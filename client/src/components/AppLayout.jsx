@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import Icon from './Icon.jsx';
 import AgentChatWidget from './AgentChatWidget.jsx';
 import AccountModal from './AccountModal.jsx';
+import HeaderSearch from './HeaderSearch.jsx';
 import logoDefault from '../assets/logo-default.png';
 
 const NAV_ITEMS = [
@@ -24,10 +25,10 @@ function userInitials(name) {
 }
 
 export default function AppLayout() {
-  const { theme, mode, setMode } = useTheme();
+  const { theme } = useTheme();
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const navItemStyle = (isActive) => ({
     display: 'flex',
@@ -55,11 +56,11 @@ export default function AppLayout() {
             display: 'flex', flexDirection: 'column', padding: '20px 16px 16px', gap: 24, overflowY: 'auto', minHeight: 0,
           }}
         >
-          <div style={{ height: 48, width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px' }}>
             <img
               src={user?.settings?.logoUrl || logoDefault}
               alt="Knowledge Hub"
-              style={{ height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'left center', display: 'block' }}
+              style={{ height: 44, width: 'auto', maxWidth: '100%', objectFit: 'contain', display: 'block' }}
             />
           </div>
 
@@ -141,57 +142,45 @@ export default function AppLayout() {
               background: theme.sidebarBg, borderBottom: `1px solid ${theme.border}`,
             }}
           >
-            <div
-              style={{
-                flex: '1 1 200px', minWidth: 0, maxWidth: 520, display: 'flex', alignItems: 'center', gap: 8,
-                background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: '10px 14px',
-              }}
-            >
-              <span style={{ opacity: 0.65, display: 'flex' }}>
-                <Icon name="search" size={16} />
+            <HeaderSearch />
+
+            <div style={{ flex: 1 }} />
+
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <span
+                onClick={() => setNotifOpen((v) => !v)}
+                title="Notifications"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                  cursor: 'pointer', color: theme.textPrimary, background: theme.subtleBg,
+                }}
+              >
+                <Icon name="bell" size={17} />
               </span>
-              <span style={{ color: theme.textPrimary, opacity: 0.65, fontSize: 14, flex: 1 }}>
-                Search notes...
-              </span>
+              {notifOpen && (
+                <div
+                  onMouseLeave={() => setNotifOpen(false)}
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 240, background: theme.dark ? 'oklch(0.20 0.025 275)' : '#ffffff',
+                    border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 16, zIndex: 50,
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Notifications</div>
+                  <div style={{ fontSize: 12, color: theme.textMuted }}>No notifications yet.</div>
+                </div>
+              )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span
-                onClick={() => navigate('/trash')}
-                title="Trash"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 9,
-                  cursor: 'pointer', color: theme.textMuted, border: `1px solid ${theme.border}`, background: theme.subtleBg,
-                }}
-              >
-                <Icon name="trash" size={16} />
-              </span>
-              <span
-                onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}
-                title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', height: 36, borderRadius: 9, padding: '0 12px',
-                  cursor: 'pointer', color: theme.textMuted, border: `1px solid ${theme.border}`, background: theme.subtleBg,
-                  fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
-                }}
-              >
-                {mode === 'dark' ? 'Dark mode' : 'Light mode'}
-              </span>
-              <span
-                onClick={() => setAccountOpen(true)}
-                title="Account"
-                style={{
-                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: theme.accent, cursor: 'pointer',
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12.5, overflow: 'hidden',
-                }}
-              >
-                {user?.settings?.avatarUrl ? (
-                  <img src={user.settings.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  userInitials(user?.name)
-                )}
-              </span>
-            </div>
+            <span
+              onClick={logout}
+              title="Lock platform"
+              style={{
+                width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: theme.accent, cursor: 'pointer',
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Icon name="lock" size={16} color="#fff" />
+            </span>
           </div>
 
           <Outlet />

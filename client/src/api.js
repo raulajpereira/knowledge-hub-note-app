@@ -36,6 +36,7 @@ export const api = {
   login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
   me: () => request('/auth/me'),
   updateProfile: (payload) => request('/auth/me', { method: 'PATCH', body: payload }),
+  changePassword: (payload) => request('/auth/change-password', { method: 'POST', body: payload }),
 
   listNotes: (trashed = false) => request(`/notes${trashed ? '?trashed=true' : ''}`),
   getNote: (id) => request(`/notes/${id}`),

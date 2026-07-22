@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
@@ -22,6 +23,7 @@ function seededBars(seed, count = 24) {
 
 export default function Voice() {
   const { theme } = useTheme();
+  const location = useLocation();
   const [voiceNotes, setVoiceNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
@@ -57,6 +59,10 @@ export default function Voice() {
   useEffect(() => {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [filtered, selectedId]);
+
+  useEffect(() => {
+    if (location.state?.voiceId) setSelectedId(location.state.voiceId);
+  }, [location.state]);
 
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');

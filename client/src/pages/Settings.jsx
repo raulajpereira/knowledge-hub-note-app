@@ -195,11 +195,11 @@ export default function Settings() {
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>App logo</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ width: 220, height: 66, borderRadius: 10, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', border: `1px solid ${theme.border}`, padding: '8px 12px' }}>
+          <div style={{ width: 220, height: 66, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', border: `1px solid ${theme.border}`, padding: '0 12px' }}>
             <img
               src={user?.settings?.logoUrl || logoDefault}
               alt="Logo"
-              style={{ height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'left center', display: 'block' }}
+              style={{ height: 44, width: 'auto', maxWidth: '100%', objectFit: 'contain', display: 'block' }}
             />
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 200 }}>

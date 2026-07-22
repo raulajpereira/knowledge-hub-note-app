@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
@@ -14,6 +15,7 @@ const FILTERS = [
 
 export default function Tasks() {
   const { theme } = useTheme();
+  const location = useLocation();
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('active');
   const [search, setSearch] = useState('');
@@ -39,6 +41,13 @@ export default function Tasks() {
   useEffect(() => {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [filtered, selectedId]);
+
+  useEffect(() => {
+    if (location.state?.taskId) {
+      setFilter('all');
+      setSelectedId(location.state.taskId);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
