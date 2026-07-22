@@ -31,3 +31,7 @@ input, textarea { font-family: inherit; }
   85% { opacity: 0.5; }
   100% { transform: translateX(140%) rotate(8deg); opacity: 0; }
 }
+@keyframes kh-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}

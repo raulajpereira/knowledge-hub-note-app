@@ -41,7 +41,6 @@ export default function CodeBlock({ value, language, onChange, onLanguageChange,
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={language === 'abap' ? 'Paste your ABAP snippet...' : 'Paste your code...'}
-          minRows={6}
           style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 13, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', padding: 12, boxSizing: 'border-box' }}
         />
       ) : (

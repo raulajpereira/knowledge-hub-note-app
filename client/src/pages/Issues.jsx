@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
@@ -54,6 +55,7 @@ function Badge({ label, hue, theme }) {
 
 export default function Issues() {
   const { theme } = useTheme();
+  const location = useLocation();
   const [issues, setIssues] = useState([]);
   const [view, setView] = useState('table');
   const [search, setSearch] = useState('');
@@ -73,6 +75,10 @@ export default function Issues() {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (location.state?.issueId) setSelectedId(location.state.issueId);
+  }, [location.state]);
 
   const filtered = useMemo(
     () => issues.filter((i) => !search.trim() || i.title.toLowerCase().includes(search.toLowerCase())),

@@ -482,7 +482,6 @@ export default function Notes() {
                     value={block.value}
                     onChange={(e) => updateBlock(block.id, { value: e.target.value })}
                     placeholder="Write... (you can paste an image here too)"
-                    minRows={block.id === 'legacy' ? 14 : 3}
                     style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit' }}
                   />
                   {getBlocks(selected).length > 1 && (

@@ -15,6 +15,8 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
+const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
+
 export default function Home() {
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -22,14 +24,19 @@ export default function Home() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const loadTasks = () => api.listTasks().then(({ tasks }) => setTasks(tasks));
+
   useEffect(() => {
-    Promise.all([api.listNotes(), api.listTasks()])
-      .then(([{ notes }, { tasks }]) => {
-        setNotes(notes);
-        setTasks(tasks);
-      })
+    Promise.all([api.listNotes(), loadTasks()])
+      .then(([{ notes }]) => setNotes(notes))
       .finally(() => setLoading(false));
   }, []);
+
+  const toggleTaskDone = async (e, task) => {
+    e.stopPropagation();
+    const { task: updated } = await api.updateTask(task.id, { done: !task.done });
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  };
 
   const createAndGo = async () => {
     await api.createNote({ title: 'Untitled note', content: '' });
@@ -166,6 +173,54 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>My Tasks</div>
+            <a onClick={() => navigate('/tasks')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
+              See all
+            </a>
+          </div>
+          <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
+            {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>Loading…</div>}
+            {!loading && tasks.filter((t) => !t.done).length === 0 && (
+              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>No open tasks — nice work.</div>
+            )}
+            {tasks
+              .filter((t) => !t.done)
+              .slice(0, 8)
+              .map((t) => {
+                const hue = PRIORITY_HUES[t.priority];
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => navigate('/tasks', { state: { taskId: t.id } })}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
+                  >
+                    <div
+                      onClick={(e) => toggleTaskDone(e, t)}
+                      style={{
+                        width: 19, height: 19, borderRadius: 6, border: `1.5px solid ${theme.border}`, background: 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                      <div style={{ fontSize: 11.5, color: theme.textMuted }}>
+                        {t.project || 'No project'}
+                        {t.due ? ` · due ${t.due}` : ''}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, flexShrink: 0, background: `oklch(0.93 0.06 ${hue})`, color: `oklch(0.45 0.14 ${hue})` }}>
+                      {t.priority}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>

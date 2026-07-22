@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 
-export default function AutoResizeTextarea({ value, minRows = 3, style, onInput, ...props }) {
+export default function AutoResizeTextarea({ value, style, onInput, ...props }) {
   const ref = useRef(null);
 
   useLayoutEffect(() => {
@@ -14,7 +14,7 @@ export default function AutoResizeTextarea({ value, minRows = 3, style, onInput,
     <textarea
       ref={ref}
       value={value}
-      rows={minRows}
+      rows={1}
       onInput={(e) => {
         e.target.style.height = 'auto';
         e.target.style.height = `${e.target.scrollHeight}px`;

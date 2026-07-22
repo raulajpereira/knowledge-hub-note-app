@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../api.js';
+import { getIssueAlerts } from '../lib/issueAlerts.js';
 import Icon from './Icon.jsx';
 import AgentChatWidget from './AgentChatWidget.jsx';
 import AccountModal from './AccountModal.jsx';
 import HeaderSearch from './HeaderSearch.jsx';
+import NewsTicker from './NewsTicker.jsx';
 import logoDefault from '../assets/logo-default.png';
 
 const NAV_ITEMS = [
@@ -27,8 +30,14 @@ function userInitials(name) {
 export default function AppLayout() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [accountOpen, setAccountOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [issueAlerts, setIssueAlerts] = useState([]);
+
+  useEffect(() => {
+    api.listIssues().then(({ issues }) => setIssueAlerts(getIssueAlerts(issues)));
+  }, []);
 
   const navItemStyle = (isActive) => ({
     display: 'flex',
@@ -151,22 +160,53 @@ export default function AppLayout() {
                 onClick={() => setNotifOpen((v) => !v)}
                 title="Notifications"
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
                   cursor: 'pointer', color: theme.textPrimary, background: theme.subtleBg,
                 }}
               >
                 <Icon name="bell" size={17} />
+                {issueAlerts.length > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute', top: -2, right: -2, background: 'oklch(0.6 0.2 25)', color: '#fff', fontSize: 10, fontWeight: 700,
+                      width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    {issueAlerts.length}
+                  </div>
+                )}
               </span>
               {notifOpen && (
                 <div
                   onMouseLeave={() => setNotifOpen(false)}
                   style={{
-                    position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 240, background: theme.dark ? 'oklch(0.20 0.025 275)' : '#ffffff',
-                    border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 16, zIndex: 50,
+                    position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 300, maxHeight: 360, overflowY: 'auto',
+                    background: theme.dark ? 'oklch(0.20 0.025 275)' : '#ffffff',
+                    border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 14, zIndex: 50,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Notifications</div>
-                  <div style={{ fontSize: 12, color: theme.textMuted }}>No notifications yet.</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Notifications</div>
+                  {issueAlerts.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted }}>No notifications yet.</div>}
+                  {issueAlerts.map(({ issue, kind, days }) => (
+                    <div
+                      key={issue.id}
+                      onClick={() => { setNotifOpen(false); navigate('/issues', { state: { issueId: issue.id } }); }}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 4px', cursor: 'pointer', borderRadius: 8 }}
+                    >
+                      <div
+                        style={{
+                          width: 7, height: 7, borderRadius: '50%', marginTop: 5, flexShrink: 0,
+                          background: kind === 'overdue' ? 'oklch(0.6 0.2 25)' : 'oklch(0.75 0.15 70)',
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{issue.title}</div>
+                        <div style={{ fontSize: 11, color: theme.textMuted }}>
+                          {kind === 'overdue' ? `Overdue by ${days} day${days === 1 ? '' : 's'}` : days === 0 ? 'Due today' : `Due in ${days} day${days === 1 ? '' : 's'}`}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -186,6 +226,8 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </div>
+
+      <NewsTicker />
 
       {accountOpen && <AccountModal onClose={() => setAccountOpen(false)} />}
 
