@@ -9,14 +9,18 @@ cd "$APP_DIR"
 
 # Non-interactive SSH shells don't load the user's profile, so Node installed
 # via nvm (or a versioned path) isn't on PATH. Make npm/npx resolvable here.
+# nvm.sh is not safe under `set -euo pipefail` (it reads unset vars), so relax
+# strict mode just while sourcing it, then restore.
+set +eu
 if [ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]; then
   export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
   # shellcheck disable=SC1091
   . "$NVM_DIR/nvm.sh"
   nvm use --lts >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true
 fi
+set -eu
 if ! command -v npm >/dev/null 2>&1; then
-  for dir in /usr/local/bin /usr/bin /snap/bin "$HOME/.nvm/versions/node"/*/bin; do
+  for dir in /usr/local/bin /usr/bin /snap/bin "$HOME"/.nvm/versions/node/*/bin; do
     if [ -x "$dir/npm" ]; then
       PATH="$dir:$PATH"
       break
