@@ -17,13 +17,14 @@ npm install --omit=dev
 echo "==> Applying database migrations"
 npx prisma migrate deploy
 
-echo "==> Restarting API (PM2)"
-pm2 restart knowledge-hub-api || pm2 start src/index.js --name knowledge-hub-api
-pm2 save
-
 echo "==> Building client"
 cd "$APP_DIR/client"
 npm install
 npm run build
+
+echo "==> Restarting API (PM2)"
+cd "$APP_DIR/server"
+pm2 restart knowledge-hub-api || pm2 start src/index.js --name knowledge-hub-api
+pm2 save
 
 echo "==> Deploy complete"
