@@ -1,8 +1,10 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import Icon from './Icon.jsx';
 import AgentChatWidget from './AgentChatWidget.jsx';
+import AccountModal from './AccountModal.jsx';
 import logoDefault from '../assets/logo-default.png';
 
 const NAV_ITEMS = [
@@ -22,8 +24,10 @@ function userInitials(name) {
 }
 
 export default function AppLayout() {
-  const { theme, mode } = useTheme();
+  const { theme, mode, setMode } = useTheme();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const navItemStyle = (isActive) => ({
     display: 'flex',
@@ -51,8 +55,12 @@ export default function AppLayout() {
             display: 'flex', flexDirection: 'column', padding: '20px 16px 16px', gap: 24, overflowY: 'auto', minHeight: 0,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px' }}>
-            <img src={logoDefault} alt="Knowledge Hub" style={{ height: 44, width: 'auto', display: 'block' }} />
+          <div style={{ height: 48, width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px' }}>
+            <img
+              src={user?.settings?.logoUrl || logoDefault}
+              alt="Knowledge Hub"
+              style={{ height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'left center', display: 'block' }}
+            />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -78,6 +86,12 @@ export default function AppLayout() {
           </div>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <NavLink to="/trash" style={({ isActive }) => navItemStyle(isActive)}>
+              <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name="trash" size={18} />
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>Trash</span>
+            </NavLink>
             <NavLink to="/settings" style={({ isActive }) => navItemStyle(isActive)}>
               <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Icon name="settings" size={18} />
@@ -85,14 +99,21 @@ export default function AppLayout() {
               <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>Settings</span>
             </NavLink>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, background: theme.subtleBg }}>
+            <div
+              onClick={() => setAccountOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, background: theme.subtleBg, cursor: 'pointer' }}
+            >
               <div
                 style={{
                   width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: theme.accent,
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12.5,
+                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12.5, overflow: 'hidden',
                 }}
               >
-                {userInitials(user?.name)}
+                {user?.settings?.avatarUrl ? (
+                  <img src={user.settings.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  userInitials(user?.name)
+                )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -102,7 +123,7 @@ export default function AppLayout() {
                   {user?.email}
                 </div>
               </div>
-              <span onClick={logout} title="Log out" style={{ cursor: 'pointer', opacity: 0.6, display: 'flex', flexShrink: 0 }}>
+              <span onClick={(e) => { e.stopPropagation(); logout(); }} title="Log out" style={{ cursor: 'pointer', opacity: 0.6, display: 'flex', flexShrink: 0 }}>
                 <Icon name="logout" size={17} />
               </span>
             </div>
@@ -133,12 +154,51 @@ export default function AppLayout() {
                 Search notes...
               </span>
             </div>
-            <div style={{ fontSize: 11, color: theme.textMuted }}>{mode === 'dark' ? 'Dark mode' : 'Light mode'}</div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <span
+                onClick={() => navigate('/trash')}
+                title="Trash"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 9,
+                  cursor: 'pointer', color: theme.textMuted, border: `1px solid ${theme.border}`, background: theme.subtleBg,
+                }}
+              >
+                <Icon name="trash" size={16} />
+              </span>
+              <span
+                onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}
+                title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', height: 36, borderRadius: 9, padding: '0 12px',
+                  cursor: 'pointer', color: theme.textMuted, border: `1px solid ${theme.border}`, background: theme.subtleBg,
+                  fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
+                }}
+              >
+                {mode === 'dark' ? 'Dark mode' : 'Light mode'}
+              </span>
+              <span
+                onClick={() => setAccountOpen(true)}
+                title="Account"
+                style={{
+                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: theme.accent, cursor: 'pointer',
+                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12.5, overflow: 'hidden',
+                }}
+              >
+                {user?.settings?.avatarUrl ? (
+                  <img src={user.settings.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  userInitials(user?.name)
+                )}
+              </span>
+            </div>
           </div>
 
           <Outlet />
         </div>
       </div>
+
+      {accountOpen && <AccountModal onClose={() => setAccountOpen(false)} />}
 
       <AgentChatWidget />
     </div>

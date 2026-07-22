@@ -22,6 +22,7 @@ function publicUser(user) {
           accentColor: user.settings.accentColor,
           logoUrl: user.settings.logoUrl,
           avatarUrl: user.settings.avatarUrl,
+          vaultAutoLockSeconds: user.settings.vaultAutoLockSeconds,
         }
       : null,
   };
@@ -78,6 +79,21 @@ router.get('/me', requireAuth, async (req, res) => {
     include: { settings: true },
   });
   if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({ user: publicUser(user) });
+});
+
+router.patch('/me', requireAuth, async (req, res) => {
+  const { name } = req.body || {};
+  const data = {};
+  if (name !== undefined) {
+    if (!name.trim()) return res.status(400).json({ error: 'Name cannot be empty' });
+    data.name = name.trim();
+  }
+  const user = await prisma.user.update({
+    where: { id: req.userId },
+    data,
+    include: { settings: true },
+  });
   res.json({ user: publicUser(user) });
 });
 

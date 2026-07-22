@@ -39,6 +39,7 @@ model Settings {
   vaultWrappedKey         String?  @db.Text
   vaultRecoveryWrappedKey String?  @db.Text
   vaultKdfIterations      Int?
+  vaultAutoLockSeconds    Int      @default(60)
   updatedAt               DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -88,6 +89,7 @@ model Task {
   due       String?
   project   String?
   notes     String?  @db.Text
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -117,6 +119,7 @@ model VoiceNote {
   audioUrl  String
   duration  Int      @default(0)
   notes     String?  @db.Text
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

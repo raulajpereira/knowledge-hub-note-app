@@ -12,6 +12,9 @@ server/uploads/avatars/*
 !server/uploads/voice/
 server/uploads/voice/*
 !server/uploads/voice/.gitkeep
+!server/uploads/notes/
+server/uploads/notes/*
+!server/uploads/notes/.gitkeep
 *.log
 .DS_Store
 .scratch-test/

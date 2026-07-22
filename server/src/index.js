@@ -36,7 +36,13 @@ app.use('/api/passwords', passwordsRoutes);
 app.use('/api/issues', issuesRoutes);
 app.use('/api/agents', agentsRoutes);
 
-app.use((req, res) => res.status(404).json({ error: 'Not found' }));
+app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
+
+const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
+app.use(express.static(clientDist));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDist, 'index.html'));
+});
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {

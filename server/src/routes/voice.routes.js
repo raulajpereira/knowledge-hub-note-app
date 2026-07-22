@@ -24,9 +24,10 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/', async (req, res) => {
+  const trashed = req.query.trashed === 'true';
   const voiceNotes = await prisma.voiceNote.findMany({
-    where: { userId: req.userId },
-    orderBy: { createdAt: 'desc' },
+    where: { userId: req.userId, deletedAt: trashed ? { not: null } : null },
+    orderBy: trashed ? { deletedAt: 'desc' } : { createdAt: 'desc' },
   });
   res.json({ voiceNotes });
 });
@@ -46,7 +47,7 @@ router.post('/', upload.single('audio'), async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  const voiceNote = await prisma.voiceNote.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const voiceNote = await prisma.voiceNote.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: null } });
   if (!voiceNote) return res.status(404).json({ error: 'Voice note not found' });
 
   const { title, notes } = req.body || {};
@@ -58,6 +59,22 @@ router.patch('/:id', async (req, res) => {
   res.json({ voiceNote: updated });
 });
 
+// Soft delete (move to trash)
+router.post('/:id/trash', async (req, res) => {
+  const voiceNote = await prisma.voiceNote.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: null } });
+  if (!voiceNote) return res.status(404).json({ error: 'Voice note not found' });
+  const updated = await prisma.voiceNote.update({ where: { id: voiceNote.id }, data: { deletedAt: new Date() } });
+  res.json({ voiceNote: updated });
+});
+
+router.post('/:id/restore', async (req, res) => {
+  const voiceNote = await prisma.voiceNote.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: { not: null } } });
+  if (!voiceNote) return res.status(404).json({ error: 'Voice note not found in trash' });
+  const updated = await prisma.voiceNote.update({ where: { id: voiceNote.id }, data: { deletedAt: null } });
+  res.json({ voiceNote: updated });
+});
+
+// Permanent delete
 router.delete('/:id', async (req, res) => {
   const voiceNote = await prisma.voiceNote.findFirst({ where: { id: req.params.id, userId: req.userId } });
   if (!voiceNote) return res.status(404).json({ error: 'Voice note not found' });

@@ -13,6 +13,7 @@ import Voice from './pages/Voice.jsx';
 import Passwords from './pages/Passwords.jsx';
 import Issues from './pages/Issues.jsx';
 import Settings from './pages/Settings.jsx';
+import Trash from './pages/Trash.jsx';
 
 function FullScreenLoader() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="/voice" element={<Voice />} />
             <Route path="/passwords" element={<Passwords />} />
             <Route path="/issues" element={<Issues />} />
+            <Route path="/trash" element={<Trash />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

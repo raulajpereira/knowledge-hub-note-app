@@ -29,6 +29,7 @@ export default function Voice() {
   const [elapsed, setElapsed] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [titleDraft, setTitleDraft] = useState('');
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -56,6 +57,17 @@ export default function Voice() {
   useEffect(() => {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [filtered, selectedId]);
+
+  useEffect(() => {
+    setTitleDraft(selected?.title ?? '');
+  }, [selected?.id]);
+
+  const commitTitle = async () => {
+    if (!selected || titleDraft === selected.title) return;
+    const { voiceNote } = await api.updateVoiceNote(selected.id, { title: titleDraft });
+    setVoiceNotes((prev) => prev.map((v) => (v.id === voiceNote.id ? voiceNote : v)));
+    setTitleDraft(voiceNote.title);
+  };
 
   const startRecording = async () => {
     setError('');
@@ -97,7 +109,7 @@ export default function Voice() {
 
   const remove = async () => {
     if (!selected) return;
-    await api.deleteVoiceNote(selected.id);
+    await api.trashVoiceNote(selected.id);
     setVoiceNotes((prev) => prev.filter((v) => v.id !== selected.id));
     setSelectedId(null);
   };
@@ -164,8 +176,10 @@ export default function Voice() {
           <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <input
-                value={selected.title}
-                onChange={(e) => patch(selected.id, { title: e.target.value })}
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                 style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}
               />
               <button onClick={remove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>

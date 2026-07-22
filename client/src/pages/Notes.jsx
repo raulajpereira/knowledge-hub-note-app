@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
+import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
 
 let blockIdCounter = 0;
 const newBlockId = () => `b${Date.now()}-${blockIdCounter++}`;
@@ -15,6 +16,7 @@ function getBlocks(note) {
 
 function contentFromBlocks(blocks) {
   return blocks
+    .filter((b) => b.type !== 'image')
     .map((b) => b.value || '')
     .join('\n\n')
     .trim();
@@ -36,6 +38,8 @@ export default function Notes() {
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [dragOverFolder, setDragOverFolder] = useState(null);
 
   const load = async () => {
     const [{ notes }, { folders }, { tags }] = await Promise.all([api.listNotes(), api.listFolders(), api.listTags()]);
@@ -82,6 +86,17 @@ export default function Notes() {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [filtered, selectedId]);
 
+  useEffect(() => {
+    setTitleDraft(selected?.title ?? '');
+  }, [selected?.id]);
+
+  const commitTitle = async () => {
+    if (!selected || titleDraft === selected.title) return;
+    const { note } = await api.updateNote(selected.id, { title: titleDraft });
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+    setTitleDraft(note.title);
+  };
+
   const addNote = async () => {
     const { note } = await api.createNote({
       title: 'Untitled note',
@@ -95,6 +110,11 @@ export default function Notes() {
   const patchSelected = async (patch) => {
     if (!selected) return;
     const { note } = await api.updateNote(selected.id, patch);
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+  };
+
+  const moveNoteToFolder = async (noteId, folderId) => {
+    const { note } = await api.updateNote(noteId, { folderId });
     setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
   };
 
@@ -151,6 +171,27 @@ export default function Notes() {
   const addCodeBlock = () => {
     if (!selected) return;
     updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'code', language: 'abap', value: '' }]);
+  };
+
+  const addImageBlock = (url) => {
+    if (!selected) return;
+    updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'image', url }]);
+  };
+
+  const handlePasteImage = async (e) => {
+    if (!selected) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type && item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+        const { url } = await api.uploadNoteImage(file);
+        addImageBlock(url);
+        break;
+      }
+    }
   };
 
   const updateBlock = (blockId, patch) => {
@@ -211,7 +252,22 @@ export default function Notes() {
         </div>
 
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <div onClick={() => setActiveFolder('all')} style={{ ...rowStyle(activeFolder === 'all'), flexDirection: 'row', alignItems: 'center', gap: 8, color: activeFolder === 'all' ? theme.accentText : theme.textMuted }}>
+          <div
+            onClick={() => setActiveFolder('all')}
+            onDragOver={(e) => { e.preventDefault(); setDragOverFolder('none'); }}
+            onDragLeave={() => setDragOverFolder((v) => (v === 'none' ? null : v))}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOverFolder(null);
+              const noteId = e.dataTransfer.getData('text/note-id');
+              if (noteId) moveNoteToFolder(noteId, null);
+            }}
+            style={{
+              ...rowStyle(activeFolder === 'all'), flexDirection: 'row', alignItems: 'center', gap: 8,
+              color: activeFolder === 'all' ? theme.accentText : theme.textMuted,
+              outline: dragOverFolder === 'none' ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
+            }}
+          >
             <Icon name="folder" size={15} />
             <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>All Notes</span>
             <span style={{ fontSize: 11.5, opacity: 0.7 }}>{notes.length}</span>
@@ -220,7 +276,19 @@ export default function Notes() {
             <div
               key={f.id}
               onClick={() => setActiveFolder(f.id)}
-              style={{ ...rowStyle(activeFolder === f.id), flexDirection: 'row', alignItems: 'center', gap: 8, color: activeFolder === f.id ? theme.accentText : theme.textMuted }}
+              onDragOver={(e) => { e.preventDefault(); setDragOverFolder(f.id); }}
+              onDragLeave={() => setDragOverFolder((v) => (v === f.id ? null : v))}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverFolder(null);
+                const noteId = e.dataTransfer.getData('text/note-id');
+                if (noteId) moveNoteToFolder(noteId, f.id);
+              }}
+              style={{
+                ...rowStyle(activeFolder === f.id), flexDirection: 'row', alignItems: 'center', gap: 8,
+                color: activeFolder === f.id ? theme.accentText : theme.textMuted,
+                outline: dragOverFolder === f.id ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
+              }}
             >
               <Icon name="folder" size={15} />
               <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
@@ -254,7 +322,13 @@ export default function Notes() {
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>No notes here yet.</div>}
           {filtered.map((n) => (
-            <div key={n.id} onClick={() => setSelectedId(n.id)} style={rowStyle(selected?.id === n.id)}>
+            <div
+              key={n.id}
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData('text/note-id', n.id)}
+              onClick={() => setSelectedId(n.id)}
+              style={{ ...rowStyle(selected?.id === n.id), cursor: 'grab' }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 {n.pinned && <Icon name="pin" size={13} color={theme.accentText} />}
                 <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</div>
@@ -303,8 +377,10 @@ export default function Notes() {
         <div style={{ flex: '1 1 480px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <input
-              value={selected.title}
-              onChange={(e) => patchSelected({ title: e.target.value })}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
               style={{ flex: '1 1 160px', minWidth: 160, border: 'none', outline: 'none', background: 'transparent', fontSize: 19, fontWeight: 800, color: theme.textPrimary }}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -376,7 +452,7 @@ export default function Notes() {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div onPaste={handlePasteImage} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {getBlocks(selected).map((block) =>
               block.type === 'code' ? (
                 <CodeBlock
@@ -387,14 +463,27 @@ export default function Notes() {
                   onLanguageChange={(language) => updateBlock(block.id, { language })}
                   onDelete={() => deleteBlock(block.id)}
                 />
+              ) : block.type === 'image' ? (
+                <div key={block.id} style={{ position: 'relative' }}>
+                  <img src={block.url} alt="" style={{ maxWidth: '100%', borderRadius: 10, display: 'block' }} />
+                  <span
+                    onClick={() => deleteBlock(block.id)}
+                    style={{
+                      position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: 6,
+                      padding: '2px 9px', cursor: 'pointer', fontSize: 15, lineHeight: 1.4,
+                    }}
+                  >
+                    &times;
+                  </span>
+                </div>
               ) : (
                 <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <textarea
+                  <AutoResizeTextarea
                     value={block.value}
                     onChange={(e) => updateBlock(block.id, { value: e.target.value })}
-                    placeholder="Write..."
-                    rows={block.id === 'legacy' ? 14 : 3}
-                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', resize: 'vertical', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit' }}
+                    placeholder="Write... (you can paste an image here too)"
+                    minRows={block.id === 'legacy' ? 14 : 3}
+                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit' }}
                   />
                   {getBlocks(selected).length > 1 && (
                     <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>

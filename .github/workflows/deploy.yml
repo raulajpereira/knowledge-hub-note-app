@@ -14,4 +14,11 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          script: bash ${{ secrets.VPS_APP_DIR }}/deploy.sh
+          # Refresh the repo (and thus deploy.sh itself) before running it, so a
+          # run always executes the current deploy script instead of the stale
+          # on-disk copy from the previous deploy.
+          script: |
+            set -e
+            cd ${{ secrets.VPS_APP_DIR }}
+            git pull origin main
+            bash deploy.sh

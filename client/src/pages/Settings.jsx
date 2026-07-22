@@ -112,6 +112,8 @@ function AgentRow({ agent, theme }) {
   );
 }
 
+const AUTO_LOCK_OPTIONS = [30, 60, 120, 300, 600];
+
 export default function Settings() {
   const { theme, mode, accentColor, setMode, setAccentColor } = useTheme();
   const { user, updateUserSettings } = useAuth();
@@ -127,6 +129,11 @@ export default function Settings() {
 
   const onResetLogo = async () => {
     const { settings } = await api.resetLogo();
+    updateUserSettings(settings);
+  };
+
+  const onAutoLockChange = async (seconds) => {
+    const { settings } = await api.updateSettings({ vaultAutoLockSeconds: seconds });
     updateUserSettings(settings);
   };
 
@@ -188,11 +195,11 @@ export default function Settings() {
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>App logo</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ width: 220, height: 66, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', border: `1px solid ${theme.border}`, padding: '0 12px' }}>
+          <div style={{ width: 220, height: 66, borderRadius: 10, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', border: `1px solid ${theme.border}`, padding: '8px 12px' }}>
             <img
               src={user?.settings?.logoUrl || logoDefault}
               alt="Logo"
-              style={{ height: 44, width: 'auto', maxWidth: '100%', objectFit: 'contain', display: 'block' }}
+              style={{ height: '100%', width: '100%', objectFit: 'contain', objectPosition: 'left center', display: 'block' }}
             />
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 200 }}>
@@ -207,6 +214,27 @@ export default function Settings() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div style={card}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Passwords vault</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Auto-lock after inactivity</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>Locks the vault automatically when you're away.</div>
+          </div>
+          <select
+            value={user?.settings?.vaultAutoLockSeconds ?? 60}
+            onChange={(e) => onAutoLockChange(Number(e.target.value))}
+            style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 12.5, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary }}
+          >
+            {AUTO_LOCK_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s < 60 ? `${s} seconds` : `${s / 60} minute${s === 60 ? '' : 's'}`}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

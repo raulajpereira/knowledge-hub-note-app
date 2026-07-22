@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { highlightCode, tokenColor, LANGUAGES } from '../lib/highlight.js';
+import AutoResizeTextarea from './AutoResizeTextarea.jsx';
 
 export default function CodeBlock({ value, language, onChange, onLanguageChange, onDelete }) {
   const { theme } = useTheme();
-  const [editing, setEditing] = useState(true);
+  const [editing, setEditing] = useState(!value);
   const lines = highlightCode(value, language);
 
   return (
@@ -36,12 +37,12 @@ export default function CodeBlock({ value, language, onChange, onLanguageChange,
       </div>
 
       {editing ? (
-        <textarea
+        <AutoResizeTextarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={language === 'abap' ? 'Paste your ABAP snippet...' : 'Paste your code...'}
-          rows={8}
-          style={{ width: '100%', border: 'none', outline: 'none', resize: 'vertical', background: 'transparent', fontSize: 13, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', padding: 12 }}
+          minRows={6}
+          style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 13, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', padding: 12, boxSizing: 'border-box' }}
         />
       ) : (
         <pre style={{ margin: 0, padding: 12, fontSize: 13, lineHeight: 1.6, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' }}>

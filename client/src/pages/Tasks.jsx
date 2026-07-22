@@ -19,6 +19,7 @@ export default function Tasks() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [titleDraft, setTitleDraft] = useState('');
 
   useEffect(() => {
     api.listTasks().then(({ tasks }) => {
@@ -39,6 +40,17 @@ export default function Tasks() {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [filtered, selectedId]);
 
+  useEffect(() => {
+    setTitleDraft(selected?.title ?? '');
+  }, [selected?.id]);
+
+  const commitTitle = async () => {
+    if (!selected || titleDraft === selected.title) return;
+    const { task } = await api.updateTask(selected.id, { title: titleDraft });
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+    setTitleDraft(task.title);
+  };
+
   const addTask = async () => {
     const { task } = await api.createTask({ title: 'New task' });
     setTasks((prev) => [task, ...prev]);
@@ -53,7 +65,7 @@ export default function Tasks() {
 
   const remove = async () => {
     if (!selected) return;
-    await api.deleteTask(selected.id);
+    await api.trashTask(selected.id);
     setTasks((prev) => prev.filter((t) => t.id !== selected.id));
     setSelectedId(null);
   };
@@ -144,8 +156,10 @@ export default function Tasks() {
         <div style={{ flex: '1 1 420px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <input
-              value={selected.title}
-              onChange={(e) => patch(selected.id, { title: e.target.value })}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
               style={{ flex: '1 1 160px', minWidth: 160, border: 'none', outline: 'none', background: 'transparent', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}
             />
             <button onClick={remove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>

@@ -8,9 +8,10 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/', async (req, res) => {
+  const trashed = req.query.trashed === 'true';
   const tasks = await prisma.task.findMany({
-    where: { userId: req.userId },
-    orderBy: [{ done: 'asc' }, { updatedAt: 'desc' }],
+    where: { userId: req.userId, deletedAt: trashed ? { not: null } : null },
+    orderBy: trashed ? { deletedAt: 'desc' } : [{ done: 'asc' }, { updatedAt: 'desc' }],
   });
   res.json({ tasks });
 });
@@ -31,7 +32,7 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  const task = await prisma.task.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const task = await prisma.task.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: null } });
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
   const { title, done, priority, due, project, notes } = req.body || {};
@@ -50,6 +51,22 @@ router.patch('/:id', async (req, res) => {
   res.json({ task: updated });
 });
 
+// Soft delete (move to trash)
+router.post('/:id/trash', async (req, res) => {
+  const task = await prisma.task.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: null } });
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  const updated = await prisma.task.update({ where: { id: task.id }, data: { deletedAt: new Date() } });
+  res.json({ task: updated });
+});
+
+router.post('/:id/restore', async (req, res) => {
+  const task = await prisma.task.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: { not: null } } });
+  if (!task) return res.status(404).json({ error: 'Task not found in trash' });
+  const updated = await prisma.task.update({ where: { id: task.id }, data: { deletedAt: null } });
+  res.json({ task: updated });
+});
+
+// Permanent delete
 router.delete('/:id', async (req, res) => {
   const task = await prisma.task.findFirst({ where: { id: req.params.id, userId: req.userId } });
   if (!task) return res.status(404).json({ error: 'Task not found' });

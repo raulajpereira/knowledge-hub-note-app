@@ -1,9 +1,38 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const notesImageDir = path.join(__dirname, '..', '..', 'uploads', 'notes');
+
+const uploadImage = multer({
+  storage: multer.diskStorage({
+    destination: notesImageDir,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.png';
+      cb(null, `${req.userId}-${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)) {
+      return cb(new Error('Only PNG, JPG, WEBP or GIF images are allowed'));
+    }
+    cb(null, true);
+  },
+});
+
 const router = Router();
 router.use(requireAuth);
+
+router.post('/images', uploadImage.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  res.status(201).json({ url: `/uploads/notes/${req.file.filename}` });
+});
 
 router.get('/', async (req, res) => {
   const trashed = req.query.trashed === 'true';
