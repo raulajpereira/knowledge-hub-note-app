@@ -22,3 +22,4 @@ jobs:
             cd ${{ secrets.VPS_APP_DIR }}
             git pull origin main
             bash deploy.sh
+          debug: true
