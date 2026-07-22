@@ -1,0 +1,40 @@
+export const ACCENTS = [
+  { name: 'Purple', hue: 290 },
+  { name: 'Blue', hue: 250 },
+  { name: 'Teal', hue: 190 },
+  { name: 'Green', hue: 145 },
+  { name: 'Amber', hue: 70 },
+  { name: 'Rose', hue: 20 },
+];
+
+export const ACCENT_TO_HUE = Object.fromEntries(
+  ACCENTS.map((a) => [a.name.toLowerCase(), a.hue])
+);
+
+export function hueForAccent(accentColor) {
+  return ACCENT_TO_HUE[accentColor] ?? 290;
+}
+
+export function getTheme(mode, accentColor) {
+  const dark = mode === 'dark';
+  const hue = hueForAccent(accentColor);
+  return {
+    dark,
+    hue,
+    pageBg: dark
+      ? 'linear-gradient(160deg, oklch(0.32 0.05 250) 0%, oklch(0.24 0.04 260) 45%, oklch(0.16 0.03 280) 100%)'
+      : `linear-gradient(160deg, oklch(0.92 0.035 ${hue}) 0%, oklch(0.87 0.03 ${hue + 20}) 45%, oklch(0.83 0.025 ${hue + 40}) 100%)`,
+    cardBg: dark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.45)',
+    modalBg: dark ? 'rgba(40,40,58,0.72)' : 'rgba(255,255,255,0.62)',
+    sidebarBg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.4)',
+    subtleBg: dark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.55)',
+    hoverBg: dark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.75)',
+    border: dark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.55)',
+    textPrimary: dark ? 'oklch(0.95 0.006 280)' : 'oklch(0.22 0.01 280)',
+    textMuted: dark ? 'oklch(0.68 0.01 280)' : 'oklch(0.55 0.01 280)',
+    accent: `oklch(0.55 0.19 ${hue})`,
+    accentDark: `oklch(0.47 0.2 ${hue})`,
+    accentText: dark ? `oklch(0.8 0.15 ${hue})` : `oklch(0.5 0.2 ${hue})`,
+    accentSoftBg: dark ? `oklch(0.55 0.19 ${hue} / 0.22)` : `oklch(0.55 0.19 ${hue} / 0.16)`,
+  };
+}

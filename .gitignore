@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.local
+server/uploads/*
+!server/uploads/logos/
+server/uploads/logos/*
+!server/uploads/logos/.gitkeep
+!server/uploads/avatars/
+server/uploads/avatars/*
+!server/uploads/avatars/.gitkeep
+!server/uploads/voice/
+server/uploads/voice/*
+!server/uploads/voice/.gitkeep
+*.log
+.DS_Store
+.scratch-test/

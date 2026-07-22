@@ -1,0 +1,16 @@
+services:
+  mysql:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: knowledge_hub
+      MYSQL_USER: kh_app
+      MYSQL_PASSWORD: kh_dev_pw
+    ports:
+      - "3306:3306"
+    volumes:
+      - kh_mysql_data:/var/lib/mysql
+
+volumes:
+  kh_mysql_data:
