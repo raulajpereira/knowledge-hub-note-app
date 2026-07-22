@@ -20,6 +20,11 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.VPS_APP_DIR }}
-            git pull origin main
+            # Force the checkout to match origin/main. `git pull` fails when a
+            # previous `npm install` has left server/package-lock.json dirty;
+            # reset --hard discards such tracked-file edits. No `git clean`, so
+            # untracked uploads (avatars, logos, voice, note images) are kept.
+            git fetch origin main
+            git reset --hard origin/main
             bash deploy.sh
           debug: true
