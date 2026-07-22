@@ -53,7 +53,7 @@ export default function Tasks() {
 
   const remove = async () => {
     if (!selected) return;
-    await api.deleteTask(selected.id);
+    await api.trashTask(selected.id);
     setTasks((prev) => prev.filter((t) => t.id !== selected.id));
     setSelectedId(null);
   };

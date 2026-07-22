@@ -17,6 +17,9 @@ npm install --omit=dev
 echo "==> Applying database migrations"
 npx prisma migrate deploy
 
+echo "==> Regenerating Prisma client"
+npx prisma generate
+
 echo "==> Building client"
 cd "$APP_DIR/client"
 npm install

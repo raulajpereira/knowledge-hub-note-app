@@ -97,7 +97,7 @@ export default function Voice() {
 
   const remove = async () => {
     if (!selected) return;
-    await api.deleteVoiceNote(selected.id);
+    await api.trashVoiceNote(selected.id);
     setVoiceNotes((prev) => prev.filter((v) => v.id !== selected.id));
     setSelectedId(null);
   };

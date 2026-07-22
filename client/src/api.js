@@ -35,6 +35,7 @@ export const api = {
   register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
   me: () => request('/auth/me'),
+  updateProfile: (payload) => request('/auth/me', { method: 'PATCH', body: payload }),
 
   listNotes: (trashed = false) => request(`/notes${trashed ? '?trashed=true' : ''}`),
   getNote: (id) => request(`/notes/${id}`),
@@ -49,10 +50,12 @@ export const api = {
   renameFolder: (id, payload) => request(`/folders/${id}`, { method: 'PATCH', body: payload }),
   deleteFolder: (id) => request(`/folders/${id}`, { method: 'DELETE' }),
 
-  listTasks: () => request('/tasks'),
+  listTasks: (trashed = false) => request(`/tasks${trashed ? '?trashed=true' : ''}`),
   createTask: (payload) => request('/tasks', { method: 'POST', body: payload }),
   updateTask: (id, payload) => request(`/tasks/${id}`, { method: 'PATCH', body: payload }),
-  deleteTask: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
+  trashTask: (id) => request(`/tasks/${id}/trash`, { method: 'POST' }),
+  restoreTask: (id) => request(`/tasks/${id}/restore`, { method: 'POST' }),
+  deleteTaskForever: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
 
   getSettings: () => request('/settings'),
   updateSettings: (payload) => request('/settings', { method: 'PATCH', body: payload }),
@@ -73,7 +76,7 @@ export const api = {
   renameTag: (id, payload) => request(`/tags/${id}`, { method: 'PATCH', body: payload }),
   deleteTag: (id) => request(`/tags/${id}`, { method: 'DELETE' }),
 
-  listVoiceNotes: () => request('/voice'),
+  listVoiceNotes: (trashed = false) => request(`/voice${trashed ? '?trashed=true' : ''}`),
   uploadVoiceNote: (blob, title, duration) => {
     const form = new FormData();
     form.append('audio', blob, 'recording.webm');
@@ -82,7 +85,9 @@ export const api = {
     return request('/voice', { method: 'POST', body: form, isForm: true });
   },
   updateVoiceNote: (id, payload) => request(`/voice/${id}`, { method: 'PATCH', body: payload }),
-  deleteVoiceNote: (id) => request(`/voice/${id}`, { method: 'DELETE' }),
+  trashVoiceNote: (id) => request(`/voice/${id}/trash`, { method: 'POST' }),
+  restoreVoiceNote: (id) => request(`/voice/${id}/restore`, { method: 'POST' }),
+  deleteVoiceNoteForever: (id) => request(`/voice/${id}`, { method: 'DELETE' }),
 
   getVaultInfo: () => request('/passwords/vault-info'),
   setupVault: (payload) => request('/passwords/setup', { method: 'POST', body: payload }),

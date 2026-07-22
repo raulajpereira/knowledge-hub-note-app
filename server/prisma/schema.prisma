@@ -88,6 +88,7 @@ model Task {
   due       String?
   project   String?
   notes     String?  @db.Text
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -117,6 +118,7 @@ model VoiceNote {
   audioUrl  String
   duration  Int      @default(0)
   notes     String?  @db.Text
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
