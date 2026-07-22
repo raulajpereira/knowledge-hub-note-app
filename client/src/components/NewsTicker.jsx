@@ -13,7 +13,9 @@ export default function NewsTicker() {
   if (items.length === 0) return null;
 
   const looped = items.concat(items);
-  const tickerBg = theme.dark ? 'oklch(0.12 0.02 280)' : 'oklch(0.2 0.02 280)';
+  const tickerBg = theme.dark ? 'oklch(0.16 0.03 280)' : `oklch(0.93 0.025 ${theme.hue})`;
+  const tickerText = theme.dark ? 'oklch(0.85 0.006 280)' : 'oklch(0.32 0.015 280)';
+  const dotColor = theme.dark ? 'oklch(0.5 0.02 280)' : 'oklch(0.65 0.015 280)';
   const durationSec = Math.max(30, items.length * 5);
 
   return (
@@ -39,11 +41,11 @@ export default function NewsTicker() {
               href={item.link}
               target="_blank"
               rel="noreferrer"
-              style={{ color: 'oklch(0.85 0.006 280)', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 8 }}
+              style={{ color: tickerText, fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 8 }}
             >
-              <span style={{ color: 'oklch(0.78 0.15 300)', fontWeight: 800, letterSpacing: '0.04em' }}>{item.source}</span>
+              <span style={{ color: theme.accentText, fontWeight: 800, letterSpacing: '0.04em' }}>{item.source}</span>
               {item.text}
-              <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'oklch(0.5 0.02 280)', flexShrink: 0, marginLeft: 40 }} />
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: dotColor, flexShrink: 0, marginLeft: 40 }} />
             </a>
           ))}
         </div>

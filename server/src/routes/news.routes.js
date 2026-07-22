@@ -10,6 +10,7 @@ const FEEDS = [
   { source: 'PÚBLICO', url: 'https://www.publico.pt/rss' },
   { source: 'DN', url: 'https://www.dn.pt/rss' },
   { source: 'JN', url: 'https://www.jn.pt/rss' },
+  { source: 'CM', url: 'https://www.cmjornal.pt/rss' },
   { source: 'EXPRESSO', url: 'https://expresso.pt/rss/rss' },
   { source: 'OBSERVADOR', url: 'https://observador.pt/feed/' },
   { source: 'SIC NOTÍCIAS', url: 'https://sicnoticias.pt/rss' },

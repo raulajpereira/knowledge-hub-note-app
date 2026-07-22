@@ -65,11 +65,15 @@ export default function AppLayout() {
             display: 'flex', flexDirection: 'column', padding: '20px 16px 16px', gap: 24, overflowY: 'auto', minHeight: 0,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px' }}>
+          <div style={{ height: 60, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px' }}>
             <img
               src={user?.settings?.logoUrl || logoDefault}
               alt="Knowledge Hub"
-              style={{ height: 44, width: 'auto', maxWidth: '100%', objectFit: 'contain', display: 'block' }}
+              style={{
+                height: '100%', width: '100%', display: 'block',
+                objectFit: user?.settings?.logoUrl ? 'cover' : 'contain',
+                objectPosition: user?.settings?.logoUrl ? 'center' : 'left center',
+              }}
             />
           </div>
 
