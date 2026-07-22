@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
 });
 
 router.patch('/', async (req, res) => {
-  const { theme, accentColor } = req.body || {};
+  const { theme, accentColor, vaultAutoLockSeconds } = req.body || {};
   const data = {};
   if (theme !== undefined) {
     if (!['dark', 'light'].includes(theme)) return res.status(400).json({ error: 'Invalid theme' });
@@ -56,6 +56,13 @@ router.patch('/', async (req, res) => {
   if (accentColor !== undefined) {
     if (!ACCENT_COLORS.includes(accentColor)) return res.status(400).json({ error: 'Invalid accent color' });
     data.accentColor = accentColor;
+  }
+  if (vaultAutoLockSeconds !== undefined) {
+    const n = Number(vaultAutoLockSeconds);
+    if (!Number.isInteger(n) || n < 5 || n > 3600) {
+      return res.status(400).json({ error: 'Auto-lock duration must be an integer between 5 and 3600 seconds' });
+    }
+    data.vaultAutoLockSeconds = n;
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },

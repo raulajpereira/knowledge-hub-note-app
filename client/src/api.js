@@ -44,6 +44,11 @@ export const api = {
   trashNote: (id) => request(`/notes/${id}/trash`, { method: 'POST' }),
   restoreNote: (id) => request(`/notes/${id}/restore`, { method: 'POST' }),
   deleteNoteForever: (id) => request(`/notes/${id}`, { method: 'DELETE' }),
+  uploadNoteImage: (file) => {
+    const form = new FormData();
+    form.append('image', file);
+    return request('/notes/images', { method: 'POST', body: form, isForm: true });
+  },
 
   listFolders: () => request('/folders'),
   createFolder: (payload) => request('/folders', { method: 'POST', body: payload }),

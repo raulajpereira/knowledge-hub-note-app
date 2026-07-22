@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import {
@@ -11,16 +12,22 @@ import {
   decryptEntry,
 } from '../lib/vaultCrypto.js';
 
-const AUTO_LOCK_MS = 10_000;
-
 function bytesEqual(a, b) {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
   return true;
 }
 
+function formatSeconds(s) {
+  if (s < 60) return `${s}s`;
+  const m = Math.round(s / 60);
+  return `${m} minute${m === 1 ? '' : 's'}`;
+}
+
 export default function Passwords() {
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const autoLockMs = (user?.settings?.vaultAutoLockSeconds ?? 60) * 1000;
   const [phase, setPhase] = useState('checking'); // checking | setup | gate | recovery | unlocked
   const [vaultInfo, setVaultInfo] = useState(null);
   const [masterKey, setMasterKey] = useState(null);
@@ -54,7 +61,7 @@ export default function Passwords() {
   const [regenRecovery, setRegenRecovery] = useState(false);
   const [newRecoveryToSave, setNewRecoveryToSave] = useState('');
 
-  const lockTimerRef = useRef(null);
+  const lastActivityRef = useRef(Date.now());
 
   const loadVaultInfo = async () => {
     const info = await api.getVaultInfo();
@@ -71,29 +78,29 @@ export default function Passwords() {
     setEntries([]);
     setSelectedId(null);
     setPhase('gate');
-    clearTimeout(lockTimerRef.current);
-  };
-
-  const resetLockTimer = () => {
-    clearTimeout(lockTimerRef.current);
-    lockTimerRef.current = setTimeout(lock, AUTO_LOCK_MS);
   };
 
   useEffect(() => {
     if (phase !== 'unlocked') return undefined;
-    resetLockTimer();
-    const onActivity = () => resetLockTimer();
-    const onVisibility = () => { if (document.hidden) resetLockTimer(); };
+    lastActivityRef.current = Date.now();
+    const onActivity = () => { lastActivityRef.current = Date.now(); };
     window.addEventListener('mousemove', onActivity);
+    window.addEventListener('mousedown', onActivity);
     window.addEventListener('keydown', onActivity);
-    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('scroll', onActivity, true);
+    window.addEventListener('touchstart', onActivity);
+    const interval = setInterval(() => {
+      if (Date.now() - lastActivityRef.current >= autoLockMs) lock();
+    }, 1000);
     return () => {
       window.removeEventListener('mousemove', onActivity);
+      window.removeEventListener('mousedown', onActivity);
       window.removeEventListener('keydown', onActivity);
-      document.removeEventListener('visibilitychange', onVisibility);
-      clearTimeout(lockTimerRef.current);
+      window.removeEventListener('scroll', onActivity, true);
+      window.removeEventListener('touchstart', onActivity);
+      clearInterval(interval);
     };
-  }, [phase]);
+  }, [phase, autoLockMs]);
 
   const decryptAllEntries = async (key) => {
     const { entries: raw } = await api.listPasswords();
@@ -379,7 +386,7 @@ export default function Passwords() {
             <span onClick={() => { setPhase('recovery'); setRecoveryStage('key'); }} style={{ fontSize: 12, color: theme.accentText, cursor: 'pointer', fontWeight: 600 }}>
               Forgot your vault password?
             </span>
-            <div style={{ fontSize: 11, color: theme.textMuted }}>Locked automatically after 10s of inactivity</div>
+            <div style={{ fontSize: 11, color: theme.textMuted }}>Locked automatically after {formatSeconds(autoLockMs / 1000)} of inactivity</div>
           </div>
         </form>
       </div>

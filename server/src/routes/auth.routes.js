@@ -22,6 +22,7 @@ function publicUser(user) {
           accentColor: user.settings.accentColor,
           logoUrl: user.settings.logoUrl,
           avatarUrl: user.settings.avatarUrl,
+          vaultAutoLockSeconds: user.settings.vaultAutoLockSeconds,
         }
       : null,
   };

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `settings` ADD COLUMN `vaultAutoLockSeconds` INTEGER NOT NULL DEFAULT 60;
