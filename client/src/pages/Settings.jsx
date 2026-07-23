@@ -106,6 +106,21 @@ function TeamCard({ theme, t, card, outlineButton }) {
   );
 }
 
+function detectedProviderLabel(agent) {
+  if (agent.provider === 'anthropic') return 'Anthropic';
+  const host = (() => {
+    try {
+      return agent.baseUrl ? new URL(agent.baseUrl).hostname : '';
+    } catch {
+      return '';
+    }
+  })();
+  if (host.includes('groq.com')) return 'Groq';
+  if (host.includes('openrouter.ai')) return 'OpenRouter';
+  if (host.includes('perplexity.ai')) return 'Perplexity';
+  return 'OpenAI';
+}
+
 function AgentRow({ agent, theme, t }) {
   const { updateAgent, deleteAgent } = useAgents();
   const confirm = useConfirm();
@@ -154,12 +169,11 @@ function AgentRow({ agent, theme, t }) {
         </span>
       </div>
 
-      <input
-        value={agent.baseUrl || ''}
-        onChange={(e) => updateAgent(agent.id, { baseUrl: e.target.value })}
-        placeholder={t('settings.baseUrlPlaceholder')}
-        style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 11px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
-      />
+      {agent.hasToken && (
+        <div style={{ fontSize: 11.5, color: theme.textMuted }}>
+          {t('settings.detectedProvider', { provider: detectedProviderLabel(agent) })}
+        </div>
+      )}
 
       <div style={{ position: 'relative', display: 'flex' }}>
         <input
@@ -213,18 +227,16 @@ export default function Settings() {
   const [newAgentOpen, setNewAgentOpen] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
   const [newAgentToken, setNewAgentToken] = useState('');
-  const [newAgentBaseUrl, setNewAgentBaseUrl] = useState('');
 
   const openNewAgent = () => {
     setNewAgentName('');
     setNewAgentToken('');
-    setNewAgentBaseUrl('');
     setNewAgentOpen(true);
   };
 
   const submitNewAgent = async () => {
     if (!newAgentName.trim() || !newAgentToken.trim()) return;
-    await createAgent({ name: newAgentName.trim(), token: newAgentToken.trim(), baseUrl: newAgentBaseUrl.trim() || undefined });
+    await createAgent({ name: newAgentName.trim(), token: newAgentToken.trim() });
     setNewAgentOpen(false);
   };
 
@@ -451,19 +463,6 @@ export default function Settings() {
                 type="password"
                 placeholder={t('settings.tokenPlaceholder')}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13.5, fontFamily: 'var(--font-mono)', background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
-                {t('settings.baseUrlLabel')}
-              </div>
-              <input
-                value={newAgentBaseUrl}
-                onChange={(e) => setNewAgentBaseUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && submitNewAgent()}
-                placeholder={t('settings.baseUrlPlaceholder')}
-                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
 

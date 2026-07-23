@@ -6,20 +6,21 @@ import { encryptSecret, decryptSecret } from '../lib/crypto.js';
 const ANTHROPIC_MODEL = 'claude-3-5-haiku-20241022';
 const OPENAI_MODEL = 'gpt-4o-mini';
 
-// The user just names an agent and pastes an API key — we don't make them
-// pick a "provider" from a fixed list. Anthropic's API has a genuinely
-// different request shape (x-api-key header, /v1/messages), so we still
-// need to know which shape to use; we infer that from the base URL's
-// hostname instead of asking. Everything else is treated as an
-// OpenAI-compatible /chat/completions endpoint, which covers OpenAI itself
-// plus most other providers (Groq, Together, OpenRouter, local models, ...).
-function detectProvider(baseUrl) {
-  try {
-    const host = new URL(baseUrl || 'https://api.openai.com/v1').hostname;
-    return host.includes('anthropic.com') ? 'anthropic' : 'openai';
-  } catch {
-    return 'openai';
-  }
+// The user just names an agent and pastes an API key — nothing else. We
+// figure out which endpoint and request shape to use from the key's own
+// prefix, since every provider mints keys with a distinct one. Anything we
+// don't recognize falls back to OpenAI's endpoint (the most common
+// OpenAI-compatible shape), same as an unset base URL always did.
+const KEY_PROVIDERS = [
+  { test: (k) => k.startsWith('sk-ant-'), provider: 'anthropic', baseUrl: null },
+  { test: (k) => k.startsWith('gsk_'), provider: 'openai', baseUrl: 'https://api.groq.com/openai/v1' },
+  { test: (k) => k.startsWith('sk-or-'), provider: 'openai', baseUrl: 'https://openrouter.ai/api/v1' },
+  { test: (k) => k.startsWith('pplx-'), provider: 'openai', baseUrl: 'https://api.perplexity.ai' },
+];
+
+function detectFromToken(token) {
+  const match = KEY_PROVIDERS.find((p) => p.test(token || ''));
+  return match ? { provider: match.provider, baseUrl: match.baseUrl } : { provider: 'openai', baseUrl: null };
 }
 
 const router = Router();
@@ -36,16 +37,18 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, token, baseUrl } = req.body || {};
+  const { name, token } = req.body || {};
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
+  if (!token?.trim()) return res.status(400).json({ error: 'token is required' });
 
+  const { provider, baseUrl } = detectFromToken(token.trim());
   const agent = await prisma.agent.create({
     data: {
       userId: req.userId,
       name: name.trim(),
-      provider: detectProvider(baseUrl),
-      baseUrl: baseUrl || null,
-      tokenCipher: encryptSecret(token || ''),
+      provider,
+      baseUrl,
+      tokenCipher: encryptSecret(token.trim()),
     },
   });
   res.status(201).json({ agent: toPublic(agent) });
@@ -55,14 +58,15 @@ router.patch('/:id', async (req, res) => {
   const agent = await prisma.agent.findFirst({ where: { id: req.params.id, userId: req.userId } });
   if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
-  const { name, token, baseUrl, active } = req.body || {};
+  const { name, token, active } = req.body || {};
   const data = {};
   if (name !== undefined) data.name = name.trim() || agent.name;
-  if (baseUrl !== undefined) {
-    data.baseUrl = baseUrl || null;
-    data.provider = detectProvider(baseUrl);
+  if (token !== undefined && token !== '') {
+    const { provider, baseUrl } = detectFromToken(token);
+    data.provider = provider;
+    data.baseUrl = baseUrl;
+    data.tokenCipher = encryptSecret(token);
   }
-  if (token !== undefined && token !== '') data.tokenCipher = encryptSecret(token);
   if (active !== undefined) data.active = !!active;
 
   const updated = await prisma.agent.update({ where: { id: agent.id }, data });
