@@ -30,13 +30,33 @@ const CACHE_MS = 15 * 60 * 1000;
 let cache = { items: [], fetchedAt: 0 };
 
 // Some feeds (e.g. CM) ship titles as literal `<![CDATA[ ... ]]>` text
-// instead of a properly parsed CDATA section, so strip it defensively.
+// instead of a properly parsed CDATA section, and others (e.g. CNN
+// Portugal) ship HTML entities (&quot;, &amp;, ...) that never get
+// decoded, so handle both defensively.
+const HTML_ENTITIES = {
+  quot: '"',
+  amp: '&',
+  apos: "'",
+  lt: '<',
+  gt: '>',
+  nbsp: ' ',
+};
+
+function decodeEntities(str) {
+  return str
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (m, name) => HTML_ENTITIES[name.toLowerCase()] ?? m);
+}
+
 function cleanText(str) {
   if (!str) return str;
-  return str
-    .replace(/^\s*<!\[CDATA\[/i, '')
-    .replace(/\]\]>\s*$/i, '')
-    .trim();
+  return decodeEntities(
+    str
+      .replace(/^\s*<!\[CDATA\[/i, '')
+      .replace(/\]\]>\s*$/i, '')
+      .trim()
+  ).trim();
 }
 
 function shuffle(arr) {
