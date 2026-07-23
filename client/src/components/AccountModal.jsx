@@ -81,8 +81,8 @@ export default function AccountModal({ onClose }) {
     }
   };
 
-  const modalBg = theme.dark ? 'oklch(0.20 0.025 275)' : '#ffffff';
-  const fieldBg = theme.dark ? 'oklch(0.26 0.02 275)' : 'oklch(0.97 0.005 280)';
+  const modalBg = theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff';
+  const fieldBg = theme.dark ? 'oklch(0.24 0.02 255)' : 'oklch(0.97 0.005 280)';
   const fieldStyle = {
     width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13.5,
     background: fieldBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box',

@@ -113,7 +113,7 @@ export default function HeaderSearch() {
         <div
           onMouseDown={(e) => e.preventDefault()}
           style={{
-            position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: theme.dark ? 'oklch(0.20 0.025 275)' : '#ffffff',
+            position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff',
             border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', overflow: 'hidden', zIndex: 50,
             maxHeight: 320, overflowY: 'auto',
           }}

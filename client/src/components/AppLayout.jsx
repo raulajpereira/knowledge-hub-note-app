@@ -186,7 +186,7 @@ export default function AppLayout() {
                   onMouseLeave={() => setNotifOpen(false)}
                   style={{
                     position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 300, maxHeight: 360, overflowY: 'auto',
-                    background: theme.dark ? 'oklch(0.20 0.025 275)' : '#ffffff',
+                    background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff',
                     border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 14, zIndex: 50,
                   }}
                 >

@@ -41,10 +41,10 @@ export default function CodeBlock({ value, language, onChange, onLanguageChange,
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={language === 'abap' ? 'Paste your ABAP snippet...' : 'Paste your code...'}
-          style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 13, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', padding: 12, boxSizing: 'border-box' }}
+          style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 13, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'var(--font-mono)', padding: 12, boxSizing: 'border-box' }}
         />
       ) : (
-        <pre style={{ margin: 0, padding: 12, fontSize: 13, lineHeight: 1.6, overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' }}>
+        <pre style={{ margin: 0, padding: 12, fontSize: 13, lineHeight: 1.6, overflowX: 'auto', fontFamily: 'var(--font-mono)' }}>
           {lines.map((tokens, i) => (
             <div key={i} style={{ display: 'flex' }}>
               <span style={{ display: 'inline-block', width: 28, flexShrink: 0, textAlign: 'right', marginRight: 12, color: theme.textMuted, opacity: 0.5, userSelect: 'none' }}>

@@ -164,7 +164,7 @@ function AgentRow({ agent, theme }) {
           onChange={(e) => setTokenInput(e.target.value)}
           type={tokenReveal ? 'text' : 'password'}
           placeholder={agent.hasToken ? 'API token saved — enter a new one to replace it' : 'API token'}
-          style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 90px 9px 11px', fontSize: 12.5, fontFamily: 'monospace', background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+          style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 90px 9px 11px', fontSize: 12.5, fontFamily: 'var(--font-mono)', background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
         />
         <span onClick={() => setTokenReveal((v) => !v)} style={{ position: 'absolute', right: 60, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.5, display: 'flex' }}>
           <Icon name={tokenReveal ? 'eyeOff' : 'eye'} size={15} />

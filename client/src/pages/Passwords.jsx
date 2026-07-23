@@ -318,7 +318,7 @@ export default function Passwords() {
             If you forget your vault password, this is the only way back in. We don't store it — download or copy it
             somewhere safe now. It won't be shown again.
           </div>
-          <div style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 700, letterSpacing: '0.05em', textAlign: 'center', background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: '14px 10px', wordBreak: 'break-all' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 700, letterSpacing: '0.05em', textAlign: 'center', background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: '14px 10px', wordBreak: 'break-all' }}>
             {recoveryToSave}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -405,7 +405,7 @@ export default function Passwords() {
               onChange={(e) => setRecoveryInput(e.target.value.toUpperCase())}
               placeholder="XXXXX-XXXXX-XXXXX-..."
               autoFocus
-              style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 10, padding: '11px 12px', fontSize: 13, fontFamily: 'monospace', background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+              style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 10, padding: '11px 12px', fontSize: 13, fontFamily: 'var(--font-mono)', background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
             />
             {recoveryError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', fontWeight: 600, alignSelf: 'flex-start' }}>{recoveryError}</div>}
             <button type="submit" style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', width: '100%' }}>
@@ -479,7 +479,7 @@ export default function Passwords() {
           {newRecoveryToSave && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
               <div style={{ fontSize: 12, fontWeight: 700 }}>New recovery key — save it now, it won't be shown again:</div>
-              <div style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, wordBreak: 'break-all' }}>{newRecoveryToSave}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, wordBreak: 'break-all' }}>{newRecoveryToSave}</div>
               <button type="button" onClick={() => downloadRecoveryKey(newRecoveryToSave)} style={{ alignSelf: 'flex-start', background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                 Download as file
               </button>
@@ -564,7 +564,7 @@ export default function Passwords() {
                   value={selected.password || ''}
                   onChange={(e) => patch(selected.id, { password: e.target.value })}
                   type={revealPasswordField ? 'text' : 'password'}
-                  style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 74px 9px 12px', fontSize: 13.5, fontFamily: 'monospace', background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+                  style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 74px 9px 12px', fontSize: 13.5, fontFamily: 'var(--font-mono)', background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
                 />
                 <span onClick={() => setRevealPasswordField((v) => !v)} title="Reveal" style={{ position: 'absolute', right: 38, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.6, display: 'flex' }}>
                   <Icon name={revealPasswordField ? 'eyeOff' : 'eye'} size={16} />

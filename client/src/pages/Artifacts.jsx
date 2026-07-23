@@ -285,7 +285,7 @@ export default function Artifacts() {
               onChange={(e) => patch({ html: e.target.value })}
               style={{
                 width: '100%', height: '100%', border: `1px solid ${theme.border}`, borderRadius: 10, outline: 'none', resize: 'none',
-                background: theme.subtleBg, color: theme.textPrimary, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+                background: theme.subtleBg, color: theme.textPrimary, fontFamily: 'var(--font-mono)',
                 fontSize: 12.5, lineHeight: 1.6, padding: 14, boxSizing: 'border-box',
               }}
             />
