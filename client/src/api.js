@@ -37,6 +37,10 @@ export const api = {
   me: () => request('/auth/me'),
   updateProfile: (payload) => request('/auth/me', { method: 'PATCH', body: payload }),
   changePassword: (payload) => request('/auth/change-password', { method: 'POST', body: payload }),
+  exportData: () => request('/auth/export'),
+  getTeam: () => request('/auth/team'),
+  inviteTeamMember: (payload) => request('/auth/team/invite', { method: 'POST', body: payload }),
+  removeTeamMember: (id) => request(`/auth/team/${id}`, { method: 'DELETE' }),
 
   listNotes: (trashed = false) => request(`/notes${trashed ? '?trashed=true' : ''}`),
   getNote: (id) => request(`/notes/${id}`),
@@ -118,4 +122,9 @@ export const api = {
   chatWithAgent: (id, payload) => request(`/agents/${id}/chat`, { method: 'POST', body: payload }),
 
   getNews: () => request('/news'),
+
+  listArtifacts: () => request('/artifacts'),
+  createArtifact: (payload) => request('/artifacts', { method: 'POST', body: payload }),
+  updateArtifact: (id, payload) => request(`/artifacts/${id}`, { method: 'PATCH', body: payload }),
+  deleteArtifact: (id) => request(`/artifacts/${id}`, { method: 'DELETE' }),
 };

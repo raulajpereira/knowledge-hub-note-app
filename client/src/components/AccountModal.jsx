@@ -24,6 +24,23 @@ export default function AccountModal({ onClose }) {
   const [pwSaving, setPwSaving] = useState(false);
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const exportData = async () => {
+    setExporting(true);
+    try {
+      const data = await api.exportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'knowledge-hub-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const onAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -132,6 +149,17 @@ export default function AccountModal({ onClose }) {
           </div>
         </div>
         {saved && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.15 145)', marginTop: -10 }}>Name saved.</div>}
+
+        <button
+          onClick={exportData}
+          disabled={exporting}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: theme.subtleBg, border: 'none',
+            color: theme.textPrimary, borderRadius: 9, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: exporting ? 0.6 : 1,
+          }}
+        >
+          {exporting ? 'Exporting…' : 'Export my data (JSON)'}
+        </button>
 
         <div style={{ height: 1, background: theme.border }} />
 

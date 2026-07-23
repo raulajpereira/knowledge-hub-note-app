@@ -7,7 +7,7 @@ router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   const folders = await prisma.folder.findMany({
-    where: { userId: req.userId },
+    where: { userId: req.effectiveUserId },
     orderBy: { createdAt: 'asc' },
     include: { _count: { select: { notes: { where: { deletedAt: null } } } } },
   });
@@ -19,12 +19,12 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const { name } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
-  const folder = await prisma.folder.create({ data: { userId: req.userId, name: name.trim() } });
+  const folder = await prisma.folder.create({ data: { userId: req.effectiveUserId, name: name.trim() } });
   res.status(201).json({ folder });
 });
 
 router.patch('/:id', async (req, res) => {
-  const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!folder) return res.status(404).json({ error: 'Folder not found' });
   const { name } = req.body || {};
   const updated = await prisma.folder.update({
@@ -35,7 +35,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
-  const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!folder) return res.status(404).json({ error: 'Folder not found' });
   await prisma.note.updateMany({ where: { folderId: folder.id }, data: { folderId: null } });
   await prisma.folder.delete({ where: { id: folder.id } });

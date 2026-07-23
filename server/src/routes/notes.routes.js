@@ -14,7 +14,7 @@ const uploadImage = multer({
     destination: notesImageDir,
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname) || '.png';
-      cb(null, `${req.userId}-${crypto.randomUUID()}${ext}`);
+      cb(null, `${req.effectiveUserId}-${crypto.randomUUID()}${ext}`);
     },
   }),
   limits: { fileSize: 8 * 1024 * 1024 },
@@ -37,14 +37,14 @@ router.post('/images', uploadImage.single('image'), async (req, res) => {
 router.get('/', async (req, res) => {
   const trashed = req.query.trashed === 'true';
   const notes = await prisma.note.findMany({
-    where: { userId: req.userId, deletedAt: trashed ? { not: null } : null },
+    where: { userId: req.effectiveUserId, deletedAt: trashed ? { not: null } : null },
     orderBy: trashed ? { deletedAt: 'desc' } : [{ pinned: 'desc' }, { updatedAt: 'desc' }],
   });
   res.json({ notes });
 });
 
 router.get('/:id', async (req, res) => {
-  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!note) return res.status(404).json({ error: 'Note not found' });
   res.json({ note });
 });
@@ -53,7 +53,7 @@ router.post('/', async (req, res) => {
   const { title, content, blocks, folderId, tags } = req.body || {};
   const note = await prisma.note.create({
     data: {
-      userId: req.userId,
+      userId: req.effectiveUserId,
       title: title?.trim() || 'Untitled note',
       content: content || '',
       blocks: Array.isArray(blocks) ? blocks : undefined,
@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: null } });
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!note) return res.status(404).json({ error: 'Note not found' });
 
   const { title, content, blocks, folderId, tags, pinned } = req.body || {};
@@ -83,14 +83,14 @@ router.patch('/:id', async (req, res) => {
 
 // Soft delete (move to trash)
 router.post('/:id/trash', async (req, res) => {
-  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: null } });
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!note) return res.status(404).json({ error: 'Note not found' });
   const updated = await prisma.note.update({ where: { id: note.id }, data: { deletedAt: new Date() } });
   res.json({ note: updated });
 });
 
 router.post('/:id/restore', async (req, res) => {
-  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.userId, deletedAt: { not: null } } });
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: { not: null } } });
   if (!note) return res.status(404).json({ error: 'Note not found in trash' });
   const updated = await prisma.note.update({ where: { id: note.id }, data: { deletedAt: null } });
   res.json({ note: updated });
@@ -98,7 +98,7 @@ router.post('/:id/restore', async (req, res) => {
 
 // Permanent delete
 router.delete('/:id', async (req, res) => {
-  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!note) return res.status(404).json({ error: 'Note not found' });
   await prisma.note.delete({ where: { id: note.id } });
   res.status(204).end();

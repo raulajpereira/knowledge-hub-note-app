@@ -15,6 +15,7 @@ import passwordsRoutes from './routes/passwords.routes.js';
 import issuesRoutes from './routes/issues.routes.js';
 import agentsRoutes from './routes/agents.routes.js';
 import newsRoutes from './routes/news.routes.js';
+import artifactsRoutes from './routes/artifacts.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -37,6 +38,7 @@ app.use('/api/passwords', passwordsRoutes);
 app.use('/api/issues', issuesRoutes);
 app.use('/api/agents', agentsRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/artifacts', artifactsRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

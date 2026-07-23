@@ -38,10 +38,11 @@ export default function HeaderSearch() {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const [{ notes }, { tasks }, { voiceNotes }] = await Promise.all([
+        const [{ notes }, { tasks }, { voiceNotes }, { artifacts }] = await Promise.all([
           api.listNotes(),
           api.listTasks(),
           api.listVoiceNotes(),
+          api.listArtifacts(),
         ]);
         const noteHits = notes
           .filter((n) => n.title.toLowerCase().includes(q) || (n.content || '').toLowerCase().includes(q))
@@ -55,7 +56,11 @@ export default function HeaderSearch() {
           .filter((v) => v.title.toLowerCase().includes(q))
           .slice(0, 5)
           .map((v) => ({ type: 'voice', id: v.id, label: v.title }));
-        setResults([...noteHits, ...taskHits, ...voiceHits].slice(0, 8));
+        const artifactHits = artifacts
+          .filter((a) => a.title.toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((a) => ({ type: 'artifact', id: a.id, label: a.title }));
+        setResults([...noteHits, ...taskHits, ...voiceHits, ...artifactHits].slice(0, 8));
       } finally {
         setLoading(false);
       }
@@ -70,11 +75,12 @@ export default function HeaderSearch() {
     inputRef.current?.blur();
     if (result.type === 'note') navigate('/notes', { state: { noteId: result.id } });
     else if (result.type === 'task') navigate('/tasks', { state: { taskId: result.id } });
+    else if (result.type === 'artifact') navigate('/artifacts', { state: { artifactId: result.id } });
     else navigate('/voice', { state: { voiceId: result.id } });
   };
 
-  const typeLabel = { note: 'Note', task: 'Task', voice: 'Voice Note' };
-  const typeIcon = { note: 'doc', task: 'check', voice: 'mic' };
+  const typeLabel = { note: 'Note', task: 'Task', voice: 'Voice Note', artifact: 'Artifact' };
+  const typeIcon = { note: 'doc', task: 'check', voice: 'mic', artifact: 'code' };
 
   return (
     <div style={{ flex: '1 1 200px', minWidth: 0, maxWidth: 520, position: 'relative' }}>

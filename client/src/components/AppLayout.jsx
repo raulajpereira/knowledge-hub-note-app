@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { to: '/tags', label: 'Tags', icon: 'tag' },
   { to: '/passwords', label: 'Passwords', icon: 'lock' },
   { to: '/issues', label: 'Project Issues', icon: 'archive' },
+  { to: '/artifacts', label: 'Artifacts', icon: 'code' },
 ];
 
 function userInitials(name) {

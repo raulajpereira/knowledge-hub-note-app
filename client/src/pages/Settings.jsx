@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useAgents } from '../context/AgentsContext.jsx';
@@ -11,6 +11,93 @@ function userInitials(name) {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
+}
+
+function TeamCard({ theme, card, outlineButton }) {
+  const [team, setTeam] = useState(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [inviting, setInviting] = useState(false);
+
+  const load = () => api.getTeam().then(setTeam);
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const invite = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!name.trim() || !email.trim() || !password) return;
+    setInviting(true);
+    try {
+      await api.inviteTeamMember({ name: name.trim(), email: email.trim(), password });
+      setName('');
+      setEmail('');
+      setPassword('');
+      setInviteOpen(false);
+      await load();
+    } catch (err) {
+      setError(err.message || 'Could not invite this member.');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const remove = async (id) => {
+    await api.removeTeamMember(id);
+    await load();
+  };
+
+  if (!team) return null;
+
+  return (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Team</div>
+          <div style={{ fontSize: 12, color: theme.textMuted }}>
+            {team.isOwner ? 'Members share your Notes, Tasks, Tags, Voice Notes, Issues and Artifacts.' : `You're part of ${team.owner.name}'s team.`}
+          </div>
+        </div>
+        {team.isOwner && (
+          <button onClick={() => setInviteOpen((v) => !v)} style={outlineButton}>
+            {inviteOpen ? 'Cancel' : '+ Invite member'}
+          </button>
+        )}
+      </div>
+
+      {inviteOpen && (
+        <form onSubmit={invite} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" style={{ flex: '1 1 140px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" style={{ flex: '1 1 160px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
+          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Temporary password" style={{ flex: '1 1 160px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
+          <button type="submit" disabled={inviting} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: inviting ? 0.6 : 1 }}>
+            {inviting ? 'Inviting…' : 'Invite'}
+          </button>
+          {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', width: '100%' }}>{error}</div>}
+        </form>
+      )}
+
+      {team.members.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>No members yet.</div>}
+      {team.members.map((m) => (
+        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: `1px solid ${theme.border}` }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700 }}>{m.name}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{m.email}</div>
+          </div>
+          {team.isOwner && (
+            <span onClick={() => remove(m.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
+              &times;
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function AgentRow({ agent, theme }) {
@@ -254,6 +341,8 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      <TeamCard theme={theme} card={card} outlineButton={outlineButton} />
 
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>

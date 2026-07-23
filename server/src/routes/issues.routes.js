@@ -9,7 +9,7 @@ router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   const issues = await prisma.issue.findMany({
-    where: { userId: req.userId },
+    where: { userId: req.effectiveUserId },
     orderBy: { updatedAt: 'desc' },
   });
   res.json({ issues });
@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
   const { title, description, priority, project, due, waitingOn, notes } = req.body || {};
   const issue = await prisma.issue.create({
     data: {
-      userId: req.userId,
+      userId: req.effectiveUserId,
       title: title?.trim() || 'New issue',
       description: description || null,
       priority: PRIORITIES.includes(priority) ? priority : 'Medium',
@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  const issue = await prisma.issue.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const issue = await prisma.issue.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!issue) return res.status(404).json({ error: 'Issue not found' });
 
   const { title, description, status, priority, project, due, waitingOn, notes } = req.body || {};
@@ -59,7 +59,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
-  const issue = await prisma.issue.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const issue = await prisma.issue.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!issue) return res.status(404).json({ error: 'Issue not found' });
   await prisma.issue.delete({ where: { id: issue.id } });
   res.status(204).end();

@@ -16,6 +16,7 @@ function publicUser(user) {
     email: user.email,
     name: user.name,
     createdAt: user.createdAt,
+    isTeamMember: !!user.teamOwnerId,
     settings: user.settings
       ? {
           theme: user.settings.theme,
@@ -116,6 +117,81 @@ router.post('/change-password', requireAuth, async (req, res) => {
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
   res.json({ ok: true });
+});
+
+// Passwords (zero-knowledge ciphertext, useless outside this app) and Agent
+// tokens (sensitive) are deliberately excluded from the export.
+router.get('/export', requireAuth, async (req, res) => {
+  const userId = req.effectiveUserId;
+  const [user, notes, folders, tasks, tags, voiceNotes, issues, artifacts] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId } }),
+    prisma.note.findMany({ where: { userId } }),
+    prisma.folder.findMany({ where: { userId } }),
+    prisma.task.findMany({ where: { userId } }),
+    prisma.tag.findMany({ where: { userId } }),
+    prisma.voiceNote.findMany({ where: { userId } }),
+    prisma.issue.findMany({ where: { userId } }),
+    prisma.artifact.findMany({ where: { userId } }),
+  ]);
+
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    account: { email: user.email, name: user.name, createdAt: user.createdAt },
+    notes,
+    folders,
+    tasks,
+    tags,
+    voiceNotes,
+    issues,
+    artifacts,
+  };
+
+  res.setHeader('Content-Disposition', 'attachment; filename="knowledge-hub-export.json"');
+  res.json(exportData);
+});
+
+// Team members share the inviter's workspace data (Notes/Tasks/Tags/Voice/
+// Folders/Issues/Artifacts) via req.effectiveUserId, but keep their own
+// login, Passwords vault and Agent tokens — see middleware/auth.js.
+router.get('/team', requireAuth, async (req, res) => {
+  const me = await prisma.user.findUnique({ where: { id: req.userId } });
+  const ownerId = me.teamOwnerId || me.id;
+  const owner = me.teamOwnerId ? await prisma.user.findUnique({ where: { id: ownerId } }) : me;
+  const members = await prisma.user.findMany({ where: { teamOwnerId: ownerId }, orderBy: { createdAt: 'asc' } });
+  res.json({
+    isOwner: !me.teamOwnerId,
+    owner: { id: owner.id, name: owner.name, email: owner.email },
+    members: members.map((m) => ({ id: m.id, name: m.name, email: m.email, createdAt: m.createdAt })),
+  });
+});
+
+router.post('/team/invite', requireAuth, async (req, res) => {
+  const me = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (me.teamOwnerId) return res.status(403).json({ error: 'Only the team owner can invite members' });
+
+  const { name, email, password } = req.body || {};
+  if (!name || !email || !password) return res.status(400).json({ error: 'name, email and password are required' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (existing) return res.status(409).json({ error: 'An account with this email already exists' });
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const member = await prisma.user.create({
+    data: { email: email.toLowerCase(), passwordHash, name, teamOwnerId: me.id, settings: { create: {} } },
+  });
+  res.status(201).json({ member: { id: member.id, name: member.name, email: member.email, createdAt: member.createdAt } });
+});
+
+router.delete('/team/:memberId', requireAuth, async (req, res) => {
+  const me = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (me.teamOwnerId) return res.status(403).json({ error: 'Only the team owner can remove members' });
+
+  const member = await prisma.user.findFirst({ where: { id: req.params.memberId, teamOwnerId: me.id } });
+  if (!member) return res.status(404).json({ error: 'Team member not found' });
+
+  await prisma.user.delete({ where: { id: member.id } });
+  res.status(204).end();
 });
 
 export default router;
