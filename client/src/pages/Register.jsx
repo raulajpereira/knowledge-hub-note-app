@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { translate } from '../i18n/translations.js';
+import { getPreAuthLanguage, setPreAuthLanguage } from '../lib/preAuthLanguage.js';
+import PreAuthLanguageToggle from '../components/PreAuthLanguageToggle.jsx';
 import logoIcon from '../assets/logo-icon.png';
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [lang, setLang] = useState(getPreAuthLanguage);
+  const t = (path, vars) => translate(lang, path, vars);
+  const changeLang = (next) => {
+    setLang(next);
+    setPreAuthLanguage(next);
+  };
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +26,7 @@ export default function Register() {
     e.preventDefault();
     setError('');
     if (password !== confirm) {
-      setError('As passwords não coincidem.');
+      setError(t('register.errMismatch'));
       return;
     }
     setSubmitting(true);
@@ -25,7 +34,7 @@ export default function Register() {
       await register(email, password, name);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err.message || 'Não foi possível criar a tua conta.');
+      setError(err.message || t('register.errDefault'));
     } finally {
       setSubmitting(false);
     }
@@ -43,6 +52,7 @@ export default function Register() {
           animation: 'kh-login-drift 24s ease-in-out infinite',
         }}
       />
+      <PreAuthLanguageToggle lang={lang} onChange={changeLang} />
       <div
         style={{
           position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center',
@@ -61,15 +71,15 @@ export default function Register() {
         >
           <img src={logoIcon} alt="" style={{ height: 28, width: 'auto', filter: 'brightness(0) invert(1)' }} />
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800 }}>Cria o teu Knowledge Hub</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>O teu segundo cérebro, organizado.</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('register.title')}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>{t('register.subtitle')}</div>
           </div>
 
           {[
-            { label: 'Nome', value: name, setter: setName, type: 'text', placeholder: 'O teu nome' },
-            { label: 'Email', value: email, setter: setEmail, type: 'email', placeholder: 'tu@exemplo.com' },
-            { label: 'Password', value: password, setter: setPassword, type: 'password', placeholder: 'Pelo menos 8 caracteres' },
-            { label: 'Confirmar password', value: confirm, setter: setConfirm, type: 'password', placeholder: 'Repete a password' },
+            { label: t('register.name'), value: name, setter: setName, type: 'text', placeholder: t('register.namePlaceholder') },
+            { label: t('register.email'), value: email, setter: setEmail, type: 'email', placeholder: t('register.emailPlaceholder') },
+            { label: t('register.password'), value: password, setter: setPassword, type: 'password', placeholder: t('register.passwordPlaceholder') },
+            { label: t('register.confirmPassword'), value: confirm, setter: setConfirm, type: 'password', placeholder: t('register.confirmPasswordPlaceholder') },
           ].map((f) => (
             <div key={f.label} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{f.label}</div>
@@ -103,13 +113,13 @@ export default function Register() {
               opacity: submitting ? 0.7 : 1,
             }}
           >
-            {submitting ? 'A criar conta…' : 'Criar Conta'}
+            {submitting ? t('register.creatingAccount') : t('register.createAccount')}
           </button>
 
           <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)' }}>
-            Já tens conta?{' '}
+            {t('register.alreadyHave')}{' '}
             <Link to="/login" style={{ color: '#fff', fontWeight: 700 }}>
-              Iniciar sessão
+              {t('register.signIn')}
             </Link>
           </div>
         </form>

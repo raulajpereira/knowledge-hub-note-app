@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import { getIssueAlerts } from '../lib/issueAlerts.js';
 import Icon from './Icon.jsx';
@@ -19,9 +20,10 @@ const NAV_ITEMS = [
   { to: '/tasks', key: 'tasks', icon: 'check', countKey: 'tasks' },
   { to: '/tags', key: 'tags', icon: 'tag', countKey: 'tags' },
   { to: '/passwords', key: 'passwords', icon: 'lock' },
-  { to: '/issues', key: 'issues', icon: 'archive' },
+  { to: '/issues', key: 'issues', icon: 'archive', countKey: 'issues' },
   { to: '/artifacts', key: 'artifacts', icon: 'code', countKey: 'artifacts' },
   { to: '/calendar', key: 'calendar', icon: 'calendar' },
+  { to: '/sap-news', key: 'sapNews', icon: 'news' },
 ];
 
 function userInitials(name) {
@@ -38,18 +40,10 @@ export default function AppLayout() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [issueAlerts, setIssueAlerts] = useState([]);
-  const [counts, setCounts] = useState({});
+  const { counts } = useCounts();
 
   useEffect(() => {
     api.listIssues().then(({ issues }) => setIssueAlerts(getIssueAlerts(issues)));
-  }, []);
-
-  useEffect(() => {
-    Promise.all([api.listNotes(), api.listVoiceNotes(), api.listTasks(), api.listTags(), api.listArtifacts()]).then(
-      ([{ notes }, { voiceNotes }, { tasks }, { tags }, { artifacts }]) => {
-        setCounts({ notes: notes.length, voice: voiceNotes.length, tasks: tasks.length, tags: tags.length, artifacts: artifacts.length });
-      }
-    );
   }, []);
 
   const navItemStyle = (isActive) => ({
@@ -78,7 +72,10 @@ export default function AppLayout() {
             display: 'flex', flexDirection: 'column', padding: '20px 16px 16px', gap: 24, overflowY: 'auto', minHeight: 0,
           }}
         >
-          <div style={{ height: 60, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px' }}>
+          <div
+            onClick={() => navigate('/')}
+            style={{ height: 60, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px', cursor: 'pointer' }}
+          >
             <img
               src={user?.settings?.logoUrl || logoDefault}
               alt="Knowledge Hub"
@@ -122,51 +119,67 @@ export default function AppLayout() {
             ))}
           </div>
 
-          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <NavLink to="/trash" style={({ isActive }) => navItemStyle(isActive)}>
-              <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon name="trash" size={18} />
-              </span>
-              <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('nav.trash')}</span>
-            </NavLink>
-            <NavLink to="/settings" style={({ isActive }) => navItemStyle(isActive)}>
-              <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon name="settings" size={18} />
-              </span>
-              <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('nav.settings')}</span>
-            </NavLink>
-
-            <div
-              onClick={() => setAccountOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, background: theme.subtleBg, cursor: 'pointer' }}
-            >
-              <div
-                style={{
-                  width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: theme.accent,
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12.5, overflow: 'hidden',
-                }}
-              >
-                {user?.settings?.avatarUrl ? (
-                  <img src={user.settings.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  userInitials(user?.name)
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <NavLink to="/trash" style={({ isActive }) => navItemStyle(isActive)}>
+                <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="trash" size={18} />
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {t('nav.trash')}
+                </span>
+                {counts.trash > 0 && (
+                  <span
+                    style={{
+                      fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
+                      background: theme.subtleBg, color: theme.textMuted,
+                    }}
+                  >
+                    {counts.trash}
+                  </span>
                 )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {user?.name}
+              </NavLink>
+              <NavLink to="/settings" style={({ isActive }) => navItemStyle(isActive)}>
+                <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="settings" size={18} />
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('nav.settings')}</span>
+              </NavLink>
+
+              <div
+                onClick={() => setAccountOpen(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, background: theme.subtleBg, cursor: 'pointer' }}
+              >
+                <div
+                  style={{
+                    width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: theme.accent,
+                    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12.5, overflow: 'hidden',
+                  }}
+                >
+                  {user?.settings?.avatarUrl ? (
+                    <img src={user.settings.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    userInitials(user?.name)
+                  )}
                 </div>
-                <div style={{ fontSize: 11, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {user?.email}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user?.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user?.email}
+                  </div>
                 </div>
+                <span onClick={(e) => { e.stopPropagation(); logout(); }} title={t('nav.logout')} style={{ cursor: 'pointer', opacity: 0.6, display: 'flex', flexShrink: 0 }}>
+                  <Icon name="logout" size={17} />
+                </span>
               </div>
-              <span onClick={(e) => { e.stopPropagation(); logout(); }} title={t('nav.logout')} style={{ cursor: 'pointer', opacity: 0.6, display: 'flex', flexShrink: 0 }}>
-                <Icon name="logout" size={17} />
-              </span>
             </div>
 
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em', color: theme.textMuted, textAlign: 'center' }}>
-              <span style={{ color: theme.accentText, fontWeight: 700 }}>{t('common.brand')}</span>{t('common.brandRest')} &copy; {new Date().getFullYear()}
+            <div style={{ flex: 1, minHeight: 12, display: 'flex', alignItems: 'center' }}>
+              <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em', color: theme.textMuted }}>
+                <span style={{ color: theme.accentText, fontWeight: 700 }}>{t('common.brand')}</span>{t('common.brandRest')} &copy; {new Date().getFullYear()}
+              </div>
             </div>
           </div>
         </div>

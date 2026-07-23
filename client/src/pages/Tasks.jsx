@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import DateInput from '../components/DateInput.jsx';
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
+const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
 
 const FILTERS = [
   { key: 'active', labelKey: 'tasks.filterActive' },
@@ -18,9 +21,12 @@ const FILTERS = [
 export default function Tasks() {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const confirm = useConfirm();
+  const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('active');
+  const [sortBy, setSortBy] = useState('recent');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,10 +40,14 @@ export default function Tasks() {
   }, []);
 
   const filtered = useMemo(() => {
-    return tasks
+    const list = tasks
       .filter((t) => (filter === 'active' ? !t.done : filter === 'done' ? t.done : true))
       .filter((t) => !search.trim() || t.title.toLowerCase().includes(search.toLowerCase()));
-  }, [tasks, filter, search]);
+    if (sortBy === 'priority') {
+      return [...list].sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+    }
+    return list;
+  }, [tasks, filter, search, sortBy]);
 
   const selected = tasks.find((t) => t.id === selectedId) || filtered[0] || null;
 
@@ -68,6 +78,7 @@ export default function Tasks() {
     setTasks((prev) => [task, ...prev]);
     setSelectedId(task.id);
     setFilter('active');
+    refreshCounts();
   };
 
   const patch = async (id, payload) => {
@@ -77,9 +88,12 @@ export default function Tasks() {
 
   const remove = async () => {
     if (!selected) return;
+    const ok = await confirm({ message: t('common.confirmTrashMessage') });
+    if (!ok) return;
     await api.trashTask(selected.id);
     setTasks((prev) => prev.filter((t) => t.id !== selected.id));
     setSelectedId(null);
+    refreshCounts();
   };
 
   const rowStyle = (isActive) => ({
@@ -114,20 +128,30 @@ export default function Tasks() {
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 6 }}>
-          {FILTERS.map((f) => (
-            <div
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              style={{
-                padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
-                background: filter === f.key ? theme.accentSoftBg : theme.subtleBg,
-                color: filter === f.key ? theme.accentText : theme.textMuted,
-              }}
-            >
-              {t(f.labelKey)}
-            </div>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {FILTERS.map((f) => (
+              <div
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                style={{
+                  padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                  background: filter === f.key ? theme.accentSoftBg : theme.subtleBg,
+                  color: filter === f.key ? theme.accentText : theme.textMuted,
+                }}
+              >
+                {t(f.labelKey)}
+              </div>
+            ))}
+          </div>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 8px', fontSize: 12, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', cursor: 'pointer' }}
+          >
+            <option value="recent">{t('tasks.sortBy')}: {t('tasks.sortRecent')}</option>
+            <option value="priority">{t('tasks.sortBy')}: {t('tasks.sortPriority')}</option>
+          </select>
         </div>
 
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>

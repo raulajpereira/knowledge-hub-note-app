@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
@@ -25,6 +27,8 @@ function seededBars(seed, count = 24) {
 export default function Voice() {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const confirm = useConfirm();
+  const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const [voiceNotes, setVoiceNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -92,6 +96,7 @@ export default function Voice() {
         const { voiceNote } = await api.uploadVoiceNote(blob, title, duration);
         setVoiceNotes((prev) => [voiceNote, ...prev]);
         setSelectedId(voiceNote.id);
+        refreshCounts();
       };
       mediaRecorderRef.current = recorder;
       recorder.start();
@@ -117,9 +122,12 @@ export default function Voice() {
 
   const remove = async () => {
     if (!selected) return;
+    const ok = await confirm({ message: t('common.confirmTrashMessage') });
+    if (!ok) return;
     await api.trashVoiceNote(selected.id);
     setVoiceNotes((prev) => prev.filter((v) => v.id !== selected.id));
     setSelectedId(null);
+    refreshCounts();
   };
 
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;

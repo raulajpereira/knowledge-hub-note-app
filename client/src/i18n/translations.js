@@ -10,9 +10,15 @@ export const translations = {
       issues: 'Project Issues',
       artifacts: 'Artifacts',
       calendar: 'Calendar',
+      sapNews: 'SAP News',
       trash: 'Trash',
       settings: 'Settings',
       logout: 'Log out',
+    },
+    sapNews: {
+      title: 'SAP News',
+      empty: 'No news available right now.',
+      readFull: 'Read on SAP News',
     },
     calendar: {
       locale: 'en-US',
@@ -48,6 +54,12 @@ export const translations = {
       minsAgo: '{n}m ago',
       hoursAgo: '{n}h ago',
       daysAgo: '{n}d ago',
+      confirmDeleteTitle: 'Delete?',
+      confirmDeleteMessage: 'This action cannot be undone.',
+      confirmTrashMessage: 'This will move it to Trash. You can restore it later.',
+      confirmDeleteForeverMessage: 'This will permanently delete it. This action cannot be undone.',
+      confirmRemoveMemberMessage: 'Remove this member from your team?',
+      confirmDeleteAgentMessage: 'Delete this agent? Its chat history will be lost.',
     },
     home: {
       quickCapture: 'Quick Capture',
@@ -62,6 +74,8 @@ export const translations = {
       seeAll: 'See all',
       noNotesYet: 'No notes yet — create your first one above.',
       noOpenTasks: 'No open tasks — nice work.',
+      sapMeTitle: 'SAP me',
+      sapMeDesc: 'Open your SAP customer portal',
     },
     notes: {
       searchPlaceholder: 'Search notes...',
@@ -114,6 +128,9 @@ export const translations = {
       notes: 'Notes',
       notesPlaceholder: 'Add notes...',
       selectOrCreate: 'Select or create a task to get started.',
+      sortBy: 'Sort',
+      sortRecent: 'Recent',
+      sortPriority: 'Priority',
     },
     tags: {
       searchPlaceholder: 'Search tags...',
@@ -399,9 +416,15 @@ export const translations = {
       issues: 'Project Issues',
       artifacts: 'Artifacts',
       calendar: 'Calendário',
+      sapNews: 'SAP News',
       trash: 'Lixo',
       settings: 'Definições',
       logout: 'Terminar sessão',
+    },
+    sapNews: {
+      title: 'SAP News',
+      empty: 'Sem notícias disponíveis de momento.',
+      readFull: 'Ler no SAP News',
     },
     calendar: {
       locale: 'pt-PT',
@@ -437,6 +460,12 @@ export const translations = {
       minsAgo: 'há {n}m',
       hoursAgo: 'há {n}h',
       daysAgo: 'há {n}d',
+      confirmDeleteTitle: 'Eliminar?',
+      confirmDeleteMessage: 'Esta ação não pode ser desfeita.',
+      confirmTrashMessage: 'Isto vai mover para o Lixo. Podes restaurar mais tarde.',
+      confirmDeleteForeverMessage: 'Isto vai eliminar definitivamente. Esta ação não pode ser desfeita.',
+      confirmRemoveMemberMessage: 'Remover este membro da tua equipa?',
+      confirmDeleteAgentMessage: 'Eliminar este agente? O histórico de conversa será perdido.',
     },
     home: {
       quickCapture: 'Captura Rápida',
@@ -451,6 +480,8 @@ export const translations = {
       seeAll: 'Ver todas',
       noNotesYet: 'Ainda sem notas — cria a primeira acima.',
       noOpenTasks: 'Sem tarefas abertas — bom trabalho.',
+      sapMeTitle: 'SAP me',
+      sapMeDesc: 'Abre o teu portal de cliente SAP',
     },
     notes: {
       searchPlaceholder: 'Pesquisar notas...',
@@ -503,6 +534,9 @@ export const translations = {
       notes: 'Notas',
       notesPlaceholder: 'Adicionar notas...',
       selectOrCreate: 'Seleciona ou cria uma tarefa para começar.',
+      sortBy: 'Ordenar',
+      sortRecent: 'Recentes',
+      sortPriority: 'Prioridade',
     },
     tags: {
       searchPlaceholder: 'Pesquisar etiquetas...',
@@ -778,3 +812,26 @@ export const translations = {
     },
   },
 };
+
+function lookupPath(dict, path) {
+  let cur = dict;
+  for (const part of path.split('.')) {
+    cur = cur?.[part];
+    if (cur === undefined) return undefined;
+  }
+  return cur;
+}
+
+// Standalone translate, usable outside LanguageProvider (e.g. pre-auth
+// screens, which render before there's a user/settings to read the
+// language from).
+export function translate(lang, path, vars) {
+  const dict = translations[lang] || translations.pt;
+  let value = lookupPath(dict, path);
+  if (value === undefined) value = lookupPath(translations.en, path);
+  if (value === undefined) return path;
+  if (typeof value === 'string' && vars) {
+    return Object.entries(vars).reduce((s, [k, v]) => s.split(`{${k}}`).join(v), value);
+  }
+  return value;
+}

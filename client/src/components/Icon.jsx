@@ -103,6 +103,16 @@ const PATHS = {
     ['path', { d: 'M11 6.5l1.4-1.4a4 4 0 1 1 5.6 5.6L16.5 12' }],
     ['path', { d: 'M13 17.5l-1.4 1.4a4 4 0 1 1-5.6-5.6L7.5 12' }],
   ],
+  news: [
+    ['rect', { x: 3.5, y: 5.5, width: 13, height: 13, rx: 1.5 }],
+    ['path', { d: 'M16.5 8.5H19a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H8' }],
+    ['path', { d: 'M6.5 9h7M6.5 12h7M6.5 15h4' }],
+  ],
+  external: [
+    ['path', { d: 'M9 6H6a1.5 1.5 0 0 0-1.5 1.5v10.5A1.5 1.5 0 0 0 6 19.5h10.5A1.5 1.5 0 0 0 18 18v-3' }],
+    ['path', { d: 'M13.5 4.5H19.5V10.5' }],
+    ['path', { d: 'M19 5 11 13' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

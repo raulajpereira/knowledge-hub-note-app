@@ -51,6 +51,7 @@ export const api = {
   deleteNoteForever: (id) => request(`/notes/${id}`, { method: 'DELETE' }),
   listNoteVersions: (id) => request(`/notes/${id}/versions`),
   restoreNoteVersion: (id, versionId) => request(`/notes/${id}/versions/${versionId}/restore`, { method: 'POST' }),
+  linkPreview: (url) => request(`/notes/link-preview?url=${encodeURIComponent(url)}`),
   uploadNoteImage: (file) => {
     const form = new FormData();
     form.append('image', file);
@@ -129,4 +130,6 @@ export const api = {
   createArtifact: (payload) => request('/artifacts', { method: 'POST', body: payload }),
   updateArtifact: (id, payload) => request(`/artifacts/${id}`, { method: 'PATCH', body: payload }),
   deleteArtifact: (id) => request(`/artifacts/${id}`, { method: 'DELETE' }),
+
+  getSapNews: () => request('/sap-news'),
 };

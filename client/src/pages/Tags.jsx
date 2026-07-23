@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
@@ -10,6 +12,8 @@ const HUE_ROTATION = [290, 250, 190, 150, 70, 20, 340, 25];
 export default function Tags() {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const confirm = useConfirm();
+  const { refresh: refreshCounts } = useCounts();
   const navigate = useNavigate();
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -53,6 +57,7 @@ export default function Tags() {
       setNewTagName('');
       setNewTagOpen(false);
       setSelectedId(tag.id);
+      refreshCounts();
     } catch (err) {
       alert(err.message);
     }
@@ -74,10 +79,12 @@ export default function Tags() {
 
   const removeTag = async (tag, e) => {
     e.stopPropagation();
-    if (!confirm(t('tags.confirmDelete', { name: tag.name }))) return;
+    const ok = await confirm({ message: t('tags.confirmDelete', { name: tag.name }) });
+    if (!ok) return;
     await api.deleteTag(tag.id);
     if (selectedId === tag.id) setSelectedId(null);
     await load();
+    refreshCounts();
   };
 
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;

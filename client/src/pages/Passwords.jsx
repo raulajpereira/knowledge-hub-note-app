@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import {
@@ -29,6 +30,7 @@ export default function Passwords() {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const autoLockMs = (user?.settings?.vaultAutoLockSeconds ?? 60) * 1000;
   const [phase, setPhase] = useState('checking'); // checking | setup | gate | recovery | unlocked
   const [vaultInfo, setVaultInfo] = useState(null);
@@ -222,10 +224,23 @@ export default function Passwords() {
 
   const remove = async () => {
     if (!selected) return;
+    const ok = await confirm({ message: t('common.confirmDeleteMessage') });
+    if (!ok) return;
     await api.deletePassword(selected.id);
     setEntries((prev) => prev.filter((p) => p.id !== selected.id));
     setSelectedId(null);
   };
+
+  const websiteInfo = (() => {
+    if (!selected?.url) return null;
+    let host = '';
+    try {
+      host = new URL(selected.url).hostname;
+    } catch {
+      return null;
+    }
+    return { host, favicon: `https://www.google.com/s2/favicons?sz=32&domain=${host}` };
+  })();
 
   const copyPassword = async () => {
     if (!selected) return;
@@ -583,6 +598,17 @@ export default function Passwords() {
                 placeholder="https://"
                 style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 12px', fontSize: 13.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
+              {websiteInfo && (
+                <a
+                  href={selected.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: theme.accentText, textDecoration: 'none' }}
+                >
+                  <img src={websiteInfo.favicon} alt="" style={{ width: 16, height: 16, flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{websiteInfo.host}</span>
+                </a>
+              )}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

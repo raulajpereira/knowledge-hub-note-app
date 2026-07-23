@@ -10,6 +10,7 @@ export default function HeaderSearch() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -106,7 +107,7 @@ export default function HeaderSearch() {
         />
         {!query && (
           <span style={{ fontSize: 11, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 5, padding: '2px 6px', color: theme.textMuted, flexShrink: 0 }}>
-            &#8984;K
+            {isMac ? '⌘K' : 'Ctrl K'}
           </span>
         )}
       </div>

@@ -43,6 +43,47 @@ router.get('/', async (req, res) => {
   res.json({ notes });
 });
 
+// Best-effort metadata for a pasted URL (title + favicon), so link blocks
+// can render as a clean card instead of raw text. Must stay ahead of
+// GET /:id or Express would treat "link-preview" as a note id.
+const HTML_ENTITIES = { quot: '"', amp: '&', apos: "'", lt: '<', gt: '>', nbsp: ' ' };
+function decodeEntities(str) {
+  return str
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (m, name) => HTML_ENTITIES[name.toLowerCase()] ?? m);
+}
+
+router.get('/link-preview', async (req, res) => {
+  const url = req.query.url;
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'Invalid URL' });
+
+  let host = '';
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+
+  let title = null;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; KnowledgeHubLinkPreview/1.0)' },
+    });
+    clearTimeout(timer);
+    const html = await response.text();
+    const match = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+    if (match) title = decodeEntities(match[1].trim());
+  } catch {
+    // best-effort — fall back to the hostname if the page can't be fetched
+  }
+
+  res.json({ url, host, title: title || host, favicon: `https://www.google.com/s2/favicons?sz=64&domain=${host}` });
+});
+
 router.get('/:id', async (req, res) => {
   const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!note) return res.status(404).json({ error: 'Note not found' });

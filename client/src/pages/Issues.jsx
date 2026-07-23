@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import DateInput from '../components/DateInput.jsx';
@@ -67,6 +69,8 @@ export default function Issues() {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { user, updateUserSettings } = useAuth();
+  const confirm = useConfirm();
+  const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const [issues, setIssues] = useState([]);
   const [view, setView] = useState('table');
@@ -219,12 +223,16 @@ export default function Issues() {
     setIssues((prev) => [issue, ...prev]);
     setSelectedId(issue.id);
     setNewIssueOpen(false);
+    refreshCounts();
   };
 
   const remove = async (id) => {
+    const ok = await confirm({ message: t('common.confirmDeleteMessage') });
+    if (!ok) return;
     await api.deleteIssue(id);
     setIssues((prev) => prev.filter((i) => i.id !== id));
     if (selectedId === id) setSelectedId(null);
+    refreshCounts();
   };
 
   const onDropOnColumn = async (status, e) => {

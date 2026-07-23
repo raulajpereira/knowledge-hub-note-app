@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
@@ -16,6 +18,8 @@ const TYPE_ICON = { note: 'doc', task: 'check', voice: 'mic' };
 export default function Trash() {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const confirm = useConfirm();
+  const { refresh: refreshCounts } = useCounts();
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -47,13 +51,17 @@ export default function Trash() {
     else if (item.type === 'task') await api.restoreTask(item.id);
     else await api.restoreVoiceNote(item.id);
     setItems((prev) => prev.filter((i) => !(i.type === item.type && i.id === item.id)));
+    refreshCounts();
   };
 
   const deleteForever = async (item) => {
+    const ok = await confirm({ message: t('common.confirmDeleteForeverMessage') });
+    if (!ok) return;
     if (item.type === 'note') await api.deleteNoteForever(item.id);
     else if (item.type === 'task') await api.deleteTaskForever(item.id);
     else await api.deleteVoiceNoteForever(item.id);
     setItems((prev) => prev.filter((i) => !(i.type === item.type && i.id === item.id)));
+    refreshCounts();
   };
 
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;

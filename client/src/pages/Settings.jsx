@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useAgents } from '../context/AgentsContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
 import { FONT_OPTIONS } from '../styles/theme.js';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
@@ -16,6 +17,7 @@ function userInitials(name) {
 }
 
 function TeamCard({ theme, t, card, outlineButton }) {
+  const confirm = useConfirm();
   const [team, setTeam] = useState(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [name, setName] = useState('');
@@ -50,6 +52,8 @@ function TeamCard({ theme, t, card, outlineButton }) {
   };
 
   const remove = async (id) => {
+    const ok = await confirm({ message: t('common.confirmRemoveMemberMessage') });
+    if (!ok) return;
     await api.removeTeamMember(id);
     await load();
   };
@@ -104,6 +108,7 @@ function TeamCard({ theme, t, card, outlineButton }) {
 
 function AgentRow({ agent, theme, t }) {
   const { updateAgent, deleteAgent } = useAgents();
+  const confirm = useConfirm();
   const [tokenInput, setTokenInput] = useState('');
   const [tokenReveal, setTokenReveal] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -146,7 +151,13 @@ function AgentRow({ agent, theme, t }) {
           <option value="anthropic">Anthropic</option>
           <option value="openai">OpenAI-compatible</option>
         </select>
-        <span onClick={() => deleteAgent(agent.id)} style={{ cursor: 'pointer', opacity: 0.45, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}>
+        <span
+          onClick={async () => {
+            const ok = await confirm({ message: t('common.confirmDeleteAgentMessage') });
+            if (ok) deleteAgent(agent.id);
+          }}
+          style={{ cursor: 'pointer', opacity: 0.45, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}
+        >
           &times;
         </span>
       </div>

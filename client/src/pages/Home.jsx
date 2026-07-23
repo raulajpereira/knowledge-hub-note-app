@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
@@ -22,6 +23,7 @@ export default function Home() {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { refresh: refreshCounts } = useCounts();
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,7 @@ export default function Home() {
 
   const createAndGo = async () => {
     await api.createNote({ title: 'Untitled note', content: '' });
+    refreshCounts();
     navigate('/notes');
   };
 
@@ -65,6 +68,13 @@ export default function Home() {
       desc: t('home.voiceNoteDesc'),
       icon: <Icon name="mic" size={18} color={theme.accent} />,
       onClick: () => navigate('/voice'),
+      gradient: false,
+    },
+    {
+      title: t('home.sapMeTitle'),
+      desc: t('home.sapMeDesc'),
+      icon: <Icon name="external" size={18} color={theme.accent} />,
+      onClick: () => window.open('https://me.sap.com', '_blank', 'noopener,noreferrer'),
       gradient: false,
     },
   ];

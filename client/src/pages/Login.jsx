@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { translate } from '../i18n/translations.js';
+import { getPreAuthLanguage, setPreAuthLanguage } from '../lib/preAuthLanguage.js';
+import PreAuthLanguageToggle from '../components/PreAuthLanguageToggle.jsx';
 import logoIcon from '../assets/logo-icon.png';
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [lang, setLang] = useState(getPreAuthLanguage);
+  const t = (path, vars) => translate(lang, path, vars);
+  const changeLang = (next) => {
+    setLang(next);
+    setPreAuthLanguage(next);
+  };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [reveal, setReveal] = useState(false);
@@ -20,7 +29,7 @@ export default function Login() {
       await login(email, password);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err.message || 'Email ou password incorretos.');
+      setError(err.message || t('login.errDefault'));
     } finally {
       setSubmitting(false);
     }
@@ -68,6 +77,7 @@ export default function Login() {
           pointerEvents: 'none',
         }}
       />
+      <PreAuthLanguageToggle lang={lang} onChange={changeLang} />
       <div
         style={{
           position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center',
@@ -78,14 +88,14 @@ export default function Login() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src={logoIcon} alt="" style={{ height: 26, width: 'auto', filter: 'brightness(0) invert(1)' }} />
             <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Knowledge Hub
+              {t('login.tagline')}
             </div>
           </div>
           <div style={{ fontSize: 'clamp(32px, 4.4vw, 54px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-0.02em' }}>
-            O teu segundo cérebro,<br />organizado.
+            {t('login.heroTitle')}<br />{t('login.heroTitle2')}
           </div>
           <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.82)', maxWidth: 420, lineHeight: 1.55 }}>
-            Notas, tarefas, passwords e memos de voz — tudo num único lugar calmo e privado.
+            {t('login.heroDesc')}
           </div>
         </div>
 
@@ -100,18 +110,18 @@ export default function Login() {
           }}
         >
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800 }}>Bem-vindo de volta</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>Inicia sessão no teu Knowledge Hub</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('login.welcomeBack')}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>{t('login.signInTo')}</div>
           </div>
 
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>Email</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{t('login.email')}</div>
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
               required
-              placeholder="tu@exemplo.com"
+              placeholder={t('login.emailPlaceholder')}
               style={{
                 border: 'none', borderRadius: 11, padding: '13px 14px', fontSize: 14,
                 background: 'rgba(255,255,255,0.94)', color: '#1a1a1a', outline: 'none', width: '100%',
@@ -120,14 +130,14 @@ export default function Login() {
           </div>
 
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>Password</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{t('login.password')}</div>
             <div style={{ position: 'relative', display: 'flex', width: '100%' }}>
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type={reveal ? 'text' : 'password'}
                 required
-                placeholder="Introduz a tua password"
+                placeholder={t('login.passwordPlaceholder')}
                 style={{
                   flex: 1, border: 'none', borderRadius: 11, padding: '13px 42px 13px 14px', fontSize: 14,
                   background: 'rgba(255,255,255,0.94)', color: '#1a1a1a', outline: 'none',
@@ -137,7 +147,7 @@ export default function Login() {
                 onClick={() => setReveal((v) => !v)}
                 style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.55, fontSize: 12, color: '#1a1a1a', fontWeight: 700 }}
               >
-                {reveal ? 'OCULTAR' : 'MOSTRAR'}
+                {reveal ? t('login.hide') : t('login.show')}
               </span>
             </div>
           </div>
@@ -158,13 +168,13 @@ export default function Login() {
               opacity: submitting ? 0.7 : 1,
             }}
           >
-            {submitting ? 'A iniciar sessão…' : 'Entrar'}
+            {submitting ? t('login.signingIn') : t('login.signIn')}
           </button>
 
           <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)' }}>
-            Ainda não tens conta?{' '}
+            {t('login.noAccount')}{' '}
             <Link to="/register" style={{ color: '#fff', fontWeight: 700 }}>
-              Cria uma
+              {t('login.createOne')}
             </Link>
           </div>
         </form>

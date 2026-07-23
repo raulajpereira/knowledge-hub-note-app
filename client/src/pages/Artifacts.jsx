@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
@@ -19,6 +21,8 @@ function timeAgo(dateStr, t) {
 export default function Artifacts() {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const confirm = useConfirm();
+  const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const [artifacts, setArtifacts] = useState([]);
   const [tags, setTags] = useState([]);
@@ -69,6 +73,7 @@ export default function Artifacts() {
     setArtifacts((prev) => [artifact, ...prev]);
     setSelectedId(artifact.id);
     setMode('code');
+    refreshCounts();
   };
 
   const patch = async (payload) => {
@@ -116,9 +121,12 @@ export default function Artifacts() {
 
   const remove = async () => {
     if (!selected) return;
+    const ok = await confirm({ message: t('common.confirmDeleteMessage') });
+    if (!ok) return;
     await api.deleteArtifact(selected.id);
     setArtifacts((prev) => prev.filter((a) => a.id !== selected.id));
     setSelectedId(null);
+    refreshCounts();
   };
 
   const rowStyle = (isActive) => ({

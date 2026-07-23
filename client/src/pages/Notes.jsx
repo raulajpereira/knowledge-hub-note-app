@@ -2,11 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
+
+const URL_ONLY_RE = /^https?:\/\/\S+$/i;
 
 let blockIdCounter = 0;
 const newBlockId = () => `b${Date.now()}-${blockIdCounter++}`;
@@ -29,6 +33,8 @@ function contentFromBlocks(blocks) {
 export default function Notes() {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const confirm = useConfirm();
+  const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const [notes, setNotes] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -158,12 +164,18 @@ export default function Notes() {
     });
     setNotes((prev) => [note, ...prev]);
     setSelectedId(note.id);
+    refreshCounts();
+  };
+
+  const patchNoteById = async (noteId, patch) => {
+    const { note } = await api.updateNote(noteId, patch);
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+    return note;
   };
 
   const patchSelected = async (patch) => {
     if (!selected) return;
-    const { note } = await api.updateNote(selected.id, patch);
-    setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+    return patchNoteById(selected.id, patch);
   };
 
   const openLinkPicker = () => {
@@ -198,9 +210,12 @@ export default function Notes() {
 
   const trashSelected = async () => {
     if (!selected) return;
+    const ok = await confirm({ message: t('common.confirmTrashMessage') });
+    if (!ok) return;
     await api.trashNote(selected.id);
     setNotes((prev) => prev.filter((n) => n.id !== selected.id));
     setSelectedId(null);
+    refreshCounts();
   };
 
   const restoreNote = async (id) => {
@@ -256,19 +271,41 @@ export default function Notes() {
     updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'image', url }]);
   };
 
-  const handlePasteImage = async (e) => {
+  const addLinkBlock = async (url) => {
+    if (!selected) return;
+    const noteId = selected.id;
+    const blockId = newBlockId();
+    const blocksWithNew = [...getBlocks(selected), { id: blockId, type: 'link', url, title: url, favicon: null }];
+    const savedNote = await patchNoteById(noteId, { blocks: blocksWithNew, content: contentFromBlocks(blocksWithNew) });
+    try {
+      const preview = await api.linkPreview(url);
+      const baseBlocks = Array.isArray(savedNote.blocks) && savedNote.blocks.length ? savedNote.blocks : blocksWithNew;
+      const finalBlocks = baseBlocks.map((b) => (b.id === blockId ? { ...b, title: preview.title, favicon: preview.favicon } : b));
+      await patchNoteById(noteId, { blocks: finalBlocks, content: contentFromBlocks(finalBlocks) });
+    } catch {
+      // keep the raw URL as the card's title if the preview fetch failed
+    }
+  };
+
+  const handlePaste = async (e) => {
     if (!selected) return;
     const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type && item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (!file) continue;
-        const { url } = await api.uploadNoteImage(file);
-        addImageBlock(url);
-        break;
+    if (items) {
+      for (const item of items) {
+        if (item.type && item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) continue;
+          const { url } = await api.uploadNoteImage(file);
+          addImageBlock(url);
+          return;
+        }
       }
+    }
+    const text = e.clipboardData?.getData('text/plain')?.trim();
+    if (text && URL_ONLY_RE.test(text)) {
+      e.preventDefault();
+      addLinkBlock(text);
     }
   };
 
@@ -567,7 +604,7 @@ export default function Notes() {
             </div>
           )}
 
-          <div onPaste={handlePasteImage} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div onPaste={handlePaste} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {getBlocks(selected).map((block) =>
               block.type === 'code' ? (
                 <CodeBlock
@@ -591,6 +628,35 @@ export default function Notes() {
                     &times;
                   </span>
                 </div>
+              ) : block.type === 'link' ? (
+                <a
+                  key={block.id}
+                  href={block.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10,
+                    border: `1px solid ${theme.border}`, background: theme.subtleBg, textDecoration: 'none', color: 'inherit',
+                  }}
+                >
+                  {block.favicon ? (
+                    <img src={block.favicon} alt="" style={{ width: 18, height: 18, flexShrink: 0 }} />
+                  ) : (
+                    <Icon name="link" size={16} color={theme.textMuted} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{block.title || block.url}</div>
+                    <div style={{ fontSize: 11.5, color: theme.textMuted, textDecoration: 'underline', textDecorationStyle: 'dashed', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {block.url}
+                    </div>
+                  </div>
+                  <span
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteBlock(block.id); }}
+                    style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}
+                  >
+                    &times;
+                  </span>
+                </a>
               ) : (
                 <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <AutoResizeTextarea
@@ -812,6 +878,30 @@ export default function Notes() {
                 }
                 if (block.type === 'image') {
                   return <img key={block.id} src={block.url} alt="" style={{ maxWidth: '100%', borderRadius: 10, display: 'block' }} />;
+                }
+                if (block.type === 'link') {
+                  return (
+                    <a
+                      key={block.id}
+                      href={block.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10,
+                        border: `1px solid ${theme.border}`, background: theme.subtleBg, textDecoration: 'none', color: 'inherit',
+                      }}
+                    >
+                      {block.favicon ? (
+                        <img src={block.favicon} alt="" style={{ width: 18, height: 18, flexShrink: 0 }} />
+                      ) : (
+                        <Icon name="link" size={16} color={theme.textMuted} />
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{block.title || block.url}</div>
+                        <div style={{ fontSize: 11.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{block.url}</div>
+                      </div>
+                    </a>
+                  );
                 }
                 return (
                   <div key={block.id} style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: theme.textPrimary }}>
