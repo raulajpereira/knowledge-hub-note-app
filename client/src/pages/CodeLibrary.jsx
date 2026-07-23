@@ -7,7 +7,7 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 
-const FOLDER_KINDS = ['program', 'class', 'function_module'];
+const FOLDER_KINDS = ['program', 'class', 'function_module', 'other'];
 const ITEM_TYPES = ['snippet', 'characteristics', 'table', 'data_element', 'domain'];
 const ITEM_ICON = { snippet: 'code', characteristics: 'settings', table: 'archive', data_element: 'tag', domain: 'doc' };
 const optionStyle = { color: '#1a1a1a', background: '#fff' };
@@ -111,6 +111,7 @@ function defaultAttributes(type, folderKind) {
       return {
         caracteristicas: { descricao: '', classeSuperior: '', classeMensagem: '', statusPrograma: 'Não classificado', categoria: '', pacote: '', idiomaOriginal: '', criadoPor: '', criadoEm: '', modificadoPor: '', modificadoEm: '', versaoIdiomaAbap: '', aritmeticaPontoFixo: false, memoriaCompartilhada: false },
         atributos: [],
+        declaracoesProgressivas: [],
       };
     }
     if (folderKind === 'function_module') {
@@ -124,7 +125,7 @@ function defaultAttributes(type, folderKind) {
       };
     }
     return {
-      caracteristicas: { titulo: '', idiomaOriginal: '', status: 'Ativo', criadoPor: '', criadoEm: '', modificadoPor: '', modificadoEm: '', pacote: '', tipo: 'Executable Program', statusAtributo: 'Não classificado', grupoAutorizacoes: '', aplicacao: '', versaoIdiomaAbap: '', aritmeticaPontoFixo: false, bloqueioEditor: false },
+      caracteristicas: { titulo: '', idiomaOriginal: '', status: 'Ativo', criadoPor: '', criadoEm: '', modificadoPor: '', modificadoEm: '', pacote: '', tipo: 'Executable Program', statusAtributo: 'Não classificado', grupoAutorizacoes: '', aplicacao: '', versaoIdiomaAbap: '', nomeDbLogico: '', telaSelecao: '', aritmeticaPontoFixo: false, bloqueioEditor: false },
       textos: { simbolos: [], selecao: [], titulos: [] },
     };
   }
@@ -188,6 +189,8 @@ function ProgramConfig({ a, set, t }) {
           <Field label={t('codeLibrary.pGrupoAutorizacoes')}><input value={c.grupoAutorizacoes || ''} onChange={(e) => setC({ grupoAutorizacoes: e.target.value })} style={inputStyle(theme)} /></Field>
           <Field label={t('codeLibrary.pAplicacao')}><input value={c.aplicacao || ''} onChange={(e) => setC({ aplicacao: e.target.value })} style={inputStyle(theme)} /></Field>
           <Field label={t('codeLibrary.pVersaoIdiomaAbap')}><input value={c.versaoIdiomaAbap || ''} onChange={(e) => setC({ versaoIdiomaAbap: e.target.value })} placeholder="Standard ABAP" style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pNomeDbLogico')}><input value={c.nomeDbLogico || ''} onChange={(e) => setC({ nomeDbLogico: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pTelaSelecao')}><input value={c.telaSelecao || ''} onChange={(e) => setC({ telaSelecao: e.target.value })} style={inputStyle(theme)} /></Field>
           <div style={{ display: 'flex', gap: 18, alignItems: 'center', paddingTop: 18 }}>
             <Checkbox label={t('codeLibrary.pAritmeticaPontoFixo')} checked={c.aritmeticaPontoFixo} onChange={(v) => setC({ aritmeticaPontoFixo: v })} />
             <Checkbox label={t('codeLibrary.pBloqueioEditor')} checked={c.bloqueioEditor} onChange={(v) => setC({ bloqueioEditor: v })} />
@@ -240,6 +243,7 @@ function ClassConfig({ a, set, t }) {
   const c = a.caracteristicas || {};
   const setC = (patch) => set({ caracteristicas: { ...c, ...patch } });
   const atributos = a.atributos || [];
+  const declaracoesProgressivas = a.declaracoesProgressivas || [];
 
   return (
     <>
@@ -265,19 +269,29 @@ function ClassConfig({ a, set, t }) {
           </div>
         </div>
       </Block>
-      <Block title={t('codeLibrary.blockAtributos')} last>
+      <Block title={t('codeLibrary.blockAtributos')}>
         <SubTable
           title={t('codeLibrary.blockAtributos')}
           columns={[
             { key: 'atributo', label: t('codeLibrary.colAtributo'), width: 130 },
             { key: 'tipo', label: t('codeLibrary.colTipoAtrib'), width: 90 },
             { key: 'visibilidade', label: t('codeLibrary.colVisibilidade'), width: 100 },
+            { key: 'readOnly', label: t('codeLibrary.colReadOnly'), type: 'checkbox', width: 90 },
             { key: 'atribuicaoTipo', label: t('codeLibrary.colAtribuicaoTipo'), width: 90 },
             { key: 'tipoReferencia', label: t('codeLibrary.colTipoReferencia'), width: 130 },
             { key: 'descricao', label: t('codeLibrary.colDescricao'), width: 200 },
           ]}
           rows={atributos}
           onChange={(rows) => set({ atributos: rows })}
+          t={t}
+        />
+      </Block>
+      <Block title={t('codeLibrary.blockDeclaracoesProgressivas')} last>
+        <SubTable
+          title={t('codeLibrary.blockDeclaracoesProgressivas')}
+          columns={[{ key: 'grpTipoCtgObjeto', label: t('codeLibrary.colGrpTipoCtgObjeto'), width: 220 }]}
+          rows={declaracoesProgressivas}
+          onChange={(rows) => set({ declaracoesProgressivas: rows })}
           t={t}
         />
       </Block>
@@ -295,6 +309,7 @@ function ParamTable({ title, rows, onChange, t, hasValorProposto, hasOpcional, h
   if (hasOpcional) columns.push({ key: 'opcional', label: t('codeLibrary.colOpcional'), type: 'checkbox', width: 80 });
   if (hasTransfer) columns.push({ key: 'transfer', label: t('codeLibrary.colTransfer'), type: 'checkbox', width: 100 });
   columns.push({ key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 200 });
+  columns.push({ key: 'txtDescr', label: t('codeLibrary.colTxtDescr'), width: 130 });
   return <SubTable title={title} columns={columns} rows={rows} onChange={onChange} t={t} />;
 }
 
@@ -366,7 +381,7 @@ function FunctionModuleConfig({ a, set, t }) {
       <Block title={t('codeLibrary.blockExcecoes')} last>
         <SubTable
           title={t('codeLibrary.blockExcecoes')}
-          columns={[{ key: 'excecao', label: t('codeLibrary.colExcecao'), width: 150 }, { key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 250 }]}
+          columns={[{ key: 'excecao', label: t('codeLibrary.colExcecao'), width: 150 }, { key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 250 }, { key: 'txtDescr', label: t('codeLibrary.colTxtDescr'), width: 130 }]}
           rows={a.excecoes || []}
           onChange={(rows) => set({ excecoes: rows })}
           t={t}
@@ -662,8 +677,9 @@ export default function CodeLibrary() {
     if (selectedFolder) setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, itemCount: Math.max(0, (f.itemCount || 1) - 1) } : f)));
   };
 
-  const kindLabel = (kind) => t(`codeLibrary.kind${kind === 'program' ? 'Program' : kind === 'class' ? 'Class' : 'FunctionModule'}`);
+  const kindLabel = (kind) => t(`codeLibrary.kind${kind === 'program' ? 'Program' : kind === 'class' ? 'Class' : kind === 'function_module' ? 'FunctionModule' : 'Other'}`);
   const configLabel = (kind) => t(`codeLibrary.newConfig${kind === 'class' ? 'Class' : kind === 'function_module' ? 'FunctionModule' : 'Program'}`);
+  const itemTypesFor = (kind) => (kind === 'other' ? ITEM_TYPES.filter((t) => t !== 'characteristics') : ITEM_TYPES);
 
   const rowStyle = (isActive) => ({
     display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
@@ -770,7 +786,7 @@ export default function CodeLibrary() {
                     borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 6, display: 'flex', flexDirection: 'column', gap: 2,
                   }}
                 >
-                  {ITEM_TYPES.map((type) => (
+                  {itemTypesFor(selectedFolder.kind).map((type) => (
                     <div
                       key={type}
                       onClick={() => createItem(type)}

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 
-const FOLDER_KINDS = ['program', 'class', 'function_module'];
+const FOLDER_KINDS = ['program', 'class', 'function_module', 'other'];
 const ITEM_TYPES = ['snippet', 'characteristics', 'table', 'data_element', 'domain'];
 
 const router = Router();

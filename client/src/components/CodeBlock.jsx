@@ -9,7 +9,7 @@ export default function CodeBlock({ value, language, onChange, onLanguageChange,
   const lines = highlightCode(value, language);
 
   return (
-    <div style={{ background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'hidden' }}>
+    <div style={{ background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'visible' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderBottom: `1px solid ${theme.border}`, flexWrap: 'wrap' }}>
         {LANGUAGES.map((lo) => (
           <div
