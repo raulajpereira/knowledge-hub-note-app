@@ -6,6 +6,24 @@ import { encryptSecret, decryptSecret } from '../lib/crypto.js';
 const ANTHROPIC_MODEL = 'claude-3-5-haiku-20241022';
 const OPENAI_MODEL = 'gpt-4o-mini';
 
+// OpenAI-compatible providers don't share a model catalog — "gpt-4o-mini"
+// only exists on OpenAI itself. Pick a sensible default per provider by
+// hostname so a freshly-detected agent works without the user having to
+// know or configure a model name.
+function modelForBaseUrl(baseUrl) {
+  const host = (() => {
+    try {
+      return new URL(baseUrl || 'https://api.openai.com/v1').hostname;
+    } catch {
+      return '';
+    }
+  })();
+  if (host.includes('groq.com')) return 'llama-3.3-70b-versatile';
+  if (host.includes('openrouter.ai')) return 'openai/gpt-4o-mini';
+  if (host.includes('perplexity.ai')) return 'llama-3.1-sonar-small-128k-online';
+  return OPENAI_MODEL;
+}
+
 // The user just names an agent and pastes an API key — nothing else. We
 // figure out which endpoint and request shape to use from the key's own
 // prefix, since every provider mints keys with a distinct one. Anything we
@@ -98,7 +116,7 @@ async function callProvider(agent, messages) {
   const res = await fetch(`${base.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ model: OPENAI_MODEL, messages }),
+    body: JSON.stringify({ model: modelForBaseUrl(agent.baseUrl), messages }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error?.message || `OpenAI-compatible API error (${res.status})`);
