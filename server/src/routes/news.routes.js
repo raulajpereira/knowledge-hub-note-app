@@ -29,6 +29,16 @@ const parser = new Parser({
 const CACHE_MS = 15 * 60 * 1000;
 let cache = { items: [], fetchedAt: 0 };
 
+// Some feeds (e.g. CM) ship titles as literal `<![CDATA[ ... ]]>` text
+// instead of a properly parsed CDATA section, so strip it defensively.
+function cleanText(str) {
+  if (!str) return str;
+  return str
+    .replace(/^\s*<!\[CDATA\[/i, '')
+    .replace(/\]\]>\s*$/i, '')
+    .trim();
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -44,7 +54,7 @@ async function fetchAllFeeds() {
       const feed = await parser.parseURL(f.url);
       return (feed.items || [])
         .slice(0, 3)
-        .map((item) => ({ source: f.source, text: item.title?.trim(), link: item.link }))
+        .map((item) => ({ source: f.source, text: cleanText(item.title), link: item.link }))
         .filter((i) => i.text);
     })
   );
