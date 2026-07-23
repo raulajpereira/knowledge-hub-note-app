@@ -119,7 +119,7 @@ export default function AppLayout() {
             ))}
           </div>
 
-          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <NavLink to="/trash" style={({ isActive }) => navItemStyle(isActive)}>
                 <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -176,10 +176,8 @@ export default function AppLayout() {
               </div>
             </div>
 
-            <div style={{ flex: 1, minHeight: 12, display: 'flex', alignItems: 'center' }}>
-              <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em', color: theme.textMuted }}>
-                <span style={{ color: theme.accentText, fontWeight: 700 }}>{t('common.brand')}</span>{t('common.brandRest')} &copy; {new Date().getFullYear()}
-              </div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em', color: theme.textMuted, textAlign: 'left' }}>
+              <span style={{ color: theme.accentText, fontWeight: 700 }}>{t('common.brand')}</span>{t('common.brandRest')} &copy; {new Date().getFullYear()}
             </div>
           </div>
         </div>

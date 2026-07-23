@@ -132,4 +132,8 @@ export const api = {
   deleteArtifact: (id) => request(`/artifacts/${id}`, { method: 'DELETE' }),
 
   getSapNews: () => request('/sap-news'),
+  listSavedNews: () => request('/sap-news/saved'),
+  saveNews: (payload) => request('/sap-news/saved', { method: 'POST', body: payload }),
+  updateSavedNews: (id, payload) => request(`/sap-news/saved/${id}`, { method: 'PATCH', body: payload }),
+  deleteSavedNews: (id) => request(`/sap-news/saved/${id}`, { method: 'DELETE' }),
 };

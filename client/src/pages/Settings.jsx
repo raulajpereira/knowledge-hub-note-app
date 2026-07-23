@@ -148,8 +148,8 @@ function AgentRow({ agent, theme, t }) {
           onChange={(e) => updateAgent(agent.id, { provider: e.target.value })}
           style={{ border: `1px solid ${theme.border}`, borderRadius: 7, padding: '5px 8px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary }}
         >
-          <option value="anthropic">Anthropic</option>
-          <option value="openai">OpenAI-compatible</option>
+          <option value="anthropic" style={{ color: '#1a1a1a', background: '#fff' }}>Anthropic</option>
+          <option value="openai" style={{ color: '#1a1a1a', background: '#fff' }}>OpenAI-compatible</option>
         </select>
         <span
           onClick={async () => {
@@ -363,7 +363,7 @@ export default function Settings() {
             style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 12.5, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary }}
           >
             {AUTO_LOCK_OPTIONS.map((s) => (
-              <option key={s} value={s}>
+              <option key={s} value={s} style={{ color: '#1a1a1a', background: '#fff' }}>
                 {s < 60 ? t('settings.seconds', { n: s }) : t(s === 60 ? 'settings.minute' : 'settings.minutes', { n: s / 60 })}
               </option>
             ))}

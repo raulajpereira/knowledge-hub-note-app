@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import Parser from 'rss-parser';
+import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 
-// SAP's official newsroom feed. Best-effort fetch, same pattern as
-// news.routes.js — a feed being down just means an empty/stale list,
-// never a broken page.
-const FEEDS = [{ source: 'SAP News', url: 'https://news.sap.com/feed/' }];
+// SAP's official newsroom feed plus community writing tagged ABAP on
+// Medium. Best-effort fetch, same pattern as news.routes.js — a feed
+// being down just means an empty/stale list, never a broken page.
+const FEEDS = [
+  { source: 'SAP News', url: 'https://news.sap.com/feed/' },
+  { source: 'Medium ABAP', url: 'https://medium.com/feed/tag/abap' },
+];
 
 const parser = new Parser({
   timeout: 8000,
@@ -79,6 +83,37 @@ router.get('/', async (req, res) => {
     }
   }
   res.json({ items: cache.items, fetchedAt: cache.fetchedAt });
+});
+
+router.get('/saved', async (req, res) => {
+  const saved = await prisma.savedNews.findMany({ where: { userId: req.effectiveUserId }, orderBy: { createdAt: 'desc' } });
+  res.json({ saved });
+});
+
+router.post('/saved', async (req, res) => {
+  const { newsId, title, source, image, summary, content, link } = req.body || {};
+  if (!newsId || !title || !link) return res.status(400).json({ error: 'newsId, title and link are required' });
+  const saved = await prisma.savedNews.upsert({
+    where: { userId_newsId: { userId: req.effectiveUserId, newsId } },
+    update: {},
+    create: { userId: req.effectiveUserId, newsId, title, source, image, summary, content, link },
+  });
+  res.status(201).json({ saved });
+});
+
+router.patch('/saved/:id', async (req, res) => {
+  const existing = await prisma.savedNews.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!existing) return res.status(404).json({ error: 'Saved item not found' });
+  const { read } = req.body || {};
+  const saved = await prisma.savedNews.update({ where: { id: existing.id }, data: { read: read !== undefined ? !!read : existing.read } });
+  res.json({ saved });
+});
+
+router.delete('/saved/:id', async (req, res) => {
+  const existing = await prisma.savedNews.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!existing) return res.status(404).json({ error: 'Saved item not found' });
+  await prisma.savedNews.delete({ where: { id: existing.id } });
+  res.status(204).end();
 });
 
 export default router;

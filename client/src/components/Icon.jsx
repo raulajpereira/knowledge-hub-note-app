@@ -113,6 +113,12 @@ const PATHS = {
     ['path', { d: 'M13.5 4.5H19.5V10.5' }],
     ['path', { d: 'M19 5 11 13' }],
   ],
+  bookmark: [
+    ['path', { d: 'M6.5 4.5h11a1 1 0 0 1 1 1V20l-6.5-4-6.5 4V5.5a1 1 0 0 1 1-1Z' }],
+  ],
+  bookmarkFilled: [
+    ['path', { d: 'M6.5 4.5h11a1 1 0 0 1 1 1V20l-6.5-4-6.5 4V5.5a1 1 0 0 1 1-1Z', fillOverride: true }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

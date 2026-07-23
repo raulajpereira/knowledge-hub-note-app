@@ -10,7 +10,14 @@ import CodeBlock from '../components/CodeBlock.jsx';
 import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
 
-const URL_ONLY_RE = /^https?:\/\/\S+$/i;
+const URL_ONLY_RE = /^(https?:\/\/|www\.)\S+$/i;
+
+function normalizeUrl(text) {
+  // Drop trailing punctuation that tends to hitch a ride when a URL is
+  // copied as part of a sentence (e.g. "see https://sap.com.").
+  const trimmed = text.replace(/[.,;:)\]]+$/, '');
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
 
 let blockIdCounter = 0;
 const newBlockId = () => `b${Date.now()}-${blockIdCounter++}`;
@@ -305,7 +312,7 @@ export default function Notes() {
     const text = e.clipboardData?.getData('text/plain')?.trim();
     if (text && URL_ONLY_RE.test(text)) {
       e.preventDefault();
-      addLinkBlock(text);
+      addLinkBlock(normalizeUrl(text));
     }
   };
 

@@ -149,8 +149,8 @@ export default function Tasks() {
             onChange={(e) => setSortBy(e.target.value)}
             style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 8px', fontSize: 12, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', cursor: 'pointer' }}
           >
-            <option value="recent">{t('tasks.sortBy')}: {t('tasks.sortRecent')}</option>
-            <option value="priority">{t('tasks.sortBy')}: {t('tasks.sortPriority')}</option>
+            <option value="recent" style={{ color: '#1a1a1a', background: '#fff' }}>{t('tasks.sortBy')}: {t('tasks.sortRecent')}</option>
+            <option value="priority" style={{ color: '#1a1a1a', background: '#fff' }}>{t('tasks.sortBy')}: {t('tasks.sortPriority')}</option>
           </select>
         </div>
 

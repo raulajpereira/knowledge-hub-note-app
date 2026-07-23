@@ -26,6 +26,7 @@ model User {
   issues          Issue[]
   agents          Agent[]
   artifacts       Artifact[]
+  savedNews       SavedNews[]
   teamOwner       User?    @relation("TeamMembers", fields: [teamOwnerId], references: [id], onDelete: SetNull)
   teamMembers     User[]   @relation("TeamMembers")
 
@@ -232,4 +233,24 @@ model Artifact {
 
   @@index([userId])
   @@map("artifacts")
+}
+
+model SavedNews {
+  id        String   @id @default(uuid())
+  userId    String
+  newsId    String
+  title     String
+  source    String?
+  image     String?  @db.Text
+  summary   String?  @db.Text
+  content   String?  @db.LongText
+  link      String   @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, newsId])
+  @@index([userId])
+  @@map("saved_news")
 }
