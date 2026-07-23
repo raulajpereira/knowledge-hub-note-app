@@ -23,7 +23,6 @@ const NAV_ITEMS = [
   { to: '/issues', key: 'issues', icon: 'archive', countKey: 'issues' },
   { to: '/artifacts', key: 'artifacts', icon: 'code', countKey: 'artifacts' },
   { to: '/calendar', key: 'calendar', icon: 'calendar' },
-  { to: '/sap-news', key: 'sapNews', icon: 'news' },
 ];
 
 function userInitials(name) {
@@ -117,6 +116,17 @@ export default function AppLayout() {
                 )}
               </NavLink>
             ))}
+          </div>
+
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <NavLink to="/sap-news" style={({ isActive }) => navItemStyle(isActive)}>
+              <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name="news" size={18} />
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {t('nav.sapNews')}
+              </span>
+            </NavLink>
           </div>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
