@@ -415,6 +415,7 @@ export const translations = {
       savedToNotes: 'Saved to Notes ✓',
       saveAsNote: 'Save as Note',
       saving: 'Saving…',
+      model: 'Model',
     },
   },
   pt: {
@@ -833,6 +834,7 @@ export const translations = {
       savedToNotes: 'Guardado nas Notas ✓',
       saveAsNote: 'Guardar como Nota',
       saving: 'A guardar…',
+      model: 'Modelo',
     },
   },
 };

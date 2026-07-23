@@ -194,6 +194,7 @@ model Agent {
   name        String
   provider    String   @default("anthropic") // "anthropic" | "openai"
   baseUrl     String?
+  model       String?
   tokenCipher String   @db.Text
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())

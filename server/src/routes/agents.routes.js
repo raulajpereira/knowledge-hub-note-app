@@ -3,25 +3,54 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { encryptSecret, decryptSecret } from '../lib/crypto.js';
 
-const ANTHROPIC_MODEL = 'claude-3-5-haiku-20241022';
-const OPENAI_MODEL = 'gpt-4o-mini';
+// Providers don't share a model catalog — "gpt-4o-mini" only exists on
+// OpenAI itself, for example. Each provider/host gets a short list of
+// sensible models; the first entry is the default used until the user
+// picks a different one in the chat widget.
+const MODEL_CATALOG = {
+  anthropic: [
+    { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+    { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+  ],
+  'api.openai.com': [
+    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
+    { id: 'gpt-4o', label: 'GPT-4o' },
+    { id: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { id: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+  ],
+  'api.groq.com': [
+    { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile' },
+    { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
+    { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+    { id: 'gemma2-9b-it', label: 'Gemma 2 9B' },
+  ],
+  'openrouter.ai': [
+    { id: 'openai/gpt-4o-mini', label: 'GPT-4o mini (OpenRouter)' },
+    { id: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet (OpenRouter)' },
+    { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (OpenRouter)' },
+    { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash (OpenRouter)' },
+  ],
+  'api.perplexity.ai': [
+    { id: 'llama-3.1-sonar-small-128k-online', label: 'Sonar Small (online)' },
+    { id: 'llama-3.1-sonar-large-128k-online', label: 'Sonar Large (online)' },
+  ],
+};
 
-// OpenAI-compatible providers don't share a model catalog — "gpt-4o-mini"
-// only exists on OpenAI itself. Pick a sensible default per provider by
-// hostname so a freshly-detected agent works without the user having to
-// know or configure a model name.
-function modelForBaseUrl(baseUrl) {
+function modelOptionsFor(agent) {
+  if (agent.provider === 'anthropic') return MODEL_CATALOG.anthropic;
   const host = (() => {
     try {
-      return new URL(baseUrl || 'https://api.openai.com/v1').hostname;
+      return new URL(agent.baseUrl || 'https://api.openai.com/v1').hostname;
     } catch {
       return '';
     }
   })();
-  if (host.includes('groq.com')) return 'llama-3.3-70b-versatile';
-  if (host.includes('openrouter.ai')) return 'openai/gpt-4o-mini';
-  if (host.includes('perplexity.ai')) return 'llama-3.1-sonar-small-128k-online';
-  return OPENAI_MODEL;
+  return MODEL_CATALOG[host] || MODEL_CATALOG['api.openai.com'];
+}
+
+function defaultModelFor(agent) {
+  return modelOptionsFor(agent)[0].id;
 }
 
 // The user just names an agent and pastes an API key — nothing else. We
@@ -46,7 +75,7 @@ router.use(requireAuth);
 
 function toPublic(agent) {
   const { tokenCipher, ...rest } = agent;
-  return { ...rest, hasToken: !!tokenCipher };
+  return { ...rest, hasToken: !!tokenCipher, modelOptions: modelOptionsFor(agent) };
 }
 
 router.get('/', async (req, res) => {
@@ -76,7 +105,7 @@ router.patch('/:id', async (req, res) => {
   const agent = await prisma.agent.findFirst({ where: { id: req.params.id, userId: req.userId } });
   if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
-  const { name, token, active } = req.body || {};
+  const { name, token, active, model } = req.body || {};
   const data = {};
   if (name !== undefined) data.name = name.trim() || agent.name;
   if (token !== undefined && token !== '') {
@@ -84,8 +113,13 @@ router.patch('/:id', async (req, res) => {
     data.provider = provider;
     data.baseUrl = baseUrl;
     data.tokenCipher = encryptSecret(token);
+    data.model = null; // provider changed with the new token — fall back to its default model
   }
   if (active !== undefined) data.active = !!active;
+  if (model !== undefined) {
+    const options = modelOptionsFor({ ...agent, ...data });
+    data.model = options.some((o) => o.id === model) ? model : null;
+  }
 
   const updated = await prisma.agent.update({ where: { id: agent.id }, data });
   res.json({ agent: toPublic(updated) });
@@ -100,12 +134,13 @@ router.delete('/:id', async (req, res) => {
 
 async function callProvider(agent, messages) {
   const token = decryptSecret(agent.tokenCipher);
+  const model = agent.model || defaultModelFor(agent);
 
   if (agent.provider === 'anthropic') {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': token, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 512, messages }),
+      body: JSON.stringify({ model, max_tokens: 512, messages }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error?.message || `Anthropic API error (${res.status})`);
@@ -116,7 +151,7 @@ async function callProvider(agent, messages) {
   const res = await fetch(`${base.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ model: modelForBaseUrl(agent.baseUrl), messages }),
+    body: JSON.stringify({ model, messages }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error?.message || `OpenAI-compatible API error (${res.status})`);

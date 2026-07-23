@@ -52,7 +52,7 @@ function SaveAsNoteButton({ content, agentName, theme, t }) {
 export default function AgentChatWidget() {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { agents } = useAgents();
+  const { agents, updateAgent } = useAgents();
   const activeAgents = agents.filter((a) => a.active);
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
@@ -131,6 +131,24 @@ export default function AgentChatWidget() {
             <span onClick={clearHistory} title={t('agent.clear')} style={{ cursor: 'pointer', opacity: 0.5, fontSize: 11, fontWeight: 600, padding: '4px 6px', flexShrink: 0, color: theme.textMuted }}>
               {t('agent.clear')}
             </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: `1px solid ${theme.border}` }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: theme.textMuted, flexShrink: 0 }}>{t('agent.model')}</span>
+            <select
+              value={currentAgent.model || currentAgent.modelOptions?.[0]?.id || ''}
+              onChange={(e) => updateAgent(currentAgent.id, { model: e.target.value })}
+              style={{
+                flex: 1, minWidth: 0, fontSize: 11.5, border: `1px solid ${theme.border}`, borderRadius: 6,
+                padding: '3px 6px', background: theme.subtleBg, color: theme.textPrimary,
+              }}
+            >
+              {(currentAgent.modelOptions || []).map((m) => (
+                <option key={m.id} value={m.id} style={{ color: '#1a1a1a', background: '#fff' }}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
