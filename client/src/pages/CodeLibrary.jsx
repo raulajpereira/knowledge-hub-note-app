@@ -36,240 +36,531 @@ function Checkbox({ label, checked, onChange }) {
   );
 }
 
+function Radio({ label, checked, onChange }) {
+  const { theme } = useTheme();
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: theme.textPrimary, cursor: 'pointer' }}>
+      <input type="radio" checked={!!checked} onChange={onChange} />
+      {label}
+    </label>
+  );
+}
+
+function Block({ title, children, last }) {
+  const { theme } = useTheme();
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 20, marginBottom: 20, borderBottom: last ? 'none' : `1px solid ${theme.border}` }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: theme.textPrimary }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function SubTable({ title, columns, rows, onChange, t }) {
+  const { theme } = useTheme();
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted }}>{title}</span>
+        <span
+          onClick={() => onChange([...rows, Object.fromEntries(columns.map((c) => [c.key, c.type === 'checkbox' ? false : '']))])}
+          style={{ fontSize: 11.5, fontWeight: 700, color: theme.accentText, cursor: 'pointer' }}
+        >
+          + {t('codeLibrary.addRow')}
+        </span>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 'max-content' }}>
+          {rows.map((row, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {columns.map((c) =>
+                c.type === 'checkbox' ? (
+                  <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, width: c.width || 90, flexShrink: 0, color: theme.textPrimary }}>
+                    <input
+                      type="checkbox"
+                      checked={!!row[c.key]}
+                      onChange={(e) => onChange(rows.map((r, i) => (i === idx ? { ...r, [c.key]: e.target.checked } : r)))}
+                    />
+                    {c.label}
+                  </label>
+                ) : (
+                  <input
+                    key={c.key}
+                    value={row[c.key] || ''}
+                    onChange={(e) => onChange(rows.map((r, i) => (i === idx ? { ...r, [c.key]: e.target.value } : r)))}
+                    placeholder={c.label}
+                    style={{ ...inputStyle(theme), width: c.width || 120, flexShrink: 0 }}
+                  />
+                )
+              )}
+              <span onClick={() => onChange(rows.filter((_, i) => i !== idx))} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 4px', flexShrink: 0 }}>
+                &times;
+              </span>
+            </div>
+          ))}
+          {rows.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('codeLibrary.noRows')}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function defaultAttributes(type, folderKind) {
   if (type === 'characteristics') {
-    if (folderKind === 'class') return { description: '', category: 'Usual ABAP Class', instantiation: 'Public', superclass: '', interfaces: '' };
-    if (folderKind === 'function_module') return { shortText: '', functionGroup: '', remoteEnabled: false, updateModule: false, importing: '', exporting: '', changing: '', exceptions: '' };
-    return { title: '', programType: 'Executable Program', status: 'Active', application: '', package: '', fixedPointArithmetic: false, unicodeChecksActive: true };
+    if (folderKind === 'class') {
+      return {
+        caracteristicas: { descricao: '', classeSuperior: '', classeMensagem: '', statusPrograma: 'Não classificado', categoria: '', pacote: '', idiomaOriginal: '', criadoPor: '', criadoEm: '', modificadoPor: '', modificadoEm: '', versaoIdiomaAbap: '', aritmeticaPontoFixo: false, memoriaCompartilhada: false },
+        atributos: [],
+      };
+    }
+    if (folderKind === 'function_module') {
+      return {
+        caracteristicas: {
+          grupoFuncoes: '', textoBreve: '', tipoProcesso: 'normal', acessibilidade: '', contratoInterface: '', basXmlSuportado: false,
+          atualizacaoTipo: 'imediato', responsavel: '', ultimoModificador: '', dataModificacao: '', pacote: '', nomePrograma: '', nomeInclude: '', idiomaOriginal: '',
+          naoLiberado: false, bloqueioProcesso: false, global: false,
+        },
+        importacao: [], exportacao: [], modificacao: [], tabelas: [], excecoes: [],
+      };
+    }
+    return {
+      caracteristicas: { titulo: '', idiomaOriginal: '', status: 'Ativo', criadoPor: '', criadoEm: '', modificadoPor: '', modificadoEm: '', pacote: '', tipo: 'Executable Program', statusAtributo: 'Não classificado', grupoAutorizacoes: '', aplicacao: '', versaoIdiomaAbap: '', aritmeticaPontoFixo: false, bloqueioEditor: false },
+      textos: { simbolos: [], selecao: [], titulos: [] },
+    };
   }
-  if (type === 'table') return { shortText: '', deliveryClass: 'A', tableCategory: 'Transparent Table', fields: [] };
-  if (type === 'data_element') return { shortText: '', domain: '', headingText: '', mediumText: '', longText: '' };
-  if (type === 'domain') return { dataType: 'CHAR', length: '10', decimals: '0', outputLength: '', lowerCase: false, valueTable: '', fixedValues: [] };
+  if (type === 'table') {
+    return {
+      entrega: { classeEntrega: 'A', dataBrowser: '' },
+      campos: [],
+      tecnico: { categoriaDados: '', ctgTamanho: '', tpCompartmt: '', buffering: 'naoPermitido', bufferingTipo: { registosIndividuais: false, areaGeral: false, totalmenteArmazenado: false }, numCamposChave: '', registrarLog: false, avaliacao: '', motivo: '' },
+    };
+  }
+  if (type === 'data_element') {
+    return {
+      ctgDds: { categoria: 'dominio', dominio: '', tipoIncorporadoCtgDados: '', tipoIncorporadoCompr: '', nomeTipoRefer: '', refInstaladoTpDados: '', refInstaladoCompr: '' },
+      denominacaoCampo: { curto: '', medio: '', longo: '', heading: '' },
+    };
+  }
+  if (type === 'domain') {
+    return {
+      definicao: { ctgDados: 'CHAR', numPosicoes: '', casasDecimais: '', comprSaida: '', rotinaConversao: '', sinal: false, minusculas: false },
+      valoresFixos: [],
+    };
+  }
   return {};
 }
 
-function ProgramCharacteristics({ a, set, t }) {
+function ProgramConfig({ a, set, t }) {
   const { theme } = useTheme();
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-      <Field label={t('codeLibrary.fieldTitle')}>
-        <input value={a.title || ''} onChange={(e) => set({ title: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldProgramType')}>
-        <select value={a.programType || 'Executable Program'} onChange={(e) => set({ programType: e.target.value })} style={inputStyle(theme)}>
-          {['Executable Program', 'Include Program', 'Module Pool', 'Function Group', 'Class Pool', 'Interface Pool', 'Subroutine Pool'].map((v) => (
-            <option key={v} value={v} style={optionStyle}>{v}</option>
-          ))}
-        </select>
-      </Field>
-      <Field label={t('codeLibrary.fieldStatus')}>
-        <select value={a.status || 'Active'} onChange={(e) => set({ status: e.target.value })} style={inputStyle(theme)}>
-          {['Active', 'Inactive'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
-        </select>
-      </Field>
-      <Field label={t('codeLibrary.fieldApplication')}>
-        <input value={a.application || ''} onChange={(e) => set({ application: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldPackage')}>
-        <input value={a.package || ''} onChange={(e) => set({ package: e.target.value })} placeholder="$TMP, ZPACKAGE..." style={inputStyle(theme)} />
-      </Field>
-      <div style={{ display: 'flex', gap: 18, alignItems: 'center', paddingTop: 18 }}>
-        <Checkbox label={t('codeLibrary.fieldFixedPoint')} checked={a.fixedPointArithmetic} onChange={(v) => set({ fixedPointArithmetic: v })} />
-        <Checkbox label={t('codeLibrary.fieldUnicodeChecks')} checked={a.unicodeChecksActive !== false} onChange={(v) => set({ unicodeChecksActive: v })} />
-      </div>
-    </div>
-  );
-}
-
-function ClassCharacteristics({ a, set, t }) {
-  const { theme } = useTheme();
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-      <div style={{ gridColumn: '1 / -1' }}>
-        <Field label={t('codeLibrary.fieldDescription')}>
-          <input value={a.description || ''} onChange={(e) => set({ description: e.target.value })} style={inputStyle(theme)} />
-        </Field>
-      </div>
-      <Field label={t('codeLibrary.fieldCategory')}>
-        <select value={a.category || 'Usual ABAP Class'} onChange={(e) => set({ category: e.target.value })} style={inputStyle(theme)}>
-          {['Usual ABAP Class', 'Exception Class', 'Persistent Class', 'Test Class'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
-        </select>
-      </Field>
-      <Field label={t('codeLibrary.fieldInstantiation')}>
-        <select value={a.instantiation || 'Public'} onChange={(e) => set({ instantiation: e.target.value })} style={inputStyle(theme)}>
-          {['Public', 'Protected', 'Private'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
-        </select>
-      </Field>
-      <Field label={t('codeLibrary.fieldSuperclass')}>
-        <input value={a.superclass || ''} onChange={(e) => set({ superclass: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldInterfaces')}>
-        <input value={a.interfaces || ''} onChange={(e) => set({ interfaces: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-    </div>
-  );
-}
-
-function FunctionModuleCharacteristics({ a, set, t }) {
-  const { theme } = useTheme();
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-      <div style={{ gridColumn: '1 / -1' }}>
-        <Field label={t('codeLibrary.fieldShortText')}>
-          <input value={a.shortText || ''} onChange={(e) => set({ shortText: e.target.value })} style={inputStyle(theme)} />
-        </Field>
-      </div>
-      <Field label={t('codeLibrary.fieldFunctionGroup')}>
-        <input value={a.functionGroup || ''} onChange={(e) => set({ functionGroup: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <div style={{ display: 'flex', gap: 18, alignItems: 'center', paddingTop: 18 }}>
-        <Checkbox label={t('codeLibrary.fieldRemoteEnabled')} checked={a.remoteEnabled} onChange={(v) => set({ remoteEnabled: v })} />
-        <Checkbox label={t('codeLibrary.fieldUpdateModule')} checked={a.updateModule} onChange={(v) => set({ updateModule: v })} />
-      </div>
-      <Field label={t('codeLibrary.fieldImporting')}>
-        <input value={a.importing || ''} onChange={(e) => set({ importing: e.target.value })} placeholder="IV_PARAM TYPE STRING, ..." style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldExporting')}>
-        <input value={a.exporting || ''} onChange={(e) => set({ exporting: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldChanging')}>
-        <input value={a.changing || ''} onChange={(e) => set({ changing: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldExceptions')}>
-        <input value={a.exceptions || ''} onChange={(e) => set({ exceptions: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-    </div>
-  );
-}
-
-function TableForm({ a, set, t }) {
-  const { theme } = useTheme();
-  const fields = a.fields || [];
-  const setField = (idx, patch) => set({ fields: fields.map((f, i) => (i === idx ? { ...f, ...patch } : f)) });
-  const addField = () => set({ fields: [...fields, { fieldName: '', keyFlag: false, dataElement: '', dataType: '', length: '', notNull: false }] });
-  const removeField = (idx) => set({ fields: fields.filter((_, i) => i !== idx) });
+  const c = a.caracteristicas || {};
+  const setC = (patch) => set({ caracteristicas: { ...c, ...patch } });
+  const textos = a.textos || {};
+  const setTextos = (patch) => set({ textos: { ...textos, ...patch } });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-        <Field label={t('codeLibrary.fieldShortText')}>
-          <input value={a.shortText || ''} onChange={(e) => set({ shortText: e.target.value })} style={inputStyle(theme)} />
-        </Field>
-        <Field label={t('codeLibrary.fieldDeliveryClass')}>
-          <select value={a.deliveryClass || 'A'} onChange={(e) => set({ deliveryClass: e.target.value })} style={inputStyle(theme)}>
-            {['A', 'C', 'L', 'G', 'E', 'S', 'W'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
-          </select>
-        </Field>
-        <Field label={t('codeLibrary.fieldTableCategory')}>
-          <select value={a.tableCategory || 'Transparent Table'} onChange={(e) => set({ tableCategory: e.target.value })} style={inputStyle(theme)}>
-            {['Transparent Table', 'Structure', 'Pooled Table', 'Cluster Table'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
-          </select>
-        </Field>
-      </div>
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('codeLibrary.fieldsHeader')}</span>
-          <span onClick={addField} style={{ fontSize: 11.5, fontWeight: 700, color: theme.accentText, cursor: 'pointer' }}>+ {t('codeLibrary.addField')}</span>
+    <>
+      <Block title={t('codeLibrary.blockCaracteristicas')}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <Field label={t('codeLibrary.pTitulo')}><input value={c.titulo || ''} onChange={(e) => setC({ titulo: e.target.value })} style={inputStyle(theme)} /></Field>
+          </div>
+          <Field label={t('codeLibrary.pIdiomaOriginal')}><input value={c.idiomaOriginal || ''} onChange={(e) => setC({ idiomaOriginal: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pStatus')}>
+            <select value={c.status || 'Ativo'} onChange={(e) => setC({ status: e.target.value })} style={inputStyle(theme)}>
+              {['Ativo', 'Inativo'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
+            </select>
+          </Field>
+          <Field label={t('codeLibrary.pCriadoPor')}><input value={c.criadoPor || ''} onChange={(e) => setC({ criadoPor: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pCriadoEm')}><input value={c.criadoEm || ''} onChange={(e) => setC({ criadoEm: e.target.value })} placeholder="DD.MM.AAAA" style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pModificadoPor')}><input value={c.modificadoPor || ''} onChange={(e) => setC({ modificadoPor: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pModificadoEm')}><input value={c.modificadoEm || ''} onChange={(e) => setC({ modificadoEm: e.target.value })} placeholder="DD.MM.AAAA" style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pPacote')}><input value={c.pacote || ''} onChange={(e) => setC({ pacote: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pTipo')}>
+            <select value={c.tipo || 'Executable Program'} onChange={(e) => setC({ tipo: e.target.value })} style={inputStyle(theme)}>
+              {['Executable Program', 'Include Program', 'Module Pool', 'Function Group', 'Class Pool', 'Interface Pool', 'Subroutine Pool'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
+            </select>
+          </Field>
+          <Field label={t('codeLibrary.pStatusAtributo')}>
+            <select value={c.statusAtributo || 'Não classificado'} onChange={(e) => setC({ statusAtributo: e.target.value })} style={inputStyle(theme)}>
+              {['Não classificado', 'Programa teste', 'Programa standard SAP', 'Programa cliente'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
+            </select>
+          </Field>
+          <Field label={t('codeLibrary.pGrupoAutorizacoes')}><input value={c.grupoAutorizacoes || ''} onChange={(e) => setC({ grupoAutorizacoes: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pAplicacao')}><input value={c.aplicacao || ''} onChange={(e) => setC({ aplicacao: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.pVersaoIdiomaAbap')}><input value={c.versaoIdiomaAbap || ''} onChange={(e) => setC({ versaoIdiomaAbap: e.target.value })} placeholder="Standard ABAP" style={inputStyle(theme)} /></Field>
+          <div style={{ display: 'flex', gap: 18, alignItems: 'center', paddingTop: 18 }}>
+            <Checkbox label={t('codeLibrary.pAritmeticaPontoFixo')} checked={c.aritmeticaPontoFixo} onChange={(v) => setC({ aritmeticaPontoFixo: v })} />
+            <Checkbox label={t('codeLibrary.pBloqueioEditor')} checked={c.bloqueioEditor} onChange={(v) => setC({ bloqueioEditor: v })} />
+          </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {fields.map((f, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-              <input value={f.fieldName} onChange={(e) => setField(idx, { fieldName: e.target.value })} placeholder={t('codeLibrary.colField')} style={{ ...inputStyle(theme), width: 130 }} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: theme.textPrimary }}>
-                <input type="checkbox" checked={!!f.keyFlag} onChange={(e) => setField(idx, { keyFlag: e.target.checked })} /> {t('codeLibrary.colKey')}
-              </label>
-              <input value={f.dataElement} onChange={(e) => setField(idx, { dataElement: e.target.value })} placeholder={t('codeLibrary.colDataElement')} style={{ ...inputStyle(theme), width: 140 }} />
-              <input value={f.dataType} onChange={(e) => setField(idx, { dataType: e.target.value })} placeholder={t('codeLibrary.colType')} style={{ ...inputStyle(theme), width: 80 }} />
-              <input value={f.length} onChange={(e) => setField(idx, { length: e.target.value })} placeholder={t('codeLibrary.colLength')} style={{ ...inputStyle(theme), width: 70 }} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: theme.textPrimary }}>
-                <input type="checkbox" checked={!!f.notNull} onChange={(e) => setField(idx, { notNull: e.target.checked })} /> {t('codeLibrary.colNotNull')}
-              </label>
-              <span onClick={() => removeField(idx)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 4px' }}>&times;</span>
+      </Block>
+      <Block title={t('codeLibrary.blockTextos')} last>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <SubTable
+            title={t('codeLibrary.tSimbolos')}
+            columns={[
+              { key: 'nome', label: t('codeLibrary.colNome'), width: 90 },
+              { key: 'texto', label: t('codeLibrary.colTexto'), width: 220 },
+              { key: 'compr', label: t('codeLibrary.colCompr'), width: 70 },
+              { key: 'max', label: t('codeLibrary.colMax'), width: 70 },
+            ]}
+            rows={textos.simbolos || []}
+            onChange={(rows) => setTextos({ simbolos: rows })}
+            t={t}
+          />
+          <SubTable
+            title={t('codeLibrary.tSelecao')}
+            columns={[
+              { key: 'nome', label: t('codeLibrary.colNome'), width: 90 },
+              { key: 'texto', label: t('codeLibrary.colTexto'), width: 240 },
+              { key: 'referDict', label: t('codeLibrary.colReferDict'), type: 'checkbox', width: 130 },
+            ]}
+            rows={textos.selecao || []}
+            onChange={(rows) => setTextos({ selecao: rows })}
+            t={t}
+          />
+          <SubTable
+            title={t('codeLibrary.tTitulos')}
+            columns={[
+              { key: 'nome', label: t('codeLibrary.colNome'), width: 90 },
+              { key: 'texto', label: t('codeLibrary.colTexto'), width: 240 },
+            ]}
+            rows={textos.titulos || []}
+            onChange={(rows) => setTextos({ titulos: rows })}
+            t={t}
+          />
+        </div>
+      </Block>
+    </>
+  );
+}
+
+function ClassConfig({ a, set, t }) {
+  const { theme } = useTheme();
+  const c = a.caracteristicas || {};
+  const setC = (patch) => set({ caracteristicas: { ...c, ...patch } });
+  const atributos = a.atributos || [];
+
+  return (
+    <>
+      <Block title={t('codeLibrary.blockCaracteristicas')}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <Field label={t('codeLibrary.cDescricao')}><input value={c.descricao || ''} onChange={(e) => setC({ descricao: e.target.value })} style={inputStyle(theme)} /></Field>
+          </div>
+          <Field label={t('codeLibrary.cClasseSuperior')}><input value={c.classeSuperior || ''} onChange={(e) => setC({ classeSuperior: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cClasseMensagem')}><input value={c.classeMensagem || ''} onChange={(e) => setC({ classeMensagem: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cStatusPrograma')}><input value={c.statusPrograma || ''} onChange={(e) => setC({ statusPrograma: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cCategoria')}><input value={c.categoria || ''} onChange={(e) => setC({ categoria: e.target.value })} placeholder="6 Classe de comportamento" style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cPacote')}><input value={c.pacote || ''} onChange={(e) => setC({ pacote: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cIdiomaOriginal')}><input value={c.idiomaOriginal || ''} onChange={(e) => setC({ idiomaOriginal: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cCriadoPor')}><input value={c.criadoPor || ''} onChange={(e) => setC({ criadoPor: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cCriadoEm')}><input value={c.criadoEm || ''} onChange={(e) => setC({ criadoEm: e.target.value })} placeholder="DD.MM.AAAA" style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cModificadoPor')}><input value={c.modificadoPor || ''} onChange={(e) => setC({ modificadoPor: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cModificadoEm')}><input value={c.modificadoEm || ''} onChange={(e) => setC({ modificadoEm: e.target.value })} placeholder="DD.MM.AAAA" style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.cVersaoIdiomaAbap')}><input value={c.versaoIdiomaAbap || ''} onChange={(e) => setC({ versaoIdiomaAbap: e.target.value })} placeholder="Standard ABAP" style={inputStyle(theme)} /></Field>
+          <div style={{ display: 'flex', gap: 18, alignItems: 'center', paddingTop: 18 }}>
+            <Checkbox label={t('codeLibrary.cAritmeticaPontoFixo')} checked={c.aritmeticaPontoFixo} onChange={(v) => setC({ aritmeticaPontoFixo: v })} />
+            <Checkbox label={t('codeLibrary.cMemoriaCompartilhada')} checked={c.memoriaCompartilhada} onChange={(v) => setC({ memoriaCompartilhada: v })} />
+          </div>
+        </div>
+      </Block>
+      <Block title={t('codeLibrary.blockAtributos')} last>
+        <SubTable
+          title={t('codeLibrary.blockAtributos')}
+          columns={[
+            { key: 'atributo', label: t('codeLibrary.colAtributo'), width: 130 },
+            { key: 'tipo', label: t('codeLibrary.colTipoAtrib'), width: 90 },
+            { key: 'visibilidade', label: t('codeLibrary.colVisibilidade'), width: 100 },
+            { key: 'atribuicaoTipo', label: t('codeLibrary.colAtribuicaoTipo'), width: 90 },
+            { key: 'tipoReferencia', label: t('codeLibrary.colTipoReferencia'), width: 130 },
+            { key: 'descricao', label: t('codeLibrary.colDescricao'), width: 200 },
+          ]}
+          rows={atributos}
+          onChange={(rows) => set({ atributos: rows })}
+          t={t}
+        />
+      </Block>
+    </>
+  );
+}
+
+function ParamTable({ title, rows, onChange, t, hasValorProposto, hasOpcional, hasTransfer }) {
+  const columns = [
+    { key: 'nome', label: t('codeLibrary.colNomeParam'), width: 130 },
+    { key: 'atribTipo', label: t('codeLibrary.colAtribTipo'), width: 80 },
+    { key: 'tipoReferencia', label: t('codeLibrary.colTipoReferencia'), width: 130 },
+  ];
+  if (hasValorProposto) columns.push({ key: 'valorProposto', label: t('codeLibrary.colValorProposto'), width: 110 });
+  if (hasOpcional) columns.push({ key: 'opcional', label: t('codeLibrary.colOpcional'), type: 'checkbox', width: 80 });
+  if (hasTransfer) columns.push({ key: 'transfer', label: t('codeLibrary.colTransfer'), type: 'checkbox', width: 100 });
+  columns.push({ key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 200 });
+  return <SubTable title={title} columns={columns} rows={rows} onChange={onChange} t={t} />;
+}
+
+function FunctionModuleConfig({ a, set, t }) {
+  const { theme } = useTheme();
+  const c = a.caracteristicas || {};
+  const setC = (patch) => set({ caracteristicas: { ...c, ...patch } });
+
+  return (
+    <>
+      <Block title={t('codeLibrary.blockCaracteristicas')}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <Field label={t('codeLibrary.fGrupoFuncoes')}><input value={c.grupoFuncoes || ''} onChange={(e) => setC({ grupoFuncoes: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.fTextoBreve')}><input value={c.textoBreve || ''} onChange={(e) => setC({ textoBreve: e.target.value })} style={inputStyle(theme)} /></Field>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, marginBottom: 8 }}>{t('codeLibrary.fTipoProcesso')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Radio label={t('codeLibrary.fTipoProcessoNormal')} checked={c.tipoProcesso === 'normal'} onChange={() => setC({ tipoProcesso: 'normal' })} />
+            <Radio label={t('codeLibrary.fTipoProcessoRemoto')} checked={c.tipoProcesso === 'remoto'} onChange={() => setC({ tipoProcesso: 'remoto' })} />
+            {c.tipoProcesso === 'remoto' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginLeft: 24 }}>
+                <Field label={t('codeLibrary.fAcessibilidade')}><input value={c.acessibilidade || ''} onChange={(e) => setC({ acessibilidade: e.target.value })} style={inputStyle(theme)} /></Field>
+                <Field label={t('codeLibrary.fContratoInterface')}><input value={c.contratoInterface || ''} onChange={(e) => setC({ contratoInterface: e.target.value })} style={inputStyle(theme)} /></Field>
+                <Checkbox label={t('codeLibrary.fBasXmlSuportado')} checked={c.basXmlSuportado} onChange={(v) => setC({ basXmlSuportado: v })} />
+              </div>
+            )}
+            <Radio label={t('codeLibrary.fTipoProcessoAtualizacao')} checked={c.tipoProcesso === 'atualizacao'} onChange={() => setC({ tipoProcesso: 'atualizacao' })} />
+            {c.tipoProcesso === 'atualizacao' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 24 }}>
+                <Radio label={t('codeLibrary.fAtualizacaoImediato')} checked={c.atualizacaoTipo === 'imediato'} onChange={() => setC({ atualizacaoTipo: 'imediato' })} />
+                <Radio label={t('codeLibrary.fAtualizacaoImediatoSemPoster')} checked={c.atualizacaoTipo === 'imediatoSemPoster'} onChange={() => setC({ atualizacaoTipo: 'imediatoSemPoster' })} />
+                <Radio label={t('codeLibrary.fAtualizacaoRetardado')} checked={c.atualizacaoTipo === 'retardado'} onChange={() => setC({ atualizacaoTipo: 'retardado' })} />
+                <Radio label={t('codeLibrary.fAtualizacaoExecColetiva')} checked={c.atualizacaoTipo === 'execColetiva'} onChange={() => setC({ atualizacaoTipo: 'execColetiva' })} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <Field label={t('codeLibrary.fResponsavel')}><input value={c.responsavel || ''} onChange={(e) => setC({ responsavel: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.fUltimoModificador')}><input value={c.ultimoModificador || ''} onChange={(e) => setC({ ultimoModificador: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.fDataModificacao')}><input value={c.dataModificacao || ''} onChange={(e) => setC({ dataModificacao: e.target.value })} placeholder="DD.MM.AAAA" style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.fPacote')}><input value={c.pacote || ''} onChange={(e) => setC({ pacote: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.fNomePrograma')}><input value={c.nomePrograma || ''} onChange={(e) => setC({ nomePrograma: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.fNomeInclude')}><input value={c.nomeInclude || ''} onChange={(e) => setC({ nomeInclude: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.fIdiomaOriginal')}><input value={c.idiomaOriginal || ''} onChange={(e) => setC({ idiomaOriginal: e.target.value })} style={inputStyle(theme)} /></Field>
+          <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', paddingTop: 18 }}>
+            <Checkbox label={t('codeLibrary.fNaoLiberado')} checked={c.naoLiberado} onChange={(v) => setC({ naoLiberado: v })} />
+            <Checkbox label={t('codeLibrary.fBloqueioProcesso')} checked={c.bloqueioProcesso} onChange={(v) => setC({ bloqueioProcesso: v })} />
+            <Checkbox label={t('codeLibrary.fGlobal')} checked={c.global} onChange={(v) => setC({ global: v })} />
+          </div>
+        </div>
+      </Block>
+
+      <Block title={t('codeLibrary.blockImportacao')}>
+        <ParamTable title={t('codeLibrary.blockImportacao')} rows={a.importacao || []} onChange={(rows) => set({ importacao: rows })} t={t} hasValorProposto hasOpcional hasTransfer />
+      </Block>
+      <Block title={t('codeLibrary.blockExportacao')}>
+        <ParamTable title={t('codeLibrary.blockExportacao')} rows={a.exportacao || []} onChange={(rows) => set({ exportacao: rows })} t={t} hasTransfer />
+      </Block>
+      <Block title={t('codeLibrary.blockModificacao')}>
+        <ParamTable title={t('codeLibrary.blockModificacao')} rows={a.modificacao || []} onChange={(rows) => set({ modificacao: rows })} t={t} hasValorProposto hasOpcional hasTransfer />
+      </Block>
+      <Block title={t('codeLibrary.blockTabelas')}>
+        <ParamTable title={t('codeLibrary.blockTabelas')} rows={a.tabelas || []} onChange={(rows) => set({ tabelas: rows })} t={t} hasOpcional />
+      </Block>
+      <Block title={t('codeLibrary.blockExcecoes')} last>
+        <SubTable
+          title={t('codeLibrary.blockExcecoes')}
+          columns={[{ key: 'excecao', label: t('codeLibrary.colExcecao'), width: 150 }, { key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 250 }]}
+          rows={a.excecoes || []}
+          onChange={(rows) => set({ excecoes: rows })}
+          t={t}
+        />
+      </Block>
+    </>
+  );
+}
+
+function TableConfig({ a, set, t }) {
+  const { theme } = useTheme();
+  const entrega = a.entrega || {};
+  const setEntrega = (patch) => set({ entrega: { ...entrega, ...patch } });
+  const tecnico = a.tecnico || {};
+  const setTecnico = (patch) => set({ tecnico: { ...tecnico, ...patch } });
+  const bufferingTipo = tecnico.bufferingTipo || {};
+  const setBufferingTipo = (patch) => setTecnico({ bufferingTipo: { ...bufferingTipo, ...patch } });
+
+  return (
+    <>
+      <Block title={t('codeLibrary.blockEntrega')}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <Field label={t('codeLibrary.tbClasseEntrega')}>
+            <select value={entrega.classeEntrega || 'A'} onChange={(e) => setEntrega({ classeEntrega: e.target.value })} style={inputStyle(theme)}>
+              {['A', 'C', 'L', 'G', 'E', 'S', 'W'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
+            </select>
+          </Field>
+          <Field label={t('codeLibrary.tbDataBrowser')}><input value={entrega.dataBrowser || ''} onChange={(e) => setEntrega({ dataBrowser: e.target.value })} style={inputStyle(theme)} /></Field>
+        </div>
+      </Block>
+
+      <Block title={t('codeLibrary.blockCampos')}>
+        <SubTable
+          title={t('codeLibrary.blockCampos')}
+          columns={[
+            { key: 'campo', label: t('codeLibrary.colCampo'), width: 120 },
+            { key: 'chave', label: t('codeLibrary.colChave'), type: 'checkbox', width: 70 },
+            { key: 'valObrigatorio', label: t('codeLibrary.colValObrigatorio'), type: 'checkbox', width: 80 },
+            { key: 'elementoDados', label: t('codeLibrary.colElementoDados'), width: 130 },
+            { key: 'ctgDados', label: t('codeLibrary.colCtgDados'), width: 90 },
+            { key: 'compr', label: t('codeLibrary.colCompr'), width: 70 },
+            { key: 'casasDecimais', label: t('codeLibrary.colCasasDecimais'), width: 90 },
+            { key: 'descricaoBreve', label: t('codeLibrary.colDescricaoBreve'), width: 200 },
+          ]}
+          rows={a.campos || []}
+          onChange={(rows) => set({ campos: rows })}
+          t={t}
+        />
+      </Block>
+
+      <Block title={t('codeLibrary.blockTecnico')} last>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <Field label={t('codeLibrary.tbCategoriaDados')}><input value={tecnico.categoriaDados || ''} onChange={(e) => setTecnico({ categoriaDados: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.tbCtgTamanho')}><input value={tecnico.ctgTamanho || ''} onChange={(e) => setTecnico({ ctgTamanho: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.tbTpCompartmt')}><input value={tecnico.tpCompartmt || ''} onChange={(e) => setTecnico({ tpCompartmt: e.target.value })} style={inputStyle(theme)} /></Field>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, marginBottom: 8 }}>{t('codeLibrary.tbBuffering')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Radio label={t('codeLibrary.tbBufferingNaoPermitido')} checked={tecnico.buffering === 'naoPermitido'} onChange={() => setTecnico({ buffering: 'naoPermitido' })} />
+            <Radio label={t('codeLibrary.tbBufferingPermitidoDesativado')} checked={tecnico.buffering === 'permitidoDesativado'} onChange={() => setTecnico({ buffering: 'permitidoDesativado' })} />
+            <Radio label={t('codeLibrary.tbBufferingAtivado')} checked={tecnico.buffering === 'ativado'} onChange={() => setTecnico({ buffering: 'ativado' })} />
+          </div>
+        </div>
+
+        {tecnico.buffering === 'ativado' && (
+          <div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, marginBottom: 8 }}>{t('codeLibrary.tbBufferingTipo')}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Checkbox label={t('codeLibrary.tbRegistosIndividuais')} checked={bufferingTipo.registosIndividuais} onChange={(v) => setBufferingTipo({ registosIndividuais: v })} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Checkbox label={t('codeLibrary.tbAreaGeral')} checked={bufferingTipo.areaGeral} onChange={(v) => setBufferingTipo({ areaGeral: v })} />
+                {bufferingTipo.areaGeral && (
+                  <input value={tecnico.numCamposChave || ''} onChange={(e) => setTecnico({ numCamposChave: e.target.value })} placeholder={t('codeLibrary.tbNumCamposChave')} style={{ ...inputStyle(theme), width: 140 }} />
+                )}
+              </div>
+              <Checkbox label={t('codeLibrary.tbTotalmenteArmazenado')} checked={bufferingTipo.totalmenteArmazenado} onChange={(v) => setBufferingTipo({ totalmenteArmazenado: v })} />
             </div>
-          ))}
-          {fields.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('codeLibrary.noFields')}</div>}
-        </div>
-      </div>
-    </div>
-  );
-}
+          </div>
+        )}
 
-function DataElementForm({ a, set, t }) {
-  const { theme } = useTheme();
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-      <div style={{ gridColumn: '1 / -1' }}>
-        <Field label={t('codeLibrary.fieldShortText')}>
-          <input value={a.shortText || ''} onChange={(e) => set({ shortText: e.target.value })} style={inputStyle(theme)} />
-        </Field>
-      </div>
-      <Field label={t('codeLibrary.fieldDomain')}>
-        <input value={a.domain || ''} onChange={(e) => set({ domain: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldHeadingText')}>
-        <input value={a.headingText || ''} onChange={(e) => set({ headingText: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldMediumText')}>
-        <input value={a.mediumText || ''} onChange={(e) => set({ mediumText: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-      <Field label={t('codeLibrary.fieldLongText')}>
-        <input value={a.longText || ''} onChange={(e) => set({ longText: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-    </div>
-  );
-}
-
-function DomainForm({ a, set, t }) {
-  const { theme } = useTheme();
-  const values = a.fixedValues || [];
-  const setValue = (idx, patch) => set({ fixedValues: values.map((v, i) => (i === idx ? { ...v, ...patch } : v)) });
-  const addValue = () => set({ fixedValues: [...values, { low: '', high: '', text: '' }] });
-  const removeValue = (idx) => set({ fixedValues: values.filter((_, i) => i !== idx) });
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14 }}>
-        <Field label={t('codeLibrary.fieldDataType')}>
-          <select value={a.dataType || 'CHAR'} onChange={(e) => set({ dataType: e.target.value })} style={inputStyle(theme)}>
-            {['CHAR', 'NUMC', 'DEC', 'DATS', 'TIMS', 'INT4', 'CUKY', 'QUAN', 'STRG'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
-          </select>
-        </Field>
-        <Field label={t('codeLibrary.fieldLength')}>
-          <input value={a.length || ''} onChange={(e) => set({ length: e.target.value })} style={inputStyle(theme)} />
-        </Field>
-        <Field label={t('codeLibrary.fieldDecimals')}>
-          <input value={a.decimals || ''} onChange={(e) => set({ decimals: e.target.value })} style={inputStyle(theme)} />
-        </Field>
-        <Field label={t('codeLibrary.fieldOutputLength')}>
-          <input value={a.outputLength || ''} onChange={(e) => set({ outputLength: e.target.value })} style={inputStyle(theme)} />
-        </Field>
-      </div>
-      <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-        <Checkbox label={t('codeLibrary.fieldLowerCase')} checked={a.lowerCase} onChange={(v) => set({ lowerCase: v })} />
-      </div>
-      <Field label={t('codeLibrary.fieldValueTable')}>
-        <input value={a.valueTable || ''} onChange={(e) => set({ valueTable: e.target.value })} style={inputStyle(theme)} />
-      </Field>
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('codeLibrary.fixedValuesHeader')}</span>
-          <span onClick={addValue} style={{ fontSize: 11.5, fontWeight: 700, color: theme.accentText, cursor: 'pointer' }}>+ {t('codeLibrary.addFixedValue')}</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {values.map((v, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input value={v.low} onChange={(e) => setValue(idx, { low: e.target.value })} placeholder={t('codeLibrary.colLow')} style={{ ...inputStyle(theme), width: 100 }} />
-              <input value={v.high} onChange={(e) => setValue(idx, { high: e.target.value })} placeholder={t('codeLibrary.colHigh')} style={{ ...inputStyle(theme), width: 100 }} />
-              <input value={v.text} onChange={(e) => setValue(idx, { text: e.target.value })} placeholder={t('codeLibrary.colText')} style={{ ...inputStyle(theme), flex: 1 }} />
-              <span onClick={() => removeValue(idx)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 4px' }}>&times;</span>
+        <div>
+          <Checkbox label={t('codeLibrary.tbRegistrarLog')} checked={tecnico.registrarLog} onChange={(v) => setTecnico({ registrarLog: v })} />
+          {tecnico.registrarLog && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 12 }}>
+              <Field label={t('codeLibrary.tbAvaliacao')}><input value={tecnico.avaliacao || ''} onChange={(e) => setTecnico({ avaliacao: e.target.value })} style={inputStyle(theme)} /></Field>
+              <Field label={t('codeLibrary.tbMotivo')}><input value={tecnico.motivo || ''} onChange={(e) => setTecnico({ motivo: e.target.value })} style={inputStyle(theme)} /></Field>
             </div>
-          ))}
-          {values.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('codeLibrary.noFixedValues')}</div>}
+          )}
         </div>
-      </div>
-    </div>
+      </Block>
+    </>
+  );
+}
+
+function DataElementConfig({ a, set, t }) {
+  const { theme } = useTheme();
+  const ctgDds = a.ctgDds || {};
+  const setCtgDds = (patch) => set({ ctgDds: { ...ctgDds, ...patch } });
+  const denom = a.denominacaoCampo || {};
+  const setDenom = (patch) => set({ denominacaoCampo: { ...denom, ...patch } });
+
+  return (
+    <>
+      <Block title={t('codeLibrary.blockCtgDds')}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Radio label={t('codeLibrary.deDominio')} checked={ctgDds.categoria === 'dominio'} onChange={() => setCtgDds({ categoria: 'dominio' })} />
+          {ctgDds.categoria === 'dominio' && (
+            <div style={{ marginLeft: 24 }}>
+              <Field label={t('codeLibrary.deDominio')}><input value={ctgDds.dominio || ''} onChange={(e) => setCtgDds({ dominio: e.target.value })} style={inputStyle(theme)} /></Field>
+            </div>
+          )}
+
+          <Radio label={t('codeLibrary.deTipoIncorporado')} checked={ctgDds.categoria === 'tipoIncorporado'} onChange={() => setCtgDds({ categoria: 'tipoIncorporado' })} />
+          {ctgDds.categoria === 'tipoIncorporado' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginLeft: 24 }}>
+              <Field label={t('codeLibrary.deCtgDados')}><input value={ctgDds.tipoIncorporadoCtgDados || ''} onChange={(e) => setCtgDds({ tipoIncorporadoCtgDados: e.target.value })} style={inputStyle(theme)} /></Field>
+              <Field label={t('codeLibrary.deCompr')}><input value={ctgDds.tipoIncorporadoCompr || ''} onChange={(e) => setCtgDds({ tipoIncorporadoCompr: e.target.value })} style={inputStyle(theme)} /></Field>
+            </div>
+          )}
+
+          <Radio label={t('codeLibrary.deTipoReferencia')} checked={ctgDds.categoria === 'tipoReferencia'} onChange={() => setCtgDds({ categoria: 'tipoReferencia' })} />
+          {ctgDds.categoria === 'tipoReferencia' && (
+            <div style={{ marginLeft: 24 }}>
+              <Field label={t('codeLibrary.deNomeTipoRefer')}><input value={ctgDds.nomeTipoRefer || ''} onChange={(e) => setCtgDds({ nomeTipoRefer: e.target.value })} style={inputStyle(theme)} /></Field>
+            </div>
+          )}
+
+          <Radio label={t('codeLibrary.deReferenciaTipoInstalado')} checked={ctgDds.categoria === 'referenciaTipoInstalado'} onChange={() => setCtgDds({ categoria: 'referenciaTipoInstalado' })} />
+          {ctgDds.categoria === 'referenciaTipoInstalado' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginLeft: 24 }}>
+              <Field label={t('codeLibrary.deTpDados')}><input value={ctgDds.refInstaladoTpDados || ''} onChange={(e) => setCtgDds({ refInstaladoTpDados: e.target.value })} style={inputStyle(theme)} /></Field>
+              <Field label={t('codeLibrary.deCompr')}><input value={ctgDds.refInstaladoCompr || ''} onChange={(e) => setCtgDds({ refInstaladoCompr: e.target.value })} style={inputStyle(theme)} /></Field>
+            </div>
+          )}
+        </div>
+      </Block>
+
+      <Block title={t('codeLibrary.blockDenominacaoCampo')} last>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <Field label={t('codeLibrary.deDenomCurto')}><input value={denom.curto || ''} onChange={(e) => setDenom({ curto: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.deDenomMedio')}><input value={denom.medio || ''} onChange={(e) => setDenom({ medio: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.deDenomLongo')}><input value={denom.longo || ''} onChange={(e) => setDenom({ longo: e.target.value })} style={inputStyle(theme)} /></Field>
+          <Field label={t('codeLibrary.deDenomHeading')}><input value={denom.heading || ''} onChange={(e) => setDenom({ heading: e.target.value })} style={inputStyle(theme)} /></Field>
+        </div>
+      </Block>
+    </>
+  );
+}
+
+function DomainConfig({ a, set, t }) {
+  const { theme } = useTheme();
+  const def = a.definicao || {};
+  const setDef = (patch) => set({ definicao: { ...def, ...patch } });
+
+  return (
+    <>
+      <Block title={t('codeLibrary.blockDefinicao')}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            <Field label={t('codeLibrary.doCtgDados')}>
+              <select value={def.ctgDados || 'CHAR'} onChange={(e) => setDef({ ctgDados: e.target.value })} style={inputStyle(theme)}>
+                {['CHAR', 'NUMC', 'DEC', 'DATS', 'TIMS', 'INT4', 'CUKY', 'QUAN', 'STRG'].map((v) => <option key={v} value={v} style={optionStyle}>{v}</option>)}
+              </select>
+            </Field>
+            <Field label={t('codeLibrary.doNumPosicoes')}><input value={def.numPosicoes || ''} onChange={(e) => setDef({ numPosicoes: e.target.value })} style={inputStyle(theme)} /></Field>
+            <Field label={t('codeLibrary.doCasasDecimais')}><input value={def.casasDecimais || ''} onChange={(e) => setDef({ casasDecimais: e.target.value })} style={inputStyle(theme)} /></Field>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <Field label={t('codeLibrary.doComprSaida')}><input value={def.comprSaida || ''} onChange={(e) => setDef({ comprSaida: e.target.value })} style={inputStyle(theme)} /></Field>
+            <Field label={t('codeLibrary.doRotinaConversao')}><input value={def.rotinaConversao || ''} onChange={(e) => setDef({ rotinaConversao: e.target.value })} style={inputStyle(theme)} /></Field>
+          </div>
+          <div style={{ display: 'flex', gap: 18 }}>
+            <Checkbox label={t('codeLibrary.doSinal')} checked={def.sinal} onChange={(v) => setDef({ sinal: v })} />
+            <Checkbox label={t('codeLibrary.doMinusculas')} checked={def.minusculas} onChange={(v) => setDef({ minusculas: v })} />
+          </div>
+        </div>
+      </Block>
+
+      <Block title={t('codeLibrary.blockValoresFixos')} last>
+        <SubTable
+          title={t('codeLibrary.blockValoresFixos')}
+          columns={[
+            { key: 'inferior', label: t('codeLibrary.colInferior'), width: 110 },
+            { key: 'superior', label: t('codeLibrary.colSuperior'), width: 110 },
+            { key: 'texto', label: t('codeLibrary.colTextoBreve'), width: 240 },
+          ]}
+          rows={a.valoresFixos || []}
+          onChange={(rows) => set({ valoresFixos: rows })}
+          t={t}
+        />
+      </Block>
+    </>
   );
 }
 
@@ -336,16 +627,16 @@ export default function CodeLibrary() {
 
   const createItem = async (type) => {
     if (!selectedFolder) return;
-    const names = {
-      snippet: t('codeLibrary.newSnippetName'),
-      characteristics: t('codeLibrary.characteristicsName'),
-      table: t('codeLibrary.newTableName'),
-      data_element: t('codeLibrary.newDataElementName'),
-      domain: t('codeLibrary.newDomainName'),
+    const nameKeys = {
+      snippet: 'newSnippetName',
+      characteristics: selectedFolder.kind === 'class' ? 'nameConfigClass' : selectedFolder.kind === 'function_module' ? 'nameConfigFunctionModule' : 'nameConfigProgram',
+      table: 'nameTable',
+      data_element: 'nameDataElement',
+      domain: 'nameDomain',
     };
     const { item } = await api.createCodeItem(selectedFolder.id, {
       type,
-      name: names[type],
+      name: t(`codeLibrary.${nameKeys[type]}`),
       language: 'abap',
       content: type === 'snippet' ? '' : null,
       attributes: type === 'snippet' ? null : defaultAttributes(type, selectedFolder.kind),
@@ -372,6 +663,7 @@ export default function CodeLibrary() {
   };
 
   const kindLabel = (kind) => t(`codeLibrary.kind${kind === 'program' ? 'Program' : kind === 'class' ? 'Class' : 'FunctionModule'}`);
+  const configLabel = (kind) => t(`codeLibrary.newConfig${kind === 'class' ? 'Class' : kind === 'function_module' ? 'FunctionModule' : 'Program'}`);
 
   const rowStyle = (isActive) => ({
     display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
@@ -485,7 +777,7 @@ export default function CodeLibrary() {
                       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: theme.textPrimary }}
                     >
                       <Icon name={ITEM_ICON[type]} size={14} />
-                      {t(`codeLibrary.new${type === 'snippet' ? 'Snippet' : type === 'characteristics' ? 'Characteristics' : type === 'table' ? 'Table' : type === 'data_element' ? 'DataElement' : 'Domain'}`)}
+                      {type === 'characteristics' ? configLabel(selectedFolder.kind) : t(`codeLibrary.new${type === 'snippet' ? 'Snippet' : type === 'table' ? 'Table' : type === 'data_element' ? 'DataElement' : 'Domain'}`)}
                     </div>
                   ))}
                 </div>
@@ -527,22 +819,22 @@ export default function CodeLibrary() {
             )}
 
             {selectedItem.type === 'characteristics' && selectedFolder?.kind === 'program' && (
-              <ProgramCharacteristics a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
+              <ProgramConfig a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
             )}
             {selectedItem.type === 'characteristics' && selectedFolder?.kind === 'class' && (
-              <ClassCharacteristics a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
+              <ClassConfig a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
             )}
             {selectedItem.type === 'characteristics' && selectedFolder?.kind === 'function_module' && (
-              <FunctionModuleCharacteristics a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
+              <FunctionModuleConfig a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
             )}
             {selectedItem.type === 'table' && (
-              <TableForm a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
+              <TableConfig a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
             )}
             {selectedItem.type === 'data_element' && (
-              <DataElementForm a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
+              <DataElementConfig a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
             )}
             {selectedItem.type === 'domain' && (
-              <DomainForm a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
+              <DomainConfig a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
             )}
           </>
         )}
