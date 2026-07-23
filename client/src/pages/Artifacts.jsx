@@ -19,15 +19,20 @@ export default function Artifacts() {
   const { theme } = useTheme();
   const location = useLocation();
   const [artifacts, setArtifacts] = useState([]);
+  const [tags, setTags] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [mode, setMode] = useState('preview');
   const [loading, setLoading] = useState(true);
   const [titleDraft, setTitleDraft] = useState('');
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [newTagInput, setNewTagInput] = useState('');
 
   const load = async () => {
-    const { artifacts } = await api.listArtifacts();
+    const [{ artifacts }, { tags }] = await Promise.all([api.listArtifacts(), api.listTags()]);
     setArtifacts(artifacts);
+    setTags(tags);
     setLoading(false);
   };
 
@@ -52,7 +57,9 @@ export default function Artifacts() {
 
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
+    setDescriptionDraft(selected?.description ?? '');
     setMode('preview');
+    setTagPickerOpen(false);
   }, [selected?.id]);
 
   const addArtifact = async () => {
@@ -73,6 +80,36 @@ export default function Artifacts() {
     const { artifact } = await api.updateArtifact(selected.id, { title: titleDraft });
     setArtifacts((prev) => prev.map((a) => (a.id === artifact.id ? artifact : a)));
     setTitleDraft(artifact.title);
+  };
+
+  const commitDescription = async () => {
+    if (!selected || descriptionDraft === (selected.description || '')) return;
+    const { artifact } = await api.updateArtifact(selected.id, { description: descriptionDraft });
+    setArtifacts((prev) => prev.map((a) => (a.id === artifact.id ? artifact : a)));
+    setDescriptionDraft(artifact.description || '');
+  };
+
+  const addTagToArtifact = async (tagName) => {
+    if (!selected || selected.tags?.includes(tagName)) return;
+    await patch({ tags: [...(selected.tags || []), tagName] });
+  };
+
+  const removeTagFromArtifact = async (tagName) => {
+    if (!selected) return;
+    await patch({ tags: (selected.tags || []).filter((t) => t !== tagName) });
+  };
+
+  const createAndAddTag = async () => {
+    const name = newTagInput.trim();
+    if (!name) return;
+    let tag = tags.find((t) => t.name.toLowerCase() === name.toLowerCase());
+    if (!tag) {
+      const res = await api.createTag({ name });
+      tag = res.tag;
+      setTags((prev) => [...prev, tag]);
+    }
+    await addTagToArtifact(tag.name);
+    setNewTagInput('');
   };
 
   const remove = async () => {
@@ -123,7 +160,18 @@ export default function Artifacts() {
           {filtered.map((a) => (
             <div key={a.id} onClick={() => setSelectedId(a.id)} style={rowStyle(selected?.id === a.id)}>
               <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
-              <div style={{ fontSize: 11.5, color: theme.textMuted }}>{timeAgo(a.updatedAt)}</div>
+              <div style={{ fontSize: 11.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {a.description || timeAgo(a.updatedAt)}
+              </div>
+              {a.tags?.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {a.tags.map((tagName) => (
+                    <span key={tagName} style={{ fontSize: 10, fontWeight: 700, background: theme.subtleBg, color: theme.textMuted, padding: '2px 6px', borderRadius: 5 }}>
+                      {tagName}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -158,6 +206,74 @@ export default function Artifacts() {
               Delete
             </button>
           </div>
+
+          <input
+            value={descriptionDraft}
+            onChange={(e) => setDescriptionDraft(e.target.value)}
+            onBlur={commitDescription}
+            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+            placeholder="Add a description..."
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textMuted }}
+          />
+
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            {(selected.tags || []).map((tagName) => {
+              const tag = tags.find((t) => t.name === tagName);
+              const hue = tag?.hue ?? 290;
+              return (
+                <span
+                  key={tagName}
+                  style={{
+                    fontSize: 11, fontWeight: 700, background: `oklch(0.55 0.19 ${hue} / 0.16)`, color: `oklch(0.5 0.2 ${hue})`,
+                    padding: '3px 6px 3px 9px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  {tagName}
+                  <span onClick={() => removeTagFromArtifact(tagName)} style={{ cursor: 'pointer', opacity: 0.7 }}>
+                    &times;
+                  </span>
+                </span>
+              );
+            })}
+            <span
+              onClick={() => setTagPickerOpen((v) => !v)}
+              style={{ fontSize: 11, fontWeight: 700, border: `1px dashed ${theme.border}`, color: theme.textMuted, padding: '3px 9px', borderRadius: 6, cursor: 'pointer' }}
+            >
+              + Tag
+            </span>
+          </div>
+
+          {tagPickerOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 10 }}>
+              {tags.filter((t) => !(selected.tags || []).includes(t.name)).length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {tags
+                    .filter((t) => !(selected.tags || []).includes(t.name))
+                    .map((t) => (
+                      <span
+                        key={t.id}
+                        onClick={() => addTagToArtifact(t.name)}
+                        style={{ fontSize: 11, fontWeight: 700, background: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.textPrimary, padding: '4px 9px', borderRadius: 6, cursor: 'pointer' }}
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={newTagInput}
+                  onChange={(e) => setNewTagInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && createAndAddTag()}
+                  placeholder="New tag name..."
+                  style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
+                />
+                <button onClick={createAndAddTag} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  Add
+                </button>
+              </div>
+            </div>
+          )}
 
           <div style={{ flex: 1, minHeight: 0, border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'hidden', display: mode === 'preview' ? 'block' : 'none' }}>
             <iframe title="Artifact preview" srcDoc={selected.html} sandbox="allow-scripts" style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
