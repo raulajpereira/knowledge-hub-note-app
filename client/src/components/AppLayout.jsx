@@ -14,13 +14,13 @@ import logoDefault from '../assets/logo-default.png';
 
 const NAV_ITEMS = [
   { to: '/', key: 'home', icon: 'home', end: true },
-  { to: '/notes', key: 'notes', icon: 'doc' },
-  { to: '/voice', key: 'voice', icon: 'mic' },
-  { to: '/tasks', key: 'tasks', icon: 'check' },
-  { to: '/tags', key: 'tags', icon: 'tag' },
+  { to: '/notes', key: 'notes', icon: 'doc', countKey: 'notes' },
+  { to: '/voice', key: 'voice', icon: 'mic', countKey: 'voice' },
+  { to: '/tasks', key: 'tasks', icon: 'check', countKey: 'tasks' },
+  { to: '/tags', key: 'tags', icon: 'tag', countKey: 'tags' },
   { to: '/passwords', key: 'passwords', icon: 'lock' },
   { to: '/issues', key: 'issues', icon: 'archive' },
-  { to: '/artifacts', key: 'artifacts', icon: 'code' },
+  { to: '/artifacts', key: 'artifacts', icon: 'code', countKey: 'artifacts' },
   { to: '/calendar', key: 'calendar', icon: 'calendar' },
 ];
 
@@ -38,9 +38,18 @@ export default function AppLayout() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [issueAlerts, setIssueAlerts] = useState([]);
+  const [counts, setCounts] = useState({});
 
   useEffect(() => {
     api.listIssues().then(({ issues }) => setIssueAlerts(getIssueAlerts(issues)));
+  }, []);
+
+  useEffect(() => {
+    Promise.all([api.listNotes(), api.listVoiceNotes(), api.listTasks(), api.listTags(), api.listArtifacts()]).then(
+      ([{ notes }, { voiceNotes }, { tasks }, { tags }, { artifacts }]) => {
+        setCounts({ notes: notes.length, voice: voiceNotes.length, tasks: tasks.length, tags: tags.length, artifacts: artifacts.length });
+      }
+    );
   }, []);
 
   const navItemStyle = (isActive) => ({
@@ -96,6 +105,16 @@ export default function AppLayout() {
                 <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {t(`nav.${item.key}`)}
                 </span>
+                {item.countKey && counts[item.countKey] > 0 && (
+                  <span
+                    style={{
+                      fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
+                      background: theme.subtleBg, color: theme.textMuted,
+                    }}
+                  >
+                    {counts[item.countKey]}
+                  </span>
+                )}
                 {item.soon && (
                   <span style={{ fontSize: 9.5, fontWeight: 700, opacity: 0.5, flexShrink: 0 }}>SOON</span>
                 )}

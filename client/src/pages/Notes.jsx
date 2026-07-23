@@ -6,8 +6,7 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
-import LinkableTextBlock from '../components/LinkableTextBlock.jsx';
-import { findBacklinks, renameLinksInNotes } from '../lib/wikiLinks.js';
+import { highlightCode, tokenColor } from '../lib/highlight.js';
 
 let blockIdCounter = 0;
 const newBlockId = () => `b${Date.now()}-${blockIdCounter++}`;
@@ -50,6 +49,11 @@ export default function Notes() {
   const [versions, setVersions] = useState([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [restoringId, setRestoringId] = useState(null);
+  const [linkPickerOpen, setLinkPickerOpen] = useState(false);
+  const [linkPickerSearch, setLinkPickerSearch] = useState('');
+  const [linkPickTarget, setLinkPickTarget] = useState(null);
+  const [linkLabelDraft, setLinkLabelDraft] = useState('');
+  const [previewNoteId, setPreviewNoteId] = useState(null);
 
   const load = async () => {
     const [{ notes }, { folders }, { tags }] = await Promise.all([api.listNotes(), api.listFolders(), api.listTags()]);
@@ -93,9 +97,16 @@ export default function Notes() {
   const selected = notes.find((n) => n.id === selectedId) || filtered[0] || null;
 
   const backlinks = useMemo(
-    () => (selected ? findBacklinks(notes, selected.title, selected.id) : []),
+    () => (selected ? notes.filter((n) => n.id !== selected.id && (n.links || []).some((l) => l.noteId === selected.id)) : []),
     [notes, selected]
   );
+
+  const linkCandidates = useMemo(() => {
+    if (!selected) return [];
+    const linkedIds = new Set((selected.links || []).map((l) => l.noteId));
+    const q = linkPickerSearch.trim().toLowerCase();
+    return notes.filter((n) => n.id !== selected.id && !linkedIds.has(n.id) && (!q || n.title.toLowerCase().includes(q)));
+  }, [notes, selected, linkPickerSearch]);
 
   useEffect(() => {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
@@ -134,27 +145,9 @@ export default function Notes() {
 
   const commitTitle = async () => {
     if (!selected || titleDraft === selected.title) return;
-    const oldTitle = selected.title;
     const { note } = await api.updateNote(selected.id, { title: titleDraft });
     setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
     setTitleDraft(note.title);
-
-    // Keep [[links]] pointing at this note working after a rename.
-    const patches = renameLinksInNotes(notes, oldTitle, note.title, note.id);
-    if (patches.length > 0) {
-      const updatedNotes = await Promise.all(
-        patches.map((p) => api.updateNote(p.id, { blocks: p.blocks, content: p.content }).then((r) => r.note))
-      );
-      setNotes((prev) => prev.map((n) => updatedNotes.find((u) => u.id === n.id) || n));
-    }
-  };
-
-  const createAndLinkNote = async (title) => {
-    const existing = notes.find((n) => n.title.trim().toLowerCase() === title.trim().toLowerCase());
-    if (existing) return existing;
-    const { note } = await api.createNote({ title: title.trim() || t('notes.untitledNote'), content: '' });
-    setNotes((prev) => [note, ...prev]);
-    return note;
   };
 
   const addNote = async () => {
@@ -171,6 +164,31 @@ export default function Notes() {
     if (!selected) return;
     const { note } = await api.updateNote(selected.id, patch);
     setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+  };
+
+  const openLinkPicker = () => {
+    setLinkPickerSearch('');
+    setLinkPickTarget(null);
+    setLinkLabelDraft('');
+    setLinkPickerOpen(true);
+  };
+
+  const confirmAddLink = async () => {
+    if (!selected || !linkPickTarget) return;
+    await patchSelected({ links: [...(selected.links || []), { noteId: linkPickTarget, label: linkLabelDraft.trim() || null }] });
+    setLinkPickerOpen(false);
+  };
+
+  const removeLink = async (noteId) => {
+    if (!selected) return;
+    await patchSelected({ links: (selected.links || []).filter((l) => l.noteId !== noteId) });
+  };
+
+  const previewNote = notes.find((n) => n.id === previewNoteId) || null;
+
+  const openNoteFromPreview = () => {
+    setSelectedId(previewNoteId);
+    setPreviewNoteId(null);
   };
 
   const moveNoteToFolder = async (noteId, folderId) => {
@@ -575,16 +593,11 @@ export default function Notes() {
                 </div>
               ) : (
                 <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <LinkableTextBlock
+                  <AutoResizeTextarea
                     value={block.value}
-                    onChange={(value) => updateBlock(block.id, { value })}
-                    notes={notes.filter((n) => n.id !== selected.id)}
+                    onChange={(e) => updateBlock(block.id, { value: e.target.value })}
                     placeholder={t('notes.writePlaceholder')}
-                    theme={theme}
-                    t={t}
-                    onNavigate={setSelectedId}
-                    onCreateAndLink={createAndLinkNote}
-                    style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit' }}
+                    style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit', flex: 1, minWidth: 0 }}
                   />
                   {getBlocks(selected).length > 1 && (
                     <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
@@ -593,6 +606,49 @@ export default function Notes() {
                   )}
                 </div>
               )
+            )}
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="link" size={12} /> {t('notes.linkedNotes')}
+              </div>
+              <span onClick={openLinkPicker} style={{ fontSize: 11, fontWeight: 700, color: theme.accentText, cursor: 'pointer' }}>
+                {t('notes.addLink')}
+              </span>
+            </div>
+            {(selected.links || []).length === 0 ? (
+              <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('notes.noLinkedNotes')}</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {(selected.links || []).map((link) => {
+                  const target = notes.find((n) => n.id === link.noteId);
+                  if (!target) return null;
+                  return (
+                    <div
+                      key={link.noteId}
+                      onClick={() => setPreviewNoteId(link.noteId)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: theme.subtleBg }}
+                    >
+                      <Icon name="doc" size={14} color={theme.textMuted} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {link.label && (
+                          <div style={{ fontSize: 10.5, fontWeight: 700, color: theme.accentText }}>{link.label}</div>
+                        )}
+                        <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{target.title}</div>
+                      </div>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); removeLink(link.noteId); }}
+                        title={t('notes.removeLink')}
+                        style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 4px', flexShrink: 0 }}
+                      >
+                        &times;
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 
@@ -629,6 +685,149 @@ export default function Notes() {
       ) : (
         <div style={{ flex: '1 1 480px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
           {t('notes.selectOrCreate')}
+        </div>
+      )}
+
+      {linkPickerOpen && (
+        <div
+          onClick={() => setLinkPickerOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 420, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('notes.linkPickerTitle')}</div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
+              <Icon name="search" size={14} />
+              <input
+                value={linkPickerSearch}
+                onChange={(e) => setLinkPickerSearch(e.target.value)}
+                placeholder={t('notes.linkPickerSearchPlaceholder')}
+                autoFocus
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textPrimary, flex: 1, minWidth: 0 }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto' }}>
+              {linkCandidates.length === 0 && (
+                <div style={{ fontSize: 12.5, color: theme.textMuted, padding: '6px 4px' }}>{t('notes.noNotesFound')}</div>
+              )}
+              {linkCandidates.map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => setLinkPickTarget(n.id)}
+                  style={{
+                    padding: '8px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    background: linkPickTarget === n.id ? theme.accentSoftBg : 'transparent',
+                    color: linkPickTarget === n.id ? theme.accentText : theme.textPrimary,
+                  }}
+                >
+                  {n.title}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                {t('notes.linkLabelPlaceholder')}
+              </div>
+              <input
+                value={linkLabelDraft}
+                onChange={(e) => setLinkLabelDraft(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && confirmAddLink()}
+                placeholder={t('notes.linkLabelPlaceholder')}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button
+                onClick={() => setLinkPickerOpen(false)}
+                style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={confirmAddLink}
+                disabled={!linkPickTarget}
+                style={{
+                  flex: 1, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13,
+                  cursor: 'pointer', opacity: linkPickTarget ? 1 : 0.5,
+                }}
+              >
+                {t('common.add')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewNote && (
+        <div
+          onClick={() => setPreviewNoteId(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 560, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, fontSize: 17, fontWeight: 800, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{previewNote.title}</div>
+              <span onClick={() => setPreviewNoteId(null)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 20, padding: '0 2px', flexShrink: 0 }}>
+                &times;
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {getBlocks(previewNote).map((block) => {
+                if (block.type === 'code') {
+                  const lines = highlightCode(block.value, block.language || 'abap');
+                  return (
+                    <pre key={block.id} style={{ margin: 0, padding: 12, fontSize: 13, lineHeight: 1.6, overflowX: 'auto', fontFamily: 'var(--font-mono)', background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10 }}>
+                      {lines.map((tokens, i) => (
+                        <div key={i} style={{ display: 'flex' }}>
+                          <span style={{ display: 'inline-block', width: 28, flexShrink: 0, textAlign: 'right', marginRight: 12, color: theme.textMuted, opacity: 0.5, userSelect: 'none' }}>
+                            {i + 1}
+                          </span>
+                          <span>
+                            {tokens.map((tok, j) => (
+                              <span key={j} style={{ color: tokenColor(tok.type, theme.dark) }}>
+                                {tok.text}
+                              </span>
+                            ))}
+                            {tokens.length === 0 && ' '}
+                          </span>
+                        </div>
+                      ))}
+                    </pre>
+                  );
+                }
+                if (block.type === 'image') {
+                  return <img key={block.id} src={block.url} alt="" style={{ maxWidth: '100%', borderRadius: 10, display: 'block' }} />;
+                }
+                return (
+                  <div key={block.id} style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: theme.textPrimary }}>
+                    {block.value}
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={openNoteFromPreview}
+              style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+            >
+              {t('notes.openNote')}
+            </button>
+          </div>
         </div>
       )}
     </div>

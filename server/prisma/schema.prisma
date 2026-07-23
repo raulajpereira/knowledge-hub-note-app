@@ -75,6 +75,7 @@ model Note {
   content   String    @db.LongText
   blocks    Json?
   tags      Json?
+  links     Json?
   pinned    Boolean   @default(false)
   deletedAt DateTime?
   createdAt DateTime  @default(now())

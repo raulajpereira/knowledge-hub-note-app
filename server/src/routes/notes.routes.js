@@ -50,7 +50,7 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { title, content, blocks, folderId, tags } = req.body || {};
+  const { title, content, blocks, folderId, tags, links } = req.body || {};
   const note = await prisma.note.create({
     data: {
       userId: req.effectiveUserId,
@@ -59,6 +59,7 @@ router.post('/', async (req, res) => {
       blocks: Array.isArray(blocks) ? blocks : undefined,
       folderId: folderId || null,
       tags: Array.isArray(tags) ? tags : [],
+      links: Array.isArray(links) ? links : [],
     },
   });
   res.status(201).json({ note });
@@ -73,13 +74,14 @@ router.patch('/:id', async (req, res) => {
   const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!note) return res.status(404).json({ error: 'Note not found' });
 
-  const { title, content, blocks, folderId, tags, pinned } = req.body || {};
+  const { title, content, blocks, folderId, tags, links, pinned } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || 'Untitled note';
   if (content !== undefined) data.content = content;
   if (blocks !== undefined) data.blocks = Array.isArray(blocks) ? blocks : null;
   if (folderId !== undefined) data.folderId = folderId || null;
   if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : [];
+  if (links !== undefined) data.links = Array.isArray(links) ? links : [];
   if (pinned !== undefined) data.pinned = !!pinned;
 
   const contentChanged = data.title !== undefined || data.content !== undefined || data.blocks !== undefined;

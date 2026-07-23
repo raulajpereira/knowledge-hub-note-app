@@ -45,12 +45,6 @@ export default function Home() {
     navigate('/notes');
   };
 
-  const stats = [
-    { icon: 'doc', value: notes.length, label: t('home.notes') },
-    { icon: 'pin', value: notes.filter((n) => n.pinned).length, label: t('home.pinned') },
-    { icon: 'check', value: tasks.filter((t) => !t.done).length, label: t('home.openTasks') },
-  ];
-
   const quickCapture = [
     {
       title: t('home.newNoteTitle'),
@@ -117,26 +111,6 @@ export default function Home() {
                 <div style={{ fontSize: 12.5, color: qc.gradient ? 'rgba(255,255,255,0.85)' : theme.textMuted, lineHeight: 1.4 }}>
                   {qc.desc}
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('home.todayAtAGlance')}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
-            {stats.map((s) => (
-              <div
-                key={s.label}
-                style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', gap: 8 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: 28, fontWeight: 800 }}>{s.value}</div>
-                  <div style={{ width: 34, height: 34, borderRadius: 9, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon name={s.icon} size={16} color={theme.accentText} />
-                  </div>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{s.label}</div>
               </div>
             ))}
           </div>

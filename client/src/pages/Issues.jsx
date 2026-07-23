@@ -363,8 +363,20 @@ export default function Issues() {
           </div>
         )}
 
-        {selected && (
-          <div style={{ flex: '0 0 340px', width: 340, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 20, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+      </div>
+
+      {selected && (
+        <div
+          onClick={() => setSelectedId(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 440, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <input
                 value={titleDraft}
@@ -376,6 +388,9 @@ export default function Issues() {
               <button onClick={() => remove(selected.id)} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '6px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
                 {t('common.delete')}
               </button>
+              <span onClick={() => setSelectedId(null)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 20, padding: '0 2px', flexShrink: 0 }}>
+                &times;
+              </span>
             </div>
 
             <div>
@@ -463,8 +478,8 @@ export default function Issues() {
               />
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {newIssueOpen && (
         <div
