@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 
-const STATUSES = ['Open', 'In Progress', 'Waiting', 'Done'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 
 const router = Router();
@@ -42,9 +41,9 @@ router.patch('/:id', async (req, res) => {
   if (title !== undefined) data.title = title.trim() || 'New issue';
   if (description !== undefined) data.description = description || null;
   if (status !== undefined) {
-    if (!STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
-    data.status = status;
-    data.completedAt = status === 'Done' ? new Date() : null;
+    if (typeof status !== 'string' || !status.trim()) return res.status(400).json({ error: 'Invalid status' });
+    data.status = status.trim();
+    data.completedAt = status.trim() === 'Done' ? new Date() : null;
   }
   if (priority !== undefined) {
     if (!PRIORITIES.includes(priority)) return res.status(400).json({ error: 'Invalid priority' });

@@ -23,6 +23,7 @@ function publicUser(user) {
           logoUrl: user.settings.logoUrl,
           avatarUrl: user.settings.avatarUrl,
           vaultAutoLockSeconds: user.settings.vaultAutoLockSeconds,
+          issueStatuses: user.settings.issueStatuses,
         }
       : null,
   };

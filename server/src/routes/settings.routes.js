@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
 });
 
 router.patch('/', async (req, res) => {
-  const { theme, accentColor, vaultAutoLockSeconds } = req.body || {};
+  const { theme, accentColor, vaultAutoLockSeconds, issueStatuses } = req.body || {};
   const data = {};
   if (theme !== undefined) {
     if (!['dark', 'light'].includes(theme)) return res.status(400).json({ error: 'Invalid theme' });
@@ -63,6 +63,14 @@ router.patch('/', async (req, res) => {
       return res.status(400).json({ error: 'Auto-lock duration must be an integer between 5 and 3600 seconds' });
     }
     data.vaultAutoLockSeconds = n;
+  }
+  if (issueStatuses !== undefined) {
+    const valid =
+      Array.isArray(issueStatuses) &&
+      issueStatuses.length > 0 &&
+      issueStatuses.every((s) => s && typeof s.name === 'string' && s.name.trim() && Number.isFinite(s.hue));
+    if (!valid) return res.status(400).json({ error: 'issueStatuses must be a non-empty array of { name, hue }' });
+    data.issueStatuses = issueStatuses.map((s) => ({ name: s.name.trim(), hue: s.hue }));
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },

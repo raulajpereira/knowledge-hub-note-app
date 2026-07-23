@@ -40,6 +40,7 @@ model Settings {
   vaultRecoveryWrappedKey String?  @db.Text
   vaultKdfIterations      Int?
   vaultAutoLockSeconds    Int      @default(60)
+  issueStatuses           Json?
   updatedAt               DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

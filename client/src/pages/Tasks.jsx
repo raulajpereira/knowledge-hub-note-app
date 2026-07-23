@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import DateInput from '../components/DateInput.jsx';
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
@@ -209,10 +210,9 @@ export default function Tasks() {
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 160px' }}>
               <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Due Date</div>
-              <input
-                value={selected.due || ''}
-                onChange={(e) => patch(selected.id, { due: e.target.value })}
-                placeholder="e.g. Jul 20"
+              <DateInput
+                value={selected.due}
+                onChange={(value) => patch(selected.id, { due: value })}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
             </div>
