@@ -27,6 +27,8 @@ model User {
   agents          Agent[]
   artifacts       Artifact[]
   savedNews       SavedNews[]
+  codeFolders     CodeFolder[]
+  codeItems       CodeItem[]
   teamOwner       User?    @relation("TeamMembers", fields: [teamOwnerId], references: [id], onDelete: SetNull)
   teamMembers     User[]   @relation("TeamMembers")
 
@@ -254,4 +256,41 @@ model SavedNews {
   @@unique([userId, newsId])
   @@index([userId])
   @@map("saved_news")
+}
+
+model CodeFolder {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String // ABAP object name, e.g. ZMY_PROGRAM
+  kind        String   @default("program") // "program" | "class" | "function_module"
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CodeItem[]
+
+  @@index([userId])
+  @@map("code_folders")
+}
+
+model CodeItem {
+  id         String   @id @default(uuid())
+  folderId   String
+  userId     String
+  type       String // "snippet" | "characteristics" | "table" | "data_element" | "domain"
+  name       String
+  language   String   @default("abap")
+  content    String?  @db.LongText
+  attributes Json?
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  folder CodeFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+  @@index([userId])
+  @@map("code_items")
 }

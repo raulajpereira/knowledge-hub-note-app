@@ -7,13 +7,14 @@ export function CountsProvider({ children }) {
   const [counts, setCounts] = useState({});
 
   const refresh = useCallback(async () => {
-    const [notesR, voiceR, tasksR, tagsR, artifactsR, issuesR, trashedNotesR, trashedTasksR, trashedVoiceR] = await Promise.all([
+    const [notesR, voiceR, tasksR, tagsR, artifactsR, issuesR, codeFoldersR, trashedNotesR, trashedTasksR, trashedVoiceR] = await Promise.all([
       api.listNotes(),
       api.listVoiceNotes(),
       api.listTasks(),
       api.listTags(),
       api.listArtifacts(),
       api.listIssues(),
+      api.listCodeFolders(),
       api.listNotes(true),
       api.listTasks(true),
       api.listVoiceNotes(true),
@@ -25,6 +26,7 @@ export function CountsProvider({ children }) {
       tags: tagsR.tags.length,
       artifacts: artifactsR.artifacts.length,
       issues: issuesR.issues.length,
+      codeLibrary: codeFoldersR.folders.length,
       trash: trashedNotesR.notes.length + trashedTasksR.tasks.length + trashedVoiceR.voiceNotes.length,
     });
   }, []);

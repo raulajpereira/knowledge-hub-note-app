@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { to: '/passwords', key: 'passwords', icon: 'lock' },
   { to: '/issues', key: 'issues', icon: 'archive', countKey: 'issues' },
   { to: '/artifacts', key: 'artifacts', icon: 'code', countKey: 'artifacts' },
+  { to: '/code-library', key: 'codeLibrary', icon: 'folder', countKey: 'codeLibrary' },
   { to: '/calendar', key: 'calendar', icon: 'calendar' },
 ];
 

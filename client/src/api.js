@@ -136,4 +136,13 @@ export const api = {
   saveNews: (payload) => request('/sap-news/saved', { method: 'POST', body: payload }),
   updateSavedNews: (id, payload) => request(`/sap-news/saved/${id}`, { method: 'PATCH', body: payload }),
   deleteSavedNews: (id) => request(`/sap-news/saved/${id}`, { method: 'DELETE' }),
+
+  listCodeFolders: () => request('/code-library/folders'),
+  createCodeFolder: (payload) => request('/code-library/folders', { method: 'POST', body: payload }),
+  updateCodeFolder: (id, payload) => request(`/code-library/folders/${id}`, { method: 'PATCH', body: payload }),
+  deleteCodeFolder: (id) => request(`/code-library/folders/${id}`, { method: 'DELETE' }),
+  listCodeItems: (folderId) => request(`/code-library/folders/${folderId}/items`),
+  createCodeItem: (folderId, payload) => request(`/code-library/folders/${folderId}/items`, { method: 'POST', body: payload }),
+  updateCodeItem: (id, payload) => request(`/code-library/items/${id}`, { method: 'PATCH', body: payload }),
+  deleteCodeItem: (id) => request(`/code-library/items/${id}`, { method: 'DELETE' }),
 };

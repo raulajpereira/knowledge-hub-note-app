@@ -20,6 +20,7 @@ import Trash from './pages/Trash.jsx';
 import Artifacts from './pages/Artifacts.jsx';
 import Calendar from './pages/Calendar.jsx';
 import SapNews from './pages/SapNews.jsx';
+import CodeLibrary from './pages/CodeLibrary.jsx';
 
 function FullScreenLoader() {
   return (
@@ -70,6 +71,7 @@ export default function App() {
                   <Route path="/passwords" element={<Passwords />} />
                   <Route path="/issues" element={<Issues />} />
                   <Route path="/artifacts" element={<Artifacts />} />
+                  <Route path="/code-library" element={<CodeLibrary />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/sap-news" element={<SapNews />} />
                   <Route path="/trash" element={<Trash />} />
