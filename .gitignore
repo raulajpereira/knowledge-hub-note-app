@@ -18,3 +18,5 @@ server/uploads/notes/*
 *.log
 .DS_Store
 .scratch-test/
+# Applied patch files kept in the repo root for reference (not part of the tree)
+/*.patch
