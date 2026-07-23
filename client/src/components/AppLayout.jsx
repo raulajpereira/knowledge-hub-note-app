@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { to: '/passwords', key: 'passwords', icon: 'lock' },
   { to: '/issues', key: 'issues', icon: 'archive' },
   { to: '/artifacts', key: 'artifacts', icon: 'code' },
+  { to: '/calendar', key: 'calendar', icon: 'calendar' },
 ];
 
 function userInitials(name) {

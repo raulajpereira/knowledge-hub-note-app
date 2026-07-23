@@ -261,7 +261,7 @@ export default function Settings() {
             <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.accentColor')}</div>
             <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.accentColorDesc')}</div>
           </div>
-          <ColorWheel hue={theme.hue} onChange={setAccentHue} />
+          <ColorWheel hue={theme.hue} onChange={setAccentHue} title={t('settings.colorWheelHint')} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>

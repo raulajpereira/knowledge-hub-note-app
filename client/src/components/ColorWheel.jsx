@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 
 const STOPS = Array.from({ length: 13 }, (_, i) => `oklch(0.6 0.19 ${i * 30}) ${(i / 12) * 100}%`).join(', ');
 
-export default function ColorWheel({ hue, onChange, size = 96 }) {
+export default function ColorWheel({ hue, onChange, size = 96, title = 'Drag to pick a hue' }) {
   const ref = useRef(null);
 
   const setFromEvent = useCallback(
@@ -41,7 +41,7 @@ export default function ColorWheel({ hue, onChange, size = 96 }) {
     <div
       ref={ref}
       onMouseDown={onMouseDown}
-      title="Drag to pick a hue"
+      title={title}
       style={{
         width: size,
         height: size,

@@ -64,6 +64,11 @@ router.post('/', async (req, res) => {
   res.status(201).json({ note });
 });
 
+// A new version snapshot (of the state *before* this update) is kept
+// whenever content actually changes, throttled to once per this window
+// so continuous typing doesn't create a version per keystroke.
+const VERSION_SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
+
 router.patch('/:id', async (req, res) => {
   const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!note) return res.status(404).json({ error: 'Note not found' });
@@ -77,7 +82,42 @@ router.patch('/:id', async (req, res) => {
   if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : [];
   if (pinned !== undefined) data.pinned = !!pinned;
 
+  const contentChanged = data.title !== undefined || data.content !== undefined || data.blocks !== undefined;
+  if (contentChanged) {
+    const lastVersion = await prisma.noteVersion.findFirst({ where: { noteId: note.id }, orderBy: { createdAt: 'desc' } });
+    if (!lastVersion || Date.now() - new Date(lastVersion.createdAt).getTime() > VERSION_SNAPSHOT_INTERVAL_MS) {
+      await prisma.noteVersion.create({
+        data: { noteId: note.id, title: note.title, content: note.content, blocks: note.blocks ?? undefined },
+      });
+    }
+  }
+
   const updated = await prisma.note.update({ where: { id: note.id }, data });
+  res.json({ note: updated });
+});
+
+router.get('/:id/versions', async (req, res) => {
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  const versions = await prisma.noteVersion.findMany({ where: { noteId: note.id }, orderBy: { createdAt: 'desc' }, take: 50 });
+  res.json({ versions });
+});
+
+router.post('/:id/versions/:versionId/restore', async (req, res) => {
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  const version = await prisma.noteVersion.findFirst({ where: { id: req.params.versionId, noteId: note.id } });
+  if (!version) return res.status(404).json({ error: 'Version not found' });
+
+  // Snapshot the current state too, so restoring is itself undoable.
+  await prisma.noteVersion.create({
+    data: { noteId: note.id, title: note.title, content: note.content, blocks: note.blocks ?? undefined },
+  });
+
+  const updated = await prisma.note.update({
+    where: { id: note.id },
+    data: { title: version.title, content: version.content, blocks: version.blocks ?? null },
+  });
   res.json({ note: updated });
 });
 

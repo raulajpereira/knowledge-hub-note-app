@@ -82,10 +82,25 @@ model Note {
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  versions NoteVersion[]
 
   @@index([userId])
   @@index([folderId])
   @@map("notes")
+}
+
+model NoteVersion {
+  id        String   @id @default(uuid())
+  noteId    String
+  title     String
+  content   String   @db.LongText
+  blocks    Json?
+  createdAt DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId, createdAt])
+  @@map("note_versions")
 }
 
 model Task {

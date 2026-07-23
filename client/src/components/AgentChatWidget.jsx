@@ -179,7 +179,7 @@ export default function AgentChatWidget() {
 
       <div
         onClick={() => setOpen((v) => !v)}
-        title="AI Agents"
+        title={t('settings.aiAgents')}
         style={{
           position: 'fixed', bottom: 24, right: 24, width: 52, height: 52, borderRadius: '50%',
           background: `linear-gradient(135deg, ${theme.accent}, ${theme.accentDark})`, color: '#fff',

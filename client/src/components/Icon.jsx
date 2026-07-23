@@ -88,6 +88,21 @@ const PATHS = {
   ],
   chat: [['path', { d: 'M4 5h16v10.5H9.5L5 19v-3.5H4Z' }]],
   send: [['path', { d: 'M4 12l16-8-6 8 6 8-16-8Z' }]],
+  calendar: [
+    ['rect', { x: 3.5, y: 5, width: 17, height: 15.5, rx: 2 }],
+    ['path', { d: 'M3.5 9.5h17' }],
+    ['path', { d: 'M8 3v4M16 3v4' }],
+  ],
+  history: [
+    ['path', { d: 'M4 12a8 8 0 1 0 2.5-5.8' }],
+    ['path', { d: 'M3 4v4.5h4.5' }],
+    ['path', { d: 'M12 8v4.5l3 2' }],
+  ],
+  link: [
+    ['path', { d: 'M9.5 14.5 14.5 9.5' }],
+    ['path', { d: 'M11 6.5l1.4-1.4a4 4 0 1 1 5.6 5.6L16.5 12' }],
+    ['path', { d: 'M13 17.5l-1.4 1.4a4 4 0 1 1-5.6-5.6L7.5 12' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

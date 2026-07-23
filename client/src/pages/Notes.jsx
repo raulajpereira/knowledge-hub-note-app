@@ -6,13 +6,17 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
+import LinkableTextBlock from '../components/LinkableTextBlock.jsx';
+import { findBacklinks, renameLinksInNotes } from '../lib/wikiLinks.js';
 
 let blockIdCounter = 0;
 const newBlockId = () => `b${Date.now()}-${blockIdCounter++}`;
 
 function getBlocks(note) {
   if (Array.isArray(note.blocks) && note.blocks.length > 0) return note.blocks;
-  return [{ id: 'legacy', type: 'text', value: note.content || '' }];
+  // Per-note id (not a shared literal) so block components remount — and
+  // reset their local edit/view state — when switching between notes.
+  return [{ id: `legacy-${note.id}`, type: 'text', value: note.content || '' }];
 }
 
 function contentFromBlocks(blocks) {
@@ -42,6 +46,10 @@ export default function Notes() {
   const [loading, setLoading] = useState(true);
   const [titleDraft, setTitleDraft] = useState('');
   const [dragOverFolder, setDragOverFolder] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [versions, setVersions] = useState([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [restoringId, setRestoringId] = useState(null);
 
   const load = async () => {
     const [{ notes }, { folders }, { tags }] = await Promise.all([api.listNotes(), api.listFolders(), api.listTags()]);
@@ -84,19 +92,69 @@ export default function Notes() {
 
   const selected = notes.find((n) => n.id === selectedId) || filtered[0] || null;
 
+  const backlinks = useMemo(
+    () => (selected ? findBacklinks(notes, selected.title, selected.id) : []),
+    [notes, selected]
+  );
+
   useEffect(() => {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [filtered, selectedId]);
 
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
+    setHistoryOpen(false);
   }, [selected?.id]);
+
+  const openHistory = async () => {
+    if (!selected) return;
+    setHistoryOpen(true);
+    setVersionsLoading(true);
+    try {
+      const { versions } = await api.listNoteVersions(selected.id);
+      setVersions(versions);
+    } finally {
+      setVersionsLoading(false);
+    }
+  };
+
+  const restoreVersion = async (versionId) => {
+    if (!selected) return;
+    setRestoringId(versionId);
+    try {
+      const { note } = await api.restoreNoteVersion(selected.id, versionId);
+      setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+      setTitleDraft(note.title);
+      const { versions } = await api.listNoteVersions(selected.id);
+      setVersions(versions);
+    } finally {
+      setRestoringId(null);
+    }
+  };
 
   const commitTitle = async () => {
     if (!selected || titleDraft === selected.title) return;
+    const oldTitle = selected.title;
     const { note } = await api.updateNote(selected.id, { title: titleDraft });
     setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
     setTitleDraft(note.title);
+
+    // Keep [[links]] pointing at this note working after a rename.
+    const patches = renameLinksInNotes(notes, oldTitle, note.title, note.id);
+    if (patches.length > 0) {
+      const updatedNotes = await Promise.all(
+        patches.map((p) => api.updateNote(p.id, { blocks: p.blocks, content: p.content }).then((r) => r.note))
+      );
+      setNotes((prev) => prev.map((n) => updatedNotes.find((u) => u.id === n.id) || n));
+    }
+  };
+
+  const createAndLinkNote = async (title) => {
+    const existing = notes.find((n) => n.title.trim().toLowerCase() === title.trim().toLowerCase());
+    if (existing) return existing;
+    const { note } = await api.createNote({ title: title.trim() || t('notes.untitledNote'), content: '' });
+    setNotes((prev) => [note, ...prev]);
+    return note;
   };
 
   const addNote = async () => {
@@ -246,7 +304,7 @@ export default function Notes() {
           </div>
           <button
             onClick={addNote}
-            title="New Note"
+            title={t('notes.newNoteButton')}
             style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}
           >
             <Icon name="plus" size={16} color="#fff" />
@@ -389,11 +447,48 @@ export default function Notes() {
               <span onClick={() => patchSelected({ pinned: !selected.pinned })} style={{ display: 'flex', cursor: 'pointer' }}>
                 <Icon name="pin" size={17} color={selected.pinned ? theme.accentText : theme.textMuted} />
               </span>
+              <span onClick={openHistory} title={t('notes.history')} style={{ display: 'flex', cursor: 'pointer' }}>
+                <Icon name="history" size={17} color={theme.textMuted} />
+              </span>
               <button onClick={trashSelected} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
                 {t('common.delete')}
               </button>
             </div>
           </div>
+
+          {historyOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700 }}>{t('notes.history')}</div>
+                <span onClick={() => setHistoryOpen(false)} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 16, padding: '0 4px' }}>
+                  &times;
+                </span>
+              </div>
+              {versionsLoading && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('common.loading')}</div>}
+              {!versionsLoading && versions.length === 0 && (
+                <div style={{ fontSize: 12, color: theme.textMuted }}>{t('notes.noHistoryYet')}</div>
+              )}
+              {!versionsLoading && versions.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto' }}>
+                  {versions.map((v) => (
+                    <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.title}</div>
+                        <div style={{ fontSize: 11, color: theme.textMuted }}>{new Date(v.createdAt).toLocaleString()}</div>
+                      </div>
+                      <button
+                        onClick={() => restoreVersion(v.id)}
+                        disabled={restoringId === v.id}
+                        style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0, opacity: restoringId === v.id ? 0.6 : 1 }}
+                      >
+                        {restoringId === v.id ? t('notes.restoring') : t('notes.restore')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {(selected.tags || []).map((tagName) => {
@@ -480,11 +575,16 @@ export default function Notes() {
                 </div>
               ) : (
                 <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <AutoResizeTextarea
+                  <LinkableTextBlock
                     value={block.value}
-                    onChange={(e) => updateBlock(block.id, { value: e.target.value })}
+                    onChange={(value) => updateBlock(block.id, { value })}
+                    notes={notes.filter((n) => n.id !== selected.id)}
                     placeholder={t('notes.writePlaceholder')}
-                    style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit' }}
+                    theme={theme}
+                    t={t}
+                    onNavigate={setSelectedId}
+                    onCreateAndLink={createAndLinkNote}
+                    style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit' }}
                   />
                   {getBlocks(selected).length > 1 && (
                     <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
@@ -493,6 +593,27 @@ export default function Notes() {
                   )}
                 </div>
               )
+            )}
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="link" size={12} /> {t('notes.linkedFrom')}
+            </div>
+            {backlinks.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('notes.noBacklinks')}</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {backlinks.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => setSelectedId(n.id)}
+                    style={{ padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, background: theme.subtleBg }}
+                  >
+                    {n.title}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

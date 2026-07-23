@@ -49,6 +49,8 @@ export const api = {
   trashNote: (id) => request(`/notes/${id}/trash`, { method: 'POST' }),
   restoreNote: (id) => request(`/notes/${id}/restore`, { method: 'POST' }),
   deleteNoteForever: (id) => request(`/notes/${id}`, { method: 'DELETE' }),
+  listNoteVersions: (id) => request(`/notes/${id}/versions`),
+  restoreNoteVersion: (id, versionId) => request(`/notes/${id}/versions/${versionId}/restore`, { method: 'POST' }),
   uploadNoteImage: (file) => {
     const form = new FormData();
     form.append('image', file);

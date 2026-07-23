@@ -630,7 +630,7 @@ export default function Issues() {
                 <div key={s._key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span
                     onClick={() => cycleDraftHue(s._key)}
-                    title="Click to change color"
+                    title={t('issues.changeColor')}
                     style={{ width: 22, height: 22, borderRadius: '50%', background: `oklch(0.6 0.19 ${s.hue})`, cursor: 'pointer', flexShrink: 0 }}
                   />
                   <input

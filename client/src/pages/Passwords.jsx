@@ -566,10 +566,10 @@ export default function Passwords() {
                   type={revealPasswordField ? 'text' : 'password'}
                   style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 74px 9px 12px', fontSize: 13.5, fontFamily: 'var(--font-mono)', background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
                 />
-                <span onClick={() => setRevealPasswordField((v) => !v)} title="Reveal" style={{ position: 'absolute', right: 38, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.6, display: 'flex' }}>
+                <span onClick={() => setRevealPasswordField((v) => !v)} title={t('passwords.show')} style={{ position: 'absolute', right: 38, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.6, display: 'flex' }}>
                   <Icon name={revealPasswordField ? 'eyeOff' : 'eye'} size={16} />
                 </span>
-                <span onClick={copyPassword} title="Copy" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.6, display: 'flex' }}>
+                <span onClick={copyPassword} title={t('passwords.copyClipboard')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.6, display: 'flex' }}>
                   <Icon name="copy" size={16} />
                 </span>
               </div>

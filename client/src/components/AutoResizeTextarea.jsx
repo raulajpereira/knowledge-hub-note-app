@@ -1,6 +1,15 @@
-import { useLayoutEffect, useRef } from 'react';
+import { forwardRef, useLayoutEffect, useRef } from 'react';
 
-export default function AutoResizeTextarea({ value, style, onInput, ...props }) {
+function mergeRefs(refs) {
+  return (node) => {
+    for (const ref of refs) {
+      if (typeof ref === 'function') ref(node);
+      else if (ref) ref.current = node;
+    }
+  };
+}
+
+const AutoResizeTextarea = forwardRef(function AutoResizeTextarea({ value, style, onInput, ...props }, forwardedRef) {
   const ref = useRef(null);
 
   useLayoutEffect(() => {
@@ -12,7 +21,7 @@ export default function AutoResizeTextarea({ value, style, onInput, ...props }) 
 
   return (
     <textarea
-      ref={ref}
+      ref={mergeRefs([ref, forwardedRef])}
       value={value}
       rows={1}
       onInput={(e) => {
@@ -24,4 +33,6 @@ export default function AutoResizeTextarea({ value, style, onInput, ...props }) 
       {...props}
     />
   );
-}
+});
+
+export default AutoResizeTextarea;
