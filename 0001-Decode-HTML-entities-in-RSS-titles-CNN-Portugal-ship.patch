@@ -1,0 +1,56 @@
+From d89e638bac49d54c0ee7d8d5326328c7b8e07f59 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 23 Jul 2026 09:03:00 +0000
+Subject: [PATCH 1/6] Decode HTML entities in RSS titles (CNN Portugal ships
+ literal &quot;)
+
+---
+ server/src/routes/news.routes.js | 30 +++++++++++++++++++++++++-----
+ 1 file changed, 25 insertions(+), 5 deletions(-)
+
+diff --git a/server/src/routes/news.routes.js b/server/src/routes/news.routes.js
+index 19cc03c..40ecbc0 100644
+--- a/server/src/routes/news.routes.js
++++ b/server/src/routes/news.routes.js
+@@ -30,13 +30,33 @@ const CACHE_MS = 15 * 60 * 1000;
+ let cache = { items: [], fetchedAt: 0 };
+ 
+ // Some feeds (e.g. CM) ship titles as literal `<![CDATA[ ... ]]>` text
+-// instead of a properly parsed CDATA section, so strip it defensively.
++// instead of a properly parsed CDATA section, and others (e.g. CNN
++// Portugal) ship HTML entities (&quot;, &amp;, ...) that never get
++// decoded, so handle both defensively.
++const HTML_ENTITIES = {
++  quot: '"',
++  amp: '&',
++  apos: "'",
++  lt: '<',
++  gt: '>',
++  nbsp: ' ',
++};
++
++function decodeEntities(str) {
++  return str
++    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
++    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
++    .replace(/&([a-z]+);/gi, (m, name) => HTML_ENTITIES[name.toLowerCase()] ?? m);
++}
++
+ function cleanText(str) {
+   if (!str) return str;
+-  return str
+-    .replace(/^\s*<!\[CDATA\[/i, '')
+-    .replace(/\]\]>\s*$/i, '')
+-    .trim();
++  return decodeEntities(
++    str
++      .replace(/^\s*<!\[CDATA\[/i, '')
++      .replace(/\]\]>\s*$/i, '')
++      .trim()
++  ).trim();
+ }
+ 
+ function shuffle(arr) {
+-- 
+2.43.0
+
