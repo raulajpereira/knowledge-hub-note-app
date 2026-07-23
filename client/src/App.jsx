@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
+import { LanguageProvider } from './context/LanguageContext.jsx';
 import { AgentsProvider } from './context/AgentsContext.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -51,23 +52,25 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <AgentsProvider>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/notes" element={<Notes />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/tags" element={<Tags />} />
-            <Route path="/voice" element={<Voice />} />
-            <Route path="/passwords" element={<Passwords />} />
-            <Route path="/issues" element={<Issues />} />
-            <Route path="/artifacts" element={<Artifacts />} />
-            <Route path="/trash" element={<Trash />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AgentsProvider>
+      <LanguageProvider>
+        <AgentsProvider>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/notes" element={<Notes />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/tags" element={<Tags />} />
+              <Route path="/voice" element={<Voice />} />
+              <Route path="/passwords" element={<Passwords />} />
+              <Route path="/issues" element={<Issues />} />
+              <Route path="/artifacts" element={<Artifacts />} />
+              <Route path="/trash" element={<Trash />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AgentsProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

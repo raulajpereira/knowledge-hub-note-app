@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { useAgents } from '../context/AgentsContext.jsx';
 import { api } from '../api.js';
 import Icon from './Icon.jsx';
 import { parseReplyToBlocks, titleFromContent } from '../lib/parseAgentReply.js';
 
-function SaveAsNoteButton({ content, agentName, theme }) {
+function SaveAsNoteButton({ content, agentName, theme, t }) {
   const navigate = useNavigate();
   const [state, setState] = useState('idle'); // idle | saving | saved
 
@@ -30,7 +31,7 @@ function SaveAsNoteButton({ content, agentName, theme }) {
         onClick={() => navigate('/notes')}
         style={{ fontSize: 11, fontWeight: 700, color: 'oklch(0.6 0.15 145)', cursor: 'pointer', alignSelf: 'flex-start' }}
       >
-        Saved to Notes ✓
+        {t('agent.savedToNotes')}
       </span>
     );
   }
@@ -43,13 +44,14 @@ function SaveAsNoteButton({ content, agentName, theme }) {
         alignSelf: 'flex-start', opacity: state === 'saving' ? 0.6 : 1,
       }}
     >
-      {state === 'saving' ? 'Saving…' : 'Save as Note'}
+      {state === 'saving' ? t('agent.saving') : t('agent.saveAsNote')}
     </span>
   );
 }
 
 export default function AgentChatWidget() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { agents } = useAgents();
   const activeAgents = agents.filter((a) => a.active);
   const [open, setOpen] = useState(false);
@@ -126,15 +128,15 @@ export default function AgentChatWidget() {
                 </div>
               ))}
             </div>
-            <span onClick={clearHistory} title="Clear chat" style={{ cursor: 'pointer', opacity: 0.5, fontSize: 11, fontWeight: 600, padding: '4px 6px', flexShrink: 0, color: theme.textMuted }}>
-              Clear
+            <span onClick={clearHistory} title={t('agent.clear')} style={{ cursor: 'pointer', opacity: 0.5, fontSize: 11, fontWeight: 600, padding: '4px 6px', flexShrink: 0, color: theme.textMuted }}>
+              {t('agent.clear')}
             </span>
           </div>
 
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {messages.length === 0 && (
               <div style={{ fontSize: 12.5, color: theme.textMuted, textAlign: 'center', marginTop: 20 }}>
-                Say hello to {currentAgent.name}.
+                {t('agent.sayHello', { name: currentAgent.name })}
               </div>
             )}
             {messages.map((m) => (
@@ -149,11 +151,11 @@ export default function AgentChatWidget() {
                   {m.content}
                 </div>
                 {m.role === 'assistant' && !m.content.startsWith('⚠') && (
-                  <SaveAsNoteButton content={m.content} agentName={currentAgent.name} theme={theme} />
+                  <SaveAsNoteButton content={m.content} agentName={currentAgent.name} theme={theme} t={t} />
                 )}
               </div>
             ))}
-            {sending && <div style={{ fontSize: 12, color: theme.textMuted }}>Thinking…</div>}
+            {sending && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('agent.thinking')}</div>}
           </div>
 
           <div style={{ display: 'flex', gap: 8, padding: 10, borderTop: `1px solid ${theme.border}` }}>
@@ -161,7 +163,7 @@ export default function AgentChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder="Message..."
+              placeholder={t('agent.messagePlaceholder')}
               style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 9, padding: '9px 12px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
             />
             <button

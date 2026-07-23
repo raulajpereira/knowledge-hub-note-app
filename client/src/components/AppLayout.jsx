@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import { getIssueAlerts } from '../lib/issueAlerts.js';
 import Icon from './Icon.jsx';
@@ -12,14 +13,14 @@ import NewsTicker from './NewsTicker.jsx';
 import logoDefault from '../assets/logo-default.png';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: 'home', end: true },
-  { to: '/notes', label: 'Notes', icon: 'doc' },
-  { to: '/voice', label: 'Voice Notes', icon: 'mic' },
-  { to: '/tasks', label: 'Tasks', icon: 'check' },
-  { to: '/tags', label: 'Tags', icon: 'tag' },
-  { to: '/passwords', label: 'Passwords', icon: 'lock' },
-  { to: '/issues', label: 'Project Issues', icon: 'archive' },
-  { to: '/artifacts', label: 'Artifacts', icon: 'code' },
+  { to: '/', key: 'home', icon: 'home', end: true },
+  { to: '/notes', key: 'notes', icon: 'doc' },
+  { to: '/voice', key: 'voice', icon: 'mic' },
+  { to: '/tasks', key: 'tasks', icon: 'check' },
+  { to: '/tags', key: 'tags', icon: 'tag' },
+  { to: '/passwords', key: 'passwords', icon: 'lock' },
+  { to: '/issues', key: 'issues', icon: 'archive' },
+  { to: '/artifacts', key: 'artifacts', icon: 'code' },
 ];
 
 function userInitials(name) {
@@ -31,6 +32,7 @@ function userInitials(name) {
 export default function AppLayout() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [accountOpen, setAccountOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -91,7 +93,7 @@ export default function AppLayout() {
                   <Icon name={item.icon} size={18} />
                 </span>
                 <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {item.label}
+                  {t(`nav.${item.key}`)}
                 </span>
                 {item.soon && (
                   <span style={{ fontSize: 9.5, fontWeight: 700, opacity: 0.5, flexShrink: 0 }}>SOON</span>
@@ -105,13 +107,13 @@ export default function AppLayout() {
               <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Icon name="trash" size={18} />
               </span>
-              <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>Trash</span>
+              <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('nav.trash')}</span>
             </NavLink>
             <NavLink to="/settings" style={({ isActive }) => navItemStyle(isActive)}>
               <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Icon name="settings" size={18} />
               </span>
-              <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>Settings</span>
+              <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('nav.settings')}</span>
             </NavLink>
 
             <div
@@ -138,13 +140,13 @@ export default function AppLayout() {
                   {user?.email}
                 </div>
               </div>
-              <span onClick={(e) => { e.stopPropagation(); logout(); }} title="Log out" style={{ cursor: 'pointer', opacity: 0.6, display: 'flex', flexShrink: 0 }}>
+              <span onClick={(e) => { e.stopPropagation(); logout(); }} title={t('nav.logout')} style={{ cursor: 'pointer', opacity: 0.6, display: 'flex', flexShrink: 0 }}>
                 <Icon name="logout" size={17} />
               </span>
             </div>
 
             <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em', color: theme.textMuted, textAlign: 'center' }}>
-              <span style={{ color: theme.accentText, fontWeight: 700 }}>Knowledge</span>Hub &copy; {new Date().getFullYear()}
+              <span style={{ color: theme.accentText, fontWeight: 700 }}>{t('common.brand')}</span>{t('common.brandRest')} &copy; {new Date().getFullYear()}
             </div>
           </div>
         </div>
@@ -163,7 +165,7 @@ export default function AppLayout() {
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <span
                 onClick={() => setNotifOpen((v) => !v)}
-                title="Notifications"
+                title={t('notifications.title')}
                 style={{
                   position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
                   cursor: 'pointer', color: theme.textPrimary, background: theme.subtleBg,
@@ -190,8 +192,8 @@ export default function AppLayout() {
                     border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 14, zIndex: 50,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Notifications</div>
-                  {issueAlerts.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted }}>No notifications yet.</div>}
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{t('notifications.title')}</div>
+                  {issueAlerts.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('notifications.empty')}</div>}
                   {issueAlerts.map(({ issue, kind, days }) => (
                     <div
                       key={issue.id}
@@ -207,7 +209,11 @@ export default function AppLayout() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{issue.title}</div>
                         <div style={{ fontSize: 11, color: theme.textMuted }}>
-                          {kind === 'overdue' ? `Overdue by ${days} day${days === 1 ? '' : 's'}` : days === 0 ? 'Due today' : `Due in ${days} day${days === 1 ? '' : 's'}`}
+                          {kind === 'overdue'
+                            ? t(days === 1 ? 'notifications.overdue' : 'notifications.overduePlural', { days })
+                            : days === 0
+                            ? t('notifications.dueToday')
+                            : t(days === 1 ? 'notifications.dueIn' : 'notifications.dueInPlural', { days })}
                         </div>
                       </div>
                     </div>
@@ -218,7 +224,7 @@ export default function AppLayout() {
 
             <span
               onClick={logout}
-              title="Lock platform"
+              title={t('common.lockPlatform')}
               style={{
                 width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: theme.accent, cursor: 'pointer',
                 color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',

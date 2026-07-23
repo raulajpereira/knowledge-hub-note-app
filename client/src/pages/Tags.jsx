@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
@@ -8,6 +9,7 @@ const HUE_ROTATION = [290, 250, 190, 150, 70, 20, 340, 25];
 
 export default function Tags() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -72,13 +74,13 @@ export default function Tags() {
 
   const removeTag = async (tag, e) => {
     e.stopPropagation();
-    if (!confirm(`Delete tag "${tag.name}"? It will be removed from all notes.`)) return;
+    if (!confirm(t('tags.confirmDelete', { name: tag.name }))) return;
     await api.deleteTag(tag.id);
     if (selectedId === tag.id) setSelectedId(null);
     await load();
   };
 
-  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>Loading tags…</div>;
+  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
     <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
@@ -90,13 +92,13 @@ export default function Tags() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tags..."
+            placeholder={t('tags.searchPlaceholder')}
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
           />
         </div>
 
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>No tags yet.</div>}
+          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('tags.noTagsYet')}</div>}
           {filtered.map((t) => (
             <div
               key={t.id}
@@ -138,7 +140,7 @@ export default function Tags() {
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && createTag()}
-                placeholder="Tag name"
+                placeholder={t('tags.newTagPlaceholder')}
                 autoFocus
                 style={{ border: `1px solid ${theme.border}`, borderRadius: 7, padding: '7px 9px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
@@ -147,7 +149,7 @@ export default function Tags() {
                   <div key={h} style={{ width: 16, height: 16, borderRadius: '50%', background: `oklch(0.6 0.19 ${h})` }} />
                 ))}
                 <button onClick={createTag} style={{ marginLeft: 'auto', background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                  Add
+                  {t('common.add')}
                 </button>
               </div>
             </div>
@@ -156,7 +158,7 @@ export default function Tags() {
               onClick={() => setNewTagOpen(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: theme.accent, color: '#fff', borderRadius: 8, padding: '9px 12px', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', marginTop: 2 }}
             >
-              <Icon name="plus" size={13} color="#fff" /> New Tag
+              <Icon name="plus" size={13} color="#fff" /> {t('tags.newTag')}
             </div>
           )}
         </div>
@@ -167,10 +169,10 @@ export default function Tags() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ width: 12, height: 12, borderRadius: '50%', background: `oklch(0.6 0.19 ${selected.hue})`, flexShrink: 0 }} />
             <div style={{ fontSize: 19, fontWeight: 800 }}>{selected.name}</div>
-            <div style={{ fontSize: 12.5, color: theme.textMuted }}>{notesForSelected.length} notes</div>
+            <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('tags.notesCount', { count: notesForSelected.length })}</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {notesForSelected.length === 0 && <div style={{ fontSize: 13, color: theme.textMuted }}>No notes use this tag yet.</div>}
+            {notesForSelected.length === 0 && <div style={{ fontSize: 13, color: theme.textMuted }}>{t('tags.noNotesForTag')}</div>}
             {notesForSelected.map((n) => (
               <div
                 key={n.id}
@@ -179,7 +181,7 @@ export default function Tags() {
               >
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{n.title}</div>
                 <div style={{ fontSize: 12.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {n.content?.slice(0, 80) || 'No additional text'}
+                  {n.content?.slice(0, 80) || t('common.noAdditionalText')}
                 </div>
               </div>
             ))}
@@ -187,7 +189,7 @@ export default function Tags() {
         </div>
       ) : (
         <div style={{ flex: '1 1 420px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
-          Create a tag to get started.
+          {t('tags.createToStart')}
         </div>
       )}
     </div>

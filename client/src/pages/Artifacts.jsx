@@ -1,22 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
-function timeAgo(dateStr) {
+function timeAgo(dateStr, t) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('common.justNow');
+  if (mins < 60) return t('common.minsAgo', { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('common.hoursAgo', { n: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t('common.daysAgo', { n: days });
 }
 
 export default function Artifacts() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const location = useLocation();
   const [artifacts, setArtifacts] = useState([]);
   const [tags, setTags] = useState([]);
@@ -129,7 +131,7 @@ export default function Artifacts() {
     background: isActive ? theme.accentSoftBg : 'transparent',
   });
 
-  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>Loading artifacts…</div>;
+  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
     <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
@@ -142,13 +144,13 @@ export default function Artifacts() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search artifacts..."
+              placeholder={t('artifacts.searchPlaceholder')}
               style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
             />
           </div>
           <button
             onClick={addArtifact}
-            title="New Artifact"
+            title={t('artifacts.newArtifact')}
             style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}
           >
             <Icon name="plus" size={16} color="#fff" />
@@ -156,12 +158,12 @@ export default function Artifacts() {
         </div>
 
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>No artifacts yet.</div>}
+          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('artifacts.noArtifactsYet')}</div>}
           {filtered.map((a) => (
             <div key={a.id} onClick={() => setSelectedId(a.id)} style={rowStyle(selected?.id === a.id)}>
               <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
               <div style={{ fontSize: 11.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {a.description || timeAgo(a.updatedAt)}
+                {a.description || timeAgo(a.updatedAt, t)}
               </div>
               {a.tags?.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -198,12 +200,12 @@ export default function Artifacts() {
                     boxShadow: mode === m ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
                   }}
                 >
-                  {m}
+                  {t(`artifacts.${m}`)}
                 </div>
               ))}
             </div>
             <button onClick={remove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-              Delete
+              {t('common.delete')}
             </button>
           </div>
 
@@ -212,7 +214,7 @@ export default function Artifacts() {
             onChange={(e) => setDescriptionDraft(e.target.value)}
             onBlur={commitDescription}
             onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-            placeholder="Add a description..."
+            placeholder={t('artifacts.descriptionPlaceholder')}
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textMuted }}
           />
 
@@ -239,7 +241,7 @@ export default function Artifacts() {
               onClick={() => setTagPickerOpen((v) => !v)}
               style={{ fontSize: 11, fontWeight: 700, border: `1px dashed ${theme.border}`, color: theme.textMuted, padding: '3px 9px', borderRadius: 6, cursor: 'pointer' }}
             >
-              + Tag
+              {t('artifacts.addTag')}
             </span>
           </div>
 
@@ -265,11 +267,11 @@ export default function Artifacts() {
                   value={newTagInput}
                   onChange={(e) => setNewTagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && createAndAddTag()}
-                  placeholder="New tag name..."
+                  placeholder={t('artifacts.newTagPlaceholder')}
                   style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
                 />
                 <button onClick={createAndAddTag} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                  Add
+                  {t('common.add')}
                 </button>
               </div>
             </div>
@@ -293,7 +295,7 @@ export default function Artifacts() {
         </div>
       ) : (
         <div style={{ flex: '1 1 640px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
-          Select or create an artifact to get started.
+          {t('artifacts.selectOrCreate')}
         </div>
       )}
     </div>

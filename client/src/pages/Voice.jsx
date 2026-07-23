@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
@@ -23,6 +24,7 @@ function seededBars(seed, count = 24) {
 
 export default function Voice() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const location = useLocation();
   const [voiceNotes, setVoiceNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -98,7 +100,7 @@ export default function Voice() {
       timerRef.current = setInterval(() => setElapsed(Math.round((Date.now() - startRef.current) / 1000)), 250);
       setRecording(true);
     } catch (err) {
-      setError('Microphone access was denied or is unavailable.');
+      setError(t('voice.micDenied'));
     }
   };
 
@@ -120,7 +122,7 @@ export default function Voice() {
     setSelectedId(null);
   };
 
-  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>Loading voice notes…</div>;
+  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
     <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
@@ -132,12 +134,12 @@ export default function Voice() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search voice notes..."
+            placeholder={t('voice.searchPlaceholder')}
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
           />
         </div>
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>No recordings yet.</div>}
+          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('voice.noRecordingsYet')}</div>}
           {filtered.map((v) => (
             <div
               key={v.id}
@@ -172,8 +174,8 @@ export default function Voice() {
             <Icon name={recording ? 'check' : 'mic'} size={26} color="#fff" />
           </button>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>{recording ? 'Recording…' : 'Tap to record'}</div>
-            <div style={{ fontSize: 13, opacity: 0.85 }}>{recording ? formatDuration(elapsed) : 'Capture a quick voice memo'}</div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>{recording ? t('voice.recording') : t('voice.tapToRecord')}</div>
+            <div style={{ fontSize: 13, opacity: 0.85 }}>{recording ? formatDuration(elapsed) : t('voice.captureMemo')}</div>
             {error && <div style={{ fontSize: 12, marginTop: 4, color: '#fff' }}>{error}</div>}
           </div>
         </div>
@@ -189,7 +191,7 @@ export default function Voice() {
                 style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}
               />
               <button onClick={remove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-                Delete
+                {t('common.delete')}
               </button>
             </div>
             <div style={{ fontSize: 12.5, color: theme.textMuted }}>
@@ -197,19 +199,19 @@ export default function Voice() {
             </div>
             <audio controls src={selected.audioUrl} style={{ width: '100%' }} />
             <div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Notes</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('voice.notes')}</div>
               <textarea
                 value={selected.notes || ''}
                 onChange={(e) => patch(selected.id, { notes: e.target.value })}
                 rows={6}
-                placeholder="Add notes about this recording..."
+                placeholder={t('voice.notesPlaceholder')}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, fontSize: 13.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
               />
             </div>
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
-            Record your first voice note above.
+            {t('voice.recordFirst')}
           </div>
         )}
       </div>

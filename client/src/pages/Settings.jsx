@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useAgents } from '../context/AgentsContext.jsx';
-import { ACCENTS } from '../styles/theme.js';
+import { useLanguage } from '../context/LanguageContext.jsx';
+import { FONT_OPTIONS } from '../styles/theme.js';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import ColorWheel from '../components/ColorWheel.jsx';
 import logoDefault from '../assets/logo-default.png';
 
 function userInitials(name) {
@@ -13,7 +15,7 @@ function userInitials(name) {
   return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
 }
 
-function TeamCard({ theme, card, outlineButton }) {
+function TeamCard({ theme, t, card, outlineButton }) {
   const [team, setTeam] = useState(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [name, setName] = useState('');
@@ -41,7 +43,7 @@ function TeamCard({ theme, card, outlineButton }) {
       setInviteOpen(false);
       await load();
     } catch (err) {
-      setError(err.message || 'Could not invite this member.');
+      setError(err.message || t('settings.couldNotInvite'));
     } finally {
       setInviting(false);
     }
@@ -58,31 +60,31 @@ function TeamCard({ theme, card, outlineButton }) {
     <div style={card}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>Team</div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.team')}</div>
           <div style={{ fontSize: 12, color: theme.textMuted }}>
-            {team.isOwner ? 'Members share your Notes, Tasks, Tags, Voice Notes, Issues and Artifacts.' : `You're part of ${team.owner.name}'s team.`}
+            {team.isOwner ? t('settings.teamOwnerDesc') : t('settings.teamMemberDesc', { name: team.owner.name })}
           </div>
         </div>
         {team.isOwner && (
           <button onClick={() => setInviteOpen((v) => !v)} style={outlineButton}>
-            {inviteOpen ? 'Cancel' : '+ Invite member'}
+            {inviteOpen ? t('common.cancel') : t('settings.inviteMember')}
           </button>
         )}
       </div>
 
       {inviteOpen && (
         <form onSubmit={invite} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" style={{ flex: '1 1 140px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" style={{ flex: '1 1 160px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
-          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Temporary password" style={{ flex: '1 1 160px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('settings.namePlaceholder')} style={{ flex: '1 1 140px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder={t('settings.emailPlaceholder')} style={{ flex: '1 1 160px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
+          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder={t('settings.tempPasswordPlaceholder')} style={{ flex: '1 1 160px', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }} />
           <button type="submit" disabled={inviting} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: inviting ? 0.6 : 1 }}>
-            {inviting ? 'Inviting…' : 'Invite'}
+            {inviting ? t('settings.inviting') : t('settings.invite')}
           </button>
           {error && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', width: '100%' }}>{error}</div>}
         </form>
       )}
 
-      {team.members.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>No members yet.</div>}
+      {team.members.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noMembersYet')}</div>}
       {team.members.map((m) => (
         <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: `1px solid ${theme.border}` }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -100,7 +102,7 @@ function TeamCard({ theme, card, outlineButton }) {
   );
 }
 
-function AgentRow({ agent, theme }) {
+function AgentRow({ agent, theme, t }) {
   const { updateAgent, deleteAgent } = useAgents();
   const [tokenInput, setTokenInput] = useState('');
   const [tokenReveal, setTokenReveal] = useState(false);
@@ -119,7 +121,7 @@ function AgentRow({ agent, theme }) {
     setTestResult(null);
     try {
       await api.testAgent(agent.id);
-      setTestResult({ ok: true, message: 'Connected' });
+      setTestResult({ ok: true, message: t('settings.connected') });
     } catch (err) {
       setTestResult({ ok: false, message: err.message });
     } finally {
@@ -133,7 +135,7 @@ function AgentRow({ agent, theme }) {
         <input
           value={agent.name}
           onChange={(e) => updateAgent(agent.id, { name: e.target.value })}
-          placeholder="Agent name"
+          placeholder={t('settings.agentNamePlaceholder')}
           style={{ flex: 1, border: 'none', borderBottom: '1px solid transparent', padding: '2px 0', fontSize: 14.5, fontWeight: 700, background: 'transparent', color: theme.textPrimary, outline: 'none' }}
         />
         <select
@@ -153,7 +155,7 @@ function AgentRow({ agent, theme }) {
         <input
           value={agent.baseUrl || ''}
           onChange={(e) => updateAgent(agent.id, { baseUrl: e.target.value })}
-          placeholder="Base URL (optional — defaults to api.openai.com)"
+          placeholder={t('settings.baseUrlPlaceholder')}
           style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 11px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
         />
       )}
@@ -163,14 +165,14 @@ function AgentRow({ agent, theme }) {
           value={tokenInput}
           onChange={(e) => setTokenInput(e.target.value)}
           type={tokenReveal ? 'text' : 'password'}
-          placeholder={agent.hasToken ? 'API token saved — enter a new one to replace it' : 'API token'}
+          placeholder={agent.hasToken ? t('settings.tokenSavedPlaceholder') : t('settings.tokenPlaceholder')}
           style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 90px 9px 11px', fontSize: 12.5, fontFamily: 'var(--font-mono)', background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
         />
         <span onClick={() => setTokenReveal((v) => !v)} style={{ position: 'absolute', right: 60, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.5, display: 'flex' }}>
           <Icon name={tokenReveal ? 'eyeOff' : 'eye'} size={15} />
         </span>
         <button onClick={saveToken} style={{ position: 'absolute', right: 4, top: 4, bottom: 4, background: theme.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '0 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-          Save
+          {t('common.save')}
         </button>
       </div>
 
@@ -182,7 +184,7 @@ function AgentRow({ agent, theme }) {
           >
             <div style={{ position: 'absolute', top: 2, left: agent.active ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
           </div>
-          Active
+          {t('settings.active')}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 10 }}>
           {testResult && (
@@ -191,7 +193,7 @@ function AgentRow({ agent, theme }) {
             </div>
           )}
           <button onClick={runTest} disabled={testing || !agent.hasToken} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '7px 12px', fontSize: 12.5, fontWeight: 600, cursor: agent.hasToken ? 'pointer' : 'default', opacity: agent.hasToken ? 1 : 0.5 }}>
-            {testing ? 'Testing…' : 'Test'}
+            {testing ? t('settings.testing') : t('settings.test')}
           </button>
         </div>
       </div>
@@ -202,9 +204,10 @@ function AgentRow({ agent, theme }) {
 const AUTO_LOCK_OPTIONS = [30, 60, 120, 300, 600];
 
 export default function Settings() {
-  const { theme, mode, accentColor, setMode, setAccentColor } = useTheme();
+  const { theme, mode, accentHue, fontFamily, setMode, setAccentHue, setFontFamily } = useTheme();
   const { user, updateUserSettings } = useAuth();
   const { agents, createAgent } = useAgents();
+  const { t, lang, setLanguage } = useLanguage();
   const fileInputRef = useRef(null);
 
   const onLogoUpload = async (e) => {
@@ -229,14 +232,14 @@ export default function Settings() {
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', width: '100%', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 800 }}>Settings</div>
+      <div style={{ fontSize: 22, fontWeight: 800 }}>{t('settings.title')}</div>
 
       <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>Appearance</div>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.appearance')}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Theme</div>
-            <div style={{ fontSize: 12, color: theme.textMuted }}>Choose a light or dark interface</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.theme')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.themeDesc')}</div>
           </div>
           <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
             {['dark', 'light'].map((m) => (
@@ -248,33 +251,61 @@ export default function Settings() {
                   background: mode === m ? theme.cardBg : 'transparent', color: mode === m ? theme.textPrimary : theme.textMuted,
                 }}
               >
-                {m}
+                {t(`settings.${m}`)}
               </div>
             ))}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Accent color</div>
-            <div style={{ fontSize: 12, color: theme.textMuted }}>Applied across buttons, links and highlights</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.accentColor')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.accentColorDesc')}</div>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {ACCENTS.map((a) => {
-              const key = a.name.toLowerCase();
-              const active = accentColor === key;
+          <ColorWheel hue={theme.hue} onChange={setAccentHue} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.font')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.fontDesc')}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {FONT_OPTIONS.map((f) => {
+              const active = (fontFamily || 'inter') === f.id;
               return (
                 <div
-                  key={key}
-                  onClick={() => setAccentColor(key)}
-                  title={a.name}
+                  key={f.id}
+                  onClick={() => setFontFamily(f.id)}
                   style={{
-                    width: 26, height: 26, borderRadius: '50%', cursor: 'pointer',
-                    background: `oklch(0.6 0.19 ${a.hue})`,
-                    boxShadow: active ? `0 0 0 2px ${theme.cardBg}, 0 0 0 4px oklch(0.6 0.19 ${a.hue})` : 'none',
+                    padding: '7px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                    background: active ? theme.accentSoftBg : theme.subtleBg,
+                    color: active ? theme.accentText : theme.textMuted,
+                    fontFamily: f.display,
                   }}
-                />
+                >
+                  {t(`settings.font${f.id.charAt(0).toUpperCase()}${f.id.slice(1)}`)}
+                </div>
               );
             })}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.language')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.languageDesc')}</div>
+          </div>
+          <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
+            {['pt', 'en'].map((l) => (
+              <div
+                key={l}
+                onClick={() => setLanguage(l)}
+                style={{
+                  padding: '7px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                  background: lang === l ? theme.cardBg : 'transparent', color: lang === l ? theme.textPrimary : theme.textMuted,
+                }}
+              >
+                {l.toUpperCase()}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -294,14 +325,14 @@ export default function Settings() {
             />
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 200 }}>
-            <div style={{ fontSize: 12.5, color: theme.textMuted }}>Replaces the whole sidebar logo (icon + app name).</div>
+            <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.appLogoDesc')}</div>
             <div style={{ display: 'flex', gap: 10 }}>
               <label style={{ ...outlineButton, alignSelf: 'flex-start' }}>
-                Upload logo
+                {t('settings.uploadLogo')}
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={onLogoUpload} style={{ display: 'none' }} />
               </label>
               <button onClick={onResetLogo} style={{ ...outlineButton, alignSelf: 'flex-start' }}>
-                Reset logo
+                {t('settings.resetLogo')}
               </button>
             </div>
           </div>
@@ -309,11 +340,11 @@ export default function Settings() {
       </div>
 
       <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>Passwords vault</div>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.vault')}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Auto-lock after inactivity</div>
-            <div style={{ fontSize: 12, color: theme.textMuted }}>Locks the vault automatically when you're away.</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.autoLock')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.autoLockDesc')}</div>
           </div>
           <select
             value={user?.settings?.vaultAutoLockSeconds ?? 60}
@@ -322,7 +353,7 @@ export default function Settings() {
           >
             {AUTO_LOCK_OPTIONS.map((s) => (
               <option key={s} value={s}>
-                {s < 60 ? `${s} seconds` : `${s / 60} minute${s === 60 ? '' : 's'}`}
+                {s < 60 ? t('settings.seconds', { n: s }) : t(s === 60 ? 'settings.minute' : 'settings.minutes', { n: s / 60 })}
               </option>
             ))}
           </select>
@@ -330,7 +361,7 @@ export default function Settings() {
       </div>
 
       <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>Account</div>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.account')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 52, height: 52, borderRadius: '50%', background: theme.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 17, flexShrink: 0 }}>
             {userInitials(user?.name)}
@@ -342,24 +373,24 @@ export default function Settings() {
         </div>
       </div>
 
-      <TeamCard theme={theme} card={card} outlineButton={outlineButton} />
+      <TeamCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
 
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>AI Agents</div>
-            <div style={{ fontSize: 12, color: theme.textMuted }}>Connect AI agents to assist across your workspace.</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.aiAgents')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.aiAgentsDesc')}</div>
           </div>
           <button
             onClick={() => createAgent({ name: 'New Agent', provider: 'anthropic' })}
             style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
-            Add agent
+            {t('settings.addAgent')}
           </button>
         </div>
-        {agents.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>No agents yet — add one to enable the chat widget.</div>}
+        {agents.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noAgentsYet')}</div>}
         {agents.map((agent) => (
-          <AgentRow key={agent.id} agent={agent} theme={theme} />
+          <AgentRow key={agent.id} agent={agent} theme={theme} t={t} />
         ))}
       </div>
     </div>

@@ -21,6 +21,9 @@ function publicUser(user) {
       ? {
           theme: user.settings.theme,
           accentColor: user.settings.accentColor,
+          accentHue: user.settings.accentHue,
+          fontFamily: user.settings.fontFamily,
+          language: user.settings.language,
           logoUrl: user.settings.logoUrl,
           avatarUrl: user.settings.avatarUrl,
           vaultAutoLockSeconds: user.settings.vaultAutoLockSeconds,

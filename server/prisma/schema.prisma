@@ -37,6 +37,9 @@ model Settings {
   userId                  String   @unique
   theme                   String   @default("dark") // "dark" | "light"
   accentColor             String   @default("purple")
+  accentHue               Int?
+  fontFamily              String?
+  language                String   @default("pt") // "pt" | "en"
   logoUrl                 String?
   avatarUrl               String?
   vaultSalt               String?  @db.Text

@@ -15,9 +15,41 @@ export function hueForAccent(accentColor) {
   return ACCENT_TO_HUE[accentColor] ?? 290;
 }
 
-export function getTheme(mode, accentColor) {
+export const FONT_OPTIONS = [
+  {
+    id: 'inter',
+    body: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+    display: "'Space Grotesk', 'Inter', -apple-system, sans-serif",
+  },
+  {
+    id: 'grotesk',
+    body: "'Space Grotesk', 'Inter', -apple-system, sans-serif",
+    display: "'Space Grotesk', 'Inter', -apple-system, sans-serif",
+  },
+  {
+    id: 'system',
+    body: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+    display: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+  },
+  {
+    id: 'serif',
+    body: "Georgia, 'Times New Roman', serif",
+    display: "Georgia, 'Times New Roman', serif",
+  },
+  {
+    id: 'mono',
+    body: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    display: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  },
+];
+
+export function fontStackFor(id) {
+  return FONT_OPTIONS.find((f) => f.id === id) || FONT_OPTIONS[0];
+}
+
+export function getTheme(mode, accentColor, accentHue) {
   const dark = mode === 'dark';
-  const hue = hueForAccent(accentColor);
+  const hue = Number.isFinite(accentHue) ? accentHue : hueForAccent(accentColor);
   return {
     dark,
     hue,

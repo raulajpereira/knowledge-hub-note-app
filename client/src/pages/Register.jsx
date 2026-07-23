@@ -17,7 +17,7 @@ export default function Register() {
     e.preventDefault();
     setError('');
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError('As passwords não coincidem.');
       return;
     }
     setSubmitting(true);
@@ -25,7 +25,7 @@ export default function Register() {
       await register(email, password, name);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err.message || 'Could not create your account.');
+      setError(err.message || 'Não foi possível criar a tua conta.');
     } finally {
       setSubmitting(false);
     }
@@ -61,15 +61,15 @@ export default function Register() {
         >
           <img src={logoIcon} alt="" style={{ height: 28, width: 'auto', filter: 'brightness(0) invert(1)' }} />
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800 }}>Create your Knowledge Hub</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>Your second brain, organized.</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>Cria o teu Knowledge Hub</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>O teu segundo cérebro, organizado.</div>
           </div>
 
           {[
-            { label: 'Name', value: name, setter: setName, type: 'text', placeholder: 'Your name' },
-            { label: 'Email', value: email, setter: setEmail, type: 'email', placeholder: 'you@example.com' },
-            { label: 'Password', value: password, setter: setPassword, type: 'password', placeholder: 'At least 8 characters' },
-            { label: 'Confirm password', value: confirm, setter: setConfirm, type: 'password', placeholder: 'Repeat password' },
+            { label: 'Nome', value: name, setter: setName, type: 'text', placeholder: 'O teu nome' },
+            { label: 'Email', value: email, setter: setEmail, type: 'email', placeholder: 'tu@exemplo.com' },
+            { label: 'Password', value: password, setter: setPassword, type: 'password', placeholder: 'Pelo menos 8 caracteres' },
+            { label: 'Confirmar password', value: confirm, setter: setConfirm, type: 'password', placeholder: 'Repete a password' },
           ].map((f) => (
             <div key={f.label} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{f.label}</div>
@@ -103,13 +103,13 @@ export default function Register() {
               opacity: submitting ? 0.7 : 1,
             }}
           >
-            {submitting ? 'Creating account…' : 'Create Account'}
+            {submitting ? 'A criar conta…' : 'Criar Conta'}
           </button>
 
           <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)' }}>
-            Already have an account?{' '}
+            Já tens conta?{' '}
             <Link to="/login" style={{ color: '#fff', fontWeight: 700 }}>
-              Sign in
+              Iniciar sessão
             </Link>
           </div>
         </form>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
@@ -24,6 +25,7 @@ function contentFromBlocks(blocks) {
 
 export default function Notes() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const location = useLocation();
   const [notes, setNotes] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -99,7 +101,7 @@ export default function Notes() {
 
   const addNote = async () => {
     const { note } = await api.createNote({
-      title: 'Untitled note',
+      title: t('notes.untitledNote'),
       content: '',
       folderId: activeFolder !== 'all' && activeFolder !== 'none' ? activeFolder : null,
     });
@@ -238,7 +240,7 @@ export default function Notes() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search notes..."
+              placeholder={t('notes.searchPlaceholder')}
               style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
             />
           </div>
@@ -269,7 +271,7 @@ export default function Notes() {
             }}
           >
             <Icon name="folder" size={15} />
-            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>All Notes</span>
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{t('notes.allNotes')}</span>
             <span style={{ fontSize: 11.5, opacity: 0.7 }}>{notes.length}</span>
           </div>
           {folders.map((f) => (
@@ -301,12 +303,12 @@ export default function Notes() {
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && createFolder()}
-                placeholder="Folder name"
+                placeholder={t('notes.newFolderName')}
                 autoFocus
                 style={{ flex: 1, minWidth: 0, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
               <button onClick={createFolder} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                Add
+                {t('common.add')}
               </button>
             </div>
           ) : (
@@ -314,13 +316,13 @@ export default function Notes() {
               onClick={() => setNewFolderOpen(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: theme.accent, color: '#fff', borderRadius: 8, padding: '9px 12px', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', marginTop: 2 }}
             >
-              <Icon name="plus" size={13} color="#fff" /> New Folder
+              <Icon name="plus" size={13} color="#fff" /> {t('notes.newFolder')}
             </div>
           )}
         </div>
 
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>No notes here yet.</div>}
+          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('notes.noNotesHere')}</div>}
           {filtered.map((n) => (
             <div
               key={n.id}
@@ -334,7 +336,7 @@ export default function Notes() {
                 <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</div>
               </div>
               <div style={{ fontSize: 12, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {n.content?.slice(0, 60) || 'No additional text'}
+                {n.content?.slice(0, 60) || t('common.noAdditionalText')}
               </div>
               {n.tags?.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -350,25 +352,25 @@ export default function Notes() {
         </div>
 
         <div onClick={() => setShowTrash((v) => !v)} style={{ fontSize: 12.5, color: theme.textMuted, cursor: 'pointer', textAlign: 'center', padding: '4px 0' }}>
-          {showTrash ? 'Hide trash' : 'View trash'}
+          {showTrash ? t('notes.hideTrash') : t('notes.viewTrash')}
         </div>
       </div>
 
       {showTrash ? (
         <div style={{ flex: '1 1 480px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
-          <div style={{ fontSize: 17, fontWeight: 800 }}>Trash</div>
-          {trashedNotes.length === 0 && <div style={{ fontSize: 13, color: theme.textMuted }}>Trash is empty.</div>}
+          <div style={{ fontSize: 17, fontWeight: 800 }}>{t('notes.trash')}</div>
+          {trashedNotes.length === 0 && <div style={{ fontSize: 13, color: theme.textMuted }}>{t('notes.trashEmpty')}</div>}
           {trashedNotes.map((n) => (
             <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: theme.subtleBg }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700 }}>{n.title}</div>
-                <div style={{ fontSize: 12, color: theme.textMuted }}>Deleted {new Date(n.deletedAt).toLocaleString()}</div>
+                <div style={{ fontSize: 12, color: theme.textMuted }}>{t('notes.deleted', { date: new Date(n.deletedAt).toLocaleString() })}</div>
               </div>
               <button onClick={() => restoreNote(n.id)} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                Restore
+                {t('common.restore')}
               </button>
               <button onClick={() => deleteForever(n.id)} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                Delete Forever
+                {t('common.deleteForever')}
               </button>
             </div>
           ))}
@@ -388,7 +390,7 @@ export default function Notes() {
                 <Icon name="pin" size={17} color={selected.pinned ? theme.accentText : theme.textMuted} />
               </span>
               <button onClick={trashSelected} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -416,7 +418,7 @@ export default function Notes() {
               onClick={() => setTagPickerOpen((v) => !v)}
               style={{ fontSize: 11, fontWeight: 700, border: `1px dashed ${theme.border}`, color: theme.textMuted, padding: '3px 9px', borderRadius: 6, cursor: 'pointer' }}
             >
-              + Tag
+              {t('notes.addTag')}
             </span>
           </div>
 
@@ -442,11 +444,11 @@ export default function Notes() {
                   value={newTagInput}
                   onChange={(e) => setNewTagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && createAndAddTag()}
-                  placeholder="New tag name..."
+                  placeholder={t('notes.newTagPlaceholder')}
                   style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
                 />
                 <button onClick={createAndAddTag} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                  Add
+                  {t('common.add')}
                 </button>
               </div>
             </div>
@@ -481,7 +483,7 @@ export default function Notes() {
                   <AutoResizeTextarea
                     value={block.value}
                     onChange={(e) => updateBlock(block.id, { value: e.target.value })}
-                    placeholder="Write... (you can paste an image here too)"
+                    placeholder={t('notes.writePlaceholder')}
                     style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit' }}
                   />
                   {getBlocks(selected).length > 1 && (
@@ -496,16 +498,16 @@ export default function Notes() {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={addTextBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
-              + Text
+              {t('notes.addText')}
             </button>
             <button onClick={addCodeBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
-              + Code
+              {t('notes.addCode')}
             </button>
           </div>
         </div>
       ) : (
         <div style={{ flex: '1 1 480px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
-          Select or create a note to get started.
+          {t('notes.selectOrCreate')}
         </div>
       )}
     </div>

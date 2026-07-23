@@ -46,8 +46,11 @@ router.get('/', async (req, res) => {
   res.json({ settings });
 });
 
+const FONT_FAMILIES = ['inter', 'grotesk', 'system', 'serif', 'mono'];
+const LANGUAGES = ['pt', 'en'];
+
 router.patch('/', async (req, res) => {
-  const { theme, accentColor, vaultAutoLockSeconds, issueStatuses } = req.body || {};
+  const { theme, accentColor, accentHue, fontFamily, language, vaultAutoLockSeconds, issueStatuses } = req.body || {};
   const data = {};
   if (theme !== undefined) {
     if (!['dark', 'light'].includes(theme)) return res.status(400).json({ error: 'Invalid theme' });
@@ -56,6 +59,21 @@ router.patch('/', async (req, res) => {
   if (accentColor !== undefined) {
     if (!ACCENT_COLORS.includes(accentColor)) return res.status(400).json({ error: 'Invalid accent color' });
     data.accentColor = accentColor;
+  }
+  if (accentHue !== undefined) {
+    const n = Number(accentHue);
+    if (accentHue !== null && (!Number.isFinite(n) || n < 0 || n > 360)) {
+      return res.status(400).json({ error: 'accentHue must be a number between 0 and 360' });
+    }
+    data.accentHue = accentHue === null ? null : Math.round(n);
+  }
+  if (fontFamily !== undefined) {
+    if (fontFamily !== null && !FONT_FAMILIES.includes(fontFamily)) return res.status(400).json({ error: 'Invalid fontFamily' });
+    data.fontFamily = fontFamily;
+  }
+  if (language !== undefined) {
+    if (!LANGUAGES.includes(language)) return res.status(400).json({ error: 'Invalid language' });
+    data.language = language;
   }
   if (vaultAutoLockSeconds !== undefined) {
     const n = Number(vaultAutoLockSeconds);

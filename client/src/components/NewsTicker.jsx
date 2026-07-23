@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 
 export default function NewsTicker() {
   const { theme } = useTheme();
+  const { lang } = useLanguage();
   const [items, setItems] = useState([]);
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function NewsTicker() {
           background: theme.accent, color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', zIndex: 1,
         }}
       >
-        LATEST
+        {lang === 'pt' ? 'ÚLTIMAS' : 'LATEST'}
       </div>
       <div style={{ flex: 1, overflow: 'hidden', height: '100%', position: 'relative' }}>
         <div

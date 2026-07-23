@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import DateInput from '../components/DateInput.jsx';
@@ -17,14 +18,14 @@ const DEFAULT_STATUSES = [
 const HUE_PRESETS = [250, 290, 60, 145, 20, 190, 330, 10];
 
 const DEFAULT_COLUMNS = [
-  { key: 'title', label: 'Title', width: 220 },
-  { key: 'status', label: 'Status', width: 130 },
-  { key: 'priority', label: 'Priority', width: 110 },
-  { key: 'project', label: 'Project', width: 140 },
-  { key: 'due', label: 'Due', width: 100 },
-  { key: 'waitingOn', label: 'Waiting On', width: 160 },
-  { key: 'description', label: 'Description', width: 220 },
-  { key: 'notes', label: 'Notes', width: 220 },
+  { key: 'title', labelKey: 'issues.colTitle', width: 220 },
+  { key: 'status', labelKey: 'issues.colStatus', width: 130 },
+  { key: 'priority', labelKey: 'issues.colPriority', width: 110 },
+  { key: 'project', labelKey: 'issues.colProject', width: 140 },
+  { key: 'due', labelKey: 'issues.colDue', width: 100 },
+  { key: 'waitingOn', labelKey: 'issues.colWaitingOn', width: 160 },
+  { key: 'description', labelKey: 'issues.colDescription', width: 220 },
+  { key: 'notes', labelKey: 'issues.colNotes', width: 220 },
 ];
 const MIN_COLUMN_WIDTH = 70;
 
@@ -64,6 +65,7 @@ function Badge({ label, hue, theme }) {
 
 export default function Issues() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { user, updateUserSettings } = useAuth();
   const location = useLocation();
   const [issues, setIssues] = useState([]);
@@ -117,7 +119,7 @@ export default function Issues() {
   };
 
   const addDraftStatus = () => {
-    setStatusDraft((prev) => [...prev, { _key: `new-${Date.now()}`, originalName: null, name: 'New status', hue: HUE_PRESETS[prev.length % HUE_PRESETS.length] }]);
+    setStatusDraft((prev) => [...prev, { _key: `new-${Date.now()}`, originalName: null, name: t('issues.newStatus'), hue: HUE_PRESETS[prev.length % HUE_PRESETS.length] }]);
   };
 
   const saveStatusConfig = async () => {
@@ -233,12 +235,14 @@ export default function Issues() {
 
   const cardStyle = { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer' };
 
-  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>Loading issues…</div>;
+  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
+
+  const viewLabel = { table: t('issues.table'), kanban: t('issues.kanban') };
 
   return (
     <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>Project Issues</div>
+        <div style={{ fontSize: 22, fontWeight: 800 }}>{t('issues.title')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
             {['table', 'kanban'].map((v) => (
@@ -250,7 +254,7 @@ export default function Issues() {
                   background: view === v ? theme.cardBg : 'transparent', color: view === v ? theme.textPrimary : theme.textMuted,
                 }}
               >
-                {v}
+                {viewLabel[v]}
               </div>
             ))}
           </div>
@@ -259,15 +263,15 @@ export default function Issues() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filtrar issues..."
+              placeholder={t('issues.filterPlaceholder')}
               style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textPrimary, width: 140 }}
             />
           </div>
-          <button onClick={openStatusConfig} title="Configure statuses" style={{ display: 'flex', alignItems: 'center', background: theme.subtleBg, border: 'none', color: theme.textPrimary, borderRadius: 9, padding: '9px 10px', cursor: 'pointer' }}>
+          <button onClick={openStatusConfig} title={t('issues.configureStatuses')} style={{ display: 'flex', alignItems: 'center', background: theme.subtleBg, border: 'none', color: theme.textPrimary, borderRadius: 9, padding: '9px 10px', cursor: 'pointer' }}>
             <Icon name="settings" size={16} />
           </button>
           <button onClick={openNewIssue} style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-            <Icon name="plus" size={14} color="#fff" /> Novo Issue
+            <Icon name="plus" size={14} color="#fff" /> {t('issues.newIssue')}
           </button>
         </div>
       </div>
@@ -278,7 +282,7 @@ export default function Issues() {
             <div style={{ display: 'grid', gridTemplateColumns: [...columns.map((c) => `${c.width}px`), '1fr'].join(' '), gap: 0, minWidth: '100%' }}>
               {columns.map((col, i) => (
                 <div key={col.key} style={{ position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `1px solid ${theme.border}` }}>
-                  {col.label}
+                  {t(col.labelKey)}
                   <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} />
                 </div>
               ))}
@@ -319,7 +323,7 @@ export default function Issues() {
                 </Fragment>
               ))}
               {filtered.length === 0 && (
-                <div style={{ gridColumn: '1 / -1', padding: 20, fontSize: 13, color: theme.textMuted }}>No issues yet.</div>
+                <div style={{ gridColumn: '1 / -1', padding: 20, fontSize: 13, color: theme.textMuted }}>{t('issues.noIssuesYet')}</div>
               )}
             </div>
           </div>
@@ -351,7 +355,7 @@ export default function Issues() {
                         <Badge label={issue.priority} hue={PRIORITY_HUES[issue.priority]} theme={theme} />
                         {issue.project && <span style={{ fontSize: 11, color: theme.textMuted }}>{issue.project}</span>}
                       </div>
-                      {issue.due && <div style={{ fontSize: 11, color: theme.textMuted }}>Due {issue.due}</div>}
+                      {issue.due && <div style={{ fontSize: 11, color: theme.textMuted }}>{t('common.due', { date: issue.due })}</div>}
                     </div>
                   ))}
               </div>
@@ -370,12 +374,12 @@ export default function Issues() {
                 style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontWeight: 800, color: theme.textPrimary }}
               />
               <button onClick={() => remove(selected.id)} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '6px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-                Delete
+                {t('common.delete')}
               </button>
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Status</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.status')}</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {STATUS_NAMES.map((s) => (
                   <div
@@ -394,7 +398,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Priority</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.priority')}</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {PRIORITIES.map((p) => (
                   <div
@@ -413,7 +417,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Project</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.project')}</div>
               <input
                 value={selected.project || ''}
                 onChange={(e) => patch(selected.id, { project: e.target.value })}
@@ -422,7 +426,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Due Date</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.dueDate')}</div>
               <DateInput
                 value={selected.due}
                 onChange={(value) => patch(selected.id, { due: value })}
@@ -431,7 +435,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Waiting On</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.waitingOn')}</div>
               <input
                 value={selected.waitingOn || ''}
                 onChange={(e) => patch(selected.id, { waitingOn: e.target.value })}
@@ -440,7 +444,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Description</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.description')}</div>
               <textarea
                 value={selected.description || ''}
                 onChange={(e) => patch(selected.id, { description: e.target.value })}
@@ -450,7 +454,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Notes</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.notes')}</div>
               <textarea
                 value={selected.notes || ''}
                 onChange={(e) => patch(selected.id, { notes: e.target.value })}
@@ -474,23 +478,23 @@ export default function Issues() {
               borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ fontSize: 17, fontWeight: 800 }}>New Issue</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('issues.newIssueModalTitle')}</div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Title</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.colTitle')}</div>
               <input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && createIssue()}
                 autoFocus
-                placeholder="Issue title"
+                placeholder={t('issues.titlePlaceholder')}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Project</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.project')}</div>
                 <input
                   value={newProject}
                   onChange={(e) => setNewProject(e.target.value)}
@@ -498,7 +502,7 @@ export default function Issues() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Due Date</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.dueDate')}</div>
                 <DateInput
                   value={newDue}
                   onChange={setNewDue}
@@ -508,7 +512,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Priority</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.priority')}</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {PRIORITIES.map((p) => {
                   const hue = PRIORITY_HUES[p];
@@ -531,7 +535,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Status</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.status')}</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {STATUS_NAMES.map((s) => {
                   const hue = hueFor(s);
@@ -554,7 +558,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Waiting On</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.waitingOn')}</div>
               <input
                 value={newWaitingOn}
                 onChange={(e) => setNewWaitingOn(e.target.value)}
@@ -563,7 +567,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Description</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.description')}</div>
               <textarea
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
@@ -573,7 +577,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Notes</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.notes')}</div>
               <textarea
                 value={newNotes}
                 onChange={(e) => setNewNotes(e.target.value)}
@@ -587,7 +591,7 @@ export default function Issues() {
                 onClick={() => setNewIssueOpen(false)}
                 style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={createIssue}
@@ -597,7 +601,7 @@ export default function Issues() {
                   cursor: 'pointer', opacity: newTitle.trim() ? 1 : 0.5,
                 }}
               >
-                Create
+                {t('common.create')}
               </button>
             </div>
           </div>
@@ -616,9 +620,9 @@ export default function Issues() {
               border: `1px solid ${theme.border}`, borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ fontSize: 17, fontWeight: 800 }}>Manage statuses</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('issues.manageStatuses')}</div>
             <div style={{ fontSize: 12, color: theme.textMuted, marginTop: -10 }}>
-              Renaming or removing a status updates any issues currently using it.
+              {t('issues.manageStatusesDesc')}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -648,7 +652,7 @@ export default function Issues() {
               onClick={addDraftStatus}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, border: `1px dashed ${theme.border}`, color: theme.textMuted, borderRadius: 8, padding: '8px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}
             >
-              <Icon name="plus" size={13} /> Add status
+              <Icon name="plus" size={13} /> {t('issues.addStatus')}
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
@@ -656,7 +660,7 @@ export default function Issues() {
                 onClick={() => setStatusConfigOpen(false)}
                 style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={saveStatusConfig}
@@ -666,7 +670,7 @@ export default function Issues() {
                   cursor: 'pointer', opacity: statusSaving || statusDraft.length === 0 ? 0.5 : 1,
                 }}
               >
-                {statusSaving ? 'Saving…' : 'Save'}
+                {statusSaving ? t('issues.saving') : t('common.save')}
               </button>
             </div>
           </div>

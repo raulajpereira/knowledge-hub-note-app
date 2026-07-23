@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
 const FILTERS = [
-  { key: 'all', label: 'All' },
-  { key: 'note', label: 'Notes' },
-  { key: 'task', label: 'Tasks' },
-  { key: 'voice', label: 'Voice Notes' },
+  { key: 'all', labelKey: 'trash.filterAll' },
+  { key: 'note', labelKey: 'trash.filterNotes' },
+  { key: 'task', labelKey: 'trash.filterTasks' },
+  { key: 'voice', labelKey: 'trash.filterVoice' },
 ];
 
 const TYPE_ICON = { note: 'doc', task: 'check', voice: 'mic' };
-const TYPE_LABEL = { note: 'Note', task: 'Task', voice: 'Voice Note' };
 
 export default function Trash() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -55,14 +56,16 @@ export default function Trash() {
     setItems((prev) => prev.filter((i) => !(i.type === item.type && i.id === item.id)));
   };
 
-  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>Loading trash…</div>;
+  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
+
+  const typeLabel = { note: t('trash.typeNote'), task: t('trash.typeTask'), voice: t('trash.typeVoice') };
 
   return (
     <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 18, minHeight: 0, overflowY: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800 }}>Trash</div>
-          <div style={{ fontSize: 12.5, color: theme.textMuted }}>Deleted notes, tasks and voice notes. Restore them or remove them for good.</div>
+          <div style={{ fontSize: 22, fontWeight: 800 }}>{t('trash.title')}</div>
+          <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('trash.desc')}</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {FILTERS.map((f) => (
@@ -75,14 +78,14 @@ export default function Trash() {
                 color: filter === f.key ? theme.accentText : theme.textMuted,
               }}
             >
-              {f.label}
+              {t(f.labelKey)}
             </div>
           ))}
         </div>
       </div>
 
       <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {filtered.length === 0 && <div style={{ padding: 20, fontSize: 13, color: theme.textMuted, textAlign: 'center' }}>Trash is empty.</div>}
+        {filtered.length === 0 && <div style={{ padding: 20, fontSize: 13, color: theme.textMuted, textAlign: 'center' }}>{t('trash.empty')}</div>}
         {filtered.map((item) => (
           <div key={`${item.type}-${item.id}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: theme.subtleBg, flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', opacity: 0.6, flexShrink: 0 }}>
@@ -91,20 +94,20 @@ export default function Trash() {
             <div style={{ flex: '1 1 200px', minWidth: 0 }}>
               <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
               <div style={{ fontSize: 11.5, color: theme.textMuted }}>
-                {TYPE_LABEL[item.type]} · Deleted {new Date(item.deletedAt).toLocaleString()}
+                {t('trash.deletedAt', { type: typeLabel[item.type], date: new Date(item.deletedAt).toLocaleString() })}
               </div>
             </div>
             <button
               onClick={() => restore(item)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
             >
-              <Icon name="undo" size={13} /> Restore
+              <Icon name="undo" size={13} /> {t('common.restore')}
             </button>
             <button
               onClick={() => deleteForever(item)}
               style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
             >
-              Delete Forever
+              {t('common.deleteForever')}
             </button>
           </div>
         ))}

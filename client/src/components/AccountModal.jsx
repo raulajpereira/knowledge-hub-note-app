@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from './Icon.jsx';
 
@@ -12,6 +13,7 @@ function userInitials(name) {
 
 export default function AccountModal({ onClose }) {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { user, updateUserSettings, updateProfile, logout } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
@@ -65,8 +67,8 @@ export default function AccountModal({ onClose }) {
     e.preventDefault();
     setPwError('');
     setPwSuccess(false);
-    if (newPw.length < 8) return setPwError('New password must be at least 8 characters.');
-    if (newPw !== confirmPw) return setPwError('New passwords do not match.');
+    if (newPw.length < 8) return setPwError(t('passwords.errTooShort'));
+    if (newPw !== confirmPw) return setPwError(t('passwords.errMismatch'));
     setPwSaving(true);
     try {
       await api.changePassword({ currentPassword: currentPw, newPassword: newPw });
@@ -75,7 +77,7 @@ export default function AccountModal({ onClose }) {
       setConfirmPw('');
       setPwSuccess(true);
     } catch (err) {
-      setPwError(err.message || 'Could not change password.');
+      setPwError(err.message || t('account.couldNotChangePassword'));
     } finally {
       setPwSaving(false);
     }
@@ -101,7 +103,7 @@ export default function AccountModal({ onClose }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 17, fontWeight: 800 }}>Account & Data</div>
+          <div style={{ fontSize: 17, fontWeight: 800 }}>{t('account.title')}</div>
           <span onClick={onClose} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1 }}>
             &times;
           </span>
@@ -122,7 +124,7 @@ export default function AccountModal({ onClose }) {
               )}
             </div>
             <label style={{ fontSize: 10.5, fontWeight: 700, color: theme.accentText, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              Change photo
+              {t('account.changePhoto')}
               <input ref={fileInputRef} type="file" accept="image/*" onChange={onAvatarUpload} style={{ display: 'none' }} />
             </label>
           </div>
@@ -142,13 +144,13 @@ export default function AccountModal({ onClose }) {
                   cursor: 'pointer', opacity: saving || !name.trim() || name.trim() === user?.name ? 0.5 : 1, flexShrink: 0,
                 }}
               >
-                {saving ? 'Saving…' : 'Save'}
+                {saving ? t('account.saving') : t('account.save')}
               </button>
             </div>
             <div style={{ ...fieldStyle, color: theme.textMuted, background: 'transparent', border: 'none', padding: '0 2px' }}>{user?.email}</div>
           </div>
         </div>
-        {saved && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.15 145)', marginTop: -10 }}>Name saved.</div>}
+        {saved && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.15 145)', marginTop: -10 }}>{t('account.nameSaved')}</div>}
 
         <button
           onClick={exportData}
@@ -158,39 +160,39 @@ export default function AccountModal({ onClose }) {
             color: theme.textPrimary, borderRadius: 9, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: exporting ? 0.6 : 1,
           }}
         >
-          {exporting ? 'Exporting…' : 'Export my data (JSON)'}
+          {exporting ? t('account.exporting') : t('account.exportData')}
         </button>
 
         <div style={{ height: 1, background: theme.border }} />
 
         <form onSubmit={savePassword} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 700 }}>Login password</div>
-            <div style={{ fontSize: 11.5, color: theme.textMuted }}>Used to sign in to Knowledge Hub.</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700 }}>{t('account.loginPassword')}</div>
+            <div style={{ fontSize: 11.5, color: theme.textMuted }}>{t('account.loginPasswordDesc')}</div>
           </div>
           <input
             value={currentPw}
             onChange={(e) => setCurrentPw(e.target.value)}
             type="password"
-            placeholder="Current password"
+            placeholder={t('account.currentPassword')}
             style={fieldStyle}
           />
           <input
             value={newPw}
             onChange={(e) => setNewPw(e.target.value)}
             type="password"
-            placeholder="New password"
+            placeholder={t('account.newPassword')}
             style={fieldStyle}
           />
           <input
             value={confirmPw}
             onChange={(e) => setConfirmPw(e.target.value)}
             type="password"
-            placeholder="Confirm new password"
+            placeholder={t('account.confirmNewPassword')}
             style={fieldStyle}
           />
           {pwError && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.18 25)', fontWeight: 600 }}>{pwError}</div>}
-          {pwSuccess && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.15 145)', fontWeight: 600 }}>Password updated.</div>}
+          {pwSuccess && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.15 145)', fontWeight: 600 }}>{t('account.passwordUpdated')}</div>}
           <button
             type="submit"
             disabled={pwSaving || !currentPw || !newPw || !confirmPw}
@@ -199,7 +201,7 @@ export default function AccountModal({ onClose }) {
               fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: pwSaving || !currentPw || !newPw || !confirmPw ? 0.5 : 1,
             }}
           >
-            {pwSaving ? 'Saving…' : 'Change password'}
+            {pwSaving ? t('account.saving') : t('account.changePassword')}
           </button>
         </form>
 
@@ -209,7 +211,7 @@ export default function AccountModal({ onClose }) {
           onClick={logout}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '10px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
-          <Icon name="logout" size={15} /> Log out
+          <Icon name="logout" size={15} /> {t('account.logout')}
         </button>
       </div>
     </div>

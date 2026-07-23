@@ -1,24 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 
-function timeAgo(dateStr) {
+function timeAgo(dateStr, t) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('common.justNow');
+  if (mins < 60) return t('common.minsAgo', { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('common.hoursAgo', { n: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t('common.daysAgo', { n: days });
 }
 
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
 
 export default function Home() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -44,29 +46,29 @@ export default function Home() {
   };
 
   const stats = [
-    { icon: 'doc', value: notes.length, label: 'Notes' },
-    { icon: 'pin', value: notes.filter((n) => n.pinned).length, label: 'Pinned' },
-    { icon: 'check', value: tasks.filter((t) => !t.done).length, label: 'Open Tasks' },
+    { icon: 'doc', value: notes.length, label: t('home.notes') },
+    { icon: 'pin', value: notes.filter((n) => n.pinned).length, label: t('home.pinned') },
+    { icon: 'check', value: tasks.filter((t) => !t.done).length, label: t('home.openTasks') },
   ];
 
   const quickCapture = [
     {
-      title: 'New Note',
-      desc: 'Capture your thoughts and ideas',
+      title: t('home.newNoteTitle'),
+      desc: t('home.newNoteDesc'),
       icon: <Icon name="plus" size={18} color="#fff" strokeWidth={2.2} />,
       onClick: createAndGo,
       gradient: true,
     },
     {
-      title: 'New Task',
-      desc: 'Track something you need to get done',
+      title: t('home.newTaskTitle'),
+      desc: t('home.newTaskDesc'),
       icon: <Icon name="check" size={18} color={theme.accent} />,
       onClick: () => navigate('/tasks'),
       gradient: false,
     },
     {
-      title: 'Voice Note',
-      desc: 'Record and transcribe your voice',
+      title: t('home.voiceNoteTitle'),
+      desc: t('home.voiceNoteDesc'),
       icon: <Icon name="mic" size={18} color={theme.accent} />,
       onClick: () => navigate('/voice'),
       gradient: false,
@@ -77,7 +79,7 @@ export default function Home() {
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, padding: '24px 28px', flex: 1 }}>
       <div style={{ flex: '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Quick Capture</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('home.quickCapture')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14 }}>
             {quickCapture.map((qc) => (
               <div
@@ -121,7 +123,7 @@ export default function Home() {
         </div>
 
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Today At A Glance</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('home.todayAtAGlance')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
             {stats.map((s) => (
               <div
@@ -142,15 +144,15 @@ export default function Home() {
 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>Recent Notes</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.recentNotes')}</div>
             <a onClick={() => navigate('/notes')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
-              See all
+              {t('home.seeAll')}
             </a>
           </div>
           <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
-            {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>Loading…</div>}
+            {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('common.loading')}</div>}
             {!loading && notes.length === 0 && (
-              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>No notes yet — create your first one above.</div>
+              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.noNotesYet')}</div>
             )}
             {notes.slice(0, 8).map((note) => (
               <div
@@ -164,12 +166,12 @@ export default function Home() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700 }}>{note.title}</div>
                   <div style={{ fontSize: 12.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {note.content?.slice(0, 80) || 'No additional text'}
+                    {note.content?.slice(0, 80) || t('common.noAdditionalText')}
                   </div>
                 </div>
                 {note.pinned && <Icon name="pin" size={14} color={theme.accentText} />}
                 <div style={{ fontSize: 12.5, color: theme.textMuted, width: 70, textAlign: 'right', flexShrink: 0 }}>
-                  {timeAgo(note.updatedAt)}
+                  {timeAgo(note.updatedAt, t)}
                 </div>
               </div>
             ))}
@@ -180,43 +182,43 @@ export default function Home() {
       <div style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>My Tasks</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.myTasks')}</div>
             <a onClick={() => navigate('/tasks')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
-              See all
+              {t('home.seeAll')}
             </a>
           </div>
           <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
-            {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>Loading…</div>}
+            {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('common.loading')}</div>}
             {!loading && tasks.filter((t) => !t.done).length === 0 && (
-              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>No open tasks — nice work.</div>
+              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.noOpenTasks')}</div>
             )}
             {tasks
-              .filter((t) => !t.done)
+              .filter((task) => !task.done)
               .slice(0, 8)
-              .map((t) => {
-                const hue = PRIORITY_HUES[t.priority];
+              .map((task) => {
+                const hue = PRIORITY_HUES[task.priority];
                 return (
                   <div
-                    key={t.id}
-                    onClick={() => navigate('/tasks', { state: { taskId: t.id } })}
+                    key={task.id}
+                    onClick={() => navigate('/tasks', { state: { taskId: task.id } })}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
                   >
                     <div
-                      onClick={(e) => toggleTaskDone(e, t)}
+                      onClick={(e) => toggleTaskDone(e, task)}
                       style={{
                         width: 19, height: 19, borderRadius: 6, border: `1.5px solid ${theme.border}`, background: 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
                       }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title}</div>
                       <div style={{ fontSize: 11.5, color: theme.textMuted }}>
-                        {t.project || 'No project'}
-                        {t.due ? ` · due ${t.due}` : ''}
+                        {task.project || t('common.noProject')}
+                        {task.due ? ` · ${t('common.due', { date: task.due })}` : ''}
                       </div>
                     </div>
                     <div style={{ fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, flexShrink: 0, background: `oklch(0.93 0.06 ${hue})`, color: `oklch(0.45 0.14 ${hue})` }}>
-                      {t.priority}
+                      {task.priority}
                     </div>
                   </div>
                 );

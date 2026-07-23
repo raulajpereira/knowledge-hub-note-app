@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from './Icon.jsx';
 
 export default function HeaderSearch() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const [query, setQuery] = useState('');
@@ -79,7 +81,7 @@ export default function HeaderSearch() {
     else navigate('/voice', { state: { voiceId: result.id } });
   };
 
-  const typeLabel = { note: 'Note', task: 'Task', voice: 'Voice Note', artifact: 'Artifact' };
+  const typeLabel = { note: t('search.typeNote'), task: t('search.typeTask'), voice: t('search.typeVoice'), artifact: t('search.typeArtifact') };
   const typeIcon = { note: 'doc', task: 'check', voice: 'mic', artifact: 'code' };
 
   return (
@@ -99,7 +101,7 @@ export default function HeaderSearch() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
-          placeholder="Search notes, tasks, voice notes..."
+          placeholder={t('search.placeholder')}
           style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: theme.textPrimary, fontSize: 14 }}
         />
         {!query && (
@@ -118,8 +120,8 @@ export default function HeaderSearch() {
             maxHeight: 320, overflowY: 'auto',
           }}
         >
-          {loading && <div style={{ padding: 14, fontSize: 12.5, color: theme.textMuted }}>Searching…</div>}
-          {!loading && results.length === 0 && <div style={{ padding: 14, fontSize: 12.5, color: theme.textMuted }}>No results for "{query}".</div>}
+          {loading && <div style={{ padding: 14, fontSize: 12.5, color: theme.textMuted }}>{t('search.searching')}</div>}
+          {!loading && results.length === 0 && <div style={{ padding: 14, fontSize: 12.5, color: theme.textMuted }}>{t('search.noResults', { q: query })}</div>}
           {!loading &&
             results.map((r) => (
               <div

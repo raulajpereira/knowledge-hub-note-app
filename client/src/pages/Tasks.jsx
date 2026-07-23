@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import DateInput from '../components/DateInput.jsx';
@@ -9,13 +10,14 @@ const PRIORITIES = ['Low', 'Medium', 'High'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
 
 const FILTERS = [
-  { key: 'active', label: 'Active' },
-  { key: 'done', label: 'Done' },
-  { key: 'all', label: 'All' },
+  { key: 'active', labelKey: 'tasks.filterActive' },
+  { key: 'done', labelKey: 'tasks.filterDone' },
+  { key: 'all', labelKey: 'tasks.filterAll' },
 ];
 
 export default function Tasks() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const location = useLocation();
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('active');
@@ -62,7 +64,7 @@ export default function Tasks() {
   };
 
   const addTask = async () => {
-    const { task } = await api.createTask({ title: 'New task' });
+    const { task } = await api.createTask({ title: t('tasks.newTask') });
     setTasks((prev) => [task, ...prev]);
     setSelectedId(task.id);
     setFilter('active');
@@ -90,7 +92,7 @@ export default function Tasks() {
     background: isActive ? theme.accentSoftBg : 'transparent',
   });
 
-  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>Loading tasks…</div>;
+  if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
     <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
@@ -103,11 +105,11 @@ export default function Tasks() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tasks..."
+              placeholder={t('tasks.searchPlaceholder')}
               style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
             />
           </div>
-          <button onClick={addTask} title="New Task" style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}>
+          <button onClick={addTask} title={t('tasks.newTask')} style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}>
             <Icon name="plus" size={16} color="#fff" />
           </button>
         </div>
@@ -123,38 +125,38 @@ export default function Tasks() {
                 color: filter === f.key ? theme.accentText : theme.textMuted,
               }}
             >
-              {f.label}
+              {t(f.labelKey)}
             </div>
           ))}
         </div>
 
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>No tasks here.</div>}
-          {filtered.map((t) => {
-            const hue = PRIORITY_HUES[t.priority];
+          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('tasks.noTasksHere')}</div>}
+          {filtered.map((task) => {
+            const hue = PRIORITY_HUES[task.priority];
             return (
-              <div key={t.id} onClick={() => setSelectedId(t.id)} style={rowStyle(selected?.id === t.id)}>
+              <div key={task.id} onClick={() => setSelectedId(task.id)} style={rowStyle(selected?.id === task.id)}>
                 <div
-                  onClick={(e) => { e.stopPropagation(); patch(t.id, { done: !t.done }); }}
+                  onClick={(e) => { e.stopPropagation(); patch(task.id, { done: !task.done }); }}
                   style={{
-                    width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${t.done ? theme.accent : theme.border}`,
-                    background: t.done ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${task.done ? theme.accent : theme.border}`,
+                    background: task.done ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', flexShrink: 0,
                   }}
                 >
-                  {t.done && <Icon name="check" size={12} color="#fff" strokeWidth={2.5} />}
+                  {task.done && <Icon name="check" size={12} color="#fff" strokeWidth={2.5} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {t.title}
+                  <div style={{ fontSize: 13.5, fontWeight: 700, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {task.title}
                   </div>
                   <div style={{ fontSize: 11.5, color: theme.textMuted }}>
-                    {t.project || 'No project'}
-                    {t.due ? ` · due ${t.due}` : ''}
+                    {task.project || t('common.noProject')}
+                    {task.due ? ` · ${t('common.due', { date: task.due })}` : ''}
                   </div>
                 </div>
                 <div style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, flexShrink: 0, background: `oklch(0.93 0.06 ${hue})`, color: `oklch(0.45 0.14 ${hue})` }}>
-                  {t.priority}
+                  {task.priority}
                 </div>
               </div>
             );
@@ -173,7 +175,7 @@ export default function Tasks() {
               style={{ flex: '1 1 160px', minWidth: 160, border: 'none', outline: 'none', background: 'transparent', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}
             />
             <button onClick={remove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-              Delete
+              {t('common.delete')}
             </button>
           </div>
 
@@ -181,11 +183,11 @@ export default function Tasks() {
             onClick={() => patch(selected.id, { done: !selected.done })}
             style={{ alignSelf: 'flex-start', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
           >
-            {selected.done ? 'Mark as Active' : 'Mark as Done'}
+            {selected.done ? t('tasks.markActive') : t('tasks.markDone')}
           </button>
 
           <div>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Priority</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('tasks.priority')}</div>
             <div style={{ display: 'flex', gap: 8 }}>
               {PRIORITIES.map((p) => {
                 const hue = PRIORITY_HUES[p];
@@ -209,7 +211,7 @@ export default function Tasks() {
 
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 160px' }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Due Date</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('tasks.dueDate')}</div>
               <DateInput
                 value={selected.due}
                 onChange={(value) => patch(selected.id, { due: value })}
@@ -217,30 +219,30 @@ export default function Tasks() {
               />
             </div>
             <div style={{ flex: '1 1 160px' }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Project</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('tasks.project')}</div>
               <input
                 value={selected.project || ''}
                 onChange={(e) => patch(selected.id, { project: e.target.value })}
-                placeholder="e.g. Notes"
+                placeholder={t('tasks.projectPlaceholder')}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Notes</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('tasks.notes')}</div>
             <textarea
               value={selected.notes || ''}
               onChange={(e) => patch(selected.id, { notes: e.target.value })}
               rows={5}
-              placeholder="Add notes..."
+              placeholder={t('tasks.notesPlaceholder')}
               style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, fontSize: 13.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
             />
           </div>
         </div>
       ) : (
         <div style={{ flex: '1 1 420px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
-          Select or create a task to get started.
+          {t('tasks.selectOrCreate')}
         </div>
       )}
     </div>

@@ -20,7 +20,7 @@ export default function Login() {
       await login(email, password);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err.message || 'Incorrect email or password.');
+      setError(err.message || 'Email ou password incorretos.');
     } finally {
       setSubmitting(false);
     }
@@ -82,10 +82,10 @@ export default function Login() {
             </div>
           </div>
           <div style={{ fontSize: 'clamp(32px, 4.4vw, 54px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-0.02em' }}>
-            Your second brain,<br />organized.
+            O teu segundo cérebro,<br />organizado.
           </div>
           <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.82)', maxWidth: 420, lineHeight: 1.55 }}>
-            Notes, tasks, passwords and voice memos — all in one calm, private place.
+            Notas, tarefas, passwords e memos de voz — tudo num único lugar calmo e privado.
           </div>
         </div>
 
@@ -100,8 +100,8 @@ export default function Login() {
           }}
         >
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800 }}>Welcome back</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>Sign in to your Knowledge Hub</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>Bem-vindo de volta</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>Inicia sessão no teu Knowledge Hub</div>
           </div>
 
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
@@ -111,7 +111,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               type="email"
               required
-              placeholder="you@example.com"
+              placeholder="tu@exemplo.com"
               style={{
                 border: 'none', borderRadius: 11, padding: '13px 14px', fontSize: 14,
                 background: 'rgba(255,255,255,0.94)', color: '#1a1a1a', outline: 'none', width: '100%',
@@ -127,7 +127,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 type={reveal ? 'text' : 'password'}
                 required
-                placeholder="Enter your password"
+                placeholder="Introduz a tua password"
                 style={{
                   flex: 1, border: 'none', borderRadius: 11, padding: '13px 42px 13px 14px', fontSize: 14,
                   background: 'rgba(255,255,255,0.94)', color: '#1a1a1a', outline: 'none',
@@ -137,7 +137,7 @@ export default function Login() {
                 onClick={() => setReveal((v) => !v)}
                 style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.55, fontSize: 12, color: '#1a1a1a', fontWeight: 700 }}
               >
-                {reveal ? 'HIDE' : 'SHOW'}
+                {reveal ? 'OCULTAR' : 'MOSTRAR'}
               </span>
             </div>
           </div>
@@ -158,13 +158,13 @@ export default function Login() {
               opacity: submitting ? 0.7 : 1,
             }}
           >
-            {submitting ? 'Signing in…' : 'Sign In'}
+            {submitting ? 'A iniciar sessão…' : 'Entrar'}
           </button>
 
           <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)' }}>
-            No account yet?{' '}
+            Ainda não tens conta?{' '}
             <Link to="/register" style={{ color: '#fff', fontWeight: 700 }}>
-              Create one
+              Cria uma
             </Link>
           </div>
         </form>
