@@ -55,7 +55,7 @@ async function fetchAllFeeds() {
           link: item.link,
           image: extractImage(item),
           summary: snippet.slice(0, 240),
-          content: fullText,
+          content: fullText.slice(0, 700),
           publishedAt: item.isoDate || item.pubDate || null,
         };
       });

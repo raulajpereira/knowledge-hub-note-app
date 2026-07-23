@@ -143,14 +143,6 @@ function AgentRow({ agent, theme, t }) {
           placeholder={t('settings.agentNamePlaceholder')}
           style={{ flex: 1, border: 'none', borderBottom: '1px solid transparent', padding: '2px 0', fontSize: 14.5, fontWeight: 700, background: 'transparent', color: theme.textPrimary, outline: 'none' }}
         />
-        <select
-          value={agent.provider}
-          onChange={(e) => updateAgent(agent.id, { provider: e.target.value })}
-          style={{ border: `1px solid ${theme.border}`, borderRadius: 7, padding: '5px 8px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary }}
-        >
-          <option value="anthropic" style={{ color: '#1a1a1a', background: '#fff' }}>Anthropic</option>
-          <option value="openai" style={{ color: '#1a1a1a', background: '#fff' }}>OpenAI-compatible</option>
-        </select>
         <span
           onClick={async () => {
             const ok = await confirm({ message: t('common.confirmDeleteAgentMessage') });
@@ -162,14 +154,12 @@ function AgentRow({ agent, theme, t }) {
         </span>
       </div>
 
-      {agent.provider === 'openai' && (
-        <input
-          value={agent.baseUrl || ''}
-          onChange={(e) => updateAgent(agent.id, { baseUrl: e.target.value })}
-          placeholder={t('settings.baseUrlPlaceholder')}
-          style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 11px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
-        />
-      )}
+      <input
+        value={agent.baseUrl || ''}
+        onChange={(e) => updateAgent(agent.id, { baseUrl: e.target.value })}
+        placeholder={t('settings.baseUrlPlaceholder')}
+        style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 11px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+      />
 
       <div style={{ position: 'relative', display: 'flex' }}>
         <input
@@ -220,6 +210,23 @@ export default function Settings() {
   const { agents, createAgent } = useAgents();
   const { t, lang, setLanguage } = useLanguage();
   const fileInputRef = useRef(null);
+  const [newAgentOpen, setNewAgentOpen] = useState(false);
+  const [newAgentName, setNewAgentName] = useState('');
+  const [newAgentToken, setNewAgentToken] = useState('');
+  const [newAgentBaseUrl, setNewAgentBaseUrl] = useState('');
+
+  const openNewAgent = () => {
+    setNewAgentName('');
+    setNewAgentToken('');
+    setNewAgentBaseUrl('');
+    setNewAgentOpen(true);
+  };
+
+  const submitNewAgent = async () => {
+    if (!newAgentName.trim() || !newAgentToken.trim()) return;
+    await createAgent({ name: newAgentName.trim(), token: newAgentToken.trim(), baseUrl: newAgentBaseUrl.trim() || undefined });
+    setNewAgentOpen(false);
+  };
 
   const onLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -393,7 +400,7 @@ export default function Settings() {
             <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.aiAgentsDesc')}</div>
           </div>
           <button
-            onClick={() => createAgent({ name: 'New Agent', provider: 'anthropic' })}
+            onClick={openNewAgent}
             style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             {t('settings.addAgent')}
@@ -404,6 +411,83 @@ export default function Settings() {
           <AgentRow key={agent.id} agent={agent} theme={theme} t={t} />
         ))}
       </div>
+
+      {newAgentOpen && (
+        <div
+          onClick={() => setNewAgentOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 400, maxWidth: '100%', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('settings.newAgentModalTitle')}</div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                {t('settings.agentNameLabel')}
+              </div>
+              <input
+                value={newAgentName}
+                onChange={(e) => setNewAgentName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitNewAgent()}
+                placeholder={t('settings.agentNamePlaceholder')}
+                autoFocus
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                {t('settings.tokenLabel')}
+              </div>
+              <input
+                value={newAgentToken}
+                onChange={(e) => setNewAgentToken(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitNewAgent()}
+                type="password"
+                placeholder={t('settings.tokenPlaceholder')}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13.5, fontFamily: 'var(--font-mono)', background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                {t('settings.baseUrlLabel')}
+              </div>
+              <input
+                value={newAgentBaseUrl}
+                onChange={(e) => setNewAgentBaseUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitNewAgent()}
+                placeholder={t('settings.baseUrlPlaceholder')}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button
+                onClick={() => setNewAgentOpen(false)}
+                style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={submitNewAgent}
+                disabled={!newAgentName.trim() || !newAgentToken.trim()}
+                style={{
+                  flex: 1, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13,
+                  cursor: 'pointer', opacity: newAgentName.trim() && newAgentToken.trim() ? 1 : 0.5,
+                }}
+              >
+                {t('common.create')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,9 +3,24 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { encryptSecret, decryptSecret } from '../lib/crypto.js';
 
-const PROVIDERS = ['anthropic', 'openai'];
 const ANTHROPIC_MODEL = 'claude-3-5-haiku-20241022';
 const OPENAI_MODEL = 'gpt-4o-mini';
+
+// The user just names an agent and pastes an API key — we don't make them
+// pick a "provider" from a fixed list. Anthropic's API has a genuinely
+// different request shape (x-api-key header, /v1/messages), so we still
+// need to know which shape to use; we infer that from the base URL's
+// hostname instead of asking. Everything else is treated as an
+// OpenAI-compatible /chat/completions endpoint, which covers OpenAI itself
+// plus most other providers (Groq, Together, OpenRouter, local models, ...).
+function detectProvider(baseUrl) {
+  try {
+    const host = new URL(baseUrl || 'https://api.openai.com/v1').hostname;
+    return host.includes('anthropic.com') ? 'anthropic' : 'openai';
+  } catch {
+    return 'openai';
+  }
+}
 
 const router = Router();
 router.use(requireAuth);
@@ -21,15 +36,14 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, provider, token, baseUrl } = req.body || {};
+  const { name, token, baseUrl } = req.body || {};
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
-  if (!PROVIDERS.includes(provider)) return res.status(400).json({ error: 'Invalid provider' });
 
   const agent = await prisma.agent.create({
     data: {
       userId: req.userId,
       name: name.trim(),
-      provider,
+      provider: detectProvider(baseUrl),
       baseUrl: baseUrl || null,
       tokenCipher: encryptSecret(token || ''),
     },
@@ -41,15 +55,14 @@ router.patch('/:id', async (req, res) => {
   const agent = await prisma.agent.findFirst({ where: { id: req.params.id, userId: req.userId } });
   if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
-  const { name, provider, token, baseUrl, active } = req.body || {};
+  const { name, token, baseUrl, active } = req.body || {};
   const data = {};
   if (name !== undefined) data.name = name.trim() || agent.name;
-  if (provider !== undefined) {
-    if (!PROVIDERS.includes(provider)) return res.status(400).json({ error: 'Invalid provider' });
-    data.provider = provider;
+  if (baseUrl !== undefined) {
+    data.baseUrl = baseUrl || null;
+    data.provider = detectProvider(baseUrl);
   }
   if (token !== undefined && token !== '') data.tokenCipher = encryptSecret(token);
-  if (baseUrl !== undefined) data.baseUrl = baseUrl || null;
   if (active !== undefined) data.active = !!active;
 
   const updated = await prisma.agent.update({ where: { id: agent.id }, data });
