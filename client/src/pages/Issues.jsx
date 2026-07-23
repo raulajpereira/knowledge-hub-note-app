@@ -17,12 +17,14 @@ const DEFAULT_STATUSES = [
 const HUE_PRESETS = [250, 290, 60, 145, 20, 190, 330, 10];
 
 const DEFAULT_COLUMNS = [
-  { key: 'title', label: 'Title', width: 260 },
+  { key: 'title', label: 'Title', width: 220 },
   { key: 'status', label: 'Status', width: 130 },
   { key: 'priority', label: 'Priority', width: 110 },
   { key: 'project', label: 'Project', width: 140 },
   { key: 'due', label: 'Due', width: 100 },
-  { key: 'waitingOn', label: 'Waiting On', width: 180 },
+  { key: 'waitingOn', label: 'Waiting On', width: 160 },
+  { key: 'description', label: 'Description', width: 220 },
+  { key: 'notes', label: 'Notes', width: 220 },
 ];
 const MIN_COLUMN_WIDTH = 70;
 
@@ -75,7 +77,11 @@ export default function Issues() {
   const [newTitle, setNewTitle] = useState('');
   const [newProject, setNewProject] = useState('');
   const [newPriority, setNewPriority] = useState('Medium');
+  const [newStatus, setNewStatus] = useState('');
   const [newDue, setNewDue] = useState('');
+  const [newWaitingOn, setNewWaitingOn] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newNotes, setNewNotes] = useState('');
   const [statusConfigOpen, setStatusConfigOpen] = useState(false);
   const [statusDraft, setStatusDraft] = useState([]);
   const [originalStatusNames, setOriginalStatusNames] = useState([]);
@@ -188,7 +194,11 @@ export default function Issues() {
     setNewTitle('');
     setNewProject('');
     setNewPriority('Medium');
+    setNewStatus(STATUS_NAMES[0] || 'Open');
     setNewDue('');
+    setNewWaitingOn('');
+    setNewDescription('');
+    setNewNotes('');
     setNewIssueOpen(true);
   };
 
@@ -198,7 +208,11 @@ export default function Issues() {
       title: newTitle.trim(),
       project: newProject.trim() || undefined,
       priority: newPriority,
+      status: newStatus || undefined,
       due: newDue || undefined,
+      waitingOn: newWaitingOn.trim() || undefined,
+      description: newDescription.trim() || undefined,
+      notes: newNotes.trim() || undefined,
     });
     setIssues((prev) => [issue, ...prev]);
     setSelectedId(issue.id);
@@ -294,6 +308,12 @@ export default function Issues() {
                   </div>
                   <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
                     {issue.waitingOn || '—'}
+                  </div>
+                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
+                    {issue.description || '—'}
+                  </div>
+                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
+                    {issue.notes || '—'}
                   </div>
                   <div onClick={() => setSelectedId(issue.id)} style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }} />
                 </Fragment>
@@ -450,7 +470,7 @@ export default function Issues() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: 420, maxWidth: '100%', background: theme.dark ? 'oklch(0.20 0.025 275)' : '#ffffff', border: `1px solid ${theme.border}`,
+              width: 420, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.20 0.025 275)' : '#ffffff', border: `1px solid ${theme.border}`,
               borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
@@ -508,6 +528,58 @@ export default function Issues() {
                   );
                 })}
               </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Status</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {STATUS_NAMES.map((s) => {
+                  const hue = hueFor(s);
+                  const active = newStatus === s;
+                  return (
+                    <div
+                      key={s}
+                      onClick={() => setNewStatus(s)}
+                      style={{
+                        padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        background: active ? `oklch(0.93 0.06 ${hue})` : theme.subtleBg,
+                        color: active ? `oklch(0.45 0.14 ${hue})` : theme.textMuted,
+                      }}
+                    >
+                      {s}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Waiting On</div>
+              <input
+                value={newWaitingOn}
+                onChange={(e) => setNewWaitingOn(e.target.value)}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Description</div>
+              <textarea
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                rows={3}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Notes</div>
+              <textarea
+                value={newNotes}
+                onChange={(e) => setNewNotes(e.target.value)}
+                rows={3}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>

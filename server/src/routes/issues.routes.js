@@ -16,19 +16,19 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { title, description, priority, project, due, waitingOn, notes } = req.body || {};
-  const issue = await prisma.issue.create({
-    data: {
-      userId: req.effectiveUserId,
-      title: title?.trim() || 'New issue',
-      description: description || null,
-      priority: PRIORITIES.includes(priority) ? priority : 'Medium',
-      project: project || null,
-      due: due || null,
-      waitingOn: waitingOn || null,
-      notes: notes || null,
-    },
-  });
+  const { title, description, status, priority, project, due, waitingOn, notes } = req.body || {};
+  const data = {
+    userId: req.effectiveUserId,
+    title: title?.trim() || 'New issue',
+    description: description || null,
+    priority: PRIORITIES.includes(priority) ? priority : 'Medium',
+    project: project || null,
+    due: due || null,
+    waitingOn: waitingOn || null,
+    notes: notes || null,
+  };
+  if (typeof status === 'string' && status.trim()) data.status = status.trim();
+  const issue = await prisma.issue.create({ data });
   res.status(201).json({ issue });
 });
 
