@@ -615,6 +615,11 @@ export const translations = {
       typeTask: 'Task',
       typeVoice: 'Voice Note',
       typeArtifact: 'Artifact',
+      quickActions: 'Quick actions',
+      resultsHeading: 'Results',
+      goTo: 'Go to {page}',
+      switchToLight: 'Switch to light theme',
+      switchToDark: 'Switch to dark theme',
     },
     notifications: {
       title: 'Notifications',
@@ -1252,6 +1257,11 @@ export const translations = {
       typeTask: 'Tarefa',
       typeVoice: 'Nota de Voz',
       typeArtifact: 'Artifact',
+      quickActions: 'Ações rápidas',
+      resultsHeading: 'Resultados',
+      goTo: 'Ir para {page}',
+      switchToLight: 'Mudar para tema claro',
+      switchToDark: 'Mudar para tema escuro',
     },
     notifications: {
       title: 'Notificações',
