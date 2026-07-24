@@ -55,7 +55,10 @@ function ConfirmDialog({ request, onClose }) {
           </button>
           <button
             onClick={() => onClose(true)}
-            style={{ flex: 1, background: 'oklch(0.55 0.18 25)', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+            style={{
+              flex: 1, background: request.tone === 'neutral' ? theme.accent : 'oklch(0.55 0.18 25)', color: '#fff',
+              border: 'none', borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            }}
           >
             {request.confirmLabel || t('common.delete')}
           </button>

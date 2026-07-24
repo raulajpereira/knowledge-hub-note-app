@@ -64,6 +64,41 @@ export default function Trash() {
     refreshCounts();
   };
 
+  // Both act on whatever the current filter shows — "restore all" while
+  // filtered to Notes only restores notes, not every trashed item.
+  const restoreAll = async () => {
+    if (filtered.length === 0) return;
+    const ok = await confirm({
+      title: t('trash.restoreAll'),
+      message: t('trash.confirmRestoreAllMessage', { n: filtered.length }),
+      confirmLabel: t('common.restore'),
+      tone: 'neutral',
+    });
+    if (!ok) return;
+    await Promise.all(
+      filtered.map((item) =>
+        item.type === 'note' ? api.restoreNote(item.id) : item.type === 'task' ? api.restoreTask(item.id) : api.restoreVoiceNote(item.id)
+      )
+    );
+    const restoredKeys = new Set(filtered.map((i) => `${i.type}-${i.id}`));
+    setItems((prev) => prev.filter((i) => !restoredKeys.has(`${i.type}-${i.id}`)));
+    refreshCounts();
+  };
+
+  const deleteAllForever = async () => {
+    if (filtered.length === 0) return;
+    const ok = await confirm({ message: t('trash.confirmDeleteAllMessage', { n: filtered.length }) });
+    if (!ok) return;
+    await Promise.all(
+      filtered.map((item) =>
+        item.type === 'note' ? api.deleteNoteForever(item.id) : item.type === 'task' ? api.deleteTaskForever(item.id) : api.deleteVoiceNoteForever(item.id)
+      )
+    );
+    const deletedKeys = new Set(filtered.map((i) => `${i.type}-${i.id}`));
+    setItems((prev) => prev.filter((i) => !deletedKeys.has(`${i.type}-${i.id}`)));
+    refreshCounts();
+  };
+
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   const typeLabel = { note: t('trash.typeNote'), task: t('trash.typeTask'), voice: t('trash.typeVoice') };
@@ -75,7 +110,7 @@ export default function Trash() {
           <div style={{ fontSize: 22, fontWeight: 800 }}>{t('trash.title')}</div>
           <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('trash.desc')}</div>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {FILTERS.map((f) => (
             <div
               key={f.key}
@@ -89,6 +124,28 @@ export default function Trash() {
               {t(f.labelKey)}
             </div>
           ))}
+          <button
+            onClick={restoreAll}
+            disabled={filtered.length === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: `1px solid ${theme.border}`,
+              color: theme.textPrimary, borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontWeight: 700,
+              cursor: filtered.length ? 'pointer' : 'default', opacity: filtered.length ? 1 : 0.5,
+            }}
+          >
+            <Icon name="undo" size={13} /> {t('trash.restoreAll')}
+          </button>
+          <button
+            onClick={deleteAllForever}
+            disabled={filtered.length === 0}
+            style={{
+              background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)',
+              borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontWeight: 700,
+              cursor: filtered.length ? 'pointer' : 'default', opacity: filtered.length ? 1 : 0.5,
+            }}
+          >
+            {t('trash.deleteAll')}
+          </button>
         </div>
       </div>
 
