@@ -12,7 +12,7 @@ const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
 const ACCENT_COLORS = ['purple', 'blue', 'green', 'yellow', 'pink', 'orange', 'red', 'teal'];
 const SIDEBAR_KEYS = new Set([
   'home', 'notes', 'voice', 'tasks', 'tags', 'passwords', 'issues',
-  'artifacts', 'codeLibrary', 'calendar', 'graph', 'sapNews',
+  'artifacts', 'codeLibrary', 'calendar', 'graph',
 ]);
 
 function makeUpload(subdir) {
@@ -102,11 +102,20 @@ router.patch('/', async (req, res) => {
     data.trashRetentionDays = n;
   }
   if (sidebarLayout !== undefined) {
+    const validLabel = (v) => v === undefined || typeof v === 'string';
     const valid =
       sidebarLayout === null ||
-      (Array.isArray(sidebarLayout) && sidebarLayout.every((s) => s && SIDEBAR_KEYS.has(s.key)));
-    if (!valid) return res.status(400).json({ error: 'sidebarLayout must be an array of { key, hidden? } with known keys' });
-    data.sidebarLayout = sidebarLayout === null ? null : sidebarLayout.map((s) => ({ key: s.key, hidden: !!s.hidden }));
+      (Array.isArray(sidebarLayout) && sidebarLayout.every((s) => s && SIDEBAR_KEYS.has(s.key) && validLabel(s.labelPt) && validLabel(s.labelEn)));
+    if (!valid) return res.status(400).json({ error: 'sidebarLayout must be an array of { key, hidden?, labelPt?, labelEn? } with known keys' });
+    data.sidebarLayout =
+      sidebarLayout === null
+        ? null
+        : sidebarLayout.map((s) => ({
+            key: s.key,
+            hidden: !!s.hidden,
+            labelPt: s.labelPt?.trim().slice(0, 40) || undefined,
+            labelEn: s.labelEn?.trim().slice(0, 40) || undefined,
+          }));
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },

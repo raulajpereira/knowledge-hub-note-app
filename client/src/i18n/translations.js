@@ -675,7 +675,8 @@ export const translations = {
       sectionTitle: 'Sidebar',
       sectionSubtitle: 'Choose what shows in the left sidebar and reorder it',
       title: 'Customize Sidebar',
-      subtitle: 'Drag to reorder, uncheck to hide. Trash and Settings always stay put.',
+      subtitle: 'Drag to reorder (also works directly in the sidebar), uncheck to hide. Trash and Settings always stay put.',
+      rename: 'Rename (PT / EN)',
     },
   },
   pt: {
@@ -1354,7 +1355,8 @@ export const translations = {
       sectionTitle: 'Barra Lateral',
       sectionSubtitle: 'Escolhe o que aparece na barra lateral e reorganiza',
       title: 'Personalizar Barra Lateral',
-      subtitle: 'Arrasta para reorganizar, desmarca para ocultar. Lixo e Definições ficam sempre fixos.',
+      subtitle: 'Arrasta para reorganizar (também funciona diretamente na barra lateral), desmarca para ocultar. Lixo e Definições ficam sempre fixos.',
+      rename: 'Renomear (PT / EN)',
     },
   },
 };

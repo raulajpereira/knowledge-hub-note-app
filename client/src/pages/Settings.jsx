@@ -470,7 +470,7 @@ export default function Settings() {
       </div>
 
       {sidebarSettingsOpen && (
-        <SidebarSettingsModal theme={theme} t={t} onClose={() => setSidebarSettingsOpen(false)} />
+        <SidebarSettingsModal theme={theme} t={t} lang={lang} onClose={() => setSidebarSettingsOpen(false)} />
       )}
 
       <div

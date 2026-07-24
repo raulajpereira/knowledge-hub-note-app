@@ -130,6 +130,10 @@ const PATHS = {
     ['rect', { x: 3.5, y: 4.5, width: 17, height: 15, rx: 2 }],
     ['path', { d: 'M9.5 4.5v15' }],
   ],
+  edit: [
+    ['path', { d: 'M16.5 3.5 20.5 7.5 8 20H4v-4Z' }],
+    ['path', { d: 'M14 6l4 4' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

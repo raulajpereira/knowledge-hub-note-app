@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
@@ -13,7 +13,7 @@ import AccountModal from './AccountModal.jsx';
 import HeaderSearch from './HeaderSearch.jsx';
 import NewsTicker from './NewsTicker.jsx';
 import logoDefault from '../assets/logo-default.png';
-import { resolveSidebarLayout } from '../lib/sidebarItems.js';
+import { resolveSidebarLayout, sidebarItemLabel } from '../lib/sidebarItems.js';
 
 function userInitials(name) {
   if (!name) return '?';
@@ -23,9 +23,10 @@ function userInitials(name) {
 
 export default function AppLayout() {
   const { theme } = useTheme();
-  const { user, logout } = useAuth();
-  const { t } = useLanguage();
+  const { user, logout, updateUserSettings } = useAuth();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [accountOpen, setAccountOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [issueAlerts, setIssueAlerts] = useState([]);
@@ -37,7 +38,35 @@ export default function AppLayout() {
     api.listIssues().then(({ issues }) => setIssueAlerts(getIssueAlerts(issues)));
   }, []);
 
-  const sidebarItems = resolveSidebarLayout(user?.settings?.sidebarLayout).filter((item) => !item.hidden);
+  const [sidebarItems, setSidebarItems] = useState([]);
+  const [draggedKey, setDraggedKey] = useState(null);
+  useEffect(() => {
+    setSidebarItems(resolveSidebarLayout(user?.settings?.sidebarLayout).filter((item) => !item.hidden));
+  }, [user?.settings?.sidebarLayout]);
+
+  const onSidebarDragOver = (e, index) => {
+    e.preventDefault();
+    const fromIndex = sidebarItems.findIndex((i) => i.key === draggedKey);
+    if (fromIndex === -1 || fromIndex === index) return;
+    setSidebarItems((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(index, 0, moved);
+      return next;
+    });
+  };
+
+  const onSidebarDrop = async () => {
+    if (draggedKey === null) return;
+    setDraggedKey(null);
+    const hiddenItems = resolveSidebarLayout(user?.settings?.sidebarLayout).filter((i) => i.hidden);
+    const sidebarLayout = [
+      ...sidebarItems.map((i) => ({ key: i.key, hidden: false, labelPt: i.labelPt, labelEn: i.labelEn })),
+      ...hiddenItems.map((i) => ({ key: i.key, hidden: true, labelPt: i.labelPt, labelEn: i.labelEn })),
+    ];
+    const { settings } = await api.updateSettings({ sidebarLayout });
+    updateUserSettings(settings);
+  };
 
   const navItemStyle = (isActive) => ({
     display: 'flex',
@@ -81,30 +110,40 @@ export default function AppLayout() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {sidebarItems.map((item) => (
-              <NavLink
+            {sidebarItems.map((item, index) => (
+              <div
                 key={item.key}
-                to={item.to}
-                end={item.end}
-                style={({ isActive }) => navItemStyle(isActive)}
+                draggable
+                onDragStart={() => setDraggedKey(item.key)}
+                onDragOver={(e) => onSidebarDragOver(e, index)}
+                onDrop={onSidebarDrop}
+                onDragEnd={onSidebarDrop}
+                style={{ opacity: draggedKey === item.key ? 0.5 : 1 }}
               >
-                <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon name={item.icon} size={18} />
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {t(`nav.${item.key}`)}
-                </span>
-                {item.countKey && counts[item.countKey] > 0 && (
-                  <span
-                    style={{
-                      fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
-                      background: theme.subtleBg, color: theme.textMuted,
-                    }}
-                  >
-                    {counts[item.countKey]}
+                <NavLink
+                  to={item.to}
+                  end={item.end}
+                  draggable={false}
+                  style={({ isActive }) => navItemStyle(isActive)}
+                >
+                  <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon name={item.icon} size={18} />
                   </span>
-                )}
-              </NavLink>
+                  <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {sidebarItemLabel(item, lang, t)}
+                  </span>
+                  {item.countKey && counts[item.countKey] > 0 && (
+                    <span
+                      style={{
+                        fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
+                        background: theme.subtleBg, color: theme.textMuted,
+                      }}
+                    >
+                      {counts[item.countKey]}
+                    </span>
+                  )}
+                </NavLink>
+              </div>
             ))}
           </div>
 
@@ -179,6 +218,19 @@ export default function AppLayout() {
             }}
           >
             <HeaderSearch />
+
+            <span
+              onClick={() => navigate('/sap-news')}
+              title={t('nav.sapNews')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                cursor: 'pointer', flexShrink: 0,
+                color: location.pathname === '/sap-news' ? theme.accentText : theme.textPrimary,
+                background: location.pathname === '/sap-news' ? theme.accentSoftBg : theme.subtleBg,
+              }}
+            >
+              <Icon name="news" size={17} />
+            </span>
 
             <div style={{ flex: 1 }} />
 
