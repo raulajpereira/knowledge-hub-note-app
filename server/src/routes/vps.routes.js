@@ -72,17 +72,19 @@ router.get('/status', async (req, res) => {
       getVirtualMachine(token, settings.hostingerVpsId),
       getVmMetrics(token, settings.hostingerVpsId).catch((err) => {
         console.error('Hostinger metrics fetch failed:', err.status, err.body);
-        return null;
+        return { __error: { status: err.status || null, body: err.body ? String(err.body).slice(0, 400) : err.message } };
       }),
     ]);
+    const metricsError = metrics?.__error || null;
+    const usableMetrics = metricsError ? null : metrics;
 
     const diskTotalMb = Number.isFinite(vm?.disk) ? vm.disk : null;
     const memTotalMb = Number.isFinite(vm?.memory) ? vm.memory : null;
 
-    const diskPoint = metrics ? latestUsagePoint(metrics.diskSpace) : null;
-    const memPoint = metrics ? latestUsagePoint(metrics.ramUsage) : null;
-    const cpuPoint = metrics ? latestUsagePoint(metrics.cpuUsage) : null;
-    const uptimePoint = metrics ? latestUsagePoint(metrics.uptime) : null;
+    const diskPoint = usableMetrics ? latestUsagePoint(usableMetrics.diskSpace) : null;
+    const memPoint = usableMetrics ? latestUsagePoint(usableMetrics.ramUsage) : null;
+    const cpuPoint = usableMetrics ? latestUsagePoint(usableMetrics.cpuUsage) : null;
+    const uptimePoint = usableMetrics ? latestUsagePoint(usableMetrics.uptime) : null;
 
     const diskUsedMb = diskPoint ? normalizeToMb(diskPoint.value, diskPoint.unit) : null;
     const memUsedMb = memPoint ? normalizeToMb(memPoint.value, memPoint.unit) : null;
@@ -105,6 +107,10 @@ router.get('/status', async (req, res) => {
       },
       cpu: { cores: Number.isFinite(vm?.cpus) ? vm.cpus : null, raw: cpuPoint },
       uptime: uptimePoint,
+      // Surfaced so the browser Network tab / UI can show the real cause
+      // without needing shell access to the server's logs.
+      metricsError,
+      metricsEmpty: !metricsError && !!usableMetrics && !diskPoint && !memPoint,
       updatedAt: new Date().toISOString(),
     };
 

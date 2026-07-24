@@ -263,6 +263,15 @@ function VpsCard({ theme, t, card, user, refreshMe }) {
                 {status.cpu?.cores != null && <span>{t('settings.vpsCpuCores')}: {status.cpu.cores}</span>}
                 {status.uptime && <span>{t('settings.vpsUptime')}: {Math.floor(status.uptime.value / 86400)}d</span>}
               </div>
+
+              {status.metricsError && (
+                <div style={{ fontSize: 11.5, color: 'oklch(0.6 0.15 40)', background: theme.subtleBg, borderRadius: 8, padding: '8px 10px' }}>
+                  {t('settings.vpsMetricsError', { status: status.metricsError.status ?? '?' })}: {status.metricsError.body}
+                </div>
+              )}
+              {status.metricsEmpty && (
+                <div style={{ fontSize: 11.5, color: theme.textMuted }}>{t('settings.vpsNoData')}</div>
+              )}
             </>
           )}
 

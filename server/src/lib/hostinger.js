@@ -22,10 +22,19 @@ export function getVirtualMachine(token, vmId) {
   return hostingerFetch(token, `/vps/v1/virtual-machines/${vmId}`);
 }
 
-export function getVmMetrics(token, vmId, { minutes = 30 } = {}) {
+// RFC 3339 without fractional seconds — some backends reject the
+// milliseconds toISOString() normally appends.
+function rfc3339(date) {
+  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+// Default window is generous (24h) because we only ever use the latest
+// point anyway — a wide window just makes it more likely there IS a point,
+// in case Hostinger's metrics collector doesn't sample every few minutes.
+export function getVmMetrics(token, vmId, { minutes = 24 * 60 } = {}) {
   const dateTo = new Date();
   const dateFrom = new Date(dateTo.getTime() - minutes * 60 * 1000);
-  const qs = new URLSearchParams({ dateFrom: dateFrom.toISOString(), dateTo: dateTo.toISOString() });
+  const qs = new URLSearchParams({ dateFrom: rfc3339(dateFrom), dateTo: rfc3339(dateTo) });
   return hostingerFetch(token, `/vps/v1/virtual-machines/${vmId}/metrics?${qs.toString()}`);
 }
 
