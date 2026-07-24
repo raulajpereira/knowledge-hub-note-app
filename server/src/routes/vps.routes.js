@@ -82,9 +82,11 @@ router.get('/status', async (req, res) => {
     const diskTotalMb = Number.isFinite(vm?.disk) ? vm.disk : null;
     const memTotalMb = Number.isFinite(vm?.memory) ? vm.memory : null;
 
-    const diskPoint = usableMetrics ? latestUsagePoint(usableMetrics.diskSpace) : null;
-    const memPoint = usableMetrics ? latestUsagePoint(usableMetrics.ramUsage) : null;
-    const cpuPoint = usableMetrics ? latestUsagePoint(usableMetrics.cpuUsage) : null;
+    // Wire format is snake_case (confirmed from a live response), unlike
+    // the PHP SDK's camelCase property names which the docs are generated from.
+    const diskPoint = usableMetrics ? latestUsagePoint(usableMetrics.disk_space) : null;
+    const memPoint = usableMetrics ? latestUsagePoint(usableMetrics.ram_usage) : null;
+    const cpuPoint = usableMetrics ? latestUsagePoint(usableMetrics.cpu_usage) : null;
     const uptimePoint = usableMetrics ? latestUsagePoint(usableMetrics.uptime) : null;
 
     const diskUsedMb = diskPoint ? normalizeToMb(diskPoint.value, diskPoint.unit) : null;
