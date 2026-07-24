@@ -12,8 +12,11 @@ import { highlightCode, tokenColor } from '../lib/highlight.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 
 const URL_ONLY_RE = /^(https?:\/\/|www\.)\S+$/i;
-const URL_INLINE_RE = /(https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/gi;
 const URL_PRESENT_RE = /https?:\/\/|www\./i;
+const FORMATTING_PRESENT_RE = /\*\*[^*\n]+\*\*|`[^`\n]+`|_[^_\n]+_|^#{1,3} |^- /m;
+// Bold/code/italic/link, in one alternation so a single split pass finds
+// all of them in source order (needed since split() only takes one regex).
+const INLINE_TOKEN_RE = /(\*\*[^*\n]+\*\*|`[^`\n]+`|_[^_\n]+_|https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/g;
 
 function normalizeUrl(text) {
   // Drop trailing punctuation that tends to hitch a ride when a URL is
@@ -22,19 +25,38 @@ function normalizeUrl(text) {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-// Renders plain text with any URLs turned into clickable links (with an
-// icon), while keeping everything else as plain text nodes — used for the
-// read-only preview of a text block, since a <textarea> can't contain <a>s.
-// String.split with a single capture group interleaves matches at odd
-// indices, so even indices are always plain text and odd indices are URLs.
-function linkifyText(text, theme) {
-  return text.split(URL_INLINE_RE).map((segment, i) => {
-    if (i % 2 === 0) return segment;
+function hasRichContent(text) {
+  return URL_PRESENT_RE.test(text) || FORMATTING_PRESENT_RE.test(text);
+}
+
+// Renders one line's worth of text with **bold**, `code`, _italic_ and bare
+// URLs turned into real elements, keeping everything else as plain text —
+// used for the read-only preview of a text block, since a <textarea> can't
+// contain nested elements. split() with a single capture group interleaves
+// matches at odd indices, so even indices are always plain text.
+function renderInline(text, theme, keyPrefix) {
+  return text.split(INLINE_TOKEN_RE).map((segment, i) => {
+    if (i % 2 === 0) return segment || null;
+    const key = `${keyPrefix}-${i}`;
+    if (segment.startsWith('**') && segment.endsWith('**')) {
+      return <strong key={key}>{segment.slice(2, -2)}</strong>;
+    }
+    if (segment.startsWith('`') && segment.endsWith('`')) {
+      return (
+        <code key={key} style={{ background: theme.subtleBg, padding: '1px 5px', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: '0.9em' }}>
+          {segment.slice(1, -1)}
+        </code>
+      );
+    }
+    if (segment.startsWith('_') && segment.endsWith('_')) {
+      return <em key={key}>{segment.slice(1, -1)}</em>;
+    }
+    // Otherwise it's a URL match.
     const cleaned = segment.replace(/[.,;:)\]]+$/, '');
     const trailing = segment.slice(cleaned.length);
     const href = /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
     return (
-      <span key={i}>
+      <span key={key}>
         <a
           href={href}
           target="_blank"
@@ -47,6 +69,35 @@ function linkifyText(text, theme) {
         </a>
         {trailing}
       </span>
+    );
+  });
+}
+
+// Renders a whole text block's value line by line, applying heading (# / ##
+// / ###) and bullet (- ) line-level styling on top of the inline formatting.
+function renderRichText(text, theme) {
+  return text.split('\n').map((line, li) => {
+    let content = line;
+    let style = { minHeight: '1.6em' };
+    if (/^### /.test(line)) {
+      content = line.slice(4);
+      style = { ...style, fontSize: 15.5, fontWeight: 800 };
+    } else if (/^## /.test(line)) {
+      content = line.slice(3);
+      style = { ...style, fontSize: 17, fontWeight: 800 };
+    } else if (/^# /.test(line)) {
+      content = line.slice(2);
+      style = { ...style, fontSize: 19, fontWeight: 800 };
+    } else if (/^- /.test(line)) {
+      content = line.slice(2);
+      style = { ...style, paddingLeft: 18, position: 'relative' };
+    }
+    const isBullet = /^- /.test(line);
+    return (
+      <div key={li} style={style}>
+        {isBullet && <span style={{ position: 'absolute', left: 4 }}>•</span>}
+        {renderInline(content, theme, `l${li}`)}
+      </div>
     );
   });
 }
@@ -71,7 +122,7 @@ function getBlocks(note) {
 function contentFromBlocks(blocks) {
   return blocks
     .filter((b) => b.type !== 'image' && b.type !== 'file')
-    .map((b) => b.value || '')
+    .map((b) => (b.type === 'checklist' ? (b.items || []).map((it) => it.text).join(' ') : b.value || ''))
     .join('\n\n')
     .trim();
 }
@@ -470,10 +521,9 @@ export default function Notes() {
     }
   };
 
-  const updateBlock = (blockId, patch) => {
+  const saveBlocksDebounced = (blocks) => {
     if (!selected) return;
     const noteId = selected.id;
-    const blocks = getBlocks(selected).map((b) => (b.id === blockId ? { ...b, ...patch } : b));
     // Echo the keystroke into local state immediately (no network round-trip
     // in the render path — awaiting a PATCH per keystroke let out-of-order
     // responses clobber newer edits, garbling fast typing/paste).
@@ -481,6 +531,48 @@ export default function Notes() {
     pendingBlockSaveRef.current = { noteId, blocks };
     clearTimeout(blockSaveTimerRef.current);
     blockSaveTimerRef.current = setTimeout(flushBlockSave, 500);
+  };
+
+  const updateBlock = (blockId, patch) => {
+    if (!selected) return;
+    saveBlocksDebounced(getBlocks(selected).map((b) => (b.id === blockId ? { ...b, ...patch } : b)));
+  };
+
+  const addChecklistBlock = () => {
+    if (!selected) return;
+    updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'checklist', items: [{ id: newBlockId(), text: '', done: false }] }]);
+  };
+
+  const updateChecklistItemText = (blockId, itemId, text) => {
+    if (!selected) return;
+    const blocks = getBlocks(selected).map((b) =>
+      b.id === blockId ? { ...b, items: b.items.map((it) => (it.id === itemId ? { ...it, text } : it)) } : b
+    );
+    saveBlocksDebounced(blocks);
+  };
+
+  const toggleChecklistItemDone = (blockId, itemId) => {
+    if (!selected) return;
+    const blocks = getBlocks(selected).map((b) =>
+      b.id === blockId ? { ...b, items: b.items.map((it) => (it.id === itemId ? { ...it, done: !it.done } : it)) } : b
+    );
+    updateBlocks(blocks);
+  };
+
+  const addChecklistItem = (blockId) => {
+    if (!selected) return;
+    const blocks = getBlocks(selected).map((b) =>
+      b.id === blockId ? { ...b, items: [...b.items, { id: newBlockId(), text: '', done: false }] } : b
+    );
+    updateBlocks(blocks);
+  };
+
+  const removeChecklistItem = (blockId, itemId) => {
+    if (!selected) return;
+    const blocks = getBlocks(selected)
+      .map((b) => (b.id === blockId ? { ...b, items: b.items.filter((it) => it.id !== itemId) } : b))
+      .filter((b) => b.id !== blockId || b.items.length > 0);
+    updateBlocks(blocks);
   };
 
   const deleteBlock = (blockId) => {
@@ -957,17 +1049,56 @@ export default function Notes() {
                     &times;
                   </span>
                 </a>
+              ) : block.type === 'checklist' ? (
+                <div key={block.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {block.items.map((item) => (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        onClick={() => toggleChecklistItemDone(block.id, item.id)}
+                        style={{
+                          width: 17, height: 17, borderRadius: 5, border: `1.5px solid ${item.done ? theme.accent : theme.border}`,
+                          background: item.done ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', flexShrink: 0,
+                        }}
+                      >
+                        {item.done && <Icon name="check" size={11} color="#fff" strokeWidth={3} />}
+                      </span>
+                      <input
+                        value={item.text}
+                        onChange={(e) => updateChecklistItemText(block.id, item.id, e.target.value)}
+                        onBlur={flushBlockSave}
+                        placeholder={t('notes.checklistItemPlaceholder')}
+                        style={{
+                          flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: theme.textPrimary,
+                          textDecoration: item.done ? 'line-through' : 'none', opacity: item.done ? 0.6 : 1, fontFamily: 'inherit',
+                        }}
+                      />
+                      <span
+                        onClick={() => removeChecklistItem(block.id, item.id)}
+                        style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 15, padding: '2px 6px', flexShrink: 0 }}
+                      >
+                        &times;
+                      </span>
+                    </div>
+                  ))}
+                  <div
+                    onClick={() => addChecklistItem(block.id)}
+                    style={{ fontSize: 12.5, fontWeight: 600, color: theme.accentText, cursor: 'pointer', padding: '4px 25px' }}
+                  >
+                    {t('notes.addChecklistItem')}
+                  </div>
+                </div>
               ) : (
                 <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  {block.value && URL_PRESENT_RE.test(block.value) && editingTextBlockId !== block.id ? (
+                  {block.value && hasRichContent(block.value) && editingTextBlockId !== block.id ? (
                     <div
                       onClick={(e) => { if (e.target.closest('a')) return; setEditingTextBlockId(block.id); }}
                       style={{
                         fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, flex: 1, minWidth: 0,
-                        whiteSpace: 'pre-wrap', wordBreak: 'break-word', cursor: 'text',
+                        wordBreak: 'break-word', cursor: 'text',
                       }}
                     >
-                      {linkifyText(block.value, theme)}
+                      {renderRichText(block.value, theme)}
                     </div>
                   ) : (
                     <AutoResizeTextarea
@@ -1062,6 +1193,9 @@ export default function Notes() {
             </button>
             <button onClick={() => fileInputRef.current?.click()} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addFile')}
+            </button>
+            <button onClick={addChecklistBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+              {t('notes.addChecklist')}
             </button>
             <input ref={fileInputRef} type="file" onChange={onFileInputChange} style={{ display: 'none' }} />
           </div>
