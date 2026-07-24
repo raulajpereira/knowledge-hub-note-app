@@ -34,7 +34,7 @@ function rfc3339(date) {
 export function getVmMetrics(token, vmId, { minutes = 24 * 60 } = {}) {
   const dateTo = new Date();
   const dateFrom = new Date(dateTo.getTime() - minutes * 60 * 1000);
-  const qs = new URLSearchParams({ dateFrom: rfc3339(dateFrom), dateTo: rfc3339(dateTo) });
+  const qs = new URLSearchParams({ date_from: rfc3339(dateFrom), date_to: rfc3339(dateTo) });
   return hostingerFetch(token, `/vps/v1/virtual-machines/${vmId}/metrics?${qs.toString()}`);
 }
 
