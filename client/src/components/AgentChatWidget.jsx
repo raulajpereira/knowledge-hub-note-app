@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
@@ -6,6 +6,7 @@ import { useAgents } from '../context/AgentsContext.jsx';
 import { api } from '../api.js';
 import Icon from './Icon.jsx';
 import { parseReplyToBlocks, titleFromContent } from '../lib/parseAgentReply.js';
+import { useClickOutside } from '../lib/useClickOutside.js';
 
 function SaveAsNoteButton({ content, agentName, theme, t }) {
   const navigate = useNavigate();
@@ -60,6 +61,8 @@ export default function AgentChatWidget() {
   const [loadedAgents, setLoadedAgents] = useState({});
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const widgetRef = useRef(null);
+  useClickOutside(widgetRef, () => setOpen(false), open);
 
   const currentAgentId = activeTab || activeAgents[0]?.id;
   const currentAgent = activeAgents.find((a) => a.id === currentAgentId) || activeAgents[0];
@@ -102,7 +105,7 @@ export default function AgentChatWidget() {
   };
 
   return (
-    <>
+    <div ref={widgetRef}>
       {open && (
         <div
           style={{
@@ -207,6 +210,6 @@ export default function AgentChatWidget() {
       >
         <Icon name={open ? 'chat' : 'sparkle'} size={22} color="#fff" />
       </div>
-    </>
+    </div>
   );
 }

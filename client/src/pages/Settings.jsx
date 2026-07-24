@@ -9,6 +9,7 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import ColorWheel from '../components/ColorWheel.jsx';
 import logoDefault from '../assets/logo-default.png';
+import logoIcon from '../assets/logo-icon.png';
 
 const APP_VERSION = '1.0.0';
 
@@ -454,13 +455,16 @@ export default function Settings() {
 
       <div
         onClick={() => setAboutOpen(true)}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 16px',
-          borderRadius: 12, cursor: 'pointer', color: theme.textMuted, fontSize: 13, fontWeight: 600,
-        }}
+        style={{ ...card, flexDirection: 'row', alignItems: 'center', gap: 14, cursor: 'pointer', padding: 18 }}
       >
-        <Icon name="sparkle" size={14} />
-        {t('settings.about')}
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fff', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 6 }}>
+          <img src={logoIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 700 }}>{t('settings.about')}</div>
+          <div style={{ fontSize: 12, color: theme.textMuted }}>{t('common.brand')}{t('common.brandRest')} {t('settings.version')} {APP_VERSION}</div>
+        </div>
+        <Icon name="external" size={15} color={theme.textMuted} />
       </div>
 
       {aboutOpen && (
@@ -484,16 +488,17 @@ export default function Settings() {
             </span>
             <div
               style={{
-                width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${theme.accent}, ${theme.accentDark})`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6, boxShadow: `0 10px 24px ${theme.accentSoftBg}`,
+                width: 64, height: 64, borderRadius: 18, background: '#fff', border: `1px solid ${theme.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6, padding: 11,
+                boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
               }}
             >
-              <Icon name="sparkle" size={26} color="#fff" />
+              <img src={logoIcon} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div style={{ fontSize: 19, fontWeight: 800 }}>
               <span style={{ color: theme.accentText }}>{t('common.brand')}</span>{t('common.brandRest')}
             </div>
-            <div style={{ fontSize: 12.5, color: theme.textMuted, marginBottom: 14 }}>{t('settings.aboutTagline')}</div>
+            <div style={{ fontSize: 12.5, color: theme.textMuted, marginBottom: 14, maxWidth: 260 }}>{t('login.heroDesc')}</div>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               {t('settings.version')} {APP_VERSION}
             </div>

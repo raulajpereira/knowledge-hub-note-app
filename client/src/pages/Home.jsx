@@ -190,44 +190,6 @@ export default function Home() {
 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.recentNotes')}</div>
-            <a onClick={() => navigate('/notes')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
-              {t('home.seeAll')}
-            </a>
-          </div>
-          <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
-            {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('common.loading')}</div>}
-            {!loading && notes.length === 0 && (
-              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.noNotesYet')}</div>
-            )}
-            {notes.slice(0, 8).map((note) => (
-              <div
-                key={note.id}
-                onClick={() => navigate('/notes')}
-                style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
-              >
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon name="doc" size={16} color={theme.accentText} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>{note.title}</div>
-                  <div style={{ fontSize: 12.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {note.content?.slice(0, 80) || t('common.noAdditionalText')}
-                  </div>
-                </div>
-                {note.pinned && <Icon name="pin" size={14} color={theme.accentText} />}
-                <div style={{ fontSize: 12.5, color: theme.textMuted, width: 70, textAlign: 'right', flexShrink: 0 }}>
-                  {timeAgo(note.updatedAt, t)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.myTasks')}</div>
             <a onClick={() => navigate('/tasks')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
               {t('home.seeAll')}
@@ -269,6 +231,44 @@ export default function Home() {
                   </div>
                 );
               })}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.recentNotes')}</div>
+            <a onClick={() => navigate('/notes')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
+              {t('home.seeAll')}
+            </a>
+          </div>
+          <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
+            {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('common.loading')}</div>}
+            {!loading && notes.length === 0 && (
+              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.noNotesYet')}</div>
+            )}
+            {notes.slice(0, 8).map((note) => (
+              <div
+                key={note.id}
+                onClick={() => navigate('/notes')}
+                style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="doc" size={16} color={theme.accentText} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{note.title}</div>
+                  <div style={{ fontSize: 12.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {note.content?.slice(0, 80) || t('common.noAdditionalText')}
+                  </div>
+                </div>
+                {note.pinned && <Icon name="pin" size={14} color={theme.accentText} />}
+                <div style={{ fontSize: 12.5, color: theme.textMuted, width: 70, textAlign: 'right', flexShrink: 0 }}>
+                  {timeAgo(note.updatedAt, t)}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

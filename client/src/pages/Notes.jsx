@@ -13,10 +13,10 @@ import { useClickOutside } from '../lib/useClickOutside.js';
 
 const URL_ONLY_RE = /^(https?:\/\/|www\.)\S+$/i;
 const URL_PRESENT_RE = /https?:\/\/|www\./i;
-const FORMATTING_PRESENT_RE = /\*\*[^*\n]+\*\*|`[^`\n]+`|_[^_\n]+_|^#{1,3} |^- /m;
-// Bold/code/italic/link, in one alternation so a single split pass finds
-// all of them in source order (needed since split() only takes one regex).
-const INLINE_TOKEN_RE = /(\*\*[^*\n]+\*\*|`[^`\n]+`|_[^_\n]+_|https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/g;
+const FORMATTING_PRESENT_RE = /\*\*[^*\n]+\*\*|`[^`\n]+`|_[^_\n]+_|~[^~\n]+~|^#{1,3} |^- /m;
+// Bold/code/italic/underline/link, in one alternation so a single split pass
+// finds all of them in source order (needed since split() only takes one regex).
+const INLINE_TOKEN_RE = /(\*\*[^*\n]+\*\*|`[^`\n]+`|_[^_\n]+_|~[^~\n]+~|https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/g;
 
 function normalizeUrl(text) {
   // Drop trailing punctuation that tends to hitch a ride when a URL is
@@ -51,10 +51,19 @@ function renderInline(text, theme, keyPrefix) {
     if (segment.startsWith('_') && segment.endsWith('_')) {
       return <em key={key}>{segment.slice(1, -1)}</em>;
     }
+    if (segment.startsWith('~') && segment.endsWith('~')) {
+      return <span key={key} style={{ textDecoration: 'underline' }}>{segment.slice(1, -1)}</span>;
+    }
     // Otherwise it's a URL match.
     const cleaned = segment.replace(/[.,;:)\]]+$/, '');
     const trailing = segment.slice(cleaned.length);
     const href = /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
+    let host = '';
+    try {
+      host = new URL(href).hostname;
+    } catch {
+      // keep host empty if the URL turns out to be malformed
+    }
     return (
       <span key={key}>
         <a
@@ -62,10 +71,17 @@ function renderInline(text, theme, keyPrefix) {
           target="_blank"
           rel="noreferrer"
           onClick={(e) => e.stopPropagation()}
-          style={{ color: theme.accentText, textDecoration: 'underline', textDecorationStyle: 'dashed', display: 'inline-flex', alignItems: 'center', gap: 2 }}
+          style={{ color: theme.accentText, textDecoration: 'underline', textDecorationStyle: 'dashed', display: 'inline-flex', alignItems: 'center', gap: 4 }}
         >
+          {host && (
+            <img
+              src={`https://www.google.com/s2/favicons?sz=32&domain=${host}`}
+              alt=""
+              style={{ width: 13, height: 13, flexShrink: 0 }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          )}
           {cleaned}
-          <Icon name="external" size={11} />
         </a>
         {trailing}
       </span>
@@ -162,6 +178,7 @@ export default function Notes() {
   const [editingTextBlockId, setEditingTextBlockId] = useState(null);
   const blockSaveTimerRef = useRef(null);
   const pendingBlockSaveRef = useRef(null);
+  const textareaRefsRef = useRef({});
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
@@ -536,6 +553,23 @@ export default function Notes() {
   const updateBlock = (blockId, patch) => {
     if (!selected) return;
     saveBlocksDebounced(getBlocks(selected).map((b) => (b.id === blockId ? { ...b, ...patch } : b)));
+  };
+
+  const applyFormatting = (before, after = before) => {
+    const blockId = editingTextBlockId;
+    const el = blockId && textareaRefsRef.current[blockId];
+    if (!selected || !el) return;
+    const block = getBlocks(selected).find((b) => b.id === blockId);
+    if (!block) return;
+    const start = el.selectionStart ?? block.value.length;
+    const end = el.selectionEnd ?? block.value.length;
+    const selectedText = block.value.slice(start, end);
+    const value = block.value.slice(0, start) + before + selectedText + after + block.value.slice(end);
+    updateBlock(blockId, { value });
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + before.length, start + before.length + selectedText.length);
+    });
   };
 
   const addChecklistBlock = () => {
@@ -973,6 +1007,29 @@ export default function Notes() {
             </div>
           )}
 
+          <div style={{ display: 'flex', gap: 4, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 9, padding: 4, width: 'fit-content' }}>
+            {[
+              { key: 'bold', label: 'B', before: '**', style: { fontWeight: 800 } },
+              { key: 'italic', label: 'I', before: '_', style: { fontStyle: 'italic' } },
+              { key: 'underline', label: 'U', before: '~', style: { textDecoration: 'underline' } },
+              { key: 'code', label: '</>', before: '`', style: { fontFamily: 'var(--font-mono)', fontSize: 11 } },
+            ].map((btn) => (
+              <button
+                key={btn.key}
+                title={t(`notes.format${btn.key.charAt(0).toUpperCase()}${btn.key.slice(1)}`)}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => applyFormatting(btn.before)}
+                style={{
+                  width: 30, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', color: theme.textPrimary,
+                  fontSize: 13, ...btn.style,
+                }}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+
           <div onPaste={handlePaste} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {getBlocks(selected).map((block) =>
               block.type === 'code' ? (
@@ -1102,6 +1159,7 @@ export default function Notes() {
                     </div>
                   ) : (
                     <AutoResizeTextarea
+                      ref={(el) => { textareaRefsRef.current[block.id] = el; }}
                       value={block.value}
                       onChange={(e) => updateBlock(block.id, { value: e.target.value })}
                       onFocus={() => setEditingTextBlockId(block.id)}
