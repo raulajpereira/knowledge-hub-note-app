@@ -273,6 +273,14 @@ export default function Notes() {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [filtered, selectedId]);
 
+  // Selection is scoped to whatever's currently visible — switching folders
+  // mid-selection left stale, invisible notes counted as "selected", which
+  // read as the bulk toolbar being stuck/confused.
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setBulkMoveOpen(false);
+  }, [activeFolder]);
+
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
     setHistoryOpen(false);
@@ -358,9 +366,15 @@ export default function Notes() {
     setPreviewNoteId(null);
   };
 
+  const refreshFolders = async () => {
+    const { folders } = await api.listFolders();
+    setFolders(folders);
+  };
+
   const moveNoteToFolder = async (noteId, folderId) => {
     const { note } = await api.updateNote(noteId, { folderId });
     setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+    refreshFolders();
   };
 
   const reparentFolder = async (folderId, parentId) => {
@@ -394,6 +408,7 @@ export default function Notes() {
     setNotes((prev) => prev.filter((n) => n.id !== selected.id));
     setSelectedId(null);
     refreshCounts();
+    refreshFolders();
   };
 
   const restoreNote = async (id) => {
@@ -426,6 +441,7 @@ export default function Notes() {
     if (selectedId && selectedIds.has(selectedId)) setSelectedId(null);
     clearSelection();
     refreshCounts();
+    refreshFolders();
   };
 
   const bulkMove = async (folderId) => {
@@ -433,18 +449,29 @@ export default function Notes() {
     const updated = await Promise.all(ids.map((id) => api.updateNote(id, { folderId })));
     const byId = new Map(updated.map(({ note }) => [note.id, note]));
     setNotes((prev) => prev.map((n) => byId.get(n.id) || n));
+    // The note shown on the right can otherwise keep pointing at a note
+    // that just moved out of the folder currently being viewed, even
+    // though it's no longer in the visible list on the left.
+    if (selectedId && selectedIds.has(selectedId)) setSelectedId(null);
     clearSelection();
+    refreshFolders();
   };
 
   const bulkAddTag = async () => {
-    const tag = bulkTagInput.trim();
-    if (!tag) return;
+    const tagName = bulkTagInput.trim();
+    if (!tagName) return;
+    let tag = tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
+    if (!tag) {
+      const res = await api.createTag({ name: tagName });
+      tag = res.tag;
+      setTags((prev) => [...prev, tag]);
+    }
     const ids = [...selectedIds];
     const updated = await Promise.all(
       ids.map((id) => {
         const note = notes.find((n) => n.id === id);
-        const tags = [...new Set([...(note?.tags || []), tag])];
-        return api.updateNote(id, { tags });
+        const noteTags = [...new Set([...(note?.tags || []), tag.name])];
+        return api.updateNote(id, { tags: noteTags });
       })
     );
     const byId = new Map(updated.map(({ note }) => [note.id, note]));
