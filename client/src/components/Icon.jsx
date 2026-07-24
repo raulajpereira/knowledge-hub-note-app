@@ -120,6 +120,12 @@ const PATHS = {
     ['path', { d: 'M6.5 4.5h11a1 1 0 0 1 1 1V20l-6.5-4-6.5 4V5.5a1 1 0 0 1 1-1Z', fillOverride: true }],
   ],
   chevron: [['path', { d: 'M9 6l6 6-6 6' }]],
+  graph: [
+    ['circle', { cx: 6, cy: 6.5, r: 2.5 }],
+    ['circle', { cx: 18, cy: 6.5, r: 2.5 }],
+    ['circle', { cx: 12, cy: 18, r: 2.5 }],
+    ['path', { d: 'M8.2 7.8 15.8 7.8M7.3 8.7 10.8 15.8M16.7 8.7 13.2 15.8' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

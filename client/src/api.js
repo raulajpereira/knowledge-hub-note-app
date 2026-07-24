@@ -129,6 +129,11 @@ export const api = {
   clearAgentMessages: (id) => request(`/agents/${id}/messages`, { method: 'DELETE' }),
   chatWithAgent: (id, payload) => request(`/agents/${id}/chat`, { method: 'POST', body: payload }),
   askAgentWorkspace: (id, payload) => request(`/agents/${id}/ask-workspace`, { method: 'POST', body: payload }),
+  listLinks: (type, id) => request(`/links?type=${type}&id=${id}`),
+  listLinkSuggestions: (type, id) => request(`/links/suggestions?type=${type}&id=${id}`),
+  createLink: (payload) => request('/links', { method: 'POST', body: payload }),
+  deleteLink: (id) => request(`/links/${id}`, { method: 'DELETE' }),
+  getLinksGraph: () => request('/links/graph'),
 
   getNews: () => request('/news'),
 

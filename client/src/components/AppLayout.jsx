@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { to: '/artifacts', key: 'artifacts', icon: 'code', countKey: 'artifacts' },
   { to: '/code-library', key: 'codeLibrary', icon: 'folder', countKey: 'codeLibrary' },
   { to: '/calendar', key: 'calendar', icon: 'calendar' },
+  { to: '/graph', key: 'graph', icon: 'graph' },
 ];
 
 function userInitials(name) {

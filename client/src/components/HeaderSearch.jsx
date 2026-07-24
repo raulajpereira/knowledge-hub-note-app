@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { path: '/issues', labelKey: 'nav.issues', icon: 'archive' },
   { path: '/artifacts', labelKey: 'nav.artifacts', icon: 'code' },
   { path: '/code-library', labelKey: 'nav.codeLibrary', icon: 'folder' },
+  { path: '/graph', labelKey: 'nav.graph', icon: 'graph' },
   { path: '/calendar', labelKey: 'nav.calendar', icon: 'calendar' },
   { path: '/sap-news', labelKey: 'nav.sapNews', icon: 'news' },
   { path: '/trash', labelKey: 'nav.trash', icon: 'trash' },

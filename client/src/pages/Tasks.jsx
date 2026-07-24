@@ -7,6 +7,7 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import DateInput from '../components/DateInput.jsx';
+import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
@@ -456,6 +457,8 @@ export default function Tasks() {
               style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, fontSize: 13.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
             />
           </div>
+
+          <LinkedItemsPanel entityType="task" entityId={selected.id} theme={theme} t={t} />
         </div>
       ) : (
         <div style={{ flex: '1 1 420px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>

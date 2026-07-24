@@ -7,6 +7,7 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
+import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 
@@ -1277,6 +1278,8 @@ export default function Notes() {
               </div>
             )}
           </div>
+
+          <LinkedItemsPanel entityType="note" entityId={selected.id} theme={theme} t={t} />
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={addTextBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>

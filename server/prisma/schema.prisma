@@ -29,6 +29,7 @@ model User {
   savedNews       SavedNews[]
   codeFolders     CodeFolder[]
   codeItems       CodeItem[]
+  links           Link[]
   teamOwner       User?    @relation("TeamMembers", fields: [teamOwnerId], references: [id], onDelete: SetNull)
   teamMembers     User[]   @relation("TeamMembers")
 
@@ -312,4 +313,25 @@ model CodeItem {
   @@index([folderId])
   @@index([userId])
   @@map("code_items")
+}
+
+// Generic cross-entity link — lets a Note/Issue/Task/CodeItem point at any
+// other entity of any of those types, not just Note-to-Note (the older
+// Note.links Json field). Kept separate from that field rather than
+// migrating it, so the existing Notes-to-Notes linking UI/data is untouched.
+model Link {
+  id        String   @id @default(uuid())
+  userId    String
+  fromType  String // "note" | "issue" | "task" | "code"
+  fromId    String
+  toType    String
+  toId      String
+  label     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, fromType, fromId])
+  @@index([userId, toType, toId])
+  @@map("links")
 }

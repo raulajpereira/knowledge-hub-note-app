@@ -7,6 +7,7 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
+import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { useClickOutside } from '../lib/useClickOutside.js';
 
 const FOLDER_KINDS = ['program', 'class', 'function_module', 'other'];
@@ -1115,6 +1116,8 @@ export default function CodeLibrary() {
             {selectedItem.type === 'domain' && (
               <DomainConfig a={selectedItem.attributes || {}} set={(patch) => updateItem({ attributes: { ...selectedItem.attributes, ...patch } })} t={t} />
             )}
+
+            <LinkedItemsPanel entityType="code" entityId={selectedItem.id} theme={theme} t={t} />
           </>
         )}
       </div>

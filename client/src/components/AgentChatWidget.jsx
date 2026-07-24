@@ -7,13 +7,7 @@ import { api } from '../api.js';
 import Icon from './Icon.jsx';
 import { parseReplyToBlocks, titleFromContent } from '../lib/parseAgentReply.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
-
-const SOURCE_ROUTE = {
-  note: (s) => ['/notes', { noteId: s.id }],
-  task: (s) => ['/tasks', { taskId: s.id }],
-  issue: (s) => ['/issues', { issueId: s.id }],
-  code: (s) => ['/code-library', { folderId: s.folderId, itemId: s.id }],
-};
+import { navigateToEntity } from '../lib/entityNav.js';
 
 function SourceChips({ sources, theme, t }) {
   const navigate = useNavigate();
@@ -28,12 +22,7 @@ function SourceChips({ sources, theme, t }) {
         {sources.map((s) => (
           <span
             key={`${s.type}-${s.id}`}
-            onClick={() => {
-              const route = SOURCE_ROUTE[s.type];
-              if (!route) return;
-              const [path, state] = route(s);
-              navigate(path, { state });
-            }}
+            onClick={() => navigateToEntity(navigate, s)}
             style={{
               fontSize: 10.5, fontWeight: 600, color: theme.accentText, background: theme.accentSoftBg,
               borderRadius: 6, padding: '3px 7px', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden',

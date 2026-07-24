@@ -18,6 +18,7 @@ import newsRoutes from './routes/news.routes.js';
 import artifactsRoutes from './routes/artifacts.routes.js';
 import sapNewsRoutes from './routes/sapnews.routes.js';
 import codeLibraryRoutes from './routes/codelibrary.routes.js';
+import linksRoutes from './routes/links.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,6 +45,7 @@ app.use('/api/news', newsRoutes);
 app.use('/api/artifacts', artifactsRoutes);
 app.use('/api/sap-news', sapNewsRoutes);
 app.use('/api/code-library', codeLibraryRoutes);
+app.use('/api/links', linksRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

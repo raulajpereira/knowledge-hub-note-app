@@ -8,6 +8,7 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import DateInput from '../components/DateInput.jsx';
+import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35, Critical: 20 };
@@ -505,6 +506,8 @@ export default function Issues() {
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
               />
             </div>
+
+            <LinkedItemsPanel entityType="issue" entityId={selected.id} theme={theme} t={t} />
           </div>
         </div>
       )}
