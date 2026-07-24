@@ -8,6 +8,7 @@ import { FONT_OPTIONS } from '../styles/theme.js';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import ColorWheel from '../components/ColorWheel.jsx';
+import SidebarSettingsModal from '../components/SidebarSettingsModal.jsx';
 import logoDefault from '../assets/logo-default.png';
 import logoIcon from '../assets/logo-icon.png';
 
@@ -231,6 +232,7 @@ export default function Settings() {
   const [newAgentName, setNewAgentName] = useState('');
   const [newAgentToken, setNewAgentToken] = useState('');
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [sidebarSettingsOpen, setSidebarSettingsOpen] = useState(false);
 
   const openNewAgent = () => {
     setNewAgentName('');
@@ -452,6 +454,24 @@ export default function Settings() {
           <AgentRow key={agent.id} agent={agent} theme={theme} t={t} />
         ))}
       </div>
+
+      <div
+        onClick={() => setSidebarSettingsOpen(true)}
+        style={{ ...card, flexDirection: 'row', alignItems: 'center', gap: 14, cursor: 'pointer', padding: 18 }}
+      >
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: theme.subtleBg, border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon name="sidebar" size={17} color={theme.textPrimary} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 700 }}>{t('sidebarSettings.sectionTitle')}</div>
+          <div style={{ fontSize: 12, color: theme.textMuted }}>{t('sidebarSettings.sectionSubtitle')}</div>
+        </div>
+        <Icon name="external" size={15} color={theme.textMuted} />
+      </div>
+
+      {sidebarSettingsOpen && (
+        <SidebarSettingsModal theme={theme} t={t} onClose={() => setSidebarSettingsOpen(false)} />
+      )}
 
       <div
         onClick={() => setAboutOpen(true)}

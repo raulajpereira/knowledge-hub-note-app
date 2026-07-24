@@ -29,6 +29,7 @@ function publicUser(user) {
           vaultAutoLockSeconds: user.settings.vaultAutoLockSeconds,
           issueStatuses: user.settings.issueStatuses,
           trashRetentionDays: user.settings.trashRetentionDays,
+          sidebarLayout: user.settings.sidebarLayout,
         }
       : null,
   };

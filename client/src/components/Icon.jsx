@@ -126,6 +126,10 @@ const PATHS = {
     ['circle', { cx: 12, cy: 18, r: 2.5 }],
     ['path', { d: 'M8.2 7.8 15.8 7.8M7.3 8.7 10.8 15.8M16.7 8.7 13.2 15.8' }],
   ],
+  sidebar: [
+    ['rect', { x: 3.5, y: 4.5, width: 17, height: 15, rx: 2 }],
+    ['path', { d: 'M9.5 4.5v15' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

@@ -234,6 +234,7 @@ export const translations = {
       cancel: 'Cancel',
       create: 'Create',
       save: 'Save',
+      saving: 'Saving…',
       add: 'Add',
       restore: 'Restore',
       loading: 'Loading…',
@@ -670,6 +671,12 @@ export const translations = {
       filterCode: 'Code',
       nodeCount: '{n} items, {e} connections',
     },
+    sidebarSettings: {
+      sectionTitle: 'Sidebar',
+      sectionSubtitle: 'Choose what shows in the left sidebar and reorder it',
+      title: 'Customize Sidebar',
+      subtitle: 'Drag to reorder, uncheck to hide. Trash and Settings always stay put.',
+    },
   },
   pt: {
     nav: {
@@ -906,6 +913,7 @@ export const translations = {
       cancel: 'Cancelar',
       create: 'Criar',
       save: 'Guardar',
+      saving: 'A guardar…',
       add: 'Adicionar',
       restore: 'Restaurar',
       loading: 'A carregar…',
@@ -1341,6 +1349,12 @@ export const translations = {
       filterTasks: 'Tarefas',
       filterCode: 'Código',
       nodeCount: '{n} itens, {e} ligações',
+    },
+    sidebarSettings: {
+      sectionTitle: 'Barra Lateral',
+      sectionSubtitle: 'Escolhe o que aparece na barra lateral e reorganiza',
+      title: 'Personalizar Barra Lateral',
+      subtitle: 'Arrasta para reorganizar, desmarca para ocultar. Lixo e Definições ficam sempre fixos.',
     },
   },
 };

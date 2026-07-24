@@ -13,20 +13,7 @@ import AccountModal from './AccountModal.jsx';
 import HeaderSearch from './HeaderSearch.jsx';
 import NewsTicker from './NewsTicker.jsx';
 import logoDefault from '../assets/logo-default.png';
-
-const NAV_ITEMS = [
-  { to: '/', key: 'home', icon: 'home', end: true },
-  { to: '/notes', key: 'notes', icon: 'doc', countKey: 'notes' },
-  { to: '/voice', key: 'voice', icon: 'mic', countKey: 'voice' },
-  { to: '/tasks', key: 'tasks', icon: 'check', countKey: 'tasks' },
-  { to: '/tags', key: 'tags', icon: 'tag', countKey: 'tags' },
-  { to: '/passwords', key: 'passwords', icon: 'lock' },
-  { to: '/issues', key: 'issues', icon: 'archive', countKey: 'issues' },
-  { to: '/artifacts', key: 'artifacts', icon: 'code', countKey: 'artifacts' },
-  { to: '/code-library', key: 'codeLibrary', icon: 'folder', countKey: 'codeLibrary' },
-  { to: '/calendar', key: 'calendar', icon: 'calendar' },
-  { to: '/graph', key: 'graph', icon: 'graph' },
-];
+import { resolveSidebarLayout } from '../lib/sidebarItems.js';
 
 function userInitials(name) {
   if (!name) return '?';
@@ -49,6 +36,8 @@ export default function AppLayout() {
   useEffect(() => {
     api.listIssues().then(({ issues }) => setIssueAlerts(getIssueAlerts(issues)));
   }, []);
+
+  const sidebarItems = resolveSidebarLayout(user?.settings?.sidebarLayout).filter((item) => !item.hidden);
 
   const navItemStyle = (isActive) => ({
     display: 'flex',
@@ -92,13 +81,12 @@ export default function AppLayout() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {NAV_ITEMS.map((item) => (
+            {sidebarItems.map((item) => (
               <NavLink
-                key={item.to}
-                to={item.soon ? '#' : item.to}
+                key={item.key}
+                to={item.to}
                 end={item.end}
-                onClick={(e) => item.soon && e.preventDefault()}
-                style={({ isActive }) => navItemStyle(isActive && !item.soon)}
+                style={({ isActive }) => navItemStyle(isActive)}
               >
                 <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon name={item.icon} size={18} />
@@ -116,22 +104,8 @@ export default function AppLayout() {
                     {counts[item.countKey]}
                   </span>
                 )}
-                {item.soon && (
-                  <span style={{ fontSize: 9.5, fontWeight: 700, opacity: 0.5, flexShrink: 0 }}>SOON</span>
-                )}
               </NavLink>
             ))}
-          </div>
-
-          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <NavLink to="/sap-news" style={({ isActive }) => navItemStyle(isActive)}>
-              <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon name="news" size={18} />
-              </span>
-              <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {t('nav.sapNews')}
-              </span>
-            </NavLink>
           </div>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>

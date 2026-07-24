@@ -10,6 +10,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
 
 const ACCENT_COLORS = ['purple', 'blue', 'green', 'yellow', 'pink', 'orange', 'red', 'teal'];
+const SIDEBAR_KEYS = new Set([
+  'home', 'notes', 'voice', 'tasks', 'tags', 'passwords', 'issues',
+  'artifacts', 'codeLibrary', 'calendar', 'graph', 'sapNews',
+]);
 
 function makeUpload(subdir) {
   const storage = multer.diskStorage({
@@ -50,7 +54,7 @@ const FONT_FAMILIES = ['inter', 'grotesk', 'system', 'serif', 'mono'];
 const LANGUAGES = ['pt', 'en'];
 
 router.patch('/', async (req, res) => {
-  const { theme, accentColor, accentHue, fontFamily, language, vaultAutoLockSeconds, issueStatuses, trashRetentionDays } = req.body || {};
+  const { theme, accentColor, accentHue, fontFamily, language, vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout } = req.body || {};
   const data = {};
   if (theme !== undefined) {
     if (!['dark', 'light'].includes(theme)) return res.status(400).json({ error: 'Invalid theme' });
@@ -96,6 +100,13 @@ router.patch('/', async (req, res) => {
       return res.status(400).json({ error: 'trashRetentionDays must be an integer between 0 and 365' });
     }
     data.trashRetentionDays = n;
+  }
+  if (sidebarLayout !== undefined) {
+    const valid =
+      sidebarLayout === null ||
+      (Array.isArray(sidebarLayout) && sidebarLayout.every((s) => s && SIDEBAR_KEYS.has(s.key)));
+    if (!valid) return res.status(400).json({ error: 'sidebarLayout must be an array of { key, hidden? } with known keys' });
+    data.sidebarLayout = sidebarLayout === null ? null : sidebarLayout.map((s) => ({ key: s.key, hidden: !!s.hidden }));
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },
