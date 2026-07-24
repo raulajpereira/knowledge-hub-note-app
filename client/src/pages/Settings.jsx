@@ -498,7 +498,9 @@ export default function Settings() {
             <div style={{ fontSize: 19, fontWeight: 800 }}>
               <span style={{ color: theme.accentText }}>{t('common.brand')}</span>{t('common.brandRest')}
             </div>
-            <div style={{ fontSize: 12.5, color: theme.textMuted, marginBottom: 14, maxWidth: 260 }}>{t('login.heroDesc')}</div>
+            <div style={{ fontSize: 12.5, color: theme.textMuted, marginBottom: 14, maxWidth: 260 }}>
+              {t('login.heroTitle')} {t('login.heroTitle2')}
+            </div>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               {t('settings.version')} {APP_VERSION}
             </div>
