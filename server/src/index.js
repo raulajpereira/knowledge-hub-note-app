@@ -20,6 +20,7 @@ import artifactFoldersRoutes from './routes/artifactfolders.routes.js';
 import sapNewsRoutes from './routes/sapnews.routes.js';
 import codeLibraryRoutes from './routes/codelibrary.routes.js';
 import linksRoutes from './routes/links.routes.js';
+import vpsRoutes from './routes/vps.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -48,6 +49,7 @@ app.use('/api/artifact-folders', artifactFoldersRoutes);
 app.use('/api/sap-news', sapNewsRoutes);
 app.use('/api/code-library', codeLibraryRoutes);
 app.use('/api/links', linksRoutes);
+app.use('/api/vps', vpsRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

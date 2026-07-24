@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
@@ -25,11 +26,31 @@ function toKey(date) {
 
 const FAVORITE_ICONS = { note: 'doc', task: 'check', voice: 'mic', issue: 'archive', artifact: 'code', codeFolder: 'folder' };
 
+function DiskDonut({ theme, pct }) {
+  const size = 96;
+  const stroke = 9;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (Math.min(100, Math.max(0, pct)) / 100) * c;
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx={size / 2} cy={size / 2} r={r} stroke={theme.subtleBg} strokeWidth={stroke} fill="none" />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} strokeLinecap="round"
+        stroke={pct > 85 ? 'oklch(0.6 0.18 30)' : theme.accent}
+        strokeDasharray={c} strokeDashoffset={offset}
+        style={{ transition: 'stroke-dashoffset 0.4s' }}
+      />
+    </svg>
+  );
+}
+
 export default function Home() {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { refresh: refreshCounts } = useCounts();
+  const { user } = useAuth();
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [voiceNotes, setVoiceNotes] = useState([]);
@@ -38,6 +59,12 @@ export default function Home() {
   const [codeFolders, setCodeFolders] = useState([]);
   const [sapNews, setSapNews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [vpsDisk, setVpsDisk] = useState(null);
+
+  useEffect(() => {
+    if (!user?.hostingerConnected) return;
+    api.getVpsStatus().then((data) => setVpsDisk(data.disk)).catch(() => setVpsDisk(null));
+  }, [user?.hostingerConnected]);
 
   const loadTasks = () => api.listTasks().then(({ tasks }) => setTasks(tasks));
 
@@ -354,6 +381,33 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('home.vpsDiskUsage')}</div>
+          <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, padding: 18 }}>
+            {!user?.hostingerConnected && (
+              <div style={{ fontSize: 12.5, color: theme.textMuted, textAlign: 'center', padding: '6px 4px' }}>
+                {t('home.vpsDiskUsageNotConnected')}
+              </div>
+            )}
+            {user?.hostingerConnected && vpsDisk?.usedPct != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
+                  <DiskDonut theme={theme} pct={vpsDisk.usedPct} />
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 19, fontWeight: 800 }}>{vpsDisk.usedPct}%</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12.5, color: theme.textMuted, lineHeight: 1.5 }}>
+                  {t('home.vpsDiskUsageOf', { used: (vpsDisk.usedMb / 1024).toFixed(1), total: (vpsDisk.totalMb / 1024).toFixed(1) })}
+                </div>
+              </div>
+            )}
+            {user?.hostingerConnected && vpsDisk && vpsDisk.usedPct == null && (
+              <div style={{ fontSize: 12.5, color: theme.textMuted, textAlign: 'center', padding: '6px 4px' }}>{t('settings.vpsNoData')}</div>
+            )}
           </div>
         </div>
       </div>

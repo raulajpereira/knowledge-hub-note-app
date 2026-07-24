@@ -55,6 +55,8 @@ model Settings {
   issueStatuses           Json?
   trashRetentionDays      Int      @default(30) // 0 = never auto-purge
   sidebarLayout           Json? // [{ key: "notes", hidden: false }, ...] — order + visibility of sidebar nav items (Trash/Settings excluded, always shown)
+  hostingerApiTokenEnc    String?  @db.Text // AES-256-GCM encrypted at rest, server never exposes plaintext to the client
+  hostingerVpsId          String?
   updatedAt               DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

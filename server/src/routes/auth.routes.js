@@ -17,6 +17,7 @@ function publicUser(user) {
     name: user.name,
     createdAt: user.createdAt,
     isTeamMember: !!user.teamOwnerId,
+    hostingerConnected: !!user.settings?.hostingerApiTokenEnc,
     settings: user.settings
       ? {
           theme: user.settings.theme,

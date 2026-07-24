@@ -147,6 +147,10 @@ export const api = {
   renameArtifactFolder: (id, payload) => request(`/artifact-folders/${id}`, { method: 'PATCH', body: payload }),
   deleteArtifactFolder: (id) => request(`/artifact-folders/${id}`, { method: 'DELETE' }),
 
+  setHostingerToken: (token) => request('/vps/token', { method: 'POST', body: { token } }),
+  clearHostingerToken: () => request('/vps/token', { method: 'DELETE' }),
+  getVpsStatus: () => request('/vps/status'),
+
   getSapNews: () => request('/sap-news'),
   listSavedNews: () => request('/sap-news/saved'),
   saveNews: (payload) => request('/sap-news/saved', { method: 'POST', body: payload }),
