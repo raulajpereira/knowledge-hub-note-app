@@ -192,9 +192,6 @@ export default function AppLayout() {
                     {user?.email}
                   </div>
                 </div>
-                <span onClick={(e) => { e.stopPropagation(); logout(); }} title={t('nav.logout')} style={{ cursor: 'pointer', opacity: 0.6, display: 'flex', flexShrink: 0 }}>
-                  <Icon name="logout" size={17} />
-                </span>
               </div>
             </div>
 
