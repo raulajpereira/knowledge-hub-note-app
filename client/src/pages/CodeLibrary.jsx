@@ -594,6 +594,7 @@ export default function CodeLibrary() {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [search, setSearch] = useState('');
   const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderParentId, setNewFolderParentId] = useState(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderKind, setNewFolderKind] = useState('program');
   const [newItemMenuOpen, setNewItemMenuOpen] = useState(false);
@@ -601,10 +602,21 @@ export default function CodeLibrary() {
   const [folderTagInput, setFolderTagInput] = useState('');
   const [linkMenuOpen, setLinkMenuOpen] = useState(false);
   const [linkSearch, setLinkSearch] = useState('');
+  const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
+  const [dragOverFolderId, setDragOverFolderId] = useState(null);
   const newItemMenuRef = useRef(null);
   const linkMenuRef = useRef(null);
   useClickOutside(newItemMenuRef, () => setNewItemMenuOpen(false), newItemMenuOpen);
   useClickOutside(linkMenuRef, () => setLinkMenuOpen(false), linkMenuOpen);
+
+  const toggleCollapsed = (id) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     api.listCodeFolders().then(({ folders }) => {
@@ -696,22 +708,39 @@ export default function CodeLibrary() {
 
   const createFolder = async () => {
     if (!newFolderName.trim()) return;
-    const { folder } = await api.createCodeFolder({ name: newFolderName.trim(), kind: newFolderKind });
+    const { folder } = await api.createCodeFolder({ name: newFolderName.trim(), kind: newFolderKind, parentId: newFolderParentId });
     setFolders((prev) => [folder, ...prev]);
     setSelectedFolderId(folder.id);
     setNewFolderName('');
     setNewFolderKind('program');
     setNewFolderOpen(false);
+    setNewFolderParentId(null);
     refreshCounts();
   };
 
   const deleteFolder = async (id) => {
     const ok = await confirm({ title: t('common.confirmDeleteTitle'), message: t('codeLibrary.deleteFolderConfirm'), confirmLabel: t('common.deleteForever') });
     if (!ok) return;
+    const deleted = folders.find((f) => f.id === id);
     await api.deleteCodeFolder(id);
-    setFolders((prev) => prev.filter((f) => f.id !== id));
+    setFolders((prev) =>
+      prev.filter((f) => f.id !== id).map((f) => (f.parentId === id ? { ...f, parentId: deleted?.parentId ?? null } : f))
+    );
     if (selectedFolderId === id) setSelectedFolderId(folders.find((f) => f.id !== id)?.id || null);
     refreshCounts();
+  };
+
+  const reparentFolder = async (folderId, parentId) => {
+    if (folderId === parentId) return;
+    const target = folders.find((f) => f.id === folderId);
+    if (!target || target.parentId === parentId) return;
+    let ancestor = parentId;
+    while (ancestor) {
+      if (ancestor === folderId) return; // would create a cycle
+      ancestor = folders.find((f) => f.id === ancestor)?.parentId || null;
+    }
+    setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, parentId } : f)));
+    await updateFolderMeta(folderId, { parentId });
   };
 
   const createItem = async (type) => {
@@ -760,6 +789,60 @@ export default function CodeLibrary() {
     background: isActive ? theme.accentSoftBg : 'transparent', color: isActive ? theme.accentText : theme.textMuted,
   });
 
+  const renderFolderNode = (f, depth) => {
+    const kids = folders.filter((c) => c.parentId === f.id);
+    const hasKids = kids.length > 0;
+    const collapsed = collapsedFolders.has(f.id);
+    return (
+      <div key={f.id}>
+        <div
+          draggable
+          onDragStart={(e) => e.dataTransfer.setData('text/code-folder-id', f.id)}
+          onDragOver={(e) => { e.preventDefault(); setDragOverFolderId(f.id); }}
+          onDragLeave={() => setDragOverFolderId((v) => (v === f.id ? null : v))}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverFolderId(null);
+            const draggedId = e.dataTransfer.getData('text/code-folder-id');
+            if (draggedId) reparentFolder(draggedId, f.id);
+          }}
+          onClick={() => setSelectedFolderId(f.id)}
+          style={{
+            ...rowStyle(selectedFolderId === f.id),
+            paddingLeft: 10 + depth * 16,
+            outline: dragOverFolderId === f.id ? `2px dashed ${theme.accent}` : 'none',
+            outlineOffset: -2,
+          }}
+        >
+          {hasKids ? (
+            <span
+              onClick={(e) => { e.stopPropagation(); toggleCollapsed(f.id); }}
+              style={{ display: 'flex', cursor: 'pointer', opacity: 0.6, flexShrink: 0, transform: collapsed ? 'none' : 'rotate(90deg)' }}
+            >
+              <Icon name="chevron" size={11} />
+            </span>
+          ) : (
+            <span style={{ width: 11, flexShrink: 0 }} />
+          )}
+          <Icon name="folder" size={15} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+            <div style={{ fontSize: 10.5, opacity: 0.7 }}>{kindLabel(f.kind)}</div>
+          </div>
+          <span
+            onClick={(e) => { e.stopPropagation(); setNewFolderParentId(f.id); setNewFolderOpen(true); }}
+            title={t('codeLibrary.newSubfolder')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="plus" size={12} />
+          </span>
+          <span style={{ fontSize: 11.5, opacity: 0.7, flexShrink: 0 }}>{f.itemCount}</span>
+        </div>
+        {hasKids && !collapsed && kids.map((k) => renderFolderNode(k, depth + 1))}
+      </div>
+    );
+  };
+
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
@@ -777,19 +860,28 @@ export default function CodeLibrary() {
 
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {filteredFolders.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('codeLibrary.noFolders')}</div>}
-          {filteredFolders.map((f) => (
-            <div key={f.id} onClick={() => setSelectedFolderId(f.id)} style={rowStyle(selectedFolderId === f.id)}>
-              <Icon name="folder" size={15} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
-                <div style={{ fontSize: 10.5, opacity: 0.7 }}>{kindLabel(f.kind)}</div>
-              </div>
-              <span style={{ fontSize: 11.5, opacity: 0.7 }}>{f.itemCount}</span>
-            </div>
-          ))}
+          {search.trim()
+            ? filteredFolders.map((f) => (
+                <div key={f.id} onClick={() => setSelectedFolderId(f.id)} style={rowStyle(selectedFolderId === f.id)}>
+                  <Icon name="folder" size={15} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+                    <div style={{ fontSize: 10.5, opacity: 0.7 }}>{kindLabel(f.kind)}</div>
+                  </div>
+                  <span style={{ fontSize: 11.5, opacity: 0.7 }}>{f.itemCount}</span>
+                </div>
+              ))
+            : folders
+                .filter((f) => !f.parentId)
+                .map((f) => renderFolderNode(f, 0))}
 
           {newFolderOpen ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '6px 4px 2px' }}>
+              {newFolderParentId && (
+                <div style={{ fontSize: 11, color: theme.textMuted }}>
+                  {t('codeLibrary.newFolderInside', { name: folders.find((f) => f.id === newFolderParentId)?.name || '' })}
+                </div>
+              )}
               <input
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
@@ -805,14 +897,14 @@ export default function CodeLibrary() {
                 <button onClick={createFolder} style={{ flex: 1, background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   {t('common.add')}
                 </button>
-                <button onClick={() => setNewFolderOpen(false)} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                <button onClick={() => { setNewFolderOpen(false); setNewFolderParentId(null); }} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                   {t('common.cancel')}
                 </button>
               </div>
             </div>
           ) : (
             <div
-              onClick={() => setNewFolderOpen(true)}
+              onClick={() => { setNewFolderParentId(null); setNewFolderOpen(true); }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: theme.accent, color: '#fff', borderRadius: 8, padding: '9px 12px', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', marginTop: 2 }}
             >
               <Icon name="plus" size={13} color="#fff" /> {t('codeLibrary.newFolder')}

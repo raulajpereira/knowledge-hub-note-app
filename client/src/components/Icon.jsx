@@ -119,6 +119,7 @@ const PATHS = {
   bookmarkFilled: [
     ['path', { d: 'M6.5 4.5h11a1 1 0 0 1 1 1V20l-6.5-4-6.5 4V5.5a1 1 0 0 1 1-1Z', fillOverride: true }],
   ],
+  chevron: [['path', { d: 'M9 6l6 6-6 6' }]],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

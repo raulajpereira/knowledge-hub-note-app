@@ -52,7 +52,9 @@ export default function Notes() {
   const [showTrash, setShowTrash] = useState(false);
   const [trashedNotes, setTrashedNotes] = useState([]);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderParentId, setNewFolderParentId] = useState(null);
   const [newFolderName, setNewFolderName] = useState('');
+  const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -215,6 +217,29 @@ export default function Notes() {
     setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
   };
 
+  const reparentFolder = async (folderId, parentId) => {
+    if (folderId === parentId) return;
+    const target = folders.find((f) => f.id === folderId);
+    if (!target || target.parentId === parentId) return;
+    let ancestor = parentId;
+    while (ancestor) {
+      if (ancestor === folderId) return; // would create a cycle
+      ancestor = folders.find((f) => f.id === ancestor)?.parentId || null;
+    }
+    setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, parentId } : f)));
+    const { folder } = await api.renameFolder(folderId, { parentId });
+    setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, ...folder } : f)));
+  };
+
+  const toggleFolderCollapsed = (id) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const trashSelected = async () => {
     if (!selected) return;
     const ok = await confirm({ message: t('common.confirmTrashMessage') });
@@ -329,10 +354,11 @@ export default function Notes() {
 
   const createFolder = async () => {
     if (!newFolderName.trim()) return;
-    const { folder } = await api.createFolder({ name: newFolderName.trim() });
-    setFolders((prev) => [...prev, folder]);
+    const { folder } = await api.createFolder({ name: newFolderName.trim(), parentId: newFolderParentId });
+    setFolders((prev) => [...prev, { ...folder, noteCount: 0 }]);
     setNewFolderName('');
     setNewFolderOpen(false);
+    setNewFolderParentId(null);
   };
 
   const rowStyle = (isActive) => ({
@@ -344,6 +370,59 @@ export default function Notes() {
     cursor: 'pointer',
     background: isActive ? theme.accentSoftBg : 'transparent',
   });
+
+  const renderFolderNode = (f, depth) => {
+    const kids = folders.filter((c) => c.parentId === f.id);
+    const hasKids = kids.length > 0;
+    const collapsed = collapsedFolders.has(f.id);
+    return (
+      <div key={f.id}>
+        <div
+          draggable
+          onDragStart={(e) => e.dataTransfer.setData('text/folder-id', f.id)}
+          onClick={() => setActiveFolder(f.id)}
+          onDragOver={(e) => { e.preventDefault(); setDragOverFolder(f.id); }}
+          onDragLeave={() => setDragOverFolder((v) => (v === f.id ? null : v))}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverFolder(null);
+            const noteId = e.dataTransfer.getData('text/note-id');
+            const draggedFolderId = e.dataTransfer.getData('text/folder-id');
+            if (noteId) moveNoteToFolder(noteId, f.id);
+            else if (draggedFolderId) reparentFolder(draggedFolderId, f.id);
+          }}
+          style={{
+            ...rowStyle(activeFolder === f.id), flexDirection: 'row', alignItems: 'center', gap: 8,
+            paddingLeft: 10 + depth * 16,
+            color: activeFolder === f.id ? theme.accentText : theme.textMuted,
+            outline: dragOverFolder === f.id ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
+          }}
+        >
+          {hasKids ? (
+            <span
+              onClick={(e) => { e.stopPropagation(); toggleFolderCollapsed(f.id); }}
+              style={{ display: 'flex', cursor: 'pointer', opacity: 0.6, flexShrink: 0, transform: collapsed ? 'none' : 'rotate(90deg)' }}
+            >
+              <Icon name="chevron" size={11} />
+            </span>
+          ) : (
+            <span style={{ width: 11, flexShrink: 0 }} />
+          )}
+          <Icon name="folder" size={15} />
+          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
+          <span
+            onClick={(e) => { e.stopPropagation(); setNewFolderParentId(f.id); setNewFolderOpen(true); }}
+            title={t('codeLibrary.newSubfolder')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="plus" size={12} />
+          </span>
+          <span style={{ fontSize: 11.5, opacity: 0.7, flexShrink: 0 }}>{f.noteCount}</span>
+        </div>
+        {hasKids && !collapsed && kids.map((k) => renderFolderNode(k, depth + 1))}
+      </div>
+    );
+  };
 
   if (loading) {
     return <div style={{ padding: 28, color: theme.textMuted }}>Loading notes…</div>;
@@ -394,46 +473,31 @@ export default function Notes() {
             <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{t('notes.allNotes')}</span>
             <span style={{ fontSize: 11.5, opacity: 0.7 }}>{notes.length}</span>
           </div>
-          {folders.map((f) => (
-            <div
-              key={f.id}
-              onClick={() => setActiveFolder(f.id)}
-              onDragOver={(e) => { e.preventDefault(); setDragOverFolder(f.id); }}
-              onDragLeave={() => setDragOverFolder((v) => (v === f.id ? null : v))}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragOverFolder(null);
-                const noteId = e.dataTransfer.getData('text/note-id');
-                if (noteId) moveNoteToFolder(noteId, f.id);
-              }}
-              style={{
-                ...rowStyle(activeFolder === f.id), flexDirection: 'row', alignItems: 'center', gap: 8,
-                color: activeFolder === f.id ? theme.accentText : theme.textMuted,
-                outline: dragOverFolder === f.id ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
-              }}
-            >
-              <Icon name="folder" size={15} />
-              <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
-              <span style={{ fontSize: 11.5, opacity: 0.7 }}>{f.noteCount}</span>
-            </div>
-          ))}
+          {folders.filter((f) => !f.parentId).map((f) => renderFolderNode(f, 0))}
           {newFolderOpen ? (
-            <div style={{ display: 'flex', gap: 6, padding: '4px 4px 2px' }}>
-              <input
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && createFolder()}
-                placeholder={t('notes.newFolderName')}
-                autoFocus
-                style={{ flex: 1, minWidth: 0, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
-              />
-              <button onClick={createFolder} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                {t('common.add')}
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '6px 4px 2px' }}>
+              {newFolderParentId && (
+                <div style={{ fontSize: 11, color: theme.textMuted }}>
+                  {t('codeLibrary.newFolderInside', { name: folders.find((f) => f.id === newFolderParentId)?.name || '' })}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && createFolder()}
+                  placeholder={t('notes.newFolderName')}
+                  autoFocus
+                  style={{ flex: 1, minWidth: 0, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+                />
+                <button onClick={createFolder} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  {t('common.add')}
+                </button>
+              </div>
             </div>
           ) : (
             <div
-              onClick={() => setNewFolderOpen(true)}
+              onClick={() => { setNewFolderParentId(null); setNewFolderOpen(true); }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: theme.accent, color: '#fff', borderRadius: 8, padding: '9px 12px', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', marginTop: 2 }}
             >
               <Icon name="plus" size={13} color="#fff" /> {t('notes.newFolder')}
