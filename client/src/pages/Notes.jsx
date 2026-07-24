@@ -7,16 +7,11 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
-import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 
 const URL_ONLY_RE = /^(https?:\/\/|www\.)\S+$/i;
-const URL_PRESENT_RE = /https?:\/\/|www\./i;
-const FORMATTING_PRESENT_RE = /\*\*[^*\n]+\*\*|`[^`\n]+`|_[^_\n]+_|~[^~\n]+~|^#{1,3} |^- /m;
-// Bold/code/italic/underline/link, in one alternation so a single split pass
-// finds all of them in source order (needed since split() only takes one regex).
-const INLINE_TOKEN_RE = /(\*\*[^*\n]+\*\*|`[^`\n]+`|_[^_\n]+_|~[^~\n]+~|https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/g;
+const BARE_URL_RE = /(https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/g;
 
 function normalizeUrl(text) {
   // Drop trailing punctuation that tends to hitch a ride when a URL is
@@ -25,97 +20,24 @@ function normalizeUrl(text) {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function hasRichContent(text) {
-  return URL_PRESENT_RE.test(text) || FORMATTING_PRESENT_RE.test(text);
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Renders one line's worth of text with **bold**, `code`, _italic_ and bare
-// URLs turned into real elements, keeping everything else as plain text —
-// used for the read-only preview of a text block, since a <textarea> can't
-// contain nested elements. split() with a single capture group interleaves
-// matches at odd indices, so even indices are always plain text.
-function renderInline(text, theme, keyPrefix) {
-  return text.split(INLINE_TOKEN_RE).map((segment, i) => {
-    if (i % 2 === 0) return segment || null;
-    const key = `${keyPrefix}-${i}`;
-    if (segment.startsWith('**') && segment.endsWith('**')) {
-      return <strong key={key}>{segment.slice(2, -2)}</strong>;
-    }
-    if (segment.startsWith('`') && segment.endsWith('`')) {
-      return (
-        <code key={key} style={{ background: theme.subtleBg, padding: '1px 5px', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: '0.9em' }}>
-          {segment.slice(1, -1)}
-        </code>
-      );
-    }
-    if (segment.startsWith('_') && segment.endsWith('_')) {
-      return <em key={key}>{segment.slice(1, -1)}</em>;
-    }
-    if (segment.startsWith('~') && segment.endsWith('~')) {
-      return <span key={key} style={{ textDecoration: 'underline' }}>{segment.slice(1, -1)}</span>;
-    }
-    // Otherwise it's a URL match.
-    const cleaned = segment.replace(/[.,;:)\]]+$/, '');
-    const trailing = segment.slice(cleaned.length);
-    const href = /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
-    let host = '';
-    try {
-      host = new URL(href).hostname;
-    } catch {
-      // keep host empty if the URL turns out to be malformed
-    }
-    return (
-      <span key={key}>
-        <a
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          style={{ color: theme.accentText, textDecoration: 'underline', textDecorationStyle: 'dashed', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-        >
-          {host && (
-            <img
-              src={`https://www.google.com/s2/favicons?sz=32&domain=${host}`}
-              alt=""
-              style={{ width: 13, height: 13, flexShrink: 0 }}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
-          )}
-          {cleaned}
-        </a>
-        {trailing}
-      </span>
-    );
-  });
+// Notes written before this feature (or through any other path that stores
+// plain text) never got HTML-escaped, so a literal "<" or a leftover
+// "**word**" from earlier testing must not be interpreted as markup when we
+// hand it to innerHTML — only content explicitly tagged format:'html' (i.e.
+// produced by this editor) is trusted as real HTML.
+function textBlockToHtml(block) {
+  if (block.format === 'html') return block.value || '';
+  return escapeHtml(block.value || '').replace(/\n/g, '<br>');
 }
 
-// Renders a whole text block's value line by line, applying heading (# / ##
-// / ###) and bullet (- ) line-level styling on top of the inline formatting.
-function renderRichText(text, theme) {
-  return text.split('\n').map((line, li) => {
-    let content = line;
-    let style = { minHeight: '1.6em' };
-    if (/^### /.test(line)) {
-      content = line.slice(4);
-      style = { ...style, fontSize: 15.5, fontWeight: 800 };
-    } else if (/^## /.test(line)) {
-      content = line.slice(3);
-      style = { ...style, fontSize: 17, fontWeight: 800 };
-    } else if (/^# /.test(line)) {
-      content = line.slice(2);
-      style = { ...style, fontSize: 19, fontWeight: 800 };
-    } else if (/^- /.test(line)) {
-      content = line.slice(2);
-      style = { ...style, paddingLeft: 18, position: 'relative' };
-    }
-    const isBullet = /^- /.test(line);
-    return (
-      <div key={li} style={style}>
-        {isBullet && <span style={{ position: 'absolute', left: 4 }}>•</span>}
-        {renderInline(content, theme, `l${li}`)}
-      </div>
-    );
-  });
+function htmlToPlainText(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html || '';
+  return div.textContent || '';
 }
 
 function formatFileSize(bytes) {
@@ -123,6 +45,108 @@ function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Turns bare URLs left in the text into real <a> elements (with a favicon)
+// after the user finishes editing — done on blur via a DOM walk rather than
+// on every keystroke so it doesn't fight the user while they're still typing.
+function linkifyElement(el, theme) {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let node;
+  while ((node = walker.nextNode())) {
+    let insideLink = false;
+    for (let p = node.parentElement; p && p !== el; p = p.parentElement) {
+      if (p.tagName === 'A') { insideLink = true; break; }
+    }
+    if (!insideLink && BARE_URL_RE.test(node.textContent)) textNodes.push(node);
+    BARE_URL_RE.lastIndex = 0;
+  }
+  if (textNodes.length === 0) return false;
+
+  for (const textNode of textNodes) {
+    const text = textNode.textContent;
+    const frag = document.createDocumentFragment();
+    let lastIndex = 0;
+    let m;
+    BARE_URL_RE.lastIndex = 0;
+    while ((m = BARE_URL_RE.exec(text))) {
+      if (m.index > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+      const cleaned = m[0].replace(/[.,;:)\]]+$/, '');
+      const trailing = m[0].slice(cleaned.length);
+      const href = /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
+      const a = document.createElement('a');
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noreferrer';
+      a.style.color = theme.accentText;
+      a.style.textDecoration = 'underline';
+      a.style.textDecorationStyle = 'dashed';
+      try {
+        const host = new URL(href).hostname;
+        const img = document.createElement('img');
+        img.src = `https://www.google.com/s2/favicons?sz=32&domain=${host}`;
+        img.alt = '';
+        img.style.width = '13px';
+        img.style.height = '13px';
+        img.style.verticalAlign = 'text-bottom';
+        img.style.marginRight = '4px';
+        img.onerror = () => { img.style.display = 'none'; };
+        a.appendChild(img);
+      } catch {
+        // malformed URL — link still works, just without a favicon
+      }
+      a.appendChild(document.createTextNode(cleaned));
+      frag.appendChild(a);
+      if (trailing) frag.appendChild(document.createTextNode(trailing));
+      lastIndex = m.index + m[0].length;
+    }
+    if (lastIndex < text.length) frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+    textNode.parentNode.replaceChild(frag, textNode);
+  }
+  return true;
+}
+
+// A plain <div contentEditable> for one text block. Native execCommand
+// formatting needs a real focused DOM element to act on, so this stays
+// uncontrolled — value is only pushed back into the DOM when the block
+// isn't the one currently being typed into, to avoid resetting the cursor
+// on every keystroke-triggered re-render.
+function TextBlockEditor({ block, theme, placeholder, elRefCallback, onChange, onFocusBlock, onBlurBlock }) {
+  const elRef = useRef(null);
+
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el || document.activeElement === el) return;
+    const html = textBlockToHtml(block);
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }, [block.value, block.format]);
+
+  return (
+    <div
+      ref={(el) => { elRef.current = el; elRefCallback(el); }}
+      contentEditable
+      suppressContentEditableWarning
+      data-placeholder={placeholder}
+      onInput={(e) => {
+        const el = e.currentTarget;
+        // Browsers leave a stray <br> behind after the last character is
+        // deleted, which would defeat the :empty placeholder selector.
+        if (el.innerHTML === '<br>') el.innerHTML = '';
+        onChange(el.innerHTML);
+      }}
+      onFocus={onFocusBlock}
+      onBlur={(e) => {
+        const el = e.currentTarget;
+        if (linkifyElement(el, theme)) onChange(el.innerHTML);
+        onBlurBlock();
+      }}
+      style={{
+        border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6,
+        color: theme.textPrimary, fontFamily: 'inherit', flex: 1, minWidth: 0, wordBreak: 'break-word',
+      }}
+    />
+  );
 }
 
 let blockIdCounter = 0;
@@ -138,7 +162,11 @@ function getBlocks(note) {
 function contentFromBlocks(blocks) {
   return blocks
     .filter((b) => b.type !== 'image' && b.type !== 'file')
-    .map((b) => (b.type === 'checklist' ? (b.items || []).map((it) => it.text).join(' ') : b.value || ''))
+    .map((b) => {
+      if (b.type === 'checklist') return (b.items || []).map((it) => it.text).join(' ');
+      if (b.type === 'text' && b.format === 'html') return htmlToPlainText(b.value);
+      return b.value || '';
+    })
     .join('\n\n')
     .trim();
 }
@@ -555,21 +583,41 @@ export default function Notes() {
     saveBlocksDebounced(getBlocks(selected).map((b) => (b.id === blockId ? { ...b, ...patch } : b)));
   };
 
-  const applyFormatting = (before, after = before) => {
+  // Word-style instant formatting: toggles bold/italic/underline on the
+  // current selection via the browser's own native command (no markup
+  // symbols ever touch the stored value). Inline code has no execCommand
+  // equivalent, so it's wrapped by hand with a Range.
+  const applyFormatting = (command) => {
     const blockId = editingTextBlockId;
     const el = blockId && textareaRefsRef.current[blockId];
     if (!selected || !el) return;
-    const block = getBlocks(selected).find((b) => b.id === blockId);
-    if (!block) return;
-    const start = el.selectionStart ?? block.value.length;
-    const end = el.selectionEnd ?? block.value.length;
-    const selectedText = block.value.slice(start, end);
-    const value = block.value.slice(0, start) + before + selectedText + after + block.value.slice(end);
-    updateBlock(blockId, { value });
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + before.length, start + before.length + selectedText.length);
-    });
+    el.focus();
+    if (command === 'code') {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+      const range = sel.getRangeAt(0);
+      if (!el.contains(range.commonAncestorContainer)) return;
+      const codeEl = document.createElement('code');
+      codeEl.style.background = theme.subtleBg;
+      codeEl.style.padding = '1px 5px';
+      codeEl.style.borderRadius = '4px';
+      codeEl.style.fontFamily = 'var(--font-mono)';
+      codeEl.style.fontSize = '0.9em';
+      try {
+        range.surroundContents(codeEl);
+      } catch {
+        const contents = range.extractContents();
+        codeEl.appendChild(contents);
+        range.insertNode(codeEl);
+      }
+      sel.removeAllRanges();
+      const newRange = document.createRange();
+      newRange.selectNodeContents(codeEl);
+      sel.addRange(newRange);
+    } else {
+      document.execCommand(command, false, null);
+    }
+    updateBlock(blockId, { value: el.innerHTML, format: 'html' });
   };
 
   const addChecklistBlock = () => {
@@ -1009,16 +1057,16 @@ export default function Notes() {
 
           <div style={{ display: 'flex', gap: 4, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 9, padding: 4, width: 'fit-content' }}>
             {[
-              { key: 'bold', label: 'B', before: '**', style: { fontWeight: 800 } },
-              { key: 'italic', label: 'I', before: '_', style: { fontStyle: 'italic' } },
-              { key: 'underline', label: 'U', before: '~', style: { textDecoration: 'underline' } },
-              { key: 'code', label: '</>', before: '`', style: { fontFamily: 'var(--font-mono)', fontSize: 11 } },
+              { key: 'bold', label: 'B', command: 'bold', style: { fontWeight: 800 } },
+              { key: 'italic', label: 'I', command: 'italic', style: { fontStyle: 'italic' } },
+              { key: 'underline', label: 'U', command: 'underline', style: { textDecoration: 'underline' } },
+              { key: 'code', label: '</>', command: 'code', style: { fontFamily: 'var(--font-mono)', fontSize: 11 } },
             ].map((btn) => (
               <button
                 key={btn.key}
                 title={t(`notes.format${btn.key.charAt(0).toUpperCase()}${btn.key.slice(1)}`)}
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => applyFormatting(btn.before)}
+                onClick={() => applyFormatting(btn.command)}
                 style={{
                   width: 30, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', color: theme.textPrimary,
@@ -1147,27 +1195,15 @@ export default function Notes() {
                 </div>
               ) : (
                 <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  {block.value && hasRichContent(block.value) && editingTextBlockId !== block.id ? (
-                    <div
-                      onClick={(e) => { if (e.target.closest('a')) return; setEditingTextBlockId(block.id); }}
-                      style={{
-                        fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, flex: 1, minWidth: 0,
-                        wordBreak: 'break-word', cursor: 'text',
-                      }}
-                    >
-                      {renderRichText(block.value, theme)}
-                    </div>
-                  ) : (
-                    <AutoResizeTextarea
-                      ref={(el) => { textareaRefsRef.current[block.id] = el; }}
-                      value={block.value}
-                      onChange={(e) => updateBlock(block.id, { value: e.target.value })}
-                      onFocus={() => setEditingTextBlockId(block.id)}
-                      onBlur={() => { setEditingTextBlockId((v) => (v === block.id ? null : v)); flushBlockSave(); }}
-                      placeholder={t('notes.writePlaceholder')}
-                      style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit', flex: 1, minWidth: 0 }}
-                    />
-                  )}
+                  <TextBlockEditor
+                    block={block}
+                    theme={theme}
+                    placeholder={t('notes.writePlaceholder')}
+                    elRefCallback={(el) => { textareaRefsRef.current[block.id] = el; }}
+                    onChange={(html) => updateBlock(block.id, { value: html, format: 'html' })}
+                    onFocusBlock={() => setEditingTextBlockId(block.id)}
+                    onBlurBlock={() => { setEditingTextBlockId((v) => (v === block.id ? null : v)); flushBlockSave(); }}
+                  />
                   {getBlocks(selected).length > 1 && (
                     <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
                       &times;
@@ -1413,7 +1449,13 @@ export default function Notes() {
                     </a>
                   );
                 }
-                return (
+                return block.format === 'html' ? (
+                  <div
+                    key={block.id}
+                    style={{ fontSize: 14, lineHeight: 1.6, wordBreak: 'break-word', color: theme.textPrimary }}
+                    dangerouslySetInnerHTML={{ __html: block.value || '' }}
+                  />
+                ) : (
                   <div key={block.id} style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: theme.textPrimary }}>
                     {block.value}
                   </div>

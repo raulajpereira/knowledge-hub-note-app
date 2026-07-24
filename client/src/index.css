@@ -15,6 +15,11 @@ body {
 a { text-decoration: none; }
 button { font-family: inherit; }
 input, textarea { font-family: inherit; }
+[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  opacity: 0.45;
+  pointer-events: none;
+}
 
 @keyframes kh-login-drift {
   0% { background-position: 0% 0%; }
