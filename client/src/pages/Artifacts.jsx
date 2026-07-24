@@ -25,7 +25,9 @@ export default function Artifacts() {
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const [artifacts, setArtifacts] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [tags, setTags] = useState([]);
+  const [activeFolder, setActiveFolder] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [mode, setMode] = useState('preview');
@@ -34,10 +36,16 @@ export default function Artifacts() {
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderParentId, setNewFolderParentId] = useState(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
+  const [dragOverFolder, setDragOverFolder] = useState(null);
 
   const load = async () => {
-    const [{ artifacts }, { tags }] = await Promise.all([api.listArtifacts(), api.listTags()]);
+    const [{ artifacts }, { folders }, { tags }] = await Promise.all([api.listArtifacts(), api.listArtifactFolders(), api.listTags()]);
     setArtifacts(artifacts);
+    setFolders(folders);
     setTags(tags);
     setLoading(false);
   };
@@ -46,10 +54,16 @@ export default function Artifacts() {
     load();
   }, []);
 
-  const filtered = useMemo(
-    () => artifacts.filter((a) => !search.trim() || a.title.toLowerCase().includes(search.toLowerCase())),
-    [artifacts, search]
-  );
+  const refreshFolders = async () => {
+    const { folders } = await api.listArtifactFolders();
+    setFolders(folders);
+  };
+
+  const filtered = useMemo(() => {
+    return artifacts
+      .filter((a) => (activeFolder === 'all' ? true : activeFolder === 'none' ? !a.folderId : a.folderId === activeFolder))
+      .filter((a) => !search.trim() || a.title.toLowerCase().includes(search.toLowerCase()));
+  }, [artifacts, activeFolder, search]);
 
   const selected = artifacts.find((a) => a.id === selectedId) || filtered[0] || null;
 
@@ -58,7 +72,10 @@ export default function Artifacts() {
   }, [filtered, selectedId]);
 
   useEffect(() => {
-    if (location.state?.artifactId) setSelectedId(location.state.artifactId);
+    if (location.state?.artifactId) {
+      setActiveFolder('all');
+      setSelectedId(location.state.artifactId);
+    }
   }, [location.state]);
 
   useEffect(() => {
@@ -69,11 +86,12 @@ export default function Artifacts() {
   }, [selected?.id]);
 
   const addArtifact = async () => {
-    const { artifact } = await api.createArtifact({});
+    const { artifact } = await api.createArtifact({ folderId: activeFolder !== 'all' && activeFolder !== 'none' ? activeFolder : null });
     setArtifacts((prev) => [artifact, ...prev]);
     setSelectedId(artifact.id);
     setMode('code');
     refreshCounts();
+    refreshFolders();
   };
 
   const patch = async (payload) => {
@@ -127,6 +145,45 @@ export default function Artifacts() {
     setArtifacts((prev) => prev.filter((a) => a.id !== selected.id));
     setSelectedId(null);
     refreshCounts();
+    refreshFolders();
+  };
+
+  const moveArtifactToFolder = async (artifactId, folderId) => {
+    const { artifact } = await api.updateArtifact(artifactId, { folderId });
+    setArtifacts((prev) => prev.map((a) => (a.id === artifact.id ? artifact : a)));
+    refreshFolders();
+  };
+
+  const reparentFolder = async (folderId, parentId) => {
+    if (folderId === parentId) return;
+    const target = folders.find((f) => f.id === folderId);
+    if (!target || target.parentId === parentId) return;
+    let ancestor = parentId;
+    while (ancestor) {
+      if (ancestor === folderId) return; // would create a cycle
+      ancestor = folders.find((f) => f.id === ancestor)?.parentId || null;
+    }
+    setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, parentId } : f)));
+    const { folder } = await api.renameArtifactFolder(folderId, { parentId });
+    setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, ...folder } : f)));
+  };
+
+  const toggleFolderCollapsed = (id) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const createFolder = async () => {
+    if (!newFolderName.trim()) return;
+    const { folder } = await api.createArtifactFolder({ name: newFolderName.trim(), parentId: newFolderParentId });
+    setFolders((prev) => [...prev, { ...folder, artifactCount: 0 }]);
+    setNewFolderName('');
+    setNewFolderOpen(false);
+    setNewFolderParentId(null);
   };
 
   const rowStyle = (isActive) => ({
@@ -138,6 +195,69 @@ export default function Artifacts() {
     cursor: 'pointer',
     background: isActive ? theme.accentSoftBg : 'transparent',
   });
+
+  const folderRowStyle = (isActive) => ({
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    padding: '10px 12px',
+    borderRadius: 10,
+    cursor: 'pointer',
+    background: isActive ? theme.accentSoftBg : 'transparent',
+  });
+
+  const renderFolderNode = (f, depth) => {
+    const kids = folders.filter((c) => c.parentId === f.id);
+    const hasKids = kids.length > 0;
+    const collapsed = collapsedFolders.has(f.id);
+    return (
+      <div key={f.id}>
+        <div
+          draggable
+          onDragStart={(e) => e.dataTransfer.setData('text/folder-id', f.id)}
+          onClick={() => setActiveFolder(f.id)}
+          onDragOver={(e) => { e.preventDefault(); setDragOverFolder(f.id); }}
+          onDragLeave={() => setDragOverFolder((v) => (v === f.id ? null : v))}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverFolder(null);
+            const artifactId = e.dataTransfer.getData('text/artifact-id');
+            const draggedFolderId = e.dataTransfer.getData('text/folder-id');
+            if (artifactId) moveArtifactToFolder(artifactId, f.id);
+            else if (draggedFolderId) reparentFolder(draggedFolderId, f.id);
+          }}
+          style={{
+            ...folderRowStyle(activeFolder === f.id), flexDirection: 'row', alignItems: 'center', gap: 8,
+            paddingLeft: 10 + depth * 16,
+            color: activeFolder === f.id ? theme.accentText : theme.textMuted,
+            outline: dragOverFolder === f.id ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
+          }}
+        >
+          {hasKids ? (
+            <span
+              onClick={(e) => { e.stopPropagation(); toggleFolderCollapsed(f.id); }}
+              style={{ display: 'flex', cursor: 'pointer', opacity: 0.6, flexShrink: 0, transform: collapsed ? 'none' : 'rotate(90deg)' }}
+            >
+              <Icon name="chevron" size={11} />
+            </span>
+          ) : (
+            <span style={{ width: 11, flexShrink: 0 }} />
+          )}
+          <Icon name="folder" size={15} />
+          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
+          <span
+            onClick={(e) => { e.stopPropagation(); setNewFolderParentId(f.id); setNewFolderOpen(true); }}
+            title={t('codeLibrary.newSubfolder')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="plus" size={12} />
+          </span>
+          <span style={{ fontSize: 11.5, opacity: 0.7, flexShrink: 0 }}>{f.artifactCount}</span>
+        </div>
+        {hasKids && !collapsed && kids.map((k) => renderFolderNode(k, depth + 1))}
+      </div>
+    );
+  };
 
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
@@ -165,10 +285,69 @@ export default function Artifacts() {
           </button>
         </div>
 
+        <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div
+            onClick={() => setActiveFolder('all')}
+            onDragOver={(e) => { e.preventDefault(); setDragOverFolder('none'); }}
+            onDragLeave={() => setDragOverFolder((v) => (v === 'none' ? null : v))}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOverFolder(null);
+              const artifactId = e.dataTransfer.getData('text/artifact-id');
+              if (artifactId) moveArtifactToFolder(artifactId, null);
+            }}
+            style={{
+              ...folderRowStyle(activeFolder === 'all'), flexDirection: 'row', alignItems: 'center', gap: 8,
+              color: activeFolder === 'all' ? theme.accentText : theme.textMuted,
+              outline: dragOverFolder === 'none' ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
+            }}
+          >
+            <Icon name="folder" size={15} />
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{t('artifacts.allArtifacts')}</span>
+            <span style={{ fontSize: 11.5, opacity: 0.7 }}>{artifacts.length}</span>
+          </div>
+          {folders.filter((f) => !f.parentId).map((f) => renderFolderNode(f, 0))}
+          {newFolderOpen ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '6px 4px 2px' }}>
+              {newFolderParentId && (
+                <div style={{ fontSize: 11, color: theme.textMuted }}>
+                  {t('codeLibrary.newFolderInside', { name: folders.find((f) => f.id === newFolderParentId)?.name || '' })}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && createFolder()}
+                  placeholder={t('artifacts.newFolderName')}
+                  autoFocus
+                  style={{ flex: 1, minWidth: 0, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+                />
+                <button onClick={createFolder} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  {t('common.add')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => { setNewFolderParentId(null); setNewFolderOpen(true); }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: theme.accent, color: '#fff', borderRadius: 8, padding: '9px 12px', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', marginTop: 2 }}
+            >
+              <Icon name="plus" size={13} color="#fff" /> {t('artifacts.newFolder')}
+            </div>
+          )}
+        </div>
+
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('artifacts.noArtifactsYet')}</div>}
+          {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('artifacts.noArtifactsHere')}</div>}
           {filtered.map((a) => (
-            <div key={a.id} onClick={() => setSelectedId(a.id)} style={rowStyle(selected?.id === a.id)}>
+            <div
+              key={a.id}
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData('text/artifact-id', a.id)}
+              onClick={() => setSelectedId(a.id)}
+              style={{ ...rowStyle(selected?.id === a.id), cursor: 'grab' }}
+            >
               <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
               <div style={{ fontSize: 11.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {a.description || timeAgo(a.updatedAt, t)}

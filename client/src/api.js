@@ -142,6 +142,11 @@ export const api = {
   updateArtifact: (id, payload) => request(`/artifacts/${id}`, { method: 'PATCH', body: payload }),
   deleteArtifact: (id) => request(`/artifacts/${id}`, { method: 'DELETE' }),
 
+  listArtifactFolders: () => request('/artifact-folders'),
+  createArtifactFolder: (payload) => request('/artifact-folders', { method: 'POST', body: payload }),
+  renameArtifactFolder: (id, payload) => request(`/artifact-folders/${id}`, { method: 'PATCH', body: payload }),
+  deleteArtifactFolder: (id) => request(`/artifact-folders/${id}`, { method: 'DELETE' }),
+
   getSapNews: () => request('/sap-news'),
   listSavedNews: () => request('/sap-news/saved'),
   saveNews: (payload) => request('/sap-news/saved', { method: 'POST', body: payload }),

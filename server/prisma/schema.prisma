@@ -26,6 +26,7 @@ model User {
   issues          Issue[]
   agents          Agent[]
   artifacts       Artifact[]
+  artifactFolders ArtifactFolder[]
   savedNews       SavedNews[]
   codeFolders     CodeFolder[]
   codeItems       CodeItem[]
@@ -238,6 +239,7 @@ model AgentMessage {
 model Artifact {
   id          String   @id @default(uuid())
   userId      String
+  folderId    String?
   title       String
   description String?  @db.Text
   html        String   @db.LongText
@@ -246,10 +248,31 @@ model Artifact {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder ArtifactFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([folderId])
   @@map("artifacts")
+}
+
+// Same nested-folder shape as Notes' Folder model, kept separate so an
+// artifact folder tree doesn't mix with the Notes one.
+model ArtifactFolder {
+  id        String   @id @default(uuid())
+  userId    String
+  parentId  String?
+  name      String
+  createdAt DateTime @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artifacts Artifact[]
+  parent    ArtifactFolder?  @relation("ArtifactFolderTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  ArtifactFolder[] @relation("ArtifactFolderTree")
+
+  @@index([userId])
+  @@index([parentId])
+  @@map("artifact_folders")
 }
 
 model SavedNews {

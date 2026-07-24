@@ -481,6 +481,10 @@ export const translations = {
       code: 'code',
       selectOrCreate: 'Select or create an artifact to get started.',
       untitled: 'Untitled artifact',
+      allArtifacts: 'All Artifacts',
+      newFolder: 'New Folder',
+      newFolderName: 'Folder name',
+      noArtifactsHere: 'No artifacts here.',
     },
     trash: {
       title: 'Trash',
@@ -494,6 +498,10 @@ export const translations = {
       typeNote: 'Note',
       typeTask: 'Task',
       typeVoice: 'Voice Note',
+      restoreAll: 'Restore All',
+      deleteAll: 'Delete All',
+      confirmRestoreAllMessage: 'Restore all {n} items shown here back to where they came from?',
+      confirmDeleteAllMessage: 'Permanently delete all {n} items shown here? This action cannot be undone.',
     },
     settings: {
       title: 'Settings',
@@ -1161,6 +1169,10 @@ export const translations = {
       code: 'código',
       selectOrCreate: 'Seleciona ou cria um artifact para começar.',
       untitled: 'Artifact sem título',
+      allArtifacts: 'Todos os Artifacts',
+      newFolder: 'Nova Pasta',
+      newFolderName: 'Nome da pasta',
+      noArtifactsHere: 'Sem artifacts aqui.',
     },
     trash: {
       title: 'Lixo',
@@ -1174,6 +1186,10 @@ export const translations = {
       typeNote: 'Nota',
       typeTask: 'Tarefa',
       typeVoice: 'Nota de Voz',
+      restoreAll: 'Restaurar Tudo',
+      deleteAll: 'Eliminar Tudo',
+      confirmRestoreAllMessage: 'Restaurar todos os {n} itens mostrados aqui para o sítio de onde vieram?',
+      confirmDeleteAllMessage: 'Eliminar definitivamente todos os {n} itens mostrados aqui? Esta ação não pode ser desfeita.',
     },
     settings: {
       title: 'Definições',
