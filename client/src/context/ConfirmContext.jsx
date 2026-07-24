@@ -44,7 +44,7 @@ function ConfirmDialog({ request, onClose }) {
           borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 800 }}>{request.title || t('common.confirmDeleteTitle')}</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: theme.textPrimary }}>{request.title || t('common.confirmDeleteTitle')}</div>
         <div style={{ fontSize: 13.5, color: theme.textMuted, lineHeight: 1.5 }}>{request.message || t('common.confirmDeleteMessage')}</div>
         <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
           <button

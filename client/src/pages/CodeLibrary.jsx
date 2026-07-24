@@ -1066,7 +1066,7 @@ export default function CodeLibrary() {
         )}
       </div>
 
-      <div style={{ flex: 2, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+      <div style={{ flex: 2, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
         {selectedItem && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

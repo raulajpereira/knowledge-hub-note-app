@@ -12,12 +12,43 @@ import { highlightCode, tokenColor } from '../lib/highlight.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 
 const URL_ONLY_RE = /^(https?:\/\/|www\.)\S+$/i;
+const URL_INLINE_RE = /(https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/gi;
+const URL_PRESENT_RE = /https?:\/\/|www\./i;
 
 function normalizeUrl(text) {
   // Drop trailing punctuation that tends to hitch a ride when a URL is
   // copied as part of a sentence (e.g. "see https://sap.com.").
   const trimmed = text.replace(/[.,;:)\]]+$/, '');
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+// Renders plain text with any URLs turned into clickable links (with an
+// icon), while keeping everything else as plain text nodes — used for the
+// read-only preview of a text block, since a <textarea> can't contain <a>s.
+// String.split with a single capture group interleaves matches at odd
+// indices, so even indices are always plain text and odd indices are URLs.
+function linkifyText(text, theme) {
+  return text.split(URL_INLINE_RE).map((segment, i) => {
+    if (i % 2 === 0) return segment;
+    const cleaned = segment.replace(/[.,;:)\]]+$/, '');
+    const trailing = segment.slice(cleaned.length);
+    const href = /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
+    return (
+      <span key={i}>
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{ color: theme.accentText, textDecoration: 'underline', textDecorationStyle: 'dashed', display: 'inline-flex', alignItems: 'center', gap: 2 }}
+        >
+          {cleaned}
+          <Icon name="external" size={11} />
+        </a>
+        {trailing}
+      </span>
+    );
+  });
 }
 
 let blockIdCounter = 0;
@@ -70,6 +101,9 @@ export default function Notes() {
   const [linkPickTarget, setLinkPickTarget] = useState(null);
   const [linkLabelDraft, setLinkLabelDraft] = useState('');
   const [previewNoteId, setPreviewNoteId] = useState(null);
+  const [editingTextBlockId, setEditingTextBlockId] = useState(null);
+  const blockSaveTimerRef = useRef(null);
+  const pendingBlockSaveRef = useRef(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
@@ -341,7 +375,16 @@ export default function Notes() {
     setNewTagInput('');
   };
 
+  const flushBlockSave = () => {
+    clearTimeout(blockSaveTimerRef.current);
+    blockSaveTimerRef.current = null;
+    const pending = pendingBlockSaveRef.current;
+    pendingBlockSaveRef.current = null;
+    if (pending) patchNoteById(pending.noteId, { blocks: pending.blocks, content: contentFromBlocks(pending.blocks) });
+  };
+
   const updateBlocks = async (blocks) => {
+    flushBlockSave();
     await patchSelected({ blocks, content: contentFromBlocks(blocks) });
   };
 
@@ -400,7 +443,15 @@ export default function Notes() {
 
   const updateBlock = (blockId, patch) => {
     if (!selected) return;
-    updateBlocks(getBlocks(selected).map((b) => (b.id === blockId ? { ...b, ...patch } : b)));
+    const noteId = selected.id;
+    const blocks = getBlocks(selected).map((b) => (b.id === blockId ? { ...b, ...patch } : b));
+    // Echo the keystroke into local state immediately (no network round-trip
+    // in the render path — awaiting a PATCH per keystroke let out-of-order
+    // responses clobber newer edits, garbling fast typing/paste).
+    setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, blocks, content: contentFromBlocks(blocks) } : n)));
+    pendingBlockSaveRef.current = { noteId, blocks };
+    clearTimeout(blockSaveTimerRef.current);
+    blockSaveTimerRef.current = setTimeout(flushBlockSave, 500);
   };
 
   const deleteBlock = (blockId) => {
@@ -856,12 +907,26 @@ export default function Notes() {
                 </a>
               ) : (
                 <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <AutoResizeTextarea
-                    value={block.value}
-                    onChange={(e) => updateBlock(block.id, { value: e.target.value })}
-                    placeholder={t('notes.writePlaceholder')}
-                    style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit', flex: 1, minWidth: 0 }}
-                  />
+                  {block.value && URL_PRESENT_RE.test(block.value) && editingTextBlockId !== block.id ? (
+                    <div
+                      onClick={(e) => { if (e.target.closest('a')) return; setEditingTextBlockId(block.id); }}
+                      style={{
+                        fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, flex: 1, minWidth: 0,
+                        whiteSpace: 'pre-wrap', wordBreak: 'break-word', cursor: 'text',
+                      }}
+                    >
+                      {linkifyText(block.value, theme)}
+                    </div>
+                  ) : (
+                    <AutoResizeTextarea
+                      value={block.value}
+                      onChange={(e) => updateBlock(block.id, { value: e.target.value })}
+                      onFocus={() => setEditingTextBlockId(block.id)}
+                      onBlur={() => { setEditingTextBlockId((v) => (v === block.id ? null : v)); flushBlockSave(); }}
+                      placeholder={t('notes.writePlaceholder')}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 14, lineHeight: 1.6, color: theme.textPrimary, fontFamily: 'inherit', flex: 1, minWidth: 0 }}
+                    />
+                  )}
                   {getBlocks(selected).length > 1 && (
                     <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
                       &times;
