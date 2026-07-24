@@ -18,6 +18,7 @@ import newsRoutes from './routes/news.routes.js';
 import artifactsRoutes from './routes/artifacts.routes.js';
 import sapNewsRoutes from './routes/sapnews.routes.js';
 import codeLibraryRoutes from './routes/codelibrary.routes.js';
+import { purgeExpiredTrash } from './lib/trashPurge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -57,6 +58,10 @@ app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
+
+const PURGE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+purgeExpiredTrash().catch((err) => console.error('Trash purge failed', err));
+setInterval(() => purgeExpiredTrash().catch((err) => console.error('Trash purge failed', err)), PURGE_INTERVAL_MS);
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => console.log(`Knowledge Hub API listening on :${port}`));

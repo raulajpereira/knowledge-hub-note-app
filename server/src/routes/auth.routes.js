@@ -28,6 +28,7 @@ function publicUser(user) {
           avatarUrl: user.settings.avatarUrl,
           vaultAutoLockSeconds: user.settings.vaultAutoLockSeconds,
           issueStatuses: user.settings.issueStatuses,
+          trashRetentionDays: user.settings.trashRetentionDays,
         }
       : null,
   };

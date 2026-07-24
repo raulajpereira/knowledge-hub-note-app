@@ -50,7 +50,7 @@ const FONT_FAMILIES = ['inter', 'grotesk', 'system', 'serif', 'mono'];
 const LANGUAGES = ['pt', 'en'];
 
 router.patch('/', async (req, res) => {
-  const { theme, accentColor, accentHue, fontFamily, language, vaultAutoLockSeconds, issueStatuses } = req.body || {};
+  const { theme, accentColor, accentHue, fontFamily, language, vaultAutoLockSeconds, issueStatuses, trashRetentionDays } = req.body || {};
   const data = {};
   if (theme !== undefined) {
     if (!['dark', 'light'].includes(theme)) return res.status(400).json({ error: 'Invalid theme' });
@@ -89,6 +89,13 @@ router.patch('/', async (req, res) => {
       issueStatuses.every((s) => s && typeof s.name === 'string' && s.name.trim() && Number.isFinite(s.hue));
     if (!valid) return res.status(400).json({ error: 'issueStatuses must be a non-empty array of { name, hue }' });
     data.issueStatuses = issueStatuses.map((s) => ({ name: s.name.trim(), hue: s.hue }));
+  }
+  if (trashRetentionDays !== undefined) {
+    const n = Number(trashRetentionDays);
+    if (!Number.isInteger(n) || n < 0 || n > 365) {
+      return res.status(400).json({ error: 'trashRetentionDays must be an integer between 0 and 365' });
+    }
+    data.trashRetentionDays = n;
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },

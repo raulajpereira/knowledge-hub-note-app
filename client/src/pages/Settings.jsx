@@ -260,6 +260,11 @@ export default function Settings() {
     updateUserSettings(settings);
   };
 
+  const onTrashRetentionChange = async (days) => {
+    const { settings } = await api.updateSettings({ trashRetentionDays: days });
+    updateUserSettings(settings);
+  };
+
   const card = { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 22, display: 'flex', flexDirection: 'column', gap: 18 };
   const outlineButton = { background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '8px 14px', fontWeight: 600, fontSize: 13, cursor: 'pointer' };
 
@@ -389,6 +394,26 @@ export default function Settings() {
                 {s < 60 ? t('settings.seconds', { n: s }) : t(s === 60 ? 'settings.minute' : 'settings.minutes', { n: s / 60 })}
               </option>
             ))}
+          </select>
+        </div>
+      </div>
+
+      <div style={card}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.trash')}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.trashRetention')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.trashRetentionDesc')}</div>
+          </div>
+          <select
+            value={user?.settings?.trashRetentionDays ?? 30}
+            onChange={(e) => onTrashRetentionChange(Number(e.target.value))}
+            style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 12.5, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary }}
+          >
+            <option value={7} style={{ color: '#1a1a1a', background: '#fff' }}>{t('settings.trashRetentionDays', { n: 7 })}</option>
+            <option value={30} style={{ color: '#1a1a1a', background: '#fff' }}>{t('settings.trashRetentionDays', { n: 30 })}</option>
+            <option value={90} style={{ color: '#1a1a1a', background: '#fff' }}>{t('settings.trashRetentionDays', { n: 90 })}</option>
+            <option value={0} style={{ color: '#1a1a1a', background: '#fff' }}>{t('settings.trashRetentionNever')}</option>
           </select>
         </div>
       </div>

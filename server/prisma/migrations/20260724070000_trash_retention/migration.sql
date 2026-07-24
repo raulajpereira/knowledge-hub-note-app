@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `settings` ADD COLUMN `trashRetentionDays` INTEGER NOT NULL DEFAULT 30;
