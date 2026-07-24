@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { encryptSecret, decryptSecret } from '../lib/crypto.js';
+import { searchWorkspace, buildWorkspaceContext } from '../lib/workspaceSearch.js';
 
 // Providers don't share a model catalog — "gpt-4o-mini" only exists on
 // OpenAI itself, for example. Each provider/host gets a short list of
@@ -132,15 +133,17 @@ router.delete('/:id', async (req, res) => {
   res.status(204).end();
 });
 
-async function callProvider(agent, messages) {
+async function callProvider(agent, messages, { systemPrompt, maxTokens } = {}) {
   const token = decryptSecret(agent.tokenCipher);
   const model = agent.model || defaultModelFor(agent);
 
   if (agent.provider === 'anthropic') {
+    const body = { model, max_tokens: maxTokens || 512, messages };
+    if (systemPrompt) body.system = systemPrompt;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': token, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 512, messages }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error?.message || `Anthropic API error (${res.status})`);
@@ -148,10 +151,13 @@ async function callProvider(agent, messages) {
   }
 
   const base = agent.baseUrl || 'https://api.openai.com/v1';
+  const chatMessages = systemPrompt ? [{ role: 'system', content: systemPrompt }, ...messages] : messages;
+  const body = { model, messages: chatMessages };
+  if (maxTokens) body.max_tokens = maxTokens;
   const res = await fetch(`${base.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ model, messages }),
+    body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error?.message || `OpenAI-compatible API error (${res.status})`);
@@ -212,6 +218,45 @@ router.post('/:id/chat', async (req, res) => {
       data: { agentId: agent.id, role: 'assistant', content: reply },
     });
     res.json({ userMessage, assistantMessage });
+  } catch (err) {
+    res.status(400).json({ error: err.message, userMessage });
+  }
+});
+
+const WORKSPACE_SYSTEM_PROMPT =
+  'Estás a ajudar o utilizador com o conteúdo do seu próprio workspace (notas, snippets de código, issues, tarefas). ' +
+  'Abaixo é fornecido o conteúdo mais relevante que foi encontrado. Responde à pergunta com base nesse conteúdo, ' +
+  'citando as fontes pelo título entre parênteses (ex: "(Nota: Título)"). Se o conteúdo fornecido não tiver a resposta, ' +
+  'diz claramente que não encontraste isso no workspace — não inventes informação.';
+
+router.post('/:id/ask-workspace', async (req, res) => {
+  const agent = await prisma.agent.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  if (!agent) return res.status(404).json({ error: 'Agent not found' });
+
+  const { message } = req.body || {};
+  if (!message?.trim()) return res.status(400).json({ error: 'message is required' });
+  const question = message.trim();
+
+  const results = await searchWorkspace(req.effectiveUserId, question);
+  const context = buildWorkspaceContext(results);
+
+  const userMessage = await prisma.agentMessage.create({ data: { agentId: agent.id, role: 'user', content: question } });
+
+  const augmentedContent = context
+    ? `Conteúdo relevante do workspace:\n\n${context}\n\n---\n\nPergunta do utilizador: ${question}`
+    : `(Não foi encontrado conteúdo relevante no workspace para esta pergunta.)\n\nPergunta do utilizador: ${question}`;
+
+  try {
+    const reply = await callProvider(agent, [{ role: 'user', content: augmentedContent }], {
+      systemPrompt: WORKSPACE_SYSTEM_PROMPT,
+      maxTokens: 900,
+    });
+    const assistantMessage = await prisma.agentMessage.create({ data: { agentId: agent.id, role: 'assistant', content: reply } });
+    res.json({
+      userMessage,
+      assistantMessage,
+      sources: results.map((r) => ({ type: r.type, id: r.id, folderId: r.folderId, title: r.title })),
+    });
   } catch (err) {
     res.status(400).json({ error: err.message, userMessage });
   }

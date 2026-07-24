@@ -636,7 +636,9 @@ export default function CodeLibrary() {
     }
     api.listCodeItems(selectedFolderId).then(({ items }) => {
       setItems(items);
-      setSelectedItemId(items[0]?.id || null);
+      const wantedItem = location.state?.itemId;
+      if (wantedItem && items.some((i) => i.id === wantedItem)) setSelectedItemId(wantedItem);
+      else setSelectedItemId(items[0]?.id || null);
     });
   }, [selectedFolderId]);
 

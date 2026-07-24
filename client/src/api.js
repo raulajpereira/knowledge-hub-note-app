@@ -128,6 +128,7 @@ export const api = {
   getAgentMessages: (id) => request(`/agents/${id}/messages`),
   clearAgentMessages: (id) => request(`/agents/${id}/messages`, { method: 'DELETE' }),
   chatWithAgent: (id, payload) => request(`/agents/${id}/chat`, { method: 'POST', body: payload }),
+  askAgentWorkspace: (id, payload) => request(`/agents/${id}/ask-workspace`, { method: 'POST', body: payload }),
 
   getNews: () => request('/news'),
 

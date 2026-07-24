@@ -8,6 +8,46 @@ import Icon from './Icon.jsx';
 import { parseReplyToBlocks, titleFromContent } from '../lib/parseAgentReply.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 
+const SOURCE_ROUTE = {
+  note: (s) => ['/notes', { noteId: s.id }],
+  task: (s) => ['/tasks', { taskId: s.id }],
+  issue: (s) => ['/issues', { issueId: s.id }],
+  code: (s) => ['/code-library', { folderId: s.folderId, itemId: s.id }],
+};
+
+function SourceChips({ sources, theme, t }) {
+  const navigate = useNavigate();
+  if (!sources || sources.length === 0) return null;
+  const typeLabel = { note: t('search.typeNote'), task: t('search.typeTask'), issue: t('search.typeIssue'), code: t('search.typeCode') };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignSelf: 'flex-start', marginTop: 2 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {t('agent.sources')}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {sources.map((s) => (
+          <span
+            key={`${s.type}-${s.id}`}
+            onClick={() => {
+              const route = SOURCE_ROUTE[s.type];
+              if (!route) return;
+              const [path, state] = route(s);
+              navigate(path, { state });
+            }}
+            style={{
+              fontSize: 10.5, fontWeight: 600, color: theme.accentText, background: theme.accentSoftBg,
+              borderRadius: 6, padding: '3px 7px', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden',
+              textOverflow: 'ellipsis', maxWidth: 160,
+            }}
+          >
+            {typeLabel[s.type]}: {s.title}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SaveAsNoteButton({ content, agentName, theme, t }) {
   const navigate = useNavigate();
   const [state, setState] = useState('idle'); // idle | saving | saved
@@ -61,6 +101,8 @@ export default function AgentChatWidget() {
   const [loadedAgents, setLoadedAgents] = useState({});
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [workspaceMode, setWorkspaceMode] = useState(false);
+  const [sourcesByMessageId, setSourcesByMessageId] = useState({});
   const widgetRef = useRef(null);
   useClickOutside(widgetRef, () => setOpen(false), open);
 
@@ -87,8 +129,11 @@ export default function AgentChatWidget() {
     setMessagesByAgent((prev) => ({ ...prev, [currentAgent.id]: [...(prev[currentAgent.id] || []), optimisticUser] }));
     setSending(true);
     try {
-      const { assistantMessage } = await api.chatWithAgent(currentAgent.id, { message: text });
+      const { assistantMessage, sources } = workspaceMode
+        ? await api.askAgentWorkspace(currentAgent.id, { message: text })
+        : await api.chatWithAgent(currentAgent.id, { message: text });
       setMessagesByAgent((prev) => ({ ...prev, [currentAgent.id]: [...(prev[currentAgent.id] || []), assistantMessage] }));
+      if (sources) setSourcesByMessageId((prev) => ({ ...prev, [assistantMessage.id]: sources }));
     } catch (err) {
       setMessagesByAgent((prev) => ({
         ...prev,
@@ -154,6 +199,22 @@ export default function AgentChatWidget() {
             </select>
           </div>
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: `1px solid ${theme.border}` }}>
+            <span
+              onClick={() => setWorkspaceMode((v) => !v)}
+              title={t('agent.workspaceModeHint')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                padding: '4px 9px', borderRadius: 20, border: `1px solid ${workspaceMode ? theme.accent : theme.border}`,
+                background: workspaceMode ? theme.accentSoftBg : 'transparent',
+                color: workspaceMode ? theme.accentText : theme.textMuted,
+              }}
+            >
+              <Icon name="sparkle" size={11} color={workspaceMode ? theme.accentText : theme.textMuted} />
+              {t('agent.workspaceMode')}
+            </span>
+          </div>
+
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {messages.length === 0 && (
               <div style={{ fontSize: 12.5, color: theme.textMuted, textAlign: 'center', marginTop: 20 }}>
@@ -174,6 +235,7 @@ export default function AgentChatWidget() {
                 {m.role === 'assistant' && !m.content.startsWith('⚠') && (
                   <SaveAsNoteButton content={m.content} agentName={currentAgent.name} theme={theme} t={t} />
                 )}
+                {m.role === 'assistant' && <SourceChips sources={sourcesByMessageId[m.id]} theme={theme} t={t} />}
               </div>
             ))}
             {sending && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('agent.thinking')}</div>}
@@ -184,7 +246,7 @@ export default function AgentChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder={t('agent.messagePlaceholder')}
+              placeholder={workspaceMode ? t('agent.workspaceMessagePlaceholder') : t('agent.messagePlaceholder')}
               style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 9, padding: '9px 12px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
             />
             <button
