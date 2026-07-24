@@ -57,6 +57,11 @@ export const api = {
     form.append('image', file);
     return request('/notes/images', { method: 'POST', body: form, isForm: true });
   },
+  uploadNoteFile: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request('/notes/files', { method: 'POST', body: form, isForm: true });
+  },
 
   listFolders: () => request('/folders'),
   createFolder: (payload) => request('/folders', { method: 'POST', body: payload }),

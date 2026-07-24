@@ -8,6 +8,7 @@ import { requireAuth } from '../middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const notesImageDir = path.join(__dirname, '..', '..', 'uploads', 'notes');
+const notesFileDir = path.join(__dirname, '..', '..', 'uploads', 'note-files');
 
 const uploadImage = multer({
   storage: multer.diskStorage({
@@ -26,12 +27,28 @@ const uploadImage = multer({
   },
 });
 
+const uploadFile = multer({
+  storage: multer.diskStorage({
+    destination: notesFileDir,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || '';
+      cb(null, `${req.effectiveUserId}-${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
+
 const router = Router();
 router.use(requireAuth);
 
 router.post('/images', uploadImage.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   res.status(201).json({ url: `/uploads/notes/${req.file.filename}` });
+});
+
+router.post('/files', uploadFile.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  res.status(201).json({ url: `/uploads/note-files/${req.file.filename}`, name: req.file.originalname, size: req.file.size });
 });
 
 router.get('/', async (req, res) => {

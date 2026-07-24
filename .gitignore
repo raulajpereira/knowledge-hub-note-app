@@ -15,6 +15,9 @@ server/uploads/voice/*
 !server/uploads/notes/
 server/uploads/notes/*
 !server/uploads/notes/.gitkeep
+!server/uploads/note-files/
+server/uploads/note-files/*
+!server/uploads/note-files/.gitkeep
 *.log
 .DS_Store
 .scratch-test/

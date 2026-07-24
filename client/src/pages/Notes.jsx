@@ -51,6 +51,13 @@ function linkifyText(text, theme) {
   });
 }
 
+function formatFileSize(bytes) {
+  if (!bytes && bytes !== 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 let blockIdCounter = 0;
 const newBlockId = () => `b${Date.now()}-${blockIdCounter++}`;
 
@@ -63,7 +70,7 @@ function getBlocks(note) {
 
 function contentFromBlocks(blocks) {
   return blocks
-    .filter((b) => b.type !== 'image')
+    .filter((b) => b.type !== 'image' && b.type !== 'file')
     .map((b) => b.value || '')
     .join('\n\n')
     .trim();
@@ -110,6 +117,7 @@ export default function Notes() {
   const [bulkTagInput, setBulkTagInput] = useState('');
   const bulkMoveRef = useRef(null);
   useClickOutside(bulkMoveRef, () => setBulkMoveOpen(false), bulkMoveOpen);
+  const fileInputRef = useRef(null);
 
   const load = async () => {
     const [{ notes }, { folders }, { tags }] = await Promise.all([api.listNotes(), api.listFolders(), api.listTags()]);
@@ -403,6 +411,19 @@ export default function Notes() {
     updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'image', url }]);
   };
 
+  const addFileBlock = (url, name, size) => {
+    if (!selected) return;
+    updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'file', url, name, size }]);
+  };
+
+  const onFileInputChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const { url, name, size } = await api.uploadNoteFile(file);
+    addFileBlock(url, name, size);
+  };
+
   const addLinkBlock = async (url) => {
     if (!selected) return;
     const noteId = selected.id;
@@ -424,12 +445,20 @@ export default function Notes() {
     const items = e.clipboardData?.items;
     if (items) {
       for (const item of items) {
-        if (item.type && item.type.startsWith('image/')) {
+        if (item.kind === 'file' && item.type && item.type.startsWith('image/')) {
           e.preventDefault();
           const file = item.getAsFile();
           if (!file) continue;
           const { url } = await api.uploadNoteImage(file);
           addImageBlock(url);
+          return;
+        }
+        if (item.kind === 'file') {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) continue;
+          const { url, name, size } = await api.uploadNoteFile(file);
+          addFileBlock(url, name, size);
           return;
         }
       }
@@ -905,6 +934,29 @@ export default function Notes() {
                     &times;
                   </span>
                 </a>
+              ) : block.type === 'file' ? (
+                <a
+                  key={block.id}
+                  href={block.url}
+                  download={block.name}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10,
+                    border: `1px solid ${theme.border}`, background: theme.subtleBg, textDecoration: 'none', color: 'inherit',
+                  }}
+                >
+                  <Icon name="doc" size={18} color={theme.textMuted} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{block.name}</div>
+                    <div style={{ fontSize: 11.5, color: theme.textMuted }}>{formatFileSize(block.size)}</div>
+                  </div>
+                  <Icon name="external" size={14} color={theme.textMuted} />
+                  <span
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteBlock(block.id); }}
+                    style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}
+                  >
+                    &times;
+                  </span>
+                </a>
               ) : (
                 <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   {block.value && URL_PRESENT_RE.test(block.value) && editingTextBlockId !== block.id ? (
@@ -1008,6 +1060,10 @@ export default function Notes() {
             <button onClick={addCodeBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addCode')}
             </button>
+            <button onClick={() => fileInputRef.current?.click()} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+              {t('notes.addFile')}
+            </button>
+            <input ref={fileInputRef} type="file" onChange={onFileInputChange} style={{ display: 'none' }} />
           </div>
         </div>
       ) : (
