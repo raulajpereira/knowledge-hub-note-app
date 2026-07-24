@@ -76,7 +76,8 @@ router.get('/status', async (req, res) => {
       }),
     ]);
     const metricsError = metrics?.__error || null;
-    const usableMetrics = metricsError ? null : metrics;
+    // Some Hostinger endpoints wrap the payload in { data: ... }, others don't — tolerate both.
+    const usableMetrics = metricsError ? null : metrics?.data && typeof metrics.data === 'object' ? metrics.data : metrics;
 
     const diskTotalMb = Number.isFinite(vm?.disk) ? vm.disk : null;
     const memTotalMb = Number.isFinite(vm?.memory) ? vm.memory : null;
@@ -111,6 +112,9 @@ router.get('/status', async (req, res) => {
       // without needing shell access to the server's logs.
       metricsError,
       metricsEmpty: !metricsError && !!usableMetrics && !diskPoint && !memPoint,
+      // Only sent when we found nothing usable — lets us see the real
+      // response shape from the browser Network tab instead of guessing again.
+      metricsRaw: !metricsError && !diskPoint && !memPoint ? JSON.stringify(metrics).slice(0, 1500) : undefined,
       updatedAt: new Date().toISOString(),
     };
 

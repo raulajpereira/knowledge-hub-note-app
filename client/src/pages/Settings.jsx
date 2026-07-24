@@ -272,6 +272,14 @@ function VpsCard({ theme, t, card, user, refreshMe }) {
               {status.metricsEmpty && (
                 <div style={{ fontSize: 11.5, color: theme.textMuted }}>{t('settings.vpsNoData')}</div>
               )}
+              {status.metricsRaw && (
+                <textarea
+                  readOnly
+                  value={status.metricsRaw}
+                  onClick={(e) => e.target.select()}
+                  style={{ width: '100%', boxSizing: 'border-box', height: 90, resize: 'vertical', fontFamily: 'var(--font-mono)', fontSize: 10.5, background: theme.subtleBg, color: theme.textMuted, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8 }}
+                />
+              )}
             </>
           )}
 
