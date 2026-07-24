@@ -18,7 +18,7 @@ router.get('/folders', async (req, res) => {
 });
 
 router.post('/folders', async (req, res) => {
-  const { name, kind, description } = req.body || {};
+  const { name, kind, description, tags } = req.body || {};
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   const folder = await prisma.codeFolder.create({
     data: {
@@ -26,6 +26,7 @@ router.post('/folders', async (req, res) => {
       name: name.trim(),
       kind: FOLDER_KINDS.includes(kind) ? kind : 'program',
       description: description?.trim() || null,
+      tags: Array.isArray(tags) ? tags : undefined,
     },
   });
   res.status(201).json({ folder: { ...folder, itemCount: 0 } });
@@ -35,11 +36,12 @@ router.patch('/folders/:id', async (req, res) => {
   const folder = await prisma.codeFolder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!folder) return res.status(404).json({ error: 'Folder not found' });
 
-  const { name, kind, description } = req.body || {};
+  const { name, kind, description, tags } = req.body || {};
   const data = {};
   if (name !== undefined) data.name = name.trim() || folder.name;
   if (kind !== undefined && FOLDER_KINDS.includes(kind)) data.kind = kind;
   if (description !== undefined) data.description = description?.trim() || null;
+  if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : null;
 
   const updated = await prisma.codeFolder.update({ where: { id: folder.id }, data });
   res.json({ folder: updated });

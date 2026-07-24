@@ -21,9 +21,13 @@ const FEEDS = [
   { source: 'EURONEWS', url: 'https://www.euronews.com/rss' },
 ];
 
+// A custom bot-style User-Agent (the old "KnowledgeHubTicker/1.0" string)
+// gets blocked outright by some sources' WAF/bot-protection (e.g. CM's
+// cmjornal.pt returns a blanket 403 to it) even though the feed URL itself
+// is correct — so we present as an ordinary desktop browser instead.
 const parser = new Parser({
   timeout: 8000,
-  headers: { 'User-Agent': 'Mozilla/5.0 (compatible; KnowledgeHubTicker/1.0)' },
+  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36' },
 });
 
 const CACHE_MS = 15 * 60 * 1000;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import { getIssueAlerts } from '../lib/issueAlerts.js';
+import { useClickOutside } from '../lib/useClickOutside.js';
 import Icon from './Icon.jsx';
 import AgentChatWidget from './AgentChatWidget.jsx';
 import AccountModal from './AccountModal.jsx';
@@ -41,6 +42,8 @@ export default function AppLayout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [issueAlerts, setIssueAlerts] = useState([]);
   const { counts } = useCounts();
+  const notifRef = useRef(null);
+  useClickOutside(notifRef, () => setNotifOpen(false), notifOpen);
 
   useEffect(() => {
     api.listIssues().then(({ issues }) => setIssueAlerts(getIssueAlerts(issues)));
@@ -204,7 +207,7 @@ export default function AppLayout() {
 
             <div style={{ flex: 1 }} />
 
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div ref={notifRef} style={{ position: 'relative', flexShrink: 0 }}>
               <span
                 onClick={() => setNotifOpen((v) => !v)}
                 title={t('notifications.title')}
@@ -227,7 +230,6 @@ export default function AppLayout() {
               </span>
               {notifOpen && (
                 <div
-                  onMouseLeave={() => setNotifOpen(false)}
                   style={{
                     position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 300, maxHeight: 360, overflowY: 'auto',
                     background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff',

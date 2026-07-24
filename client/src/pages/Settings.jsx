@@ -10,6 +10,8 @@ import Icon from '../components/Icon.jsx';
 import ColorWheel from '../components/ColorWheel.jsx';
 import logoDefault from '../assets/logo-default.png';
 
+const APP_VERSION = '1.0.0';
+
 function userInitials(name) {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
@@ -227,6 +229,7 @@ export default function Settings() {
   const [newAgentOpen, setNewAgentOpen] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
   const [newAgentToken, setNewAgentToken] = useState('');
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const openNewAgent = () => {
     setNewAgentName('');
@@ -423,6 +426,59 @@ export default function Settings() {
           <AgentRow key={agent.id} agent={agent} theme={theme} t={t} />
         ))}
       </div>
+
+      <div
+        onClick={() => setAboutOpen(true)}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 16px',
+          borderRadius: 12, cursor: 'pointer', color: theme.textMuted, fontSize: 13, fontWeight: 600,
+        }}
+      >
+        <Icon name="sparkle" size={14} />
+        {t('settings.about')}
+      </div>
+
+      {aboutOpen && (
+        <div
+          onClick={() => setAboutOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 340, maxWidth: '100%', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+              borderRadius: 20, padding: '36px 28px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              boxShadow: '0 24px 70px rgba(0,0,0,0.45)', textAlign: 'center', position: 'relative',
+            }}
+          >
+            <span
+              onClick={() => setAboutOpen(false)}
+              style={{ position: 'absolute', top: 14, right: 14, cursor: 'pointer', opacity: 0.5, color: theme.textPrimary, fontSize: 18, lineHeight: 1 }}
+            >
+              ×
+            </span>
+            <div
+              style={{
+                width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${theme.accent}, ${theme.accentDark})`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 6, boxShadow: `0 10px 24px ${theme.accentSoftBg}`,
+              }}
+            >
+              <Icon name="sparkle" size={26} color="#fff" />
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 800 }}>
+              <span style={{ color: theme.accentText }}>{t('common.brand')}</span>{t('common.brandRest')}
+            </div>
+            <div style={{ fontSize: 12.5, color: theme.textMuted, marginBottom: 14 }}>{t('settings.aboutTagline')}</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              {t('settings.version')} {APP_VERSION}
+            </div>
+            <div style={{ fontSize: 13, marginTop: 10 }}>
+              {t('settings.developedBy')} <span style={{ fontWeight: 700 }}>Raul Pereira</span>
+            </div>
+            <div style={{ fontSize: 10.5, color: theme.textMuted, marginTop: 18 }}>&copy; {new Date().getFullYear()} {t('common.brand')}{t('common.brandRest')}</div>
+          </div>
+        </div>
+      )}
 
       {newAgentOpen && (
         <div

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
@@ -6,6 +6,7 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
+import { useClickOutside } from '../lib/useClickOutside.js';
 
 const FOLDER_KINDS = ['program', 'class', 'function_module', 'other'];
 const ITEM_TYPES = ['snippet', 'characteristics', 'table', 'data_element', 'domain'];
@@ -595,6 +596,9 @@ export default function CodeLibrary() {
   const [newFolderKind, setNewFolderKind] = useState('program');
   const [newItemMenuOpen, setNewItemMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [folderTagInput, setFolderTagInput] = useState('');
+  const newItemMenuRef = useRef(null);
+  useClickOutside(newItemMenuRef, () => setNewItemMenuOpen(false), newItemMenuOpen);
 
   useEffect(() => {
     api.listCodeFolders().then(({ folders }) => {
@@ -618,7 +622,38 @@ export default function CodeLibrary() {
 
   const selectedFolder = folders.find((f) => f.id === selectedFolderId) || null;
   const selectedItem = items.find((i) => i.id === selectedItemId) || null;
-  const filteredFolders = folders.filter((f) => f.name.toLowerCase().includes(search.trim().toLowerCase()));
+  const filteredFolders = folders.filter((f) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      f.name.toLowerCase().includes(q) ||
+      (f.description || '').toLowerCase().includes(q) ||
+      (f.tags || []).some((tag) => tag.toLowerCase().includes(q))
+    );
+  });
+
+  const updateFolderMeta = async (id, patch) => {
+    const { folder } = await api.updateCodeFolder(id, patch);
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...folder } : f)));
+  };
+
+  const addFolderTag = () => {
+    const tag = folderTagInput.trim();
+    if (!tag || !selectedFolder) return;
+    const tags = [...(selectedFolder.tags || [])];
+    if (!tags.includes(tag)) {
+      setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, tags: [...tags, tag] } : f)));
+      updateFolderMeta(selectedFolder.id, { tags: [...tags, tag] });
+    }
+    setFolderTagInput('');
+  };
+
+  const removeFolderTag = (tag) => {
+    if (!selectedFolder) return;
+    const tags = (selectedFolder.tags || []).filter((x) => x !== tag);
+    setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, tags } : f)));
+    updateFolderMeta(selectedFolder.id, { tags });
+  };
 
   const createFolder = async () => {
     if (!newFolderName.trim()) return;
@@ -760,6 +795,38 @@ export default function CodeLibrary() {
               </span>
             </div>
 
+            <textarea
+              value={selectedFolder.description || ''}
+              onChange={(e) => setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, description: e.target.value } : f)))}
+              onBlur={(e) => updateFolderMeta(selectedFolder.id, { description: e.target.value })}
+              placeholder={t('codeLibrary.folderDescriptionPlaceholder')}
+              rows={2}
+              style={{ ...inputStyle(theme), resize: 'none', fontSize: 12, fontFamily: 'inherit' }}
+            />
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+              {(selectedFolder.tags || []).map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
+                    background: theme.accentSoftBg, color: theme.accentText,
+                  }}
+                >
+                  {tag}
+                  <span onClick={() => removeFolderTag(tag)} style={{ cursor: 'pointer', opacity: 0.7 }}>&times;</span>
+                </span>
+              ))}
+              <input
+                value={folderTagInput}
+                onChange={(e) => setFolderTagInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addFolderTag()}
+                onBlur={addFolderTag}
+                placeholder={t('codeLibrary.addTag')}
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 11, color: theme.textPrimary, width: 72 }}
+              />
+            </div>
+
             <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
               {items.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('codeLibrary.noItems')}</div>}
               {items.map((it) => (
@@ -770,7 +837,7 @@ export default function CodeLibrary() {
               ))}
             </div>
 
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div ref={newItemMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
               <div
                 onClick={() => setNewItemMenuOpen((v) => !v)}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: theme.accent, color: '#fff', borderRadius: 8, padding: '9px 12px', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}
@@ -779,7 +846,6 @@ export default function CodeLibrary() {
               </div>
               {newItemMenuOpen && (
                 <div
-                  onMouseLeave={() => setNewItemMenuOpen(false)}
                   style={{
                     position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 20,
                     background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,

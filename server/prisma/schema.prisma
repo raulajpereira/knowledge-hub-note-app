@@ -264,6 +264,7 @@ model CodeFolder {
   name        String // ABAP object name, e.g. ZMY_PROGRAM
   kind        String   @default("program") // "program" | "class" | "function_module"
   description String?  @db.Text
+  tags        Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
