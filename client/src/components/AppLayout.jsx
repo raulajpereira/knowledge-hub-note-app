@@ -224,12 +224,11 @@ export default function AppLayout() {
               title={t('nav.sapNews')}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
-                cursor: 'pointer', flexShrink: 0,
-                color: location.pathname === '/sap-news' ? theme.accentText : theme.textPrimary,
-                background: location.pathname === '/sap-news' ? theme.accentSoftBg : theme.subtleBg,
+                cursor: 'pointer', flexShrink: 0, color: '#fff',
+                background: location.pathname === '/sap-news' ? theme.accentDark : theme.accent,
               }}
             >
-              <Icon name="news" size={17} />
+              <Icon name="news" size={17} color="#fff" />
             </span>
 
             <div style={{ flex: 1 }} />
