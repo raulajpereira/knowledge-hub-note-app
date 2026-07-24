@@ -36,13 +36,25 @@ router.patch('/folders/:id', async (req, res) => {
   const folder = await prisma.codeFolder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!folder) return res.status(404).json({ error: 'Folder not found' });
 
-  const { name, kind, description, tags, favorite } = req.body || {};
+  const { name, kind, description, tags, favorite, linkedFolderIds } = req.body || {};
   const data = {};
   if (name !== undefined) data.name = name.trim() || folder.name;
   if (kind !== undefined && FOLDER_KINDS.includes(kind)) data.kind = kind;
   if (description !== undefined) data.description = description?.trim() || null;
   if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : null;
   if (favorite !== undefined) data.favorite = !!favorite;
+  if (linkedFolderIds !== undefined) {
+    const ids = Array.isArray(linkedFolderIds) ? linkedFolderIds.filter((id) => id !== folder.id) : [];
+    if (ids.length > 0) {
+      const valid = await prisma.codeFolder.findMany({
+        where: { id: { in: ids }, userId: req.effectiveUserId },
+        select: { id: true },
+      });
+      data.linkedFolderIds = valid.map((f) => f.id);
+    } else {
+      data.linkedFolderIds = [];
+    }
+  }
 
   const updated = await prisma.codeFolder.update({ where: { id: folder.id }, data });
   res.json({ folder: updated });

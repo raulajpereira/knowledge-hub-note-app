@@ -599,8 +599,12 @@ export default function CodeLibrary() {
   const [newItemMenuOpen, setNewItemMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [folderTagInput, setFolderTagInput] = useState('');
+  const [linkMenuOpen, setLinkMenuOpen] = useState(false);
+  const [linkSearch, setLinkSearch] = useState('');
   const newItemMenuRef = useRef(null);
+  const linkMenuRef = useRef(null);
   useClickOutside(newItemMenuRef, () => setNewItemMenuOpen(false), newItemMenuOpen);
+  useClickOutside(linkMenuRef, () => setLinkMenuOpen(false), linkMenuOpen);
 
   useEffect(() => {
     api.listCodeFolders().then(({ folders }) => {
@@ -636,6 +640,18 @@ export default function CodeLibrary() {
     );
   });
 
+  const linkedFolders = (selectedFolder?.linkedFolderIds || [])
+    .map((id) => folders.find((f) => f.id === id))
+    .filter(Boolean);
+  const linkCandidates = selectedFolder
+    ? folders.filter((f) => {
+        if (f.id === selectedFolder.id) return false;
+        if ((selectedFolder.linkedFolderIds || []).includes(f.id)) return false;
+        const q = linkSearch.trim().toLowerCase();
+        return !q || f.name.toLowerCase().includes(q);
+      })
+    : [];
+
   const updateFolderMeta = async (id, patch) => {
     const { folder } = await api.updateCodeFolder(id, patch);
     setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...folder } : f)));
@@ -657,6 +673,25 @@ export default function CodeLibrary() {
     const tags = (selectedFolder.tags || []).filter((x) => x !== tag);
     setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, tags } : f)));
     updateFolderMeta(selectedFolder.id, { tags });
+  };
+
+  const addFolderLink = (id) => {
+    if (!selectedFolder) return;
+    const linkedFolderIds = [...(selectedFolder.linkedFolderIds || [])];
+    if (!linkedFolderIds.includes(id)) {
+      const next = [...linkedFolderIds, id];
+      setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, linkedFolderIds: next } : f)));
+      updateFolderMeta(selectedFolder.id, { linkedFolderIds: next });
+    }
+    setLinkSearch('');
+    setLinkMenuOpen(false);
+  };
+
+  const removeFolderLink = (id) => {
+    if (!selectedFolder) return;
+    const linkedFolderIds = (selectedFolder.linkedFolderIds || []).filter((x) => x !== id);
+    setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, linkedFolderIds } : f)));
+    updateFolderMeta(selectedFolder.id, { linkedFolderIds });
   };
 
   const createFolder = async () => {
@@ -832,6 +867,67 @@ export default function CodeLibrary() {
                 placeholder={t('codeLibrary.addTag')}
                 style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 11, color: theme.textPrimary, width: 72 }}
               />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                {t('codeLibrary.relatedFolders')}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                {linkedFolders.map((lf) => (
+                  <span
+                    key={lf.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
+                      background: theme.subtleBg, color: theme.textPrimary, border: `1px solid ${theme.border}`,
+                    }}
+                  >
+                    <span onClick={() => setSelectedFolderId(lf.id)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="folder" size={11} /> {lf.name}
+                    </span>
+                    <span onClick={() => removeFolderLink(lf.id)} style={{ cursor: 'pointer', opacity: 0.7 }}>&times;</span>
+                  </span>
+                ))}
+                <div ref={linkMenuRef} style={{ position: 'relative' }}>
+                  <span
+                    onClick={() => setLinkMenuOpen((v) => !v)}
+                    style={{ fontSize: 11, fontWeight: 600, color: theme.accentText, cursor: 'pointer' }}
+                  >
+                    {t('codeLibrary.linkFolder')}
+                  </span>
+                  {linkMenuOpen && (
+                    <div
+                      style={{
+                        position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 20, width: 220,
+                        background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+                        borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 8, display: 'flex', flexDirection: 'column', gap: 6,
+                      }}
+                    >
+                      <input
+                        value={linkSearch}
+                        onChange={(e) => setLinkSearch(e.target.value)}
+                        placeholder={t('codeLibrary.searchFoldersPlaceholder')}
+                        autoFocus
+                        style={{ border: `1px solid ${theme.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+                      />
+                      <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {linkCandidates.length === 0 && (
+                          <div style={{ fontSize: 11.5, color: theme.textMuted, padding: '4px 2px' }}>{t('codeLibrary.noFoldersToLink')}</div>
+                        )}
+                        {linkCandidates.map((f) => (
+                          <div
+                            key={f.id}
+                            onClick={() => addFolderLink(f.id)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, color: theme.textPrimary }}
+                          >
+                            <Icon name="folder" size={13} /> {f.name}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>

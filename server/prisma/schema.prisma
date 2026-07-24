@@ -270,6 +270,7 @@ model CodeFolder {
   kind        String   @default("program") // "program" | "class" | "function_module"
   description String?  @db.Text
   tags        Json?
+  linkedFolderIds Json?
   favorite    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
