@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
-import { getIssueAlerts } from '../lib/issueAlerts.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 import Icon from './Icon.jsx';
 import AgentChatWidget from './AgentChatWidget.jsx';
@@ -29,14 +28,9 @@ export default function AppLayout() {
   const location = useLocation();
   const [accountOpen, setAccountOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [issueAlerts, setIssueAlerts] = useState([]);
-  const { counts } = useCounts();
+  const { counts, issueAlerts } = useCounts();
   const notifRef = useRef(null);
   useClickOutside(notifRef, () => setNotifOpen(false), notifOpen);
-
-  useEffect(() => {
-    api.listIssues().then(({ issues }) => setIssueAlerts(getIssueAlerts(issues)));
-  }, []);
 
   const [sidebarItems, setSidebarItems] = useState([]);
   const [draggedKey, setDraggedKey] = useState(null);

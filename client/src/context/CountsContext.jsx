@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { getIssueAlerts } from '../lib/issueAlerts.js';
 
 const CountsContext = createContext(null);
 
 export function CountsProvider({ children }) {
   const [counts, setCounts] = useState({});
+  const [issueAlerts, setIssueAlerts] = useState([]);
 
   const refresh = useCallback(async () => {
     const [notesR, voiceR, tasksR, tagsR, artifactsR, issuesR, codeFoldersR, trashedNotesR, trashedTasksR, trashedVoiceR] = await Promise.all([
@@ -29,13 +31,18 @@ export function CountsProvider({ children }) {
       codeLibrary: codeFoldersR.folders.length,
       trash: trashedNotesR.notes.length + trashedTasksR.tasks.length + trashedVoiceR.voiceNotes.length,
     });
+    // Computed from the same issues list already fetched above, so every
+    // place that already calls refresh() after an issue mutation (create,
+    // delete, status/due changes) keeps the notification bell in sync too,
+    // instead of it drifting from data shown elsewhere.
+    setIssueAlerts(getIssueAlerts(issuesR.issues));
   }, []);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  return <CountsContext.Provider value={{ counts, refresh }}>{children}</CountsContext.Provider>;
+  return <CountsContext.Provider value={{ counts, issueAlerts, refresh }}>{children}</CountsContext.Provider>;
 }
 
 export function useCounts() {

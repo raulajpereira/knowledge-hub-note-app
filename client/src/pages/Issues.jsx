@@ -191,6 +191,10 @@ export default function Issues() {
       const next = prev.map((i) => (i.id === id ? issue : i));
       return nextIssue ? [nextIssue, ...next] : next;
     });
+    // Only these two fields feed the notification bell's overdue/due-soon
+    // logic — skip the refresh on every other field so it doesn't run on
+    // each keystroke while editing e.g. the project or notes text.
+    if ('status' in payload || 'due' in payload) refreshCounts();
   };
 
   const commitTitle = async () => {
