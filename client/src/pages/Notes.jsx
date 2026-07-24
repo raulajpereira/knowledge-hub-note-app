@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
@@ -9,6 +9,7 @@ import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
+import { useClickOutside } from '../lib/useClickOutside.js';
 
 const URL_ONLY_RE = /^(https?:\/\/|www\.)\S+$/i;
 
@@ -69,6 +70,12 @@ export default function Notes() {
   const [linkPickTarget, setLinkPickTarget] = useState(null);
   const [linkLabelDraft, setLinkLabelDraft] = useState('');
   const [previewNoteId, setPreviewNoteId] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
+  const [bulkTagInput, setBulkTagInput] = useState('');
+  const bulkMoveRef = useRef(null);
+  useClickOutside(bulkMoveRef, () => setBulkMoveOpen(false), bulkMoveOpen);
 
   const load = async () => {
     const [{ notes }, { folders }, { tags }] = await Promise.all([api.listNotes(), api.listFolders(), api.listTags()]);
@@ -254,6 +261,56 @@ export default function Notes() {
     await api.restoreNote(id);
     await load();
     await loadTrash();
+  };
+
+  const toggleSelected = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectMode(false);
+    setBulkMoveOpen(false);
+  };
+
+  const bulkTrash = async () => {
+    const ok = await confirm({ message: t('common.confirmTrashMessage') });
+    if (!ok) return;
+    const ids = [...selectedIds];
+    await Promise.all(ids.map((id) => api.trashNote(id)));
+    setNotes((prev) => prev.filter((n) => !selectedIds.has(n.id)));
+    if (selectedId && selectedIds.has(selectedId)) setSelectedId(null);
+    clearSelection();
+    refreshCounts();
+  };
+
+  const bulkMove = async (folderId) => {
+    const ids = [...selectedIds];
+    const updated = await Promise.all(ids.map((id) => api.updateNote(id, { folderId })));
+    const byId = new Map(updated.map(({ note }) => [note.id, note]));
+    setNotes((prev) => prev.map((n) => byId.get(n.id) || n));
+    clearSelection();
+  };
+
+  const bulkAddTag = async () => {
+    const tag = bulkTagInput.trim();
+    if (!tag) return;
+    const ids = [...selectedIds];
+    const updated = await Promise.all(
+      ids.map((id) => {
+        const note = notes.find((n) => n.id === id);
+        const tags = [...new Set([...(note?.tags || []), tag])];
+        return api.updateNote(id, { tags });
+      })
+    );
+    const byId = new Map(updated.map(({ note }) => [note.id, note]));
+    setNotes((prev) => prev.map((n) => byId.get(n.id) || n));
+    setBulkTagInput('');
   };
 
   const deleteForever = async (id) => {
@@ -444,6 +501,16 @@ export default function Notes() {
             />
           </div>
           <button
+            onClick={() => (selectMode ? clearSelection() : setSelectMode(true))}
+            title={t('notes.selectMode')}
+            style={{
+              display: 'flex', alignItems: 'center', background: selectMode ? theme.accentSoftBg : 'transparent',
+              color: selectMode ? theme.accentText : theme.textMuted, border: `1px solid ${theme.border}`, borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <Icon name="check" size={16} />
+          </button>
+          <button
             onClick={addNote}
             title={t('notes.newNoteButton')}
             style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}
@@ -451,6 +518,55 @@ export default function Notes() {
             <Icon name="plus" size={16} color="#fff" />
           </button>
         </div>
+
+        {selectMode && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', background: theme.accentSoftBg, borderRadius: 10, padding: '8px 10px' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: theme.accentText, marginRight: 4 }}>
+              {t('notes.selectedCount', { n: selectedIds.size })}
+            </span>
+            <button onClick={bulkTrash} disabled={selectedIds.size === 0} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: selectedIds.size ? 'pointer' : 'default', opacity: selectedIds.size ? 1 : 0.5 }}>
+              {t('common.delete')}
+            </button>
+            <div ref={bulkMoveRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setBulkMoveOpen((v) => !v)}
+                disabled={selectedIds.size === 0}
+                style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: selectedIds.size ? 'pointer' : 'default', opacity: selectedIds.size ? 1 : 0.5 }}
+              >
+                {t('notes.moveTo')}
+              </button>
+              {bulkMoveOpen && (
+                <div
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 20, minWidth: 160,
+                    background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+                    borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 6, display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto',
+                  }}
+                >
+                  <div onClick={() => { bulkMove(null); setBulkMoveOpen(false); }} style={{ padding: '7px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, color: theme.textPrimary }}>
+                    {t('notes.allNotes')}
+                  </div>
+                  {folders.map((f) => (
+                    <div key={f.id} onClick={() => { bulkMove(f.id); setBulkMoveOpen(false); }} style={{ padding: '7px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, color: theme.textPrimary }}>
+                      {f.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <input
+              value={bulkTagInput}
+              onChange={(e) => setBulkTagInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && bulkAddTag()}
+              placeholder={t('notes.bulkAddTagPlaceholder')}
+              disabled={selectedIds.size === 0}
+              style={{ border: `1px solid ${theme.border}`, borderRadius: 7, padding: '5px 9px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', width: 110 }}
+            />
+            <span onClick={clearSelection} style={{ marginLeft: 'auto', cursor: 'pointer', color: theme.textMuted, fontSize: 12.5, fontWeight: 600 }}>
+              {t('common.cancel')}
+            </span>
+          </div>
+        )}
 
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div
@@ -510,12 +626,22 @@ export default function Notes() {
           {filtered.map((n) => (
             <div
               key={n.id}
-              draggable
+              draggable={!selectMode}
               onDragStart={(e) => e.dataTransfer.setData('text/note-id', n.id)}
-              onClick={() => setSelectedId(n.id)}
-              style={{ ...rowStyle(selected?.id === n.id), cursor: 'grab' }}
+              onClick={() => (selectMode ? toggleSelected(n.id) : setSelectedId(n.id))}
+              style={{ ...rowStyle(selectMode ? selectedIds.has(n.id) : selected?.id === n.id), cursor: selectMode ? 'pointer' : 'grab' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                {selectMode && (
+                  <span
+                    style={{
+                      width: 16, height: 16, borderRadius: 5, border: `1.5px solid ${selectedIds.has(n.id) ? theme.accent : theme.border}`,
+                      background: selectedIds.has(n.id) ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}
+                  >
+                    {selectedIds.has(n.id) && <Icon name="check" size={11} color="#fff" strokeWidth={3} />}
+                  </span>
+                )}
                 {n.pinned && <Icon name="pin" size={13} color={theme.accentText} />}
                 <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</div>
               </div>

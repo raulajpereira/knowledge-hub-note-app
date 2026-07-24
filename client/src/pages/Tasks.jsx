@@ -62,6 +62,8 @@ export default function Tasks() {
   const [titleDraft, setTitleDraft] = useState('');
   const [view, setView] = useState('list');
   const [dragOverStatus, setDragOverStatus] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   useEffect(() => {
     api.listTasks().then(({ tasks }) => {
@@ -130,6 +132,39 @@ export default function Tasks() {
     refreshCounts();
   };
 
+  const toggleSelected = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectMode(false);
+  };
+
+  const bulkTrash = async () => {
+    const ok = await confirm({ message: t('common.confirmTrashMessage') });
+    if (!ok) return;
+    const ids = [...selectedIds];
+    await Promise.all(ids.map((id) => api.trashTask(id)));
+    setTasks((prev) => prev.filter((tk) => !selectedIds.has(tk.id)));
+    if (selectedId && selectedIds.has(selectedId)) setSelectedId(null);
+    clearSelection();
+    refreshCounts();
+  };
+
+  const bulkMarkDone = async () => {
+    const ids = [...selectedIds];
+    const updated = await Promise.all(ids.map((id) => api.updateTask(id, { done: true })));
+    const byId = new Map(updated.map(({ task }) => [task.id, task]));
+    setTasks((prev) => prev.map((tk) => byId.get(tk.id) || tk));
+    clearSelection();
+  };
+
   const rowStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
@@ -156,6 +191,18 @@ export default function Tasks() {
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
           />
         </div>
+        {view === 'list' && (
+          <button
+            onClick={() => (selectMode ? clearSelection() : setSelectMode(true))}
+            title={t('tasks.selectMode')}
+            style={{
+              display: 'flex', alignItems: 'center', background: selectMode ? theme.accentSoftBg : 'transparent',
+              color: selectMode ? theme.accentText : theme.textMuted, border: `1px solid ${theme.border}`, borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <Icon name="check" size={16} />
+          </button>
+        )}
         <button onClick={addTask} title={t('tasks.newTask')} style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}>
           <Icon name="plus" size={16} color="#fff" />
         </button>
@@ -208,6 +255,23 @@ export default function Tasks() {
         </div>
       )}
 
+      {view === 'list' && selectMode && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', background: theme.accentSoftBg, borderRadius: 10, padding: '8px 10px' }}>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: theme.accentText, marginRight: 4 }}>
+            {t('tasks.selectedCount', { n: selectedIds.size })}
+          </span>
+          <button onClick={bulkTrash} disabled={selectedIds.size === 0} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: selectedIds.size ? 'pointer' : 'default', opacity: selectedIds.size ? 1 : 0.5 }}>
+            {t('common.delete')}
+          </button>
+          <button onClick={bulkMarkDone} disabled={selectedIds.size === 0} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: selectedIds.size ? 'pointer' : 'default', opacity: selectedIds.size ? 1 : 0.5 }}>
+            {t('tasks.markDone')}
+          </button>
+          <span onClick={clearSelection} style={{ marginLeft: 'auto', cursor: 'pointer', color: theme.textMuted, fontSize: 12.5, fontWeight: 600 }}>
+            {t('common.cancel')}
+          </span>
+        </div>
+      )}
+
       {view === 'board' ? (
         <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, overflowX: 'auto' }}>
           {BOARD_COLUMNS.map((col) => {
@@ -257,17 +321,32 @@ export default function Tasks() {
           {filtered.map((task) => {
             const hue = PRIORITY_HUES[task.priority];
             return (
-              <div key={task.id} onClick={() => setSelectedId(task.id)} style={rowStyle(selected?.id === task.id)}>
-                <div
-                  onClick={(e) => { e.stopPropagation(); patch(task.id, { done: !task.done }); }}
-                  style={{
-                    width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${task.done ? theme.accent : theme.border}`,
-                    background: task.done ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', flexShrink: 0,
-                  }}
-                >
-                  {task.done && <Icon name="check" size={12} color="#fff" strokeWidth={2.5} />}
-                </div>
+              <div
+                key={task.id}
+                onClick={() => (selectMode ? toggleSelected(task.id) : setSelectedId(task.id))}
+                style={rowStyle(selectMode ? selectedIds.has(task.id) : selected?.id === task.id)}
+              >
+                {selectMode ? (
+                  <span
+                    style={{
+                      width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${selectedIds.has(task.id) ? theme.accent : theme.border}`,
+                      background: selectedIds.has(task.id) ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}
+                  >
+                    {selectedIds.has(task.id) && <Icon name="check" size={11} color="#fff" strokeWidth={3} />}
+                  </span>
+                ) : (
+                  <div
+                    onClick={(e) => { e.stopPropagation(); patch(task.id, { done: !task.done }); }}
+                    style={{
+                      width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${task.done ? theme.accent : theme.border}`,
+                      background: task.done ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >
+                    {task.done && <Icon name="check" size={12} color="#fff" strokeWidth={2.5} />}
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, textDecoration: task.done ? 'line-through' : 'none', opacity: task.done ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {task.title}
