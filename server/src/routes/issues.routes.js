@@ -3,6 +3,16 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
+const RECURRENCES = ['daily', 'weekly', 'monthly'];
+
+function nextDueDate(dueStr, recurrence) {
+  const d = new Date(`${dueStr}T00:00:00`);
+  if (recurrence === 'daily') d.setDate(d.getDate() + 1);
+  else if (recurrence === 'weekly') d.setDate(d.getDate() + 7);
+  else if (recurrence === 'monthly') d.setMonth(d.getMonth() + 1);
+  else return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 const router = Router();
 router.use(requireAuth);
@@ -16,7 +26,7 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { title, description, status, priority, project, due, waitingOn, notes } = req.body || {};
+  const { title, description, status, priority, project, due, waitingOn, notes, recurrence } = req.body || {};
   const data = {
     userId: req.effectiveUserId,
     title: title?.trim() || 'New issue',
@@ -26,6 +36,7 @@ router.post('/', async (req, res) => {
     due: due || null,
     waitingOn: waitingOn || null,
     notes: notes || null,
+    recurrence: RECURRENCES.includes(recurrence) ? recurrence : null,
   };
   if (typeof status === 'string' && status.trim()) data.status = status.trim();
   const issue = await prisma.issue.create({ data });
@@ -36,7 +47,7 @@ router.patch('/:id', async (req, res) => {
   const issue = await prisma.issue.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!issue) return res.status(404).json({ error: 'Issue not found' });
 
-  const { title, description, status, priority, project, due, waitingOn, notes, favorite } = req.body || {};
+  const { title, description, status, priority, project, due, waitingOn, notes, favorite, recurrence } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || 'New issue';
   if (description !== undefined) data.description = description || null;
@@ -54,9 +65,32 @@ router.patch('/:id', async (req, res) => {
   if (due !== undefined) data.due = due || null;
   if (waitingOn !== undefined) data.waitingOn = waitingOn || null;
   if (notes !== undefined) data.notes = notes || null;
+  if (recurrence !== undefined) data.recurrence = RECURRENCES.includes(recurrence) ? recurrence : null;
 
+  const becameDone = data.status === 'Done' && issue.status !== 'Done';
   const updated = await prisma.issue.update({ where: { id: issue.id }, data });
-  res.json({ issue: updated });
+
+  let nextIssue = null;
+  if (becameDone && updated.recurrence && updated.due) {
+    const due = nextDueDate(updated.due, updated.recurrence);
+    if (due) {
+      nextIssue = await prisma.issue.create({
+        data: {
+          userId: req.effectiveUserId,
+          title: updated.title,
+          description: updated.description,
+          priority: updated.priority,
+          project: updated.project,
+          due,
+          waitingOn: updated.waitingOn,
+          notes: updated.notes,
+          recurrence: updated.recurrence,
+        },
+      });
+    }
+  }
+
+  res.json({ issue: updated, nextIssue });
 });
 
 router.delete('/:id', async (req, res) => {

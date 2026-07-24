@@ -122,6 +122,7 @@ model Task {
   project   String?
   notes     String?  @db.Text
   favorite  Boolean  @default(false)
+  recurrence String? // "daily" | "weekly" | "monthly"
   deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -189,6 +190,7 @@ model Issue {
   project     String?
   notes       String?   @db.Text
   favorite    Boolean   @default(false)
+  recurrence  String? // "daily" | "weekly" | "monthly"
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

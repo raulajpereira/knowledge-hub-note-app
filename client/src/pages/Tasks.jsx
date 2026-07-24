@@ -113,8 +113,11 @@ export default function Tasks() {
   };
 
   const patch = async (id, payload) => {
-    const { task } = await api.updateTask(id, payload);
-    setTasks((prev) => prev.map((t) => (t.id === id ? task : t)));
+    const { task, nextTask } = await api.updateTask(id, payload);
+    setTasks((prev) => {
+      const next = prev.map((t) => (t.id === id ? task : t));
+      return nextTask ? [nextTask, ...next] : next;
+    });
   };
 
   const remove = async () => {
@@ -348,6 +351,19 @@ export default function Tasks() {
                 placeholder={t('tasks.projectPlaceholder')}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
+            </div>
+            <div style={{ flex: '1 1 160px' }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('common.recurrence')}</div>
+              <select
+                value={selected.recurrence || ''}
+                onChange={(e) => patch(selected.id, { recurrence: e.target.value || null })}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+              >
+                <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceNone')}</option>
+                <option value="daily" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceDaily')}</option>
+                <option value="weekly" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceWeekly')}</option>
+                <option value="monthly" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceMonthly')}</option>
+              </select>
             </div>
           </div>
 

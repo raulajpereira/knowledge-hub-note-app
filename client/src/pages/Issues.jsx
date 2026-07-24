@@ -185,8 +185,11 @@ export default function Issues() {
   }, [selected?.id]);
 
   const patch = async (id, payload) => {
-    const { issue } = await api.updateIssue(id, payload);
-    setIssues((prev) => prev.map((i) => (i.id === id ? issue : i)));
+    const { issue, nextIssue } = await api.updateIssue(id, payload);
+    setIssues((prev) => {
+      const next = prev.map((i) => (i.id === id ? issue : i));
+      return nextIssue ? [nextIssue, ...next] : next;
+    });
   };
 
   const commitTitle = async () => {
@@ -467,6 +470,20 @@ export default function Issues() {
                 onChange={(e) => patch(selected.id, { waitingOn: e.target.value })}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('common.recurrence')}</div>
+              <select
+                value={selected.recurrence || ''}
+                onChange={(e) => patch(selected.id, { recurrence: e.target.value || null })}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+              >
+                <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceNone')}</option>
+                <option value="daily" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceDaily')}</option>
+                <option value="weekly" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceWeekly')}</option>
+                <option value="monthly" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceMonthly')}</option>
+              </select>
             </div>
 
             <div>

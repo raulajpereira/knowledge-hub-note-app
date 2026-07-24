@@ -4,6 +4,16 @@ import { requireAuth } from '../middleware/auth.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
 const STATUSES = ['todo', 'in_progress', 'done'];
+const RECURRENCES = ['daily', 'weekly', 'monthly'];
+
+function nextDueDate(dueStr, recurrence) {
+  const d = new Date(`${dueStr}T00:00:00`);
+  if (recurrence === 'daily') d.setDate(d.getDate() + 1);
+  else if (recurrence === 'weekly') d.setDate(d.getDate() + 7);
+  else if (recurrence === 'monthly') d.setMonth(d.getMonth() + 1);
+  else return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 const router = Router();
 router.use(requireAuth);
@@ -18,7 +28,7 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { title, priority, due, project, notes } = req.body || {};
+  const { title, priority, due, project, notes, recurrence } = req.body || {};
   const task = await prisma.task.create({
     data: {
       userId: req.effectiveUserId,
@@ -27,6 +37,7 @@ router.post('/', async (req, res) => {
       due: due || null,
       project: project || null,
       notes: notes || null,
+      recurrence: RECURRENCES.includes(recurrence) ? recurrence : null,
     },
   });
   res.status(201).json({ task });
@@ -36,7 +47,7 @@ router.patch('/:id', async (req, res) => {
   const task = await prisma.task.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  const { title, done, status, priority, due, project, notes, favorite } = req.body || {};
+  const { title, done, status, priority, due, project, notes, favorite, recurrence } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || 'New task';
   if (favorite !== undefined) data.favorite = !!favorite;
@@ -55,9 +66,30 @@ router.patch('/:id', async (req, res) => {
   if (due !== undefined) data.due = due || null;
   if (project !== undefined) data.project = project || null;
   if (notes !== undefined) data.notes = notes || null;
+  if (recurrence !== undefined) data.recurrence = RECURRENCES.includes(recurrence) ? recurrence : null;
 
+  const becameDone = data.done === true && !task.done;
   const updated = await prisma.task.update({ where: { id: task.id }, data });
-  res.json({ task: updated });
+
+  let nextTask = null;
+  if (becameDone && updated.recurrence && updated.due) {
+    const due = nextDueDate(updated.due, updated.recurrence);
+    if (due) {
+      nextTask = await prisma.task.create({
+        data: {
+          userId: req.effectiveUserId,
+          title: updated.title,
+          priority: updated.priority,
+          due,
+          project: updated.project,
+          notes: updated.notes,
+          recurrence: updated.recurrence,
+        },
+      });
+    }
+  }
+
+  res.json({ task: updated, nextTask });
 });
 
 // Soft delete (move to trash)
