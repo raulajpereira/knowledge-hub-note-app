@@ -18,6 +18,35 @@ const FILTERS = [
   { key: 'all', labelKey: 'tasks.filterAll' },
 ];
 
+const BOARD_COLUMNS = [
+  { status: 'todo', labelKey: 'tasks.statusTodo' },
+  { status: 'in_progress', labelKey: 'tasks.statusInProgress' },
+  { status: 'done', labelKey: 'tasks.statusDone' },
+];
+
+function TaskCard({ task, theme, onDragStart, onClick }) {
+  const hue = PRIORITY_HUES[task.priority];
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onClick={onClick}
+      style={{
+        background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12,
+        cursor: 'grab', display: 'flex', flexDirection: 'column', gap: 8,
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.35 }}>{task.title}</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: `oklch(0.93 0.06 ${hue})`, color: `oklch(0.45 0.14 ${hue})` }}>
+          {task.priority}
+        </span>
+        {task.due && <span style={{ fontSize: 10.5, color: theme.textMuted }}>{task.due}</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function Tasks() {
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -31,6 +60,8 @@ export default function Tasks() {
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [titleDraft, setTitleDraft] = useState('');
+  const [view, setView] = useState('list');
+  const [dragOverStatus, setDragOverStatus] = useState(null);
 
   useEffect(() => {
     api.listTasks().then(({ tasks }) => {
@@ -109,25 +140,44 @@ export default function Tasks() {
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-      <div style={{ flex: '1 1 340px', minWidth: 280, maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: 1, minWidth: 0 }}>
-            <span style={{ opacity: 0.5, display: 'flex' }}>
-              <Icon name="search" size={15} />
-            </span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('tasks.searchPlaceholder')}
-              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
-            />
-          </div>
-          <button onClick={addTask} title={t('tasks.newTask')} style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}>
-            <Icon name="plus" size={16} color="#fff" />
-          </button>
+    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: '1 1 260px', minWidth: 0, maxWidth: 400 }}>
+          <span style={{ opacity: 0.5, display: 'flex' }}>
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('tasks.searchPlaceholder')}
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
+          />
         </div>
+        <button onClick={addTask} title={t('tasks.newTask')} style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}>
+          <Icon name="plus" size={16} color="#fff" />
+        </button>
 
+        <div style={{ flex: 1 }} />
+
+        <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
+          {[{ key: 'list', icon: 'doc' }, { key: 'board', icon: 'archive' }].map((v) => (
+            <div
+              key={v.key}
+              onClick={() => setView(v.key)}
+              title={t(`tasks.view${v.key === 'list' ? 'List' : 'Board'}`)}
+              style={{
+                padding: '7px 10px', borderRadius: 7, cursor: 'pointer', display: 'flex',
+                background: view === v.key ? theme.cardBg : 'transparent',
+                color: view === v.key ? theme.accentText : theme.textMuted,
+              }}
+            >
+              <Icon name={v.icon} size={15} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {view === 'list' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 6 }}>
             {FILTERS.map((f) => (
@@ -153,7 +203,52 @@ export default function Tasks() {
             <option value="priority" style={{ color: '#1a1a1a', background: '#fff' }}>{t('tasks.sortBy')}: {t('tasks.sortPriority')}</option>
           </select>
         </div>
+      )}
 
+      {view === 'board' ? (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, overflowX: 'auto' }}>
+          {BOARD_COLUMNS.map((col) => {
+            const colTasks = tasks.filter((t) => (t.status || (t.done ? 'done' : 'todo')) === col.status && (!search.trim() || t.title.toLowerCase().includes(search.toLowerCase())));
+            return (
+              <div
+                key={col.status}
+                onDragOver={(e) => { e.preventDefault(); setDragOverStatus(col.status); }}
+                onDragLeave={() => setDragOverStatus((v) => (v === col.status ? null : v))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOverStatus(null);
+                  const taskId = e.dataTransfer.getData('text/task-id');
+                  if (taskId) patch(taskId, { status: col.status });
+                }}
+                style={{
+                  flex: '1 1 260px', minWidth: 240, display: 'flex', flexDirection: 'column', gap: 10,
+                  background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12,
+                  outline: dragOverStatus === col.status ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  {t(col.labelKey)}
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>{colTasks.length}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', flex: 1, minHeight: 0 }}>
+                  {colTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      theme={theme}
+                      onDragStart={(e) => e.dataTransfer.setData('text/task-id', task.id)}
+                      onClick={() => { setSelectedId(task.id); setView('list'); }}
+                    />
+                  ))}
+                  {colTasks.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted, padding: '6px 2px' }}>{t('tasks.noTasksHere')}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+      <div style={{ flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
+      <div style={{ flex: '1 1 340px', minWidth: 280, maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('tasks.noTasksHere')}</div>}
           {filtered.map((task) => {
@@ -268,6 +363,8 @@ export default function Tasks() {
         <div style={{ flex: '1 1 420px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
           {t('tasks.selectOrCreate')}
         </div>
+      )}
+      </div>
       )}
     </div>
   );

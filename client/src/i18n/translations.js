@@ -317,6 +317,11 @@ export const translations = {
       sortBy: 'Sort',
       sortRecent: 'Recent',
       sortPriority: 'Priority',
+      viewList: 'List view',
+      viewBoard: 'Board view',
+      statusTodo: 'To Do',
+      statusInProgress: 'In Progress',
+      statusDone: 'Done',
     },
     tags: {
       searchPlaceholder: 'Search tags...',
@@ -917,6 +922,11 @@ export const translations = {
       sortBy: 'Ordenar',
       sortRecent: 'Recentes',
       sortPriority: 'Prioridade',
+      viewList: 'Vista de lista',
+      viewBoard: 'Vista de quadro',
+      statusTodo: 'Por Fazer',
+      statusInProgress: 'Em Progresso',
+      statusDone: 'Concluída',
     },
     tags: {
       searchPlaceholder: 'Pesquisar etiquetas...',

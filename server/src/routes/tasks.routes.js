@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
+const STATUSES = ['todo', 'in_progress', 'done'];
 
 const router = Router();
 router.use(requireAuth);
@@ -35,10 +36,17 @@ router.patch('/:id', async (req, res) => {
   const task = await prisma.task.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  const { title, done, priority, due, project, notes } = req.body || {};
+  const { title, done, status, priority, due, project, notes } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || 'New task';
-  if (done !== undefined) data.done = !!done;
+  if (done !== undefined) {
+    data.done = !!done;
+    data.status = data.done ? 'done' : 'todo';
+  }
+  if (status !== undefined && STATUSES.includes(status)) {
+    data.status = status;
+    data.done = status === 'done';
+  }
   if (priority !== undefined) {
     if (!PRIORITIES.includes(priority)) return res.status(400).json({ error: 'Invalid priority' });
     data.priority = priority;
