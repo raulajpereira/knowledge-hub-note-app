@@ -1,6 +1,30 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const iconsDir = path.join(__dirname, '..', '..', 'uploads', 'password-icons');
+
+const uploadIcon = multer({
+  storage: multer.diskStorage({
+    destination: iconsDir,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.png';
+      cb(null, `${req.userId}-${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!/^image\/(png|jpe?g|webp|svg\+xml)$/.test(file.mimetype)) {
+      return cb(new Error('Only PNG, JPG, WEBP or SVG images are allowed'));
+    }
+    cb(null, true);
+  },
+});
 
 const router = Router();
 router.use(requireAuth);
@@ -87,6 +111,24 @@ router.delete('/:id', async (req, res) => {
   if (!entry) return res.status(404).json({ error: 'Entry not found' });
   await prisma.passwordEntry.delete({ where: { id: entry.id } });
   res.status(204).end();
+});
+
+// Custom icon overrides the auto site favicon — this is the only entry field
+// that isn't part of the encrypted envelope, since it's just a decorative image.
+router.post('/:id/icon', uploadIcon.single('icon'), async (req, res) => {
+  const entry = await prisma.passwordEntry.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  if (!entry) return res.status(404).json({ error: 'Entry not found' });
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const iconUrl = `/uploads/password-icons/${req.file.filename}`;
+  const updated = await prisma.passwordEntry.update({ where: { id: entry.id }, data: { iconUrl } });
+  res.json({ entry: updated });
+});
+
+router.delete('/:id/icon', async (req, res) => {
+  const entry = await prisma.passwordEntry.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  if (!entry) return res.status(404).json({ error: 'Entry not found' });
+  const updated = await prisma.passwordEntry.update({ where: { id: entry.id }, data: { iconUrl: null } });
+  res.json({ entry: updated });
 });
 
 export default router;

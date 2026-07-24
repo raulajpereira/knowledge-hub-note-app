@@ -114,6 +114,12 @@ export const api = {
   createPassword: (payload) => request('/passwords', { method: 'POST', body: payload }),
   updatePassword: (id, payload) => request(`/passwords/${id}`, { method: 'PATCH', body: payload }),
   deletePassword: (id) => request(`/passwords/${id}`, { method: 'DELETE' }),
+  uploadPasswordIcon: (id, file) => {
+    const form = new FormData();
+    form.append('icon', file);
+    return request(`/passwords/${id}/icon`, { method: 'POST', body: form, isForm: true });
+  },
+  resetPasswordIcon: (id) => request(`/passwords/${id}/icon`, { method: 'DELETE' }),
 
   listIssues: () => request('/issues'),
   createIssue: (payload) => request('/issues', { method: 'POST', body: payload }),

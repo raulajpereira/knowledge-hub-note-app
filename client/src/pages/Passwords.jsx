@@ -20,6 +20,23 @@ function bytesEqual(a, b) {
   return true;
 }
 
+function faviconFor(url) {
+  if (!url) return null;
+  try {
+    const host = new URL(url).hostname;
+    return `https://www.google.com/s2/favicons?sz=64&domain=${host}`;
+  } catch {
+    return null;
+  }
+}
+
+// Precedence: a manually uploaded icon always wins, otherwise fall back to
+// the site's own favicon (derived from the URL), otherwise no icon at all
+// (caller renders the generic lock glyph).
+function iconFor(entry) {
+  return entry?.iconUrl || faviconFor(entry?.url) || null;
+}
+
 function formatSeconds(s, t) {
   if (s < 60) return t('settings.seconds', { n: s });
   const m = Math.round(s / 60);
@@ -66,6 +83,7 @@ export default function Passwords() {
   const [newRecoveryToSave, setNewRecoveryToSave] = useState('');
 
   const lastActivityRef = useRef(Date.now());
+  const iconInputRef = useRef(null);
 
   const loadVaultInfo = async () => {
     const info = await api.getVaultInfo();
@@ -112,9 +130,9 @@ export default function Passwords() {
       raw.map(async (e) => {
         try {
           const plain = await decryptEntry(key, e.envelope);
-          return { id: e.id, createdAt: e.createdAt, updatedAt: e.updatedAt, ...plain };
+          return { id: e.id, createdAt: e.createdAt, updatedAt: e.updatedAt, iconUrl: e.iconUrl || null, ...plain };
         } catch {
-          return { id: e.id, createdAt: e.createdAt, updatedAt: e.updatedAt, title: '(Could not decrypt)', username: '', password: '', url: '', notes: '', group: '' };
+          return { id: e.id, createdAt: e.createdAt, updatedAt: e.updatedAt, iconUrl: e.iconUrl || null, title: '(Could not decrypt)', username: '', password: '', url: '', notes: '', group: '' };
         }
       })
     );
@@ -208,7 +226,7 @@ export default function Passwords() {
     const obj = { title: t('passwords.newEntry'), username: '', password: '', url: '', notes: '', group: '' };
     const envelope = await encryptEntry(masterKey, obj);
     const { entry } = await api.createPassword({ envelope });
-    setEntries((prev) => [{ id: entry.id, createdAt: entry.createdAt, updatedAt: entry.updatedAt, ...obj }, ...prev]);
+    setEntries((prev) => [{ id: entry.id, createdAt: entry.createdAt, updatedAt: entry.updatedAt, iconUrl: null, ...obj }, ...prev]);
     setSelectedId(entry.id);
   };
 
@@ -216,10 +234,20 @@ export default function Passwords() {
     const current = entries.find((e) => e.id === id);
     if (!current) return;
     const next = { ...current, ...fieldPatch };
-    const { id: _id, createdAt: _c, updatedAt: _u, ...plainFields } = next;
+    const { id: _id, createdAt: _c, updatedAt: _u, iconUrl: _icon, ...plainFields } = next;
     const envelope = await encryptEntry(masterKey, plainFields);
     const { entry } = await api.updatePassword(id, { envelope });
     setEntries((prev) => prev.map((e) => (e.id === id ? { ...next, updatedAt: entry.updatedAt } : e)));
+  };
+
+  const uploadIcon = async (id, file) => {
+    const { entry } = await api.uploadPasswordIcon(id, file);
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, iconUrl: entry.iconUrl } : e)));
+  };
+
+  const resetIcon = async (id) => {
+    const { entry } = await api.resetPasswordIcon(id);
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, iconUrl: entry.iconUrl } : e)));
   };
 
   const remove = async () => {
@@ -524,8 +552,12 @@ export default function Passwords() {
                 onClick={() => setSelectedId(p.id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', background: selected?.id === p.id ? theme.accentSoftBg : 'transparent' }}
               >
-                <div style={{ width: 32, height: 32, borderRadius: 9, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon name="lock" size={15} color={theme.accentText} />
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                  {iconFor(p) ? (
+                    <img src={iconFor(p)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                  ) : (
+                    <Icon name="lock" size={15} color={theme.accentText} />
+                  )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
@@ -542,8 +574,42 @@ export default function Passwords() {
         {selected ? (
           <div style={{ flex: '1 1 380px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ width: 46, height: 46, borderRadius: 11, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon name="lock" size={20} color={theme.accentText} />
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div
+                  onClick={() => iconInputRef.current?.click()}
+                  title={t('passwords.changeIcon')}
+                  style={{ width: 46, height: 46, borderRadius: 11, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer' }}
+                >
+                  {iconFor(selected) ? (
+                    <img src={iconFor(selected)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Icon name="lock" size={20} color={theme.accentText} />
+                  )}
+                </div>
+                <input
+                  ref={iconInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadIcon(selected.id, file);
+                    e.target.value = '';
+                  }}
+                />
+                {selected.iconUrl && (
+                  <span
+                    onClick={() => resetIcon(selected.id)}
+                    title={t('passwords.resetIcon')}
+                    style={{
+                      position: 'absolute', bottom: -4, right: -4, width: 18, height: 18, borderRadius: '50%',
+                      background: theme.cardBg, border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', cursor: 'pointer', color: theme.textMuted,
+                    }}
+                  >
+                    <Icon name="undo" size={10} />
+                  </span>
+                )}
               </div>
               <div style={{ flex: '1 1 160px', minWidth: 160 }}>
                 <input

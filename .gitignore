@@ -18,6 +18,9 @@ server/uploads/notes/*
 !server/uploads/note-files/
 server/uploads/note-files/*
 !server/uploads/note-files/.gitkeep
+!server/uploads/password-icons/
+server/uploads/password-icons/*
+!server/uploads/password-icons/.gitkeep
 *.log
 .DS_Store
 .scratch-test/
