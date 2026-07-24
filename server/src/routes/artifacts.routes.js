@@ -31,12 +31,13 @@ router.patch('/:id', async (req, res) => {
   const artifact = await prisma.artifact.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!artifact) return res.status(404).json({ error: 'Artifact not found' });
 
-  const { title, description, html, tags } = req.body || {};
+  const { title, description, html, tags, favorite } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || 'Untitled artifact';
   if (description !== undefined) data.description = description || null;
   if (html !== undefined) data.html = html;
   if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : null;
+  if (favorite !== undefined) data.favorite = !!favorite;
 
   const updated = await prisma.artifact.update({ where: { id: artifact.id }, data });
   res.json({ artifact: updated });

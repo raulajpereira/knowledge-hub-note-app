@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
@@ -585,6 +586,7 @@ export default function CodeLibrary() {
   const { t } = useLanguage();
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
+  const location = useLocation();
 
   const [folders, setFolders] = useState([]);
   const [selectedFolderId, setSelectedFolderId] = useState(null);
@@ -603,7 +605,9 @@ export default function CodeLibrary() {
   useEffect(() => {
     api.listCodeFolders().then(({ folders }) => {
       setFolders(folders);
-      if (folders.length > 0) setSelectedFolderId(folders[0].id);
+      const wanted = location.state?.folderId;
+      if (wanted && folders.some((f) => f.id === wanted)) setSelectedFolderId(wanted);
+      else if (folders.length > 0) setSelectedFolderId(folders[0].id);
       setLoading(false);
     });
   }, []);
@@ -790,6 +794,9 @@ export default function CodeLibrary() {
                 <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedFolder.name}</div>
                 <div style={{ fontSize: 11.5, color: theme.textMuted }}>{kindLabel(selectedFolder.kind)}</div>
               </div>
+              <span onClick={() => updateFolderMeta(selectedFolder.id, { favorite: !selectedFolder.favorite })} style={{ cursor: 'pointer', display: 'flex' }}>
+                <Icon name="pin" size={15} color={selectedFolder.favorite ? theme.accentText : theme.textMuted} />
+              </span>
               <span onClick={() => deleteFolder(selectedFolder.id)} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
                 <Icon name="trash" size={15} />
               </span>

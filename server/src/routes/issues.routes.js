@@ -36,10 +36,11 @@ router.patch('/:id', async (req, res) => {
   const issue = await prisma.issue.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!issue) return res.status(404).json({ error: 'Issue not found' });
 
-  const { title, description, status, priority, project, due, waitingOn, notes } = req.body || {};
+  const { title, description, status, priority, project, due, waitingOn, notes, favorite } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || 'New issue';
   if (description !== undefined) data.description = description || null;
+  if (favorite !== undefined) data.favorite = !!favorite;
   if (status !== undefined) {
     if (typeof status !== 'string' || !status.trim()) return res.status(400).json({ error: 'Invalid status' });
     data.status = status.trim();

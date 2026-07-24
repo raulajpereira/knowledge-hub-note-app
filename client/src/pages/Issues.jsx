@@ -393,6 +393,9 @@ export default function Issues() {
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                 style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontWeight: 800, color: theme.textPrimary }}
               />
+              <span onClick={() => patch(selected.id, { favorite: !selected.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
+                <Icon name="pin" size={16} color={selected.favorite ? theme.accentText : theme.textMuted} />
+              </span>
               <button onClick={() => remove(selected.id)} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '6px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
                 {t('common.delete')}
               </button>

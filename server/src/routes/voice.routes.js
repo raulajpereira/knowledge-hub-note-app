@@ -50,10 +50,11 @@ router.patch('/:id', async (req, res) => {
   const voiceNote = await prisma.voiceNote.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!voiceNote) return res.status(404).json({ error: 'Voice note not found' });
 
-  const { title, notes } = req.body || {};
+  const { title, notes, favorite } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || voiceNote.title;
   if (notes !== undefined) data.notes = notes;
+  if (favorite !== undefined) data.favorite = !!favorite;
 
   const updated = await prisma.voiceNote.update({ where: { id: voiceNote.id }, data });
   res.json({ voiceNote: updated });

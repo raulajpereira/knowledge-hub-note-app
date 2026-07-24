@@ -212,6 +212,9 @@ export default function Artifacts() {
                 </div>
               ))}
             </div>
+            <span onClick={() => patch({ favorite: !selected.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
+              <Icon name="pin" size={17} color={selected.favorite ? theme.accentText : theme.textMuted} />
+            </span>
             <button onClick={remove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
               {t('common.delete')}
             </button>

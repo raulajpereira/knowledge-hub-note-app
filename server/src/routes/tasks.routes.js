@@ -36,9 +36,10 @@ router.patch('/:id', async (req, res) => {
   const task = await prisma.task.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  const { title, done, status, priority, due, project, notes } = req.body || {};
+  const { title, done, status, priority, due, project, notes, favorite } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || 'New task';
+  if (favorite !== undefined) data.favorite = !!favorite;
   if (done !== undefined) {
     data.done = !!done;
     data.status = data.done ? 'done' : 'todo';

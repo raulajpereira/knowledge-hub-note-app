@@ -117,6 +117,7 @@ model Task {
   due       String?
   project   String?
   notes     String?  @db.Text
+  favorite  Boolean  @default(false)
   deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -147,6 +148,7 @@ model VoiceNote {
   audioUrl  String
   duration  Int      @default(0)
   notes     String?  @db.Text
+  favorite  Boolean  @default(false)
   deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -182,6 +184,7 @@ model Issue {
   due         String?
   project     String?
   notes       String?   @db.Text
+  favorite    Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -230,6 +233,7 @@ model Artifact {
   description String?  @db.Text
   html        String   @db.LongText
   tags        Json?
+  favorite    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -266,6 +270,7 @@ model CodeFolder {
   kind        String   @default("program") // "program" | "class" | "function_module"
   description String?  @db.Text
   tags        Json?
+  favorite    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

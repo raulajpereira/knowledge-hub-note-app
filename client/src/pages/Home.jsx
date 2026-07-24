@@ -19,6 +19,12 @@ function timeAgo(dateStr, t) {
 
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
 
+function toKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+const FAVORITE_ICONS = { note: 'doc', task: 'check', voice: 'mic', issue: 'archive', artifact: 'code', codeFolder: 'folder' };
+
 export default function Home() {
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -26,15 +32,71 @@ export default function Home() {
   const { refresh: refreshCounts } = useCounts();
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [voiceNotes, setVoiceNotes] = useState([]);
+  const [issues, setIssues] = useState([]);
+  const [artifacts, setArtifacts] = useState([]);
+  const [codeFolders, setCodeFolders] = useState([]);
+  const [sapNews, setSapNews] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadTasks = () => api.listTasks().then(({ tasks }) => setTasks(tasks));
 
   useEffect(() => {
-    Promise.all([api.listNotes(), loadTasks()])
-      .then(([{ notes }]) => setNotes(notes))
+    Promise.all([
+      api.listNotes(),
+      loadTasks(),
+      api.listVoiceNotes(),
+      api.listIssues(),
+      api.listArtifacts(),
+      api.listCodeFolders(),
+      api.getSapNews(),
+    ])
+      .then(([{ notes }, , { voiceNotes }, { issues }, { artifacts }, { folders }, { items }]) => {
+        setNotes(notes);
+        setVoiceNotes(voiceNotes);
+        setIssues(issues);
+        setArtifacts(artifacts);
+        setCodeFolders(folders);
+        setSapNews(items);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const favorites = [
+    ...notes.filter((n) => n.pinned).map((n) => ({ id: n.id, type: 'note', title: n.title })),
+    ...tasks.filter((x) => x.favorite).map((x) => ({ id: x.id, type: 'task', title: x.title })),
+    ...voiceNotes.filter((v) => v.favorite).map((v) => ({ id: v.id, type: 'voice', title: v.title })),
+    ...issues.filter((i) => i.favorite).map((i) => ({ id: i.id, type: 'issue', title: i.title })),
+    ...artifacts.filter((a) => a.favorite).map((a) => ({ id: a.id, type: 'artifact', title: a.title })),
+    ...codeFolders.filter((f) => f.favorite).map((f) => ({ id: f.id, type: 'codeFolder', title: f.name })),
+  ];
+
+  const goToFavorite = (fav) => {
+    const routes = {
+      note: ['/notes', { noteId: fav.id }],
+      task: ['/tasks', { taskId: fav.id }],
+      voice: ['/voice', { voiceId: fav.id }],
+      issue: ['/issues', { issueId: fav.id }],
+      artifact: ['/artifacts', { artifactId: fav.id }],
+      codeFolder: ['/code-library', { folderId: fav.id }],
+    };
+    const [path, state] = routes[fav.type];
+    navigate(path, { state });
+  };
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const notesThisWeek = notes.filter((n) => new Date(n.createdAt) >= weekAgo).length;
+  const tasksCompletedThisWeek = tasks.filter((x) => x.done && new Date(x.updatedAt) >= weekAgo).length;
+
+  const todayKey = toKey(new Date());
+  const in7Key = toKey(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const agenda = [
+    ...tasks.filter((x) => x.due && !x.done).map((x) => ({ id: x.id, type: 'task', title: x.title, due: x.due })),
+    ...issues.filter((i) => i.due).map((i) => ({ id: i.id, type: 'issue', title: i.title, due: i.due })),
+  ]
+    .filter((item) => item.due >= todayKey && item.due <= in7Key)
+    .sort((a, b) => a.due.localeCompare(b.due))
+    .slice(0, 6);
 
   const toggleTaskDone = async (e, task) => {
     e.stopPropagation();
@@ -207,6 +269,91 @@ export default function Home() {
                   </div>
                 );
               })}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('home.favorites')}</div>
+          <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
+            {!loading && favorites.length === 0 && (
+              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.noFavoritesYet')}</div>
+            )}
+            {favorites.slice(0, 8).map((fav) => (
+              <div
+                key={`${fav.type}-${fav.id}`}
+                onClick={() => goToFavorite(fav)}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name={FAVORITE_ICONS[fav.type]} size={14} color={theme.accentText} />
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fav.title}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('home.weeklySummary')}</div>
+          <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1, textAlign: 'center', background: theme.subtleBg, borderRadius: 10, padding: '12px 8px' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: theme.accentText }}>{notesThisWeek}</div>
+                <div style={{ fontSize: 11.5, color: theme.textMuted, marginTop: 2 }}>{t('home.notesCreatedThisWeek', { n: notesThisWeek })}</div>
+              </div>
+              <div style={{ flex: 1, textAlign: 'center', background: theme.subtleBg, borderRadius: 10, padding: '12px 8px' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: theme.accentText }}>{tasksCompletedThisWeek}</div>
+                <div style={{ fontSize: 11.5, color: theme.textMuted, marginTop: 2 }}>{t('home.tasksCompletedThisWeek', { n: tasksCompletedThisWeek })}</div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+                {t('home.upcomingAgenda')}
+              </div>
+              {agenda.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('home.noUpcoming')}</div>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {agenda.map((item) => (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    onClick={() => navigate(item.type === 'task' ? '/tasks' : '/issues', { state: item.type === 'task' ? { taskId: item.id } : { issueId: item.id } })}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                  >
+                    <Icon name={item.type === 'task' ? 'check' : 'archive'} size={13} color={theme.textMuted} />
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+                    <div style={{ fontSize: 11.5, color: theme.textMuted, flexShrink: 0 }}>{item.due}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.sapNewsTeaser')}</div>
+            <a onClick={() => navigate('/sap-news')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
+              {t('home.seeAll')}
+            </a>
+          </div>
+          <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
+            {!loading && sapNews.length === 0 && (
+              <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.noSapNewsYet')}</div>
+            )}
+            {sapNews.slice(0, 3).map((item) => (
+              <div
+                key={item.id}
+                onClick={() => navigate('/sap-news')}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="news" size={14} color={theme.accentText} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+                  <div style={{ fontSize: 11.5, color: theme.textMuted }}>{item.source}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
