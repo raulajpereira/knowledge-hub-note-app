@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
@@ -19,6 +20,7 @@ function timeAgo(dateStr, t) {
 export default function SapNews() {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [saved, setSaved] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,13 @@ export default function SapNews() {
     _savedRecord: s,
   }));
   const visibleItems = tab === 'saved' ? savedCards : items;
+
+  useEffect(() => {
+    if (loading || !location.state?.newsId) return;
+    const found = items.find((i) => i.id === location.state.newsId) || savedCards.find((i) => i.id === location.state.newsId);
+    if (found) openPopup(found);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, location.state]);
 
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 

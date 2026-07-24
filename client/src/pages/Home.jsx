@@ -342,7 +342,7 @@ export default function Home() {
             {sapNews.slice(0, 3).map((item) => (
               <div
                 key={item.id}
-                onClick={() => navigate('/sap-news')}
+                onClick={() => navigate('/sap-news', { state: { newsId: item.id } })}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
               >
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
