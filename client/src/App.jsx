@@ -23,6 +23,7 @@ import Calendar from './pages/Calendar.jsx';
 import SapNews from './pages/SapNews.jsx';
 import CodeLibrary from './pages/CodeLibrary.jsx';
 import Graph from './pages/Graph.jsx';
+import SharedNote from './pages/SharedNote.jsx';
 
 function FullScreenLoader() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/s/:token" element={<SharedNote />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -68,6 +70,7 @@ export default function App() {
           <CountsProvider>
             <AgentsProvider>
               <Routes>
+                <Route path="/s/:token" element={<SharedNote />} />
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<Home />} />
                   <Route path="/notes" element={<Notes />} />

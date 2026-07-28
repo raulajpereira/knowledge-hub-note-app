@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
-import { searchWorkspace } from '../lib/workspaceSearch.js';
+import { searchWorkspace, getResurfacedItems } from '../lib/workspaceSearch.js';
 
 const ENTITY_TYPES = new Set(['note', 'issue', 'task', 'code']);
 
@@ -126,6 +126,52 @@ router.get('/suggestions', async (req, res) => {
   const filtered = results.filter((r) => !exclude.has(`${r.type}:${r.id}`)).slice(0, take);
 
   res.json({ suggestions: filtered });
+});
+
+// Every other item's title/name, for verbatim substring matching against a
+// note's text — separate from `fetchEntities` because that decorates issue/
+// task titles with "[status]" (never appears literally in prose) and this
+// needs the raw string that would actually show up if someone typed it.
+async function allTitledEntities(effectiveUserId) {
+  const [notes, issues, tasks, code] = await Promise.all([
+    prisma.note.findMany({ where: { userId: effectiveUserId, deletedAt: null }, select: { id: true, title: true } }),
+    prisma.issue.findMany({ where: { userId: effectiveUserId }, select: { id: true, title: true, status: true } }),
+    prisma.task.findMany({ where: { userId: effectiveUserId, deletedAt: null }, select: { id: true, title: true, status: true } }),
+    prisma.codeItem.findMany({ where: { userId: effectiveUserId }, select: { id: true, name: true, folderId: true, folder: { select: { name: true } } } }),
+  ]);
+  return [
+    ...notes.map((n) => ({ type: 'note', id: n.id, matchText: n.title, title: n.title })),
+    ...issues.map((i) => ({ type: 'issue', id: i.id, matchText: i.title, title: `${i.title} [${i.status}]` })),
+    ...tasks.map((tk) => ({ type: 'task', id: tk.id, matchText: tk.title, title: `${tk.title} [${tk.status}]` })),
+    ...code.map((c) => ({ type: 'code', id: c.id, folderId: c.folderId, matchText: c.name, title: c.folder?.name ? `${c.name} (${c.folder.name})` : c.name })),
+  ];
+}
+
+router.get('/mentions', async (req, res) => {
+  const { type, id } = req.query;
+  if (!ENTITY_TYPES.has(type) || !id) return res.status(400).json({ error: 'type and id are required' });
+
+  const queryText = await entityQueryText(req.effectiveUserId, type, id);
+  if (queryText === null) return res.status(404).json({ error: 'Entity not found' });
+  const haystack = queryText.toLowerCase();
+
+  const [outgoing, incoming] = await Promise.all([
+    prisma.link.findMany({ where: { userId: req.effectiveUserId, fromType: type, fromId: id }, select: { toType: true, toId: true } }),
+    prisma.link.findMany({ where: { userId: req.effectiveUserId, toType: type, toId: id }, select: { fromType: true, fromId: true } }),
+  ]);
+  const exclude = new Set([`${type}:${id}`, ...outgoing.map((l) => `${l.toType}:${l.toId}`), ...incoming.map((l) => `${l.fromType}:${l.fromId}`)]);
+
+  const all = await allTitledEntities(req.effectiveUserId);
+  const mentions = all.filter(
+    (e) => e.matchText?.trim().length >= 4 && !exclude.has(`${e.type}:${e.id}`) && haystack.includes(e.matchText.toLowerCase())
+  );
+
+  res.json({ mentions: mentions.slice(0, 5).map(({ matchText, ...rest }) => rest) });
+});
+
+router.get('/resurface', async (req, res) => {
+  const items = await getResurfacedItems(req.effectiveUserId);
+  res.json({ items });
 });
 
 router.post('/', async (req, res) => {

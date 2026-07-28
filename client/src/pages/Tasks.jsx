@@ -6,6 +6,8 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import TemplateMenu from '../components/TemplateMenu.jsx';
+import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 
@@ -115,6 +117,20 @@ export default function Tasks() {
     refreshCounts();
   };
 
+  const addTaskFromTemplate = async (tpl) => {
+    const { task } = await api.createTask({
+      title: tpl.data.title || tpl.name,
+      priority: tpl.data.priority,
+      notes: tpl.data.notes,
+      project: tpl.data.project,
+      recurrence: tpl.data.recurrence,
+    });
+    setTasks((prev) => [task, ...prev]);
+    setSelectedId(task.id);
+    setFilter('active');
+    refreshCounts();
+  };
+
   const patch = async (id, payload) => {
     const { task, nextTask } = await api.updateTask(id, payload);
     setTasks((prev) => {
@@ -204,6 +220,7 @@ export default function Tasks() {
             <Icon name="check" size={16} />
           </button>
         )}
+        <TemplateMenu entityType="task" onUse={addTaskFromTemplate} />
         <button onClick={addTask} title={t('tasks.newTask')} style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}>
           <Icon name="plus" size={16} color="#fff" />
         </button>
@@ -383,6 +400,11 @@ export default function Tasks() {
               {t('common.delete')}
             </button>
           </div>
+
+          <SaveTemplateButton
+            entityType="task"
+            getData={() => ({ title: selected.title, priority: selected.priority, notes: selected.notes, project: selected.project, recurrence: selected.recurrence })}
+          />
 
           <button
             onClick={() => patch(selected.id, { done: !selected.done })}

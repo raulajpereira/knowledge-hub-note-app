@@ -605,6 +605,9 @@ export default function CodeLibrary() {
   const [linkSearch, setLinkSearch] = useState('');
   const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
   const [dragOverFolderId, setDragOverFolderId] = useState(null);
+  const [documenting, setDocumenting] = useState(false);
+  const [docSuggestion, setDocSuggestion] = useState('');
+  const [docError, setDocError] = useState('');
   const newItemMenuRef = useRef(null);
   const linkMenuRef = useRef(null);
   useClickOutside(newItemMenuRef, () => setNewItemMenuOpen(false), newItemMenuOpen);
@@ -618,6 +621,11 @@ export default function CodeLibrary() {
       return next;
     });
   };
+
+  useEffect(() => {
+    setDocSuggestion('');
+    setDocError('');
+  }, [selectedItemId]);
 
   useEffect(() => {
     api.listCodeFolders().then(({ folders }) => {
@@ -772,6 +780,29 @@ export default function CodeLibrary() {
     if (!selectedItem) return;
     const { item } = await api.updateCodeItem(selectedItem.id, patch);
     setItems((prev) => prev.map((i) => (i.id === item.id ? item : i)));
+  };
+
+  const documentWithAi = async () => {
+    if (!selectedItem) return;
+    setDocumenting(true);
+    setDocError('');
+    setDocSuggestion('');
+    try {
+      const { header } = await api.documentCodeItem(selectedItem.id);
+      setDocSuggestion(header);
+    } catch (err) {
+      setDocError(err.message || t('codeLibrary.aiDocFailed'));
+    } finally {
+      setDocumenting(false);
+    }
+  };
+
+  const applyDocSuggestion = async () => {
+    if (!selectedItem || !docSuggestion) return;
+    const newContent = `${docSuggestion}\n\n${selectedItem.content || ''}`;
+    setItems((prev) => prev.map((i) => (i.id === selectedItem.id ? { ...i, content: newContent } : i)));
+    await updateItem({ content: newContent });
+    setDocSuggestion('');
   };
 
   const deleteItem = async (id) => {
@@ -1086,16 +1117,51 @@ export default function CodeLibrary() {
             </div>
 
             {selectedItem.type === 'snippet' && (
-              <CodeBlock
-                value={selectedItem.content || ''}
-                language={selectedItem.language || 'abap'}
-                onChange={(value) => {
-                  setItems((prev) => prev.map((i) => (i.id === selectedItem.id ? { ...i, content: value } : i)));
-                  updateItem({ content: value });
-                }}
-                onLanguageChange={(language) => updateItem({ language })}
-                onDelete={() => deleteItem(selectedItem.id)}
-              />
+              <>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={documentWithAi}
+                    disabled={documenting || !selectedItem.content?.trim()}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.subtleBg, border: 'none', color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: documenting || !selectedItem.content?.trim() ? 0.5 : 1 }}
+                  >
+                    <Icon name="sparkle" size={12} color={theme.accentText} />
+                    {documenting ? t('codeLibrary.aiDocumenting') : t('codeLibrary.aiDocument')}
+                  </button>
+                </div>
+                {docError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)' }}>{docError}</div>}
+                {docSuggestion && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {t('codeLibrary.aiDocPreview')}
+                    </div>
+                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5, color: theme.textPrimary }}>{docSuggestion}</pre>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setDocSuggestion('')}
+                        style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        {t('common.cancel')}
+                      </button>
+                      <button
+                        onClick={applyDocSuggestion}
+                        style={{ flex: 1, background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        {t('codeLibrary.aiDocInsert')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <CodeBlock
+                  value={selectedItem.content || ''}
+                  language={selectedItem.language || 'abap'}
+                  onChange={(value) => {
+                    setItems((prev) => prev.map((i) => (i.id === selectedItem.id ? { ...i, content: value } : i)));
+                    updateItem({ content: value });
+                  }}
+                  onLanguageChange={(language) => updateItem({ language })}
+                  onDelete={() => deleteItem(selectedItem.id)}
+                />
+              </>
             )}
 
             {selectedItem.type === 'characteristics' && selectedFolder?.kind === 'program' && (

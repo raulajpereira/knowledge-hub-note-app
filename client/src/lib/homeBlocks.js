@@ -3,7 +3,7 @@
 // list), a block here can be dragged into either column and to any position
 // within it, so the user controls both the order and how many blocks sit in
 // each column (e.g. 3 left / 4 right instead of a fixed split).
-export const HOME_BLOCKS = ['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage'];
+export const HOME_BLOCKS = ['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'resurfacing', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage'];
 
 // Only used to place a block the first time it's ever seen (brand new
 // account, or a block added to the app after the user last saved a layout).
@@ -13,6 +13,7 @@ const DEFAULT_COLUMN = {
   issuesByStatus: 'left',
   recentNotes: 'right',
   favorites: 'right',
+  resurfacing: 'right',
   weeklySummary: 'right',
   sapNewsTeaser: 'right',
   vpsDiskUsage: 'right',

@@ -50,6 +50,7 @@ model User {
   codeFolders     CodeFolder[]
   codeItems       CodeItem[]
   links           Link[]
+  templates       Template[]
   inviteCodes     InviteCode[] @relation("InviteCodeCreator")
   usedInviteCode  InviteCode?  @relation("InviteCodeUser")
   teamOwner       User?    @relation("TeamMembers", fields: [teamOwnerId], references: [id], onDelete: SetNull)
@@ -126,6 +127,7 @@ model Note {
   tags      Json?
   links     Json?
   pinned    Boolean   @default(false)
+  shareToken String?  @unique // set = publicly readable at /s/:shareToken, no auth; null = private
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -397,4 +399,21 @@ model Link {
   @@index([userId, fromType, fromId])
   @@index([userId, toType, toId])
   @@map("links")
+}
+
+// A saved starting point for a new Note/Task/Issue — `data` holds whatever
+// fields that entity type's create form accepts (e.g. {title, blocks} for a
+// note), applied as-is when the user picks the template.
+model Template {
+  id         String   @id @default(uuid())
+  userId     String
+  entityType String // "note" | "task" | "issue"
+  name       String
+  data       Json
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, entityType])
+  @@map("templates")
 }

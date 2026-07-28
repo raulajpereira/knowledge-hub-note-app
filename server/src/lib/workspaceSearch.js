@@ -105,6 +105,60 @@ export async function searchWorkspace(effectiveUserId, query, limit = 6) {
   }));
 }
 
+// Resurfacing: look at whatever the user most recently touched, then find
+// older items (untouched for a while) that share keywords with it — a
+// lightweight "you might also want to look at" without needing embeddings.
+const STALE_DAYS = 3;
+
+export async function getResurfacedItems(effectiveUserId, limit = 3) {
+  const [notes, issues, tasks] = await Promise.all([
+    prisma.note.findMany({
+      where: { userId: effectiveUserId, deletedAt: null },
+      select: { id: true, title: true, content: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    }),
+    prisma.issue.findMany({
+      where: { userId: effectiveUserId },
+      select: { id: true, title: true, description: true, notes: true, status: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    }),
+    prisma.task.findMany({
+      where: { userId: effectiveUserId, deletedAt: null },
+      select: { id: true, title: true, notes: true, status: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    }),
+  ]);
+
+  const all = [
+    ...notes.map((n) => ({ type: 'note', id: n.id, title: n.title, body: n.content || '', updatedAt: n.updatedAt })),
+    ...issues.map((i) => ({ type: 'issue', id: i.id, title: `${i.title} [${i.status}]`, body: `${i.description || ''} ${i.notes || ''}`, updatedAt: i.updatedAt })),
+    ...tasks.map((tk) => ({ type: 'task', id: tk.id, title: `${tk.title} [${tk.status}]`, body: tk.notes || '', updatedAt: tk.updatedAt })),
+  ].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+  const anchor = all[0];
+  if (!anchor) return [];
+
+  const keywords = extractKeywords(`${anchor.title} ${anchor.body}`);
+  if (keywords.length === 0) return [];
+
+  const staleBefore = Date.now() - STALE_DAYS * 24 * 60 * 60 * 1000;
+  const candidates = all
+    .filter((item) => !(item.type === anchor.type && item.id === anchor.id) && new Date(item.updatedAt).getTime() < staleBefore)
+    .map((item) => ({ ...item, score: scoreText(item.title, keywords, 3) + scoreText(item.body, keywords, 1) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return candidates.slice(0, limit).map((c) => ({
+    type: c.type,
+    id: c.id,
+    title: c.title,
+    snippet: snippetAround(c.body, keywords, 160),
+  }));
+}
+
 const TYPE_LABEL = { note: 'Nota', code: 'Código', issue: 'Issue', task: 'Tarefa' };
 
 export function buildWorkspaceContext(results) {

@@ -98,6 +98,7 @@ export default function Home() {
   const [artifacts, setArtifacts] = useState([]);
   const [codeFolders, setCodeFolders] = useState([]);
   const [sapNews, setSapNews] = useState([]);
+  const [resurfacedItems, setResurfacedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [vpsDisk, setVpsDisk] = useState(null);
   const [columns, setColumns] = useState(() => resolveHomeLayout(null));
@@ -181,6 +182,7 @@ export default function Home() {
         setSapNews(items);
       })
       .finally(() => setLoading(false));
+    api.getResurfacedItems().then(({ items }) => setResurfacedItems(items)).catch(() => setResurfacedItems([]));
   }, []);
 
   const favorites = [
@@ -445,6 +447,35 @@ export default function Home() {
                 <Icon name={FAVORITE_ICONS[fav.type]} size={14} color={theme.accentText} />
               </div>
               <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fav.title}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+
+    resurfacing: (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+          <Icon name="sparkle" size={14} color={theme.accentText} />
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.resurfacing')}</div>
+        </div>
+        <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
+          {!loading && resurfacedItems.length === 0 && (
+            <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.resurfacingEmpty')}</div>
+          )}
+          {resurfacedItems.map((item) => (
+            <div
+              key={`${item.type}-${item.id}`}
+              onClick={() => goToFavorite(item)}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
+            >
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name={FAVORITE_ICONS[item.type] || 'doc'} size={14} color={theme.accentText} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+                <div style={{ fontSize: 12, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.snippet}</div>
+              </div>
             </div>
           ))}
         </div>

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { callProvider } from '../lib/aiProvider.js';
 
 const FOLDER_KINDS = ['program', 'class', 'function_module', 'other'];
 const ITEM_TYPES = ['snippet', 'characteristics', 'table', 'data_element', 'domain'];
@@ -146,6 +147,29 @@ router.patch('/items/:id', async (req, res) => {
 
   const updated = await prisma.codeItem.update({ where: { id: item.id }, data });
   res.json({ item: updated });
+});
+
+const DOC_SYSTEM_PROMPT =
+  'Escreve um cabeçalho de documentação no estilo ABAP para o código fornecido, como um bloco de comentário ' +
+  '(linhas a começar por "*"), incluindo: um separador, "Descrição:" com um resumo conciso do que o código faz, ' +
+  'e se fizer sentido "Parâmetros:" ou "Notas:". Responde APENAS com o bloco de comentário ABAP, sem texto à volta, ' +
+  'sem blocos de código markdown.';
+
+router.post('/items/:id/document', async (req, res) => {
+  const item = await prisma.codeItem.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!item) return res.status(404).json({ error: 'Item not found' });
+  if (item.type !== 'snippet') return res.status(400).json({ error: 'Só é possível documentar snippets de código.' });
+  if (!item.content?.trim()) return res.status(400).json({ error: 'Este item ainda não tem código.' });
+
+  const agent = await prisma.agent.findFirst({ where: { userId: req.effectiveUserId, active: true } });
+  if (!agent) return res.status(400).json({ error: 'Configura um agente de IA ativo em Definições para usar esta funcionalidade.' });
+
+  try {
+    const header = await callProvider(agent, [{ role: 'user', content: item.content.slice(0, 6000) }], { systemPrompt: DOC_SYSTEM_PROMPT, maxTokens: 500 });
+    res.json({ header: header.trim() });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Não foi possível documentar este código.' });
+  }
 });
 
 router.delete('/items/:id', async (req, res) => {

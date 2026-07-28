@@ -1,6 +1,17 @@
 const CACHE_NAME = 'kh-shell-v1';
 
+// A service worker doesn't control the page that triggered its own
+// install/activate — that page's initial navigation request already
+// completed before the worker existed, so it's never seen by the fetch
+// handler below. Without this, the shell would only get cached starting
+// from the user's *second* visit. Precaching '/' here explicitly closes
+// that gap so offline works from the first visit onward.
 self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      fetch('/').then((res) => (res.ok ? cache.put('/', res) : null)).catch(() => {})
+    )
+  );
   self.skipWaiting();
 });
 

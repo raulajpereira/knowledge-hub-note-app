@@ -6,6 +6,7 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { backdropClose } from '../lib/backdropClose.js';
 
 function formatDuration(sec) {
   const m = Math.floor(sec / 60);
@@ -38,6 +39,12 @@ export default function Voice() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [titleDraft, setTitleDraft] = useState('');
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState('');
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestError, setSuggestError] = useState('');
+  const [suggestedTasks, setSuggestedTasks] = useState(null);
+  const [creatingTasks, setCreatingTasks] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -72,6 +79,9 @@ export default function Voice() {
 
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
+    setTranscribeError('');
+    setSuggestError('');
+    setSuggestedTasks(null);
   }, [selected?.id]);
 
   const commitTitle = async () => {
@@ -118,6 +128,48 @@ export default function Voice() {
   const patch = async (id, payload) => {
     const { voiceNote } = await api.updateVoiceNote(id, payload);
     setVoiceNotes((prev) => prev.map((v) => (v.id === id ? voiceNote : v)));
+  };
+
+  const transcribe = async () => {
+    if (!selected) return;
+    setTranscribing(true);
+    setTranscribeError('');
+    try {
+      const { text } = await api.transcribeVoiceNote(selected.id);
+      const merged = selected.notes?.trim() ? `${selected.notes}\n\n${text}` : text;
+      await patch(selected.id, { notes: merged });
+    } catch (err) {
+      setTranscribeError(err.message || t('voice.transcribeFailed'));
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const suggestTasks = async () => {
+    if (!selected) return;
+    setSuggesting(true);
+    setSuggestError('');
+    try {
+      const { tasks } = await api.suggestTasksFromVoiceNote(selected.id);
+      setSuggestedTasks(tasks.map((task) => ({ ...task, include: true })));
+    } catch (err) {
+      setSuggestError(err.message || t('voice.suggestFailed'));
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const createSuggestedTasks = async () => {
+    const toCreate = suggestedTasks.filter((task) => task.include && task.title.trim());
+    if (toCreate.length === 0) return setSuggestedTasks(null);
+    setCreatingTasks(true);
+    try {
+      await Promise.all(toCreate.map((task) => api.createTask({ title: task.title.trim(), due: task.due || undefined })));
+      refreshCounts();
+      setSuggestedTasks(null);
+    } finally {
+      setCreatingTasks(false);
+    }
   };
 
   const remove = async () => {
@@ -201,6 +253,14 @@ export default function Voice() {
               <span onClick={() => patch(selected.id, { favorite: !selected.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
                 <Icon name="pin" size={17} color={selected.favorite ? theme.accentText : theme.textMuted} />
               </span>
+              <button
+                onClick={transcribe}
+                disabled={transcribing}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.subtleBg, border: 'none', color: theme.textPrimary, borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0, opacity: transcribing ? 0.6 : 1 }}
+              >
+                <Icon name="sparkle" size={13} color={theme.accentText} />
+                {transcribing ? t('voice.transcribing') : t('voice.transcribe')}
+              </button>
               <button onClick={remove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
                 {t('common.delete')}
               </button>
@@ -208,9 +268,20 @@ export default function Voice() {
             <div style={{ fontSize: 12.5, color: theme.textMuted }}>
               {new Date(selected.createdAt).toLocaleString()} · {formatDuration(selected.duration)}
             </div>
+            {transcribeError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)' }}>{transcribeError}</div>}
             <audio controls src={selected.audioUrl} style={{ width: '100%' }} />
             <div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('voice.notes')}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('voice.notes')}</div>
+                <button
+                  onClick={suggestTasks}
+                  disabled={suggesting || !selected.notes?.trim()}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', color: theme.accentText, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', opacity: suggesting || !selected.notes?.trim() ? 0.5 : 1, padding: 0 }}
+                >
+                  <Icon name="sparkle" size={12} color={theme.accentText} />
+                  {suggesting ? t('voice.suggesting') : t('voice.suggestTasks')}
+                </button>
+              </div>
               <textarea
                 value={selected.notes || ''}
                 onChange={(e) => patch(selected.id, { notes: e.target.value })}
@@ -218,6 +289,7 @@ export default function Voice() {
                 placeholder={t('voice.notesPlaceholder')}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, fontSize: 13.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
               />
+              {suggestError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)', marginTop: 6 }}>{suggestError}</div>}
             </div>
           </div>
         ) : (
@@ -226,6 +298,71 @@ export default function Voice() {
           </div>
         )}
       </div>
+
+      {suggestedTasks && (
+        <div
+          onMouseDown={backdropClose(() => setSuggestedTasks(null))}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 460, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('voice.suggestedTasksTitle')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted, marginTop: -8 }}>{t('voice.suggestedTasksDesc')}</div>
+
+            {suggestedTasks.length === 0 && (
+              <div style={{ fontSize: 13, color: theme.textMuted, padding: '8px 0' }}>{t('voice.noTasksFound')}</div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {suggestedTasks.map((task, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={task.include}
+                    onChange={(e) => setSuggestedTasks((prev) => prev.map((t2, i2) => (i2 === i ? { ...t2, include: e.target.checked } : t2)))}
+                    style={{ flexShrink: 0, width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <input
+                    value={task.title}
+                    onChange={(e) => setSuggestedTasks((prev) => prev.map((t2, i2) => (i2 === i ? { ...t2, title: e.target.value } : t2)))}
+                    style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+                  />
+                  <input
+                    type="date"
+                    value={task.due || ''}
+                    onChange={(e) => setSuggestedTasks((prev) => prev.map((t2, i2) => (i2 === i ? { ...t2, due: e.target.value } : t2)))}
+                    style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 8px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', flexShrink: 0 }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button
+                onClick={() => setSuggestedTasks(null)}
+                style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={createSuggestedTasks}
+                disabled={creatingTasks || suggestedTasks.filter((t2) => t2.include).length === 0}
+                style={{
+                  flex: 1, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 14px', fontWeight: 700, fontSize: 13,
+                  cursor: 'pointer', opacity: creatingTasks || suggestedTasks.filter((t2) => t2.include).length === 0 ? 0.5 : 1,
+                }}
+              >
+                {creatingTasks ? t('voice.creatingTasks') : t('voice.createTasks')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

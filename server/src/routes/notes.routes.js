@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { callProvider } from '../lib/aiProvider.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const notesImageDir = path.join(__dirname, '..', '..', 'uploads', 'notes');
@@ -154,6 +155,63 @@ router.patch('/:id', async (req, res) => {
 
   const updated = await prisma.note.update({ where: { id: note.id }, data });
   res.json({ note: updated });
+});
+
+function stripHtml(html) {
+  return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+router.post('/:id/suggest-tags', async (req, res) => {
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+
+  const agent = await prisma.agent.findFirst({ where: { userId: req.effectiveUserId, active: true } });
+  if (!agent) return res.status(400).json({ error: 'Configura um agente de IA ativo em Definições para usar esta funcionalidade.' });
+
+  const plainText = stripHtml(note.content).slice(0, 4000);
+  if (!plainText && !note.title.trim()) return res.status(400).json({ error: 'Esta nota ainda não tem conteúdo suficiente.' });
+
+  const [existingTags, existingFolders] = await Promise.all([
+    prisma.tag.findMany({ where: { userId: req.effectiveUserId }, select: { name: true } }),
+    prisma.folder.findMany({ where: { userId: req.effectiveUserId }, select: { name: true } }),
+  ]);
+
+  const systemPrompt =
+    'Sugere etiquetas e uma pasta para organizar esta nota. ' +
+    `Etiquetas existentes (reutiliza se fizer sentido, senão sugere novas curtas): ${existingTags.map((x) => x.name).join(', ') || '(nenhuma)'}. ` +
+    `Pastas existentes (escolhe a mais adequada, ou null se nenhuma servir): ${existingFolders.map((x) => x.name).join(', ') || '(nenhuma)'}. ` +
+    'Responde APENAS com JSON válido, sem texto à volta, no formato: {"tags": ["...", "..."], "folder": "nome exato de uma pasta existente ou null"}. ' +
+    'No máximo 4 etiquetas.';
+
+  try {
+    const reply = await callProvider(agent, [{ role: 'user', content: `Título: ${note.title}\n\n${plainText}` }], { systemPrompt, maxTokens: 300 });
+    const match = reply.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : reply);
+    const suggestedTags = Array.isArray(parsed.tags) ? parsed.tags.filter((x) => typeof x === 'string' && x.trim()).slice(0, 4) : [];
+    const folderName = typeof parsed.folder === 'string' ? parsed.folder.trim() : null;
+    const matchedFolder = folderName ? existingFolders.find((f) => f.name.toLowerCase() === folderName.toLowerCase()) : null;
+    res.json({ tags: suggestedTags, folder: matchedFolder ? matchedFolder.name : null });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Não foi possível sugerir etiquetas.' });
+  }
+});
+
+// The token is high-entropy (32 random bytes) and unguessable by design —
+// knowing it is the only thing that grants read access, so it must never be
+// derived from anything predictable (note id, title, timestamp).
+router.post('/:id/share', async (req, res) => {
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  const shareToken = note.shareToken || crypto.randomBytes(32).toString('hex');
+  const updated = await prisma.note.update({ where: { id: note.id }, data: { shareToken } });
+  res.json({ shareToken: updated.shareToken });
+});
+
+router.post('/:id/unshare', async (req, res) => {
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  await prisma.note.update({ where: { id: note.id }, data: { shareToken: null } });
+  res.status(204).end();
 });
 
 router.get('/:id/versions', async (req, res) => {

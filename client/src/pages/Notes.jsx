@@ -6,6 +6,9 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { htmlToMarkdown, markdownToHtml } from '../lib/markdown.js';
+import TemplateMenu from '../components/TemplateMenu.jsx';
+import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
@@ -194,6 +197,9 @@ export default function Notes() {
   const [editingFolderId, setEditingFolderId] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [aiSuggesting, setAiSuggesting] = useState(false);
+  const [aiSuggestError, setAiSuggestError] = useState('');
+  const [aiSuggestion, setAiSuggestion] = useState(null);
   const [newTagInput, setNewTagInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [titleDraft, setTitleDraft] = useState('');
@@ -217,6 +223,15 @@ export default function Notes() {
   const [bulkTagInput, setBulkTagInput] = useState('');
   const bulkMoveRef = useRef(null);
   useClickOutside(bulkMoveRef, () => setBulkMoveOpen(false), bulkMoveOpen);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef(null);
+  useClickOutside(exportMenuRef, () => setExportMenuOpen(false), exportMenuOpen);
+  const importInputRef = useRef(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareRef = useRef(null);
+  useClickOutside(shareRef, () => setShareOpen(false), shareOpen);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const fileInputRef = useRef(null);
 
   const load = async () => {
@@ -287,6 +302,9 @@ export default function Notes() {
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
     setHistoryOpen(false);
+    setAiSuggestion(null);
+    setAiSuggestError('');
+    setShareOpen(false);
   }, [selected?.id]);
 
   const openHistory = async () => {
@@ -331,6 +349,115 @@ export default function Notes() {
     setNotes((prev) => [note, ...prev]);
     setSelectedId(note.id);
     refreshCounts();
+  };
+
+  const addNoteFromTemplate = async (tpl) => {
+    const blocks = Array.isArray(tpl.data.blocks) && tpl.data.blocks.length ? tpl.data.blocks : [{ id: newBlockId(), type: 'text', value: '' }];
+    const { note } = await api.createNote({
+      title: tpl.data.title || tpl.name,
+      content: contentFromBlocks(blocks),
+      blocks,
+      folderId: activeFolder !== 'all' && activeFolder !== 'none' ? activeFolder : null,
+    });
+    setNotes((prev) => [note, ...prev]);
+    setSelectedId(note.id);
+    refreshCounts();
+  };
+
+  const importMarkdownFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
+    const folderId = activeFolder !== 'all' && activeFolder !== 'none' ? activeFolder : null;
+    const created = [];
+    for (const file of files) {
+      const text = await file.text();
+      const firstHeading = text.match(/^#\s+(.+)/m);
+      const title = firstHeading ? firstHeading[1].trim() : file.name.replace(/\.(md|markdown)$/i, '');
+      const html = markdownToHtml(firstHeading ? text.replace(firstHeading[0], '').trim() : text);
+      const blocks = [{ id: newBlockId(), type: 'text', value: html, format: 'html' }];
+      const { note } = await api.createNote({ title, content: contentFromBlocks(blocks), blocks, folderId });
+      created.push(note);
+    }
+    setNotes((prev) => [...created, ...prev]);
+    if (created[0]) setSelectedId(created[0].id);
+    refreshCounts();
+  };
+
+  // The editable/renderable source of truth is `blocks`, not the plain-text
+  // `content` field (which is a lossy search index derived from blocks) —
+  // export has to walk the same blocks the editor renders, or formatting
+  // and non-text block types (checklists, code) silently disappear.
+  const noteBlocksAsHtml = (note) =>
+    getBlocks(note)
+      .map((b) => {
+        if (b.type === 'checklist') {
+          const items = (b.items || []).map((it) => `<li>${it.checked ? '☑' : '☐'} ${it.text || ''}</li>`).join('');
+          return `<ul>${items}</ul>`;
+        }
+        if (b.type === 'code') return `<pre><code>${(b.value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</code></pre>`;
+        if (b.type === 'image' || b.type === 'file') return '';
+        if (b.format === 'html') return `<div>${b.value || ''}</div>`;
+        return `<p>${(b.value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`;
+      })
+      .join('\n');
+
+  const exportNoteAsMarkdown = () => {
+    if (!selected) return;
+    const md = `# ${selected.title}\n\n${htmlToMarkdown(noteBlocksAsHtml(selected))}`;
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selected.title.replace(/[^\w\-]+/g, '_') || 'note'}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const toggleShare = async () => {
+    if (!selected) return;
+    setShareLoading(true);
+    try {
+      if (selected.shareToken) {
+        await api.unshareNote(selected.id);
+        setNotes((prev) => prev.map((n) => (n.id === selected.id ? { ...n, shareToken: null } : n)));
+      } else {
+        const { shareToken } = await api.shareNote(selected.id);
+        setNotes((prev) => prev.map((n) => (n.id === selected.id ? { ...n, shareToken } : n)));
+      }
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const copyShareLink = () => {
+    if (!selected?.shareToken) return;
+    navigator.clipboard.writeText(`${window.location.origin}/s/${selected.shareToken}`);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 1500);
+  };
+
+  const exportNoteAsPdf = () => {
+    if (!selected) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`
+      <html>
+        <head>
+          <title>${selected.title}</title>
+          <style>
+            body { font-family: -apple-system, Segoe UI, sans-serif; max-width: 720px; margin: 40px auto; color: #1a1a1a; line-height: 1.6; }
+            h1 { font-size: 22px; }
+          </style>
+        </head>
+        <body>
+          <h1>${selected.title}</h1>
+          ${noteBlocksAsHtml(selected)}
+        </body>
+      </html>
+    `);
+    win.document.close();
+    win.focus();
+    win.print();
   };
 
   const patchNoteById = async (noteId, patch) => {
@@ -495,6 +622,36 @@ export default function Notes() {
   const removeTagFromNote = async (tagName) => {
     if (!selected) return;
     await patchSelected({ tags: (selected.tags || []).filter((t) => t !== tagName) });
+  };
+
+  const suggestTagsAndFolder = async () => {
+    if (!selected) return;
+    setAiSuggesting(true);
+    setAiSuggestError('');
+    setAiSuggestion(null);
+    try {
+      const { tags: suggested, folder } = await api.suggestNoteTags(selected.id);
+      const newTags = suggested.filter((name) => !(selected.tags || []).includes(name));
+      const matchedFolder = folder ? folders.find((f) => f.name === folder) : null;
+      setAiSuggestion({
+        tags: newTags.map((name) => ({ name, include: true })),
+        folder: matchedFolder && matchedFolder.id !== selected.folderId ? matchedFolder : null,
+        includeFolder: true,
+      });
+    } catch (err) {
+      setAiSuggestError(err.message || t('notes.aiSuggestFailed'));
+    } finally {
+      setAiSuggesting(false);
+    }
+  };
+
+  const applyAiSuggestion = async () => {
+    if (!aiSuggestion || !selected) return;
+    const tagsToAdd = aiSuggestion.tags.filter((tg) => tg.include).map((tg) => tg.name);
+    const nextTags = [...new Set([...(selected.tags || []), ...tagsToAdd])];
+    if (tagsToAdd.length > 0) await patchSelected({ tags: nextTags });
+    if (aiSuggestion.folder && aiSuggestion.includeFolder) await moveNoteToFolder(selected.id, aiSuggestion.folder.id);
+    setAiSuggestion(null);
   };
 
   const createAndAddTag = async () => {
@@ -891,6 +1048,22 @@ export default function Notes() {
             <Icon name="check" size={16} />
           </button>
           <button
+            onClick={() => importInputRef.current?.click()}
+            title={t('notes.importMarkdown')}
+            style={{ display: 'flex', alignItems: 'center', background: 'transparent', color: theme.textMuted, border: `1px solid ${theme.border}`, borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="external" size={16} />
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".md,.markdown"
+            multiple
+            style={{ display: 'none' }}
+            onChange={(e) => { importMarkdownFiles(e.target.files); e.target.value = ''; }}
+          />
+          <TemplateMenu entityType="note" onUse={addNoteFromTemplate} />
+          <button
             onClick={addNote}
             title={t('notes.newNoteButton')}
             style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}
@@ -1082,6 +1255,65 @@ export default function Notes() {
               <span onClick={openHistory} title={t('notes.history')} style={{ display: 'flex', cursor: 'pointer' }}>
                 <Icon name="history" size={17} color={theme.textMuted} />
               </span>
+              <div ref={shareRef} style={{ position: 'relative' }}>
+                <span onClick={() => setShareOpen((v) => !v)} title={t('notes.share')} style={{ display: 'flex', cursor: 'pointer' }}>
+                  <Icon name="link" size={17} color={selected.shareToken ? theme.accentText : theme.textMuted} />
+                </span>
+                {shareOpen && (
+                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, background: theme.dark ? 'oklch(0.22 0.02 255)' : '#fff', border: `1px solid ${theme.border}`, borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, width: 280, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 10 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700 }}>{t('notes.shareTitle')}</div>
+                    <div style={{ fontSize: 11.5, color: theme.textMuted, lineHeight: 1.5 }}>{t('notes.shareDesc')}</div>
+                    {selected.shareToken ? (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.subtleBg, borderRadius: 7, padding: '7px 9px' }}>
+                          <div style={{ flex: 1, minWidth: 0, fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: theme.textMuted }}>
+                            {`${window.location.origin}/s/${selected.shareToken}`}
+                          </div>
+                          <span onClick={copyShareLink} style={{ cursor: 'pointer', color: theme.accentText, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                            {shareCopied ? t('notes.shareCopied') : t('notes.shareCopy')}
+                          </span>
+                        </div>
+                        <button
+                          onClick={toggleShare}
+                          disabled={shareLoading}
+                          style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '7px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: shareLoading ? 0.6 : 1 }}
+                        >
+                          {t('notes.shareDisable')}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={toggleShare}
+                        disabled={shareLoading}
+                        style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: shareLoading ? 0.6 : 1 }}
+                      >
+                        {shareLoading ? t('notes.shareEnabling') : t('notes.shareEnable')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div ref={exportMenuRef} style={{ position: 'relative' }}>
+                <span onClick={() => setExportMenuOpen((v) => !v)} title={t('notes.export')} style={{ display: 'flex', cursor: 'pointer' }}>
+                  <Icon name="external" size={17} color={theme.textMuted} />
+                </span>
+                {exportMenuOpen && (
+                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, background: theme.dark ? 'oklch(0.22 0.02 255)' : '#fff', border: `1px solid ${theme.border}`, borderRadius: 10, padding: 6, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 10 }}>
+                    <div
+                      onClick={() => { exportNoteAsMarkdown(); setExportMenuOpen(false); }}
+                      style={{ padding: '8px 10px', borderRadius: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', color: theme.textPrimary }}
+                    >
+                      {t('notes.exportMarkdown')}
+                    </div>
+                    <div
+                      onClick={() => { exportNoteAsPdf(); setExportMenuOpen(false); }}
+                      style={{ padding: '8px 10px', borderRadius: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', color: theme.textPrimary }}
+                    >
+                      {t('notes.exportPdf')}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button onClick={trashSelected} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
                 {t('common.delete')}
               </button>
@@ -1147,7 +1379,72 @@ export default function Notes() {
             >
               {t('notes.addTag')}
             </span>
+            <SaveTemplateButton entityType="note" getData={() => ({ title: selected.title, blocks: getBlocks(selected) })} />
+            <span
+              onClick={suggestTagsAndFolder}
+              style={{ fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, color: theme.accentText, padding: '3px 9px', borderRadius: 6, cursor: aiSuggesting ? 'default' : 'pointer', opacity: aiSuggesting ? 0.6 : 1 }}
+            >
+              <Icon name="sparkle" size={11} color={theme.accentText} />
+              {aiSuggesting ? t('notes.aiSuggesting') : t('notes.aiSuggest')}
+            </span>
           </div>
+
+          {aiSuggestError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)' }}>{aiSuggestError}</div>}
+
+          {aiSuggestion && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {t('notes.aiSuggestionTitle')}
+              </div>
+              {aiSuggestion.tags.length === 0 && !aiSuggestion.folder && (
+                <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('notes.aiNoSuggestions')}</div>
+              )}
+              {aiSuggestion.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {aiSuggestion.tags.map((tg, i) => (
+                    <span
+                      key={tg.name}
+                      onClick={() => setAiSuggestion((prev) => ({ ...prev, tags: prev.tags.map((t2, i2) => (i2 === i ? { ...t2, include: !t2.include } : t2)) }))}
+                      style={{
+                        fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 6, cursor: 'pointer',
+                        background: tg.include ? theme.accentSoftBg : 'transparent', color: tg.include ? theme.accentText : theme.textMuted,
+                        border: `1px solid ${tg.include ? theme.accentText : theme.border}`,
+                      }}
+                    >
+                      {tg.include ? '✓ ' : ''}{tg.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {aiSuggestion.folder && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={aiSuggestion.includeFolder}
+                    onChange={(e) => setAiSuggestion((prev) => ({ ...prev, includeFolder: e.target.checked }))}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  {t('notes.aiMoveToFolder', { name: aiSuggestion.folder.name })}
+                </label>
+              )}
+              {(aiSuggestion.tags.length > 0 || aiSuggestion.folder) && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setAiSuggestion(null)}
+                    style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    onClick={applyAiSuggestion}
+                    style={{ flex: 1, background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {t('common.apply')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {tagPickerOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 10 }}>

@@ -19,13 +19,14 @@ function RoleBadge({ role, theme, t }) {
   return (
     <span
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, letterSpacing: '0.04em',
-        textTransform: 'uppercase', flexShrink: 0, borderRadius: 5, padding: '2px 7px',
+        display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 800, letterSpacing: '0.04em',
+        textTransform: 'uppercase', flexShrink: 0, borderRadius: 6, padding: '4px 9px',
         color: isElevated ? gold : theme.textMuted,
-        background: isElevated ? 'oklch(0.78 0.14 85 / 0.15)' : theme.subtleBg,
+        background: isElevated ? 'oklch(0.78 0.14 85 / 0.13)' : theme.subtleBg,
         border: `1px solid ${isElevated ? 'oklch(0.78 0.14 85 / 0.35)' : theme.border}`,
       }}
     >
+      <Icon name={isElevated ? 'shield' : 'users'} size={11} color={isElevated ? gold : theme.textMuted} />
       {label}
     </span>
   );
@@ -167,13 +168,15 @@ export default function AccountModal({ onClose }) {
                 {saving ? t('account.saving') : t('account.save')}
               </button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px' }}>
-              <div style={{ color: theme.textMuted, fontSize: 13.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
-              <RoleBadge role={user?.role} theme={theme} t={t} />
+            <div style={{ color: theme.textMuted, fontSize: 12.5, padding: '0 2px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.email}
             </div>
           </div>
         </div>
-        {saved && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.15 145)', marginTop: -10 }}>{t('account.nameSaved')}</div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: -6 }}>
+          <RoleBadge role={user?.role} theme={theme} t={t} />
+          {saved && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.15 145)' }}>{t('account.nameSaved')}</div>}
+        </div>
 
         <button
           onClick={exportData}

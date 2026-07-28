@@ -15,6 +15,7 @@ export default function LinkedItemsPanel({ entityType, entityId, theme, t }) {
   const navigate = useNavigate();
   const [connections, setConnections] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
+  const [mentions, setMentions] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [addingKey, setAddingKey] = useState(null);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
@@ -27,12 +28,14 @@ export default function LinkedItemsPanel({ entityType, entityId, theme, t }) {
   };
 
   const load = async () => {
-    const [linksRes, suggRes] = await Promise.all([
+    const [linksRes, suggRes, mentionsRes] = await Promise.all([
       api.listLinks(entityType, entityId),
       api.listLinkSuggestions(entityType, entityId).catch(() => ({ suggestions: [] })),
+      api.listUnlinkedMentions(entityType, entityId).catch(() => ({ mentions: [] })),
     ]);
     setConnections([...linksRes.outgoing, ...linksRes.incoming]);
     setSuggestions(suggRes.suggestions || []);
+    setMentions(mentionsRes.mentions || []);
     setLoaded(true);
   };
 
@@ -93,7 +96,7 @@ export default function LinkedItemsPanel({ entityType, entityId, theme, t }) {
         )}
       </div>
 
-      {suggestions.length > 0 && (
+      {(suggestions.length > 0 || mentions.length > 0) && (
         <div
           onClick={() => setSuggestionsOpen(true)}
           style={{
@@ -101,7 +104,7 @@ export default function LinkedItemsPanel({ entityType, entityId, theme, t }) {
             cursor: 'pointer', padding: '6px 2px',
           }}
         >
-          <Icon name="sparkle" size={13} /> {t('links.viewSuggestions', { n: suggestions.length })}
+          <Icon name="sparkle" size={13} /> {t('links.viewSuggestions', { n: suggestions.length + mentions.length })}
         </div>
       )}
 
@@ -123,35 +126,75 @@ export default function LinkedItemsPanel({ entityType, entityId, theme, t }) {
                 &times;
               </span>
             </div>
-            {suggestions.length === 0 ? (
+            {suggestions.length === 0 && mentions.length === 0 ? (
               <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('links.noSuggestions')}</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {suggestions.map((s) => {
-                  const key = `${s.type}-${s.id}`;
-                  return (
-                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px dashed ${theme.border}` }}>
-                      <span style={{ display: 'flex', flexShrink: 0, opacity: 0.6 }}>
-                        <Icon name={TYPE_ICON[s.type]} size={14} color={theme.textMuted} />
-                      </span>
-                      <div onClick={() => navigateToEntity(navigate, s)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{typeLabel[s.type]}</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
-                      </div>
-                      <span
-                        onClick={() => (addingKey === key ? null : linkSuggestion(s))}
-                        title={t('links.addConnection')}
-                        style={{
-                          cursor: addingKey === key ? 'default' : 'pointer', color: theme.accentText, fontSize: 11.5, fontWeight: 700,
-                          padding: '4px 8px', flexShrink: 0, opacity: addingKey === key ? 0.5 : 1, whiteSpace: 'nowrap',
-                        }}
-                      >
-                        + {t('common.add')}
-                      </span>
+              <>
+                {mentions.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      {t('links.mentionsTitle')}
                     </div>
-                  );
-                })}
-              </div>
+                    {mentions.map((s) => {
+                      const key = `${s.type}-${s.id}`;
+                      return (
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px dashed ${theme.accentText}` }}>
+                          <span style={{ display: 'flex', flexShrink: 0, opacity: 0.7 }}>
+                            <Icon name={TYPE_ICON[s.type]} size={14} color={theme.accentText} />
+                          </span>
+                          <div onClick={() => navigateToEntity(navigate, s)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{typeLabel[s.type]}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
+                          </div>
+                          <span
+                            onClick={() => (addingKey === key ? null : linkSuggestion(s))}
+                            title={t('links.addConnection')}
+                            style={{
+                              cursor: addingKey === key ? 'default' : 'pointer', color: theme.accentText, fontSize: 11.5, fontWeight: 700,
+                              padding: '4px 8px', flexShrink: 0, opacity: addingKey === key ? 0.5 : 1, whiteSpace: 'nowrap',
+                            }}
+                          >
+                            + {t('common.add')}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {suggestions.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: mentions.length > 0 ? 4 : 0 }}>
+                    {mentions.length > 0 && (
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        {t('links.similarTitle')}
+                      </div>
+                    )}
+                    {suggestions.map((s) => {
+                      const key = `${s.type}-${s.id}`;
+                      return (
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px dashed ${theme.border}` }}>
+                          <span style={{ display: 'flex', flexShrink: 0, opacity: 0.6 }}>
+                            <Icon name={TYPE_ICON[s.type]} size={14} color={theme.textMuted} />
+                          </span>
+                          <div onClick={() => navigateToEntity(navigate, s)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{typeLabel[s.type]}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
+                          </div>
+                          <span
+                            onClick={() => (addingKey === key ? null : linkSuggestion(s))}
+                            title={t('links.addConnection')}
+                            style={{
+                              cursor: addingKey === key ? 'default' : 'pointer', color: theme.accentText, fontSize: 11.5, fontWeight: 700,
+                              padding: '4px 8px', flexShrink: 0, opacity: addingKey === key ? 0.5 : 1, whiteSpace: 'nowrap',
+                            }}
+                          >
+                            + {t('common.add')}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

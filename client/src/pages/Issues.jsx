@@ -7,6 +7,8 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import TemplateMenu from '../components/TemplateMenu.jsx';
+import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
@@ -59,11 +61,46 @@ function ResizeHandle({ onResize }) {
   );
 }
 
-function Badge({ label, hue, theme }) {
+function Badge({ label, hue, theme, size = 'md' }) {
   return (
-    <span style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: `oklch(0.93 0.06 ${hue})`, color: `oklch(0.45 0.14 ${hue})`, whiteSpace: 'nowrap' }}>
+    <span
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        fontSize: size === 'sm' ? 10.5 : 11, fontWeight: 800,
+        padding: size === 'sm' ? '3px 8px' : '4px 10px', borderRadius: 6,
+        background: `oklch(0.90 0.11 ${hue})`, color: `oklch(0.32 0.17 ${hue})`,
+        whiteSpace: 'nowrap', letterSpacing: '0.01em',
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: `oklch(0.55 0.20 ${hue})`, flexShrink: 0 }} />
       {label}
     </span>
+  );
+}
+
+function FieldLabel({ children, theme }) {
+  return (
+    <div style={{ fontSize: 10.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+      {children}
+    </div>
+  );
+}
+
+function Pill({ label, hue, active, onClick, theme }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+        background: active ? `oklch(0.90 0.11 ${hue})` : theme.cardBg,
+        color: active ? `oklch(0.32 0.17 ${hue})` : theme.textMuted,
+        border: `1px solid ${active ? `oklch(0.90 0.11 ${hue})` : theme.border}`,
+        display: 'flex', alignItems: 'center', gap: 6,
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: active ? `oklch(0.55 0.20 ${hue})` : theme.textMuted, flexShrink: 0, opacity: active ? 1 : 0.5 }} />
+      {label}
+    </div>
   );
 }
 
@@ -78,6 +115,7 @@ export default function Issues() {
   const [view, setView] = useState('table');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
+  const [hoveredId, setHoveredId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [columns, setColumns] = useState(DEFAULT_COLUMNS);
   const [titleDraft, setTitleDraft] = useState('');
@@ -91,6 +129,12 @@ export default function Issues() {
   const [newDescription, setNewDescription] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [statusConfigOpen, setStatusConfigOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportProject, setReportProject] = useState('');
+  const [reportText, setReportText] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const [reportCopied, setReportCopied] = useState(false);
   const [statusDraft, setStatusDraft] = useState([]);
   const [originalStatusNames, setOriginalStatusNames] = useState([]);
   const [statusSaving, setStatusSaving] = useState(false);
@@ -186,6 +230,39 @@ export default function Issues() {
     [issues, search]
   );
 
+  const projectOptions = useMemo(
+    () => [...new Set(issues.map((i) => i.project).filter(Boolean))].sort(),
+    [issues]
+  );
+
+  const openReport = () => {
+    setReportProject(projectOptions[0] || '');
+    setReportText('');
+    setReportError('');
+    setReportCopied(false);
+    setReportOpen(true);
+  };
+
+  const generateReport = async () => {
+    setReportLoading(true);
+    setReportError('');
+    setReportText('');
+    try {
+      const { report } = await api.generateIssuesReport(reportProject);
+      setReportText(report);
+    } catch (err) {
+      setReportError(err.message || t('issues.reportFailed'));
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const copyReport = () => {
+    navigator.clipboard.writeText(reportText);
+    setReportCopied(true);
+    setTimeout(() => setReportCopied(false), 1500);
+  };
+
   const toggleSort = (key) => {
     if (sortKey === key) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -252,15 +329,15 @@ export default function Issues() {
     patch(selected.id, { [field]: value });
   };
 
-  const openNewIssue = () => {
-    setNewTitle('');
-    setNewProject('');
-    setNewPriority('Medium');
+  const openNewIssue = (tpl) => {
+    setNewTitle(tpl?.data.title || '');
+    setNewProject(tpl?.data.project || '');
+    setNewPriority(tpl?.data.priority || 'Medium');
     setNewStatus(STATUS_NAMES[0] || 'Open');
     setNewDue('');
-    setNewWaitingOn('');
-    setNewDescription('');
-    setNewNotes('');
+    setNewWaitingOn(tpl?.data.waitingOn || '');
+    setNewDescription(tpl?.data.description || '');
+    setNewNotes(tpl?.data.notes || '');
     setNewIssueOpen(true);
   };
 
@@ -334,7 +411,16 @@ export default function Issues() {
           <button onClick={openStatusConfig} title={t('issues.configureStatuses')} style={{ display: 'flex', alignItems: 'center', background: theme.subtleBg, border: 'none', color: theme.textPrimary, borderRadius: 9, padding: '9px 10px', cursor: 'pointer' }}>
             <Icon name="settings" size={16} />
           </button>
-          <button onClick={openNewIssue} style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+          <button
+            onClick={openReport}
+            disabled={projectOptions.length === 0}
+            title={t('issues.aiReport')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.subtleBg, border: 'none', color: theme.textPrimary, borderRadius: 9, padding: '9px 12px', fontWeight: 700, fontSize: 12.5, cursor: projectOptions.length === 0 ? 'default' : 'pointer', opacity: projectOptions.length === 0 ? 0.5 : 1 }}
+          >
+            <Icon name="sparkle" size={14} color={theme.accentText} /> {t('issues.aiReport')}
+          </button>
+          <TemplateMenu entityType="issue" onUse={openNewIssue} />
+          <button onClick={() => openNewIssue()} style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
             <Icon name="plus" size={14} color="#fff" /> {t('issues.newIssue')}
           </button>
         </div>
@@ -343,12 +429,18 @@ export default function Issues() {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 24 }}>
         {view === 'table' ? (
           <div style={{ flex: '1 1 640px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflow: 'auto' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: [...columns.map((c) => `${c.width}px`), '1fr'].join(' '), gap: 0, minWidth: '100%' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: columns.map((c, i) => (i === columns.length - 1 ? `minmax(${c.width}px, 1fr)` : `${c.width}px`)).join(' '),
+                gap: 0, minWidth: '100%',
+              }}
+            >
               {columns.map((col, i) => (
                 <div
                   key={col.key}
                   onClick={() => toggleSort(col.key)}
-                  style={{ position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+                  style={{ position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
                 >
                   {t(col.labelKey)}
                   {sortKey === col.key && (
@@ -359,42 +451,45 @@ export default function Issues() {
                   <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} />
                 </div>
               ))}
-              <div style={{ borderBottom: `1px solid ${theme.border}` }} />
-              {sorted.map((issue) => (
-                <Fragment key={issue.id}>
-                  <div
-                    onClick={() => setSelectedId(issue.id)}
-                    style={{
-                      padding: '12px 14px', fontSize: 13.5, fontWeight: 700, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer',
-                      background: selectedId === issue.id ? theme.accentSoftBg : 'transparent', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {issue.title}
-                  </div>
-                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
-                    <Badge label={issue.status} hue={hueFor(issue.status)} theme={theme} />
-                  </div>
-                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
-                    <Badge label={issue.priority} hue={PRIORITY_HUES[issue.priority]} theme={theme} />
-                  </div>
-                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
-                    {issue.project || '—'}
-                  </div>
-                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
-                    {issue.due || '—'}
-                  </div>
-                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
-                    {issue.waitingOn || '—'}
-                  </div>
-                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
-                    {issue.description || '—'}
-                  </div>
-                  <div onClick={() => setSelectedId(issue.id)} style={{ padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }}>
-                    {issue.notes || '—'}
-                  </div>
-                  <div onClick={() => setSelectedId(issue.id)} style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: selectedId === issue.id ? theme.accentSoftBg : 'transparent' }} />
-                </Fragment>
-              ))}
+              {sorted.map((issue) => {
+                const isSelected = selectedId === issue.id;
+                const isHovered = hoveredId === issue.id;
+                const rowBg = isSelected ? theme.accentSoftBg : isHovered ? theme.subtleBg : 'transparent';
+                const cellStyle = { padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: rowBg };
+                return (
+                  <Fragment key={issue.id}>
+                    <div
+                      onClick={() => setSelectedId(issue.id)}
+                      onMouseEnter={() => setHoveredId(issue.id)}
+                      onMouseLeave={() => setHoveredId((h) => (h === issue.id ? null : h))}
+                      style={{ ...cellStyle, fontSize: 13.5, fontWeight: 700, color: theme.textPrimary, borderLeft: isSelected ? `3px solid ${theme.accent}` : '3px solid transparent' }}
+                    >
+                      {issue.title}
+                    </div>
+                    <div onClick={() => setSelectedId(issue.id)} onMouseEnter={() => setHoveredId(issue.id)} onMouseLeave={() => setHoveredId((h) => (h === issue.id ? null : h))} style={{ ...cellStyle, display: 'flex', alignItems: 'center' }}>
+                      <Badge label={issue.status} hue={hueFor(issue.status)} theme={theme} />
+                    </div>
+                    <div onClick={() => setSelectedId(issue.id)} onMouseEnter={() => setHoveredId(issue.id)} onMouseLeave={() => setHoveredId((h) => (h === issue.id ? null : h))} style={{ ...cellStyle, display: 'flex', alignItems: 'center' }}>
+                      <Badge label={issue.priority} hue={PRIORITY_HUES[issue.priority]} theme={theme} />
+                    </div>
+                    <div onClick={() => setSelectedId(issue.id)} onMouseEnter={() => setHoveredId(issue.id)} onMouseLeave={() => setHoveredId((h) => (h === issue.id ? null : h))} style={cellStyle}>
+                      {issue.project || '—'}
+                    </div>
+                    <div onClick={() => setSelectedId(issue.id)} onMouseEnter={() => setHoveredId(issue.id)} onMouseLeave={() => setHoveredId((h) => (h === issue.id ? null : h))} style={cellStyle}>
+                      {issue.due || '—'}
+                    </div>
+                    <div onClick={() => setSelectedId(issue.id)} onMouseEnter={() => setHoveredId(issue.id)} onMouseLeave={() => setHoveredId((h) => (h === issue.id ? null : h))} style={cellStyle}>
+                      {issue.waitingOn || '—'}
+                    </div>
+                    <div onClick={() => setSelectedId(issue.id)} onMouseEnter={() => setHoveredId(issue.id)} onMouseLeave={() => setHoveredId((h) => (h === issue.id ? null : h))} style={cellStyle}>
+                      {issue.description || '—'}
+                    </div>
+                    <div onClick={() => setSelectedId(issue.id)} onMouseEnter={() => setHoveredId(issue.id)} onMouseLeave={() => setHoveredId((h) => (h === issue.id ? null : h))} style={cellStyle}>
+                      {issue.notes || '—'}
+                    </div>
+                  </Fragment>
+                );
+              })}
               {filtered.length === 0 && (
                 <div style={{ gridColumn: '1 / -1', padding: 20, fontSize: 13, color: theme.textMuted }}>{t('issues.noIssuesYet')}</div>
               )}
@@ -446,8 +541,8 @@ export default function Issues() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: 440, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
-              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+              width: 560, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -456,7 +551,7 @@ export default function Issues() {
                 onChange={(e) => setTitleDraft(e.target.value)}
                 onBlur={commitTitle}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontWeight: 800, color: theme.textPrimary }}
+                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 17, fontWeight: 800, color: theme.textPrimary }}
               />
               <span onClick={() => patch(selected.id, { favorite: !selected.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
                 <Icon name="pin" size={16} color={selected.favorite ? theme.accentText : theme.textMuted} />
@@ -469,108 +564,95 @@ export default function Issues() {
               </span>
             </div>
 
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.status')}</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {STATUS_NAMES.map((s) => (
-                  <div
-                    key={s}
-                    onClick={() => patch(selected.id, { status: s })}
-                    style={{
-                      padding: '5px 10px', borderRadius: 7, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                      background: selected.status === s ? `oklch(0.93 0.06 ${hueFor(s)})` : theme.subtleBg,
-                      color: selected.status === s ? `oklch(0.45 0.14 ${hueFor(s)})` : theme.textMuted,
-                    }}
-                  >
-                    {s}
+            <SaveTemplateButton
+              entityType="issue"
+              getData={() => ({ title: selected.title, project: selected.project, priority: selected.priority, waitingOn: selected.waitingOn, description: selected.description, notes: selected.notes })}
+            />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, background: theme.subtleBg, borderRadius: 12, padding: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.status')}</FieldLabel>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {STATUS_NAMES.map((s) => (
+                      <Pill key={s} label={s} hue={hueFor(s)} active={selected.status === s} onClick={() => patch(selected.id, { status: s })} theme={theme} />
+                    ))}
                   </div>
-                ))}
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.priority')}</FieldLabel>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {PRIORITIES.map((p) => (
+                      <Pill key={p} label={p} hue={PRIORITY_HUES[p]} active={selected.priority === p} onClick={() => patch(selected.id, { priority: p })} theme={theme} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.project')}</FieldLabel>
+                  <input
+                    value={projectDraft}
+                    onChange={(e) => setProjectDraft(e.target.value)}
+                    onBlur={() => commitField('project', projectDraft)}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.dueDate')}</FieldLabel>
+                  <DateInput
+                    value={selected.due}
+                    onChange={(value) => patch(selected.id, { due: value })}
+                    style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.waitingOn')}</FieldLabel>
+                  <input
+                    value={waitingOnDraft}
+                    onChange={(e) => setWaitingOnDraft(e.target.value)}
+                    onBlur={() => commitField('waitingOn', waitingOnDraft)}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>{t('common.recurrence')}</FieldLabel>
+                  <select
+                    value={selected.recurrence || ''}
+                    onChange={(e) => patch(selected.id, { recurrence: e.target.value || null })}
+                    style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+                  >
+                    <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceNone')}</option>
+                    <option value="daily" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceDaily')}</option>
+                    <option value="weekly" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceWeekly')}</option>
+                    <option value="monthly" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceMonthly')}</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.priority')}</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {PRIORITIES.map((p) => (
-                  <div
-                    key={p}
-                    onClick={() => patch(selected.id, { priority: p })}
-                    style={{
-                      padding: '5px 10px', borderRadius: 7, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                      background: selected.priority === p ? `oklch(0.93 0.06 ${PRIORITY_HUES[p]})` : theme.subtleBg,
-                      color: selected.priority === p ? `oklch(0.45 0.14 ${PRIORITY_HUES[p]})` : theme.textMuted,
-                    }}
-                  >
-                    {p}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.project')}</div>
-              <input
-                value={projectDraft}
-                onChange={(e) => setProjectDraft(e.target.value)}
-                onBlur={() => commitField('project', projectDraft)}
-                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
-              />
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.dueDate')}</div>
-              <DateInput
-                value={selected.due}
-                onChange={(value) => patch(selected.id, { due: value })}
-                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
-              />
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.waitingOn')}</div>
-              <input
-                value={waitingOnDraft}
-                onChange={(e) => setWaitingOnDraft(e.target.value)}
-                onBlur={() => commitField('waitingOn', waitingOnDraft)}
-                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
-              />
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('common.recurrence')}</div>
-              <select
-                value={selected.recurrence || ''}
-                onChange={(e) => patch(selected.id, { recurrence: e.target.value || null })}
-                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
-              >
-                <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceNone')}</option>
-                <option value="daily" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceDaily')}</option>
-                <option value="weekly" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceWeekly')}</option>
-                <option value="monthly" style={{ color: '#1a1a1a', background: '#fff' }}>{t('common.recurrenceMonthly')}</option>
-              </select>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.description')}</div>
+              <FieldLabel theme={theme}>{t('issues.description')}</FieldLabel>
               <textarea
                 value={descriptionDraft}
                 onChange={(e) => setDescriptionDraft(e.target.value)}
                 onBlur={() => commitField('description', descriptionDraft)}
                 rows={3}
-                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
               />
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.notes')}</div>
+              <FieldLabel theme={theme}>{t('issues.notes')}</FieldLabel>
               <textarea
                 value={notesDraft}
                 onChange={(e) => setNotesDraft(e.target.value)}
                 onBlur={() => commitField('notes', notesDraft)}
                 rows={3}
-                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -587,14 +669,14 @@ export default function Issues() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: 420, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
-              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+              width: 520, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+              borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
             <div style={{ fontSize: 17, fontWeight: 800 }}>{t('issues.newIssueModalTitle')}</div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.colTitle')}</div>
+              <FieldLabel theme={theme}>{t('issues.colTitle')}</FieldLabel>
               <input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
@@ -605,82 +687,57 @@ export default function Issues() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.project')}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, background: theme.subtleBg, borderRadius: 12, padding: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.project')}</FieldLabel>
+                  <input
+                    value={newProject}
+                    onChange={(e) => setNewProject(e.target.value)}
+                    style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.dueDate')}</FieldLabel>
+                  <DateInput
+                    value={newDue}
+                    onChange={setNewDue}
+                    style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.priority')}</FieldLabel>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {PRIORITIES.map((p) => (
+                      <Pill key={p} label={p} hue={PRIORITY_HUES[p]} active={newPriority === p} onClick={() => setNewPriority(p)} theme={theme} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <FieldLabel theme={theme}>{t('issues.status')}</FieldLabel>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {STATUS_NAMES.map((s) => (
+                      <Pill key={s} label={s} hue={hueFor(s)} active={newStatus === s} onClick={() => setNewStatus(s)} theme={theme} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <FieldLabel theme={theme}>{t('issues.waitingOn')}</FieldLabel>
                 <input
-                  value={newProject}
-                  onChange={(e) => setNewProject(e.target.value)}
-                  style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.dueDate')}</div>
-                <DateInput
-                  value={newDue}
-                  onChange={setNewDue}
-                  style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+                  value={newWaitingOn}
+                  onChange={(e) => setNewWaitingOn(e.target.value)}
+                  style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.priority')}</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {PRIORITIES.map((p) => {
-                  const hue = PRIORITY_HUES[p];
-                  const active = newPriority === p;
-                  return (
-                    <div
-                      key={p}
-                      onClick={() => setNewPriority(p)}
-                      style={{
-                        padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                        background: active ? `oklch(0.93 0.06 ${hue})` : theme.subtleBg,
-                        color: active ? `oklch(0.45 0.14 ${hue})` : theme.textMuted,
-                      }}
-                    >
-                      {p}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.status')}</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {STATUS_NAMES.map((s) => {
-                  const hue = hueFor(s);
-                  const active = newStatus === s;
-                  return (
-                    <div
-                      key={s}
-                      onClick={() => setNewStatus(s)}
-                      style={{
-                        padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                        background: active ? `oklch(0.93 0.06 ${hue})` : theme.subtleBg,
-                        color: active ? `oklch(0.45 0.14 ${hue})` : theme.textMuted,
-                      }}
-                    >
-                      {s}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.waitingOn')}</div>
-              <input
-                value={newWaitingOn}
-                onChange={(e) => setNewWaitingOn(e.target.value)}
-                style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.description')}</div>
+              <FieldLabel theme={theme}>{t('issues.description')}</FieldLabel>
               <textarea
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
@@ -690,7 +747,7 @@ export default function Issues() {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.notes')}</div>
+              <FieldLabel theme={theme}>{t('issues.notes')}</FieldLabel>
               <textarea
                 value={newNotes}
                 onChange={(e) => setNewNotes(e.target.value)}
@@ -717,6 +774,55 @@ export default function Issues() {
                 {t('common.create')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {reportOpen && (
+        <div
+          onMouseDown={backdropClose(() => setReportOpen(false))}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 560, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff',
+              border: `1px solid ${theme.border}`, borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('issues.aiReport')}</div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <select
+                value={reportProject}
+                onChange={(e) => setReportProject(e.target.value)}
+                style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+              >
+                {projectOptions.map((p) => (
+                  <option key={p} value={p} style={{ color: '#1a1a1a', background: '#fff' }}>{p}</option>
+                ))}
+              </select>
+              <button
+                onClick={generateReport}
+                disabled={reportLoading}
+                style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: reportLoading ? 0.6 : 1, flexShrink: 0 }}
+              >
+                {reportLoading ? t('issues.reportGenerating') : t('issues.reportGenerate')}
+              </button>
+            </div>
+            {reportError && <div style={{ fontSize: 12.5, color: 'oklch(0.55 0.18 25)' }}>{reportError}</div>}
+            {reportText && (
+              <>
+                <div style={{ whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.6, background: theme.subtleBg, borderRadius: 10, padding: 14, maxHeight: 340, overflowY: 'auto' }}>
+                  {reportText}
+                </div>
+                <button
+                  onClick={copyReport}
+                  style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <Icon name="copy" size={13} /> {reportCopied ? t('issues.reportCopied') : t('issues.reportCopy')}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

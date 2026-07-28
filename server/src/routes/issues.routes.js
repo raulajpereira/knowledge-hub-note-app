@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { callProvider } from '../lib/aiProvider.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 const RECURRENCES = ['daily', 'weekly', 'monthly'];
@@ -23,6 +24,57 @@ router.get('/', async (req, res) => {
     orderBy: { updatedAt: 'desc' },
   });
   res.json({ issues });
+});
+
+const REPORT_SYSTEM_PROMPT =
+  'Escreve um relatório de estado profissional em português, para partilhar com um cliente, com base nos issues, notas e ' +
+  'código fornecidos. Estrutura com estes títulos: "Resumo", "Progresso", "Bloqueios / À espera de", "Próximos passos". ' +
+  'Sê conciso e factual — usa apenas a informação fornecida, não inventes datas nem nomes que não estejam no texto.';
+
+router.post('/report', async (req, res) => {
+  const { project } = req.body || {};
+  const agent = await prisma.agent.findFirst({ where: { userId: req.effectiveUserId, active: true } });
+  if (!agent) return res.status(400).json({ error: 'Configura um agente de IA ativo em Definições para usar esta funcionalidade.' });
+
+  const issueWhere = { userId: req.effectiveUserId, ...(project ? { project } : {}) };
+  const issues = await prisma.issue.findMany({ where: issueWhere, orderBy: { updatedAt: 'desc' }, take: 60 });
+  if (issues.length === 0) return res.status(400).json({ error: 'Não há issues para este projeto.' });
+
+  const keyword = (project || '').toLowerCase();
+  const [notes, codeItems] = await Promise.all([
+    keyword
+      ? prisma.note.findMany({
+          where: { userId: req.effectiveUserId, deletedAt: null, OR: [{ title: { contains: project } }, { content: { contains: project } }] },
+          select: { title: true, content: true },
+          take: 15,
+        })
+      : Promise.resolve([]),
+    keyword
+      ? prisma.codeItem.findMany({
+          where: { userId: req.effectiveUserId, OR: [{ name: { contains: project } }, { content: { contains: project } }] },
+          select: { name: true },
+          take: 15,
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const issuesText = issues
+    .map((i) => `- [${i.status}/${i.priority}] ${i.title}${i.due ? ` (prazo ${i.due})` : ''}${i.waitingOn ? ` — à espera de: ${i.waitingOn}` : ''}${i.description ? `\n  ${i.description}` : ''}`)
+    .join('\n');
+  const notesText = notes.map((n) => `- ${n.title}: ${(n.content || '').replace(/<[^>]+>/g, ' ').slice(0, 300)}`).join('\n');
+  const codeText = codeItems.map((c) => `- ${c.name}`).join('\n');
+
+  const userContent =
+    `Projeto: ${project || '(todos os projetos)'}\n\nISSUES:\n${issuesText}` +
+    (notesText ? `\n\nNOTAS RELACIONADAS:\n${notesText}` : '') +
+    (codeText ? `\n\nCÓDIGO RELACIONADO:\n${codeText}` : '');
+
+  try {
+    const report = await callProvider(agent, [{ role: 'user', content: userContent }], { systemPrompt: REPORT_SYSTEM_PROMPT, maxTokens: 1200 });
+    res.json({ report });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Não foi possível gerar o relatório.' });
+  }
 });
 
 router.post('/', async (req, res) => {

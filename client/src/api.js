@@ -53,6 +53,10 @@ export const api = {
   getNote: (id) => request(`/notes/${id}`),
   createNote: (payload) => request('/notes', { method: 'POST', body: payload }),
   updateNote: (id, payload) => request(`/notes/${id}`, { method: 'PATCH', body: payload }),
+  suggestNoteTags: (id) => request(`/notes/${id}/suggest-tags`, { method: 'POST' }),
+  shareNote: (id) => request(`/notes/${id}/share`, { method: 'POST' }),
+  unshareNote: (id) => request(`/notes/${id}/unshare`, { method: 'POST' }),
+  getPublicNote: (token) => request(`/public/notes/${token}`),
   trashNote: (id) => request(`/notes/${id}/trash`, { method: 'POST' }),
   restoreNote: (id) => request(`/notes/${id}/restore`, { method: 'POST' }),
   deleteNoteForever: (id) => request(`/notes/${id}`, { method: 'DELETE' }),
@@ -113,6 +117,8 @@ export const api = {
   trashVoiceNote: (id) => request(`/voice/${id}/trash`, { method: 'POST' }),
   restoreVoiceNote: (id) => request(`/voice/${id}/restore`, { method: 'POST' }),
   deleteVoiceNoteForever: (id) => request(`/voice/${id}`, { method: 'DELETE' }),
+  transcribeVoiceNote: (id) => request(`/voice/${id}/transcribe`, { method: 'POST' }),
+  suggestTasksFromVoiceNote: (id) => request(`/voice/${id}/suggest-tasks`, { method: 'POST' }),
 
   getVaultInfo: () => request('/passwords/vault-info'),
   setupVault: (payload) => request('/passwords/setup', { method: 'POST', body: payload }),
@@ -130,6 +136,7 @@ export const api = {
 
   listIssues: () => request('/issues'),
   createIssue: (payload) => request('/issues', { method: 'POST', body: payload }),
+  generateIssuesReport: (project) => request('/issues/report', { method: 'POST', body: { project } }),
   updateIssue: (id, payload) => request(`/issues/${id}`, { method: 'PATCH', body: payload }),
   deleteIssue: (id) => request(`/issues/${id}`, { method: 'DELETE' }),
 
@@ -144,9 +151,15 @@ export const api = {
   askAgentWorkspace: (id, payload) => request(`/agents/${id}/ask-workspace`, { method: 'POST', body: payload }),
   listLinks: (type, id) => request(`/links?type=${type}&id=${id}`),
   listLinkSuggestions: (type, id) => request(`/links/suggestions?type=${type}&id=${id}`),
+  listUnlinkedMentions: (type, id) => request(`/links/mentions?type=${type}&id=${id}`),
   createLink: (payload) => request('/links', { method: 'POST', body: payload }),
   deleteLink: (id) => request(`/links/${id}`, { method: 'DELETE' }),
   getLinksGraph: () => request('/links/graph'),
+  getResurfacedItems: () => request('/links/resurface'),
+
+  listTemplates: (type) => request(`/templates?type=${type}`),
+  createTemplate: (payload) => request('/templates', { method: 'POST', body: payload }),
+  deleteTemplate: (id) => request(`/templates/${id}`, { method: 'DELETE' }),
 
   getNews: () => request('/news'),
 
@@ -177,5 +190,6 @@ export const api = {
   listCodeItems: (folderId) => request(`/code-library/folders/${folderId}/items`),
   createCodeItem: (folderId, payload) => request(`/code-library/folders/${folderId}/items`, { method: 'POST', body: payload }),
   updateCodeItem: (id, payload) => request(`/code-library/items/${id}`, { method: 'PATCH', body: payload }),
+  documentCodeItem: (id) => request(`/code-library/items/${id}/document`, { method: 'POST' }),
   deleteCodeItem: (id) => request(`/code-library/items/${id}`, { method: 'DELETE' }),
 };
