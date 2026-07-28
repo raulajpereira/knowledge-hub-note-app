@@ -657,19 +657,24 @@ export default function Notes() {
   // the browser moves focus, and reused on change. Wraps the selection in a
   // styled <span> by hand (same technique as inline code) rather than the
   // deprecated execCommand('fontName'/'fontSize'), which emits legacy tags.
+  // Blurring the contentEditable (which happens the instant the font
+  // controls are interacted with) also resets editingTextBlockId to null via
+  // onBlurBlock — so the block id has to be captured here too, not just the
+  // Range, or applyInlineStyle would silently no-op once the blur has fired.
   const savedRangeRef = useRef(null);
 
   const saveSelectionRange = () => {
     const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && editingTextBlockId) {
+      savedRangeRef.current = { blockId: editingTextBlockId, range: sel.getRangeAt(0).cloneRange() };
     }
   };
 
   const applyInlineStyle = (styleProp, value) => {
-    const blockId = editingTextBlockId;
+    const saved = savedRangeRef.current;
+    const blockId = saved?.blockId;
     const el = blockId && textareaRefsRef.current[blockId];
-    const range = savedRangeRef.current;
+    const range = saved?.range;
     if (!selected || !el || !range || !el.contains(range.commonAncestorContainer)) return;
     const span = document.createElement('span');
     span.style[styleProp] = value;
@@ -686,7 +691,8 @@ export default function Notes() {
     const newRange = document.createRange();
     newRange.selectNodeContents(span);
     sel.addRange(newRange);
-    savedRangeRef.current = newRange.cloneRange();
+    savedRangeRef.current = { blockId, range: newRange.cloneRange() };
+    setEditingTextBlockId(blockId);
     updateBlock(blockId, { value: el.innerHTML, format: 'html' });
   };
 
@@ -1180,29 +1186,29 @@ export default function Notes() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: 4, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 9, padding: 4, width: 'fit-content' }}>
-              {[
-                { key: 'bold', label: 'B', command: 'bold', style: { fontWeight: 800 } },
-                { key: 'italic', label: 'I', command: 'italic', style: { fontStyle: 'italic' } },
-                { key: 'underline', label: 'U', command: 'underline', style: { textDecoration: 'underline' } },
-                { key: 'code', label: '</>', command: 'code', style: { fontFamily: 'var(--font-mono)', fontSize: 11 } },
-              ].map((btn) => (
-                <button
-                  key={btn.key}
-                  title={t(`notes.format${btn.key.charAt(0).toUpperCase()}${btn.key.slice(1)}`)}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => applyFormatting(btn.command)}
-                  style={{
-                    width: 30, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', color: theme.textPrimary,
-                    fontSize: 13, ...btn.style,
-                  }}
-                >
-                  {btn.label}
-                </button>
-              ))}
-            </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 9, padding: 4, width: 'fit-content' }}>
+            {[
+              { key: 'bold', label: 'B', command: 'bold', style: { fontWeight: 800 } },
+              { key: 'italic', label: 'I', command: 'italic', style: { fontStyle: 'italic' } },
+              { key: 'underline', label: 'U', command: 'underline', style: { textDecoration: 'underline' } },
+              { key: 'code', label: '</>', command: 'code', style: { fontFamily: 'var(--font-mono)', fontSize: 11 } },
+            ].map((btn) => (
+              <button
+                key={btn.key}
+                title={t(`notes.format${btn.key.charAt(0).toUpperCase()}${btn.key.slice(1)}`)}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => applyFormatting(btn.command)}
+                style={{
+                  width: 30, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', color: theme.textPrimary,
+                  fontSize: 13, ...btn.style,
+                }}
+              >
+                {btn.label}
+              </button>
+            ))}
+
+            <span style={{ width: 1, alignSelf: 'stretch', background: theme.border, margin: '2px 2px' }} />
 
             <select
               title={t('notes.fontFamily')}
@@ -1213,32 +1219,49 @@ export default function Notes() {
                 if (value) applyInlineStyle('fontFamily', value);
                 e.target.value = '';
               }}
-              style={{ height: 28, border: `1px solid ${theme.border}`, borderRadius: 7, background: theme.subtleBg, color: theme.textPrimary, fontSize: 12, padding: '0 6px', cursor: 'pointer' }}
+              style={{ height: 28, border: 'none', background: 'transparent', color: theme.textPrimary, fontSize: 12, padding: '0 4px', cursor: 'pointer', maxWidth: 120 }}
             >
               <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontFamily')}</option>
               <option value="'Inter', -apple-system, sans-serif" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontSans')}</option>
               <option value="Georgia, 'Times New Roman', serif" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontSerif')}</option>
+              <option value="Arial, Helvetica, sans-serif" style={{ color: '#1a1a1a', background: '#fff' }}>Arial</option>
+              <option value="'Times New Roman', Times, serif" style={{ color: '#1a1a1a', background: '#fff' }}>Times New Roman</option>
+              <option value="'Courier New', Courier, monospace" style={{ color: '#1a1a1a', background: '#fff' }}>Courier New</option>
+              <option value="Verdana, Geneva, sans-serif" style={{ color: '#1a1a1a', background: '#fff' }}>Verdana</option>
+              <option value="'Trebuchet MS', sans-serif" style={{ color: '#1a1a1a', background: '#fff' }}>Trebuchet MS</option>
+              <option value="'Comic Sans MS', 'Comic Sans', cursive" style={{ color: '#1a1a1a', background: '#fff' }}>Comic Sans MS</option>
               <option value="'JetBrains Mono', ui-monospace, monospace" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontMono')}</option>
             </select>
 
-            <select
+            <span style={{ width: 1, alignSelf: 'stretch', background: theme.border, margin: '2px 2px' }} />
+
+            <input
+              type="number"
+              min={6}
+              max={120}
               title={t('notes.fontSize')}
-              defaultValue=""
+              placeholder={t('notes.fontSize')}
               onMouseDown={saveSelectionRange}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value) applyInlineStyle('fontSize', value);
-                e.target.value = '';
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                // preventDefault before the blur/refocus below, or the
+                // browser's native "Enter in contenteditable" action fires
+                // on the block once it regains focus (still within this
+                // same keydown dispatch) and wipes the just-styled, fully
+                // selected span instead of just confirming the value.
+                e.preventDefault();
+                const value = e.currentTarget.value;
+                e.currentTarget.value = '';
+                if (value) applyInlineStyle('fontSize', `${value}px`);
+                e.currentTarget.blur();
               }}
-              style={{ height: 28, border: `1px solid ${theme.border}`, borderRadius: 7, background: theme.subtleBg, color: theme.textPrimary, fontSize: 12, padding: '0 6px', cursor: 'pointer' }}
-            >
-              <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontSize')}</option>
-              <option value="12px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeSmall')}</option>
-              <option value="14px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeNormal')}</option>
-              <option value="17px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeMedium')}</option>
-              <option value="21px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeLarge')}</option>
-              <option value="27px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeXLarge')}</option>
-            </select>
+              onBlur={(e) => {
+                const value = e.target.value;
+                e.target.value = '';
+                if (value) applyInlineStyle('fontSize', `${value}px`);
+              }}
+              style={{ width: 46, height: 28, border: 'none', background: 'transparent', color: theme.textPrimary, fontSize: 12, padding: '0 4px', textAlign: 'center' }}
+            />
           </div>
 
           <div onPaste={handlePaste} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
