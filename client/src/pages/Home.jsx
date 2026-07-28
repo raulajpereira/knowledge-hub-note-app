@@ -6,7 +6,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
-import { HOME_COLUMNS, resolveHomeLayout } from '../lib/homeBlocks.js';
+import { resolveHomeLayout } from '../lib/homeBlocks.js';
 
 const DEFAULT_ISSUE_STATUSES = [
   { name: 'Open', hue: 250 },
@@ -100,33 +100,57 @@ export default function Home() {
   const [sapNews, setSapNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [vpsDisk, setVpsDisk] = useState(null);
-  const [columns, setColumns] = useState(HOME_COLUMNS);
+  const [columns, setColumns] = useState(() => resolveHomeLayout(null));
   const [draggedBlock, setDraggedBlock] = useState(null);
-  const [draggedColumn, setDraggedColumn] = useState(null);
 
   useEffect(() => {
     setColumns(resolveHomeLayout(user?.settings?.homeLayout));
   }, [user?.settings?.homeLayout]);
 
-  const onBlockDragOver = (e, colKey, blockKey) => {
-    e.preventDefault();
-    if (draggedColumn !== colKey) return;
+  // Blocks can be dragged into either column and to any position — not just
+  // reordered within their starting column — so the user can split them
+  // however they like (e.g. 3 left / 4 right instead of a fixed 3/5).
+  const moveBlock = (key, toColumn, toIndex) => {
     setColumns((prev) => {
-      const list = prev[colKey];
-      const fromIndex = list.indexOf(draggedBlock);
-      const toIndex = list.indexOf(blockKey);
-      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev;
-      const next = [...list];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return { ...prev, [colKey]: next };
+      const fromColumn = prev.left.includes(key) ? 'left' : 'right';
+      const fromList = prev[fromColumn];
+      const fromIndex = fromList.indexOf(key);
+      if (fromIndex === -1) return prev;
+
+      if (fromColumn === toColumn) {
+        const clamped = Math.max(0, Math.min(toIndex, fromList.length - 1));
+        if (clamped === fromIndex) return prev;
+        const next = [...fromList];
+        next.splice(fromIndex, 1);
+        next.splice(clamped, 0, key);
+        return { ...prev, [toColumn]: next };
+      }
+
+      const nextFrom = [...fromList];
+      nextFrom.splice(fromIndex, 1);
+      const nextTo = [...prev[toColumn]];
+      const clamped = Math.max(0, Math.min(toIndex, nextTo.length));
+      nextTo.splice(clamped, 0, key);
+      return { ...prev, [fromColumn]: nextFrom, [toColumn]: nextTo };
     });
+  };
+
+  const onBlockDragOver = (e, colKey, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedBlock) return;
+    moveBlock(draggedBlock, colKey, index);
+  };
+
+  const onColumnDragOver = (e, colKey) => {
+    e.preventDefault();
+    if (!draggedBlock) return;
+    moveBlock(draggedBlock, colKey, Number.MAX_SAFE_INTEGER);
   };
 
   const onBlockDrop = async () => {
     if (!draggedBlock) return;
     setDraggedBlock(null);
-    setDraggedColumn(null);
     const { settings } = await api.updateSettings({ homeLayout: columns });
     updateUserSettings(settings);
   };
@@ -525,12 +549,12 @@ export default function Home() {
     ),
   };
 
-  const renderBlock = (key, colKey) => (
+  const renderBlock = (key, colKey, index) => (
     <div
       key={key}
       draggable
-      onDragStart={() => { setDraggedBlock(key); setDraggedColumn(colKey); }}
-      onDragOver={(e) => onBlockDragOver(e, colKey, key)}
+      onDragStart={() => setDraggedBlock(key)}
+      onDragOver={(e) => onBlockDragOver(e, colKey, index)}
       onDrop={onBlockDrop}
       onDragEnd={onBlockDrop}
       style={{ opacity: draggedBlock === key ? 0.5 : 1, cursor: 'grab' }}
@@ -541,12 +565,20 @@ export default function Home() {
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, padding: '24px 28px', flex: 1 }}>
-      <div style={{ flex: '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
-        {columns.left.map((key) => renderBlock(key, 'left'))}
+      <div
+        onDragOver={(e) => onColumnDragOver(e, 'left')}
+        onDrop={onBlockDrop}
+        style={{ flex: '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28, minHeight: 80 }}
+      >
+        {columns.left.map((key, i) => renderBlock(key, 'left', i))}
       </div>
 
-      <div style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
-        {columns.right.map((key) => renderBlock(key, 'right'))}
+      <div
+        onDragOver={(e) => onColumnDragOver(e, 'right')}
+        onDrop={onBlockDrop}
+        style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28, minHeight: 80 }}
+      >
+        {columns.right.map((key, i) => renderBlock(key, 'right', i))}
       </div>
     </div>
   );

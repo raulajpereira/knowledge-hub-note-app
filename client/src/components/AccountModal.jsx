@@ -12,6 +12,25 @@ function userInitials(name) {
   return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
 }
 
+function RoleBadge({ role, theme, t }) {
+  const isElevated = role === 'admin' || role === 'super_admin';
+  const gold = 'oklch(0.68 0.14 85)';
+  const label = role === 'super_admin' ? t('account.roleSuperAdmin') : role === 'admin' ? t('account.roleAdmin') : t('account.roleMember');
+  return (
+    <span
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, letterSpacing: '0.04em',
+        textTransform: 'uppercase', flexShrink: 0, borderRadius: 5, padding: '2px 7px',
+        color: isElevated ? gold : theme.textMuted,
+        background: isElevated ? 'oklch(0.78 0.14 85 / 0.15)' : theme.subtleBg,
+        border: `1px solid ${isElevated ? 'oklch(0.78 0.14 85 / 0.35)' : theme.border}`,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 export default function AccountModal({ onClose }) {
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -148,7 +167,10 @@ export default function AccountModal({ onClose }) {
                 {saving ? t('account.saving') : t('account.save')}
               </button>
             </div>
-            <div style={{ ...fieldStyle, color: theme.textMuted, background: 'transparent', border: 'none', padding: '0 2px' }}>{user?.email}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px' }}>
+              <div style={{ color: theme.textMuted, fontSize: 13.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
+              <RoleBadge role={user?.role} theme={theme} t={t} />
+            </div>
           </div>
         </div>
         {saved && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.15 145)', marginTop: -10 }}>{t('account.nameSaved')}</div>}

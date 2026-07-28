@@ -195,18 +195,67 @@ function AdminCard({ theme, t, card, outlineButton }) {
   if (!codes || !users) return null;
 
   const activeCodes = codes.filter((c) => !c.usedAt && !c.revokedAt);
+  const suspendedCount = users.filter((u) => u.status === 'suspended').length;
+  const gold = 'oklch(0.78 0.14 85)';
+  const goldButton = { ...outlineButton, border: `1px solid ${gold}`, color: gold, fontWeight: 700 };
 
   return (
-    <div style={card}>
-      <div>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.admin')}</div>
-        <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.adminDesc')}</div>
+    <div
+      style={{
+        ...card,
+        position: 'relative',
+        overflow: 'hidden',
+        border: `1px solid oklch(0.78 0.14 85 / 0.4)`,
+        background: theme.dark
+          ? `linear-gradient(160deg, oklch(0.78 0.14 85 / 0.1), ${theme.cardBg} 40%)`
+          : `linear-gradient(160deg, oklch(0.78 0.14 85 / 0.14), ${theme.cardBg} 40%)`,
+        boxShadow: `0 0 0 1px oklch(0.78 0.14 85 / 0.06), 0 12px 32px oklch(0.78 0.14 85 / 0.08)`,
+      }}
+    >
+      <div style={{ position: 'absolute', top: -60, right: -60, width: 180, height: 180, borderRadius: '50%', background: 'oklch(0.78 0.14 85 / 0.12)', pointerEvents: 'none' }} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
+        <div
+          style={{
+            width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'oklch(0.78 0.14 85 / 0.18)', border: `1px solid oklch(0.78 0.14 85 / 0.4)`,
+          }}
+        >
+          <Icon name="shield" size={20} color={gold} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15.5, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+            {t('settings.admin')}
+            <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: gold, background: 'oklch(0.78 0.14 85 / 0.15)', border: `1px solid oklch(0.78 0.14 85 / 0.35)`, borderRadius: 5, padding: '2px 7px' }}>
+              {t('settings.adminBadge')}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.adminDesc')}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <div style={{ textAlign: 'center', background: theme.subtleBg, borderRadius: 9, padding: '6px 12px' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: gold }}>{activeCodes.length}</div>
+            <div style={{ fontSize: 9.5, color: theme.textMuted, fontWeight: 700, textTransform: 'uppercase' }}>{t('settings.statPendingCodes')}</div>
+          </div>
+          <div style={{ textAlign: 'center', background: theme.subtleBg, borderRadius: 9, padding: '6px 12px' }}>
+            <div style={{ fontSize: 16, fontWeight: 800 }}>{users.length}</div>
+            <div style={{ fontSize: 9.5, color: theme.textMuted, fontWeight: 700, textTransform: 'uppercase' }}>{t('settings.statAccounts')}</div>
+          </div>
+          {suspendedCount > 0 && (
+            <div style={{ textAlign: 'center', background: 'oklch(0.6 0.16 50 / 0.15)', borderRadius: 9, padding: '6px 12px' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'oklch(0.6 0.16 50)' }}>{suspendedCount}</div>
+              <div style={{ fontSize: 9.5, color: 'oklch(0.6 0.16 50)', fontWeight: 700, textTransform: 'uppercase' }}>{t('settings.statPaused')}</div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div>
+      <div style={{ position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700 }}>{t('settings.inviteCodes')}</div>
-          <button onClick={generateCode} disabled={generating} style={{ ...outlineButton, opacity: generating ? 0.6 : 1 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="lock" size={13} color={theme.textMuted} /> {t('settings.inviteCodes')}
+          </div>
+          <button onClick={generateCode} disabled={generating} style={{ ...goldButton, opacity: generating ? 0.6 : 1 }}>
             {generating ? t('settings.generating') : t('settings.generateCode')}
           </button>
         </div>
@@ -241,8 +290,10 @@ function AdminCard({ theme, t, card, outlineButton }) {
         )}
       </div>
 
-      <div>
-        <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 10 }}>{t('settings.manageAccounts')}</div>
+      <div style={{ position: 'relative' }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="users" size={13} color={theme.textMuted} /> {t('settings.manageAccounts')}
+        </div>
         {users.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noAccountsYet')}</div>}
         {users.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

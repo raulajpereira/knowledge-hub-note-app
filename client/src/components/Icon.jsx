@@ -134,6 +134,16 @@ const PATHS = {
     ['path', { d: 'M16.5 3.5 20.5 7.5 8 20H4v-4Z' }],
     ['path', { d: 'M14 6l4 4' }],
   ],
+  shield: [
+    ['path', { d: 'M12 3.5 19 6.5v5.5c0 4.5-3 7.5-7 8.5-4-1-7-4-7-8.5V6.5Z' }],
+    ['path', { d: 'M9 12l2 2 4-4.5' }],
+  ],
+  users: [
+    ['circle', { cx: 9, cy: 8.5, r: 3 }],
+    ['path', { d: 'M3.5 19.5c0-3.5 2.5-5.5 5.5-5.5s5.5 2 5.5 5.5' }],
+    ['path', { d: 'M16 8.5a3 3 0 1 0 0-6' }],
+    ['path', { d: 'M14.8 14.2c2.6 0.3 4.7 2.3 4.7 5.3' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

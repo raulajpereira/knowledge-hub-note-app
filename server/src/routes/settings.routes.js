@@ -14,8 +14,10 @@ const SIDEBAR_KEYS = new Set([
   'home', 'notes', 'voice', 'tasks', 'tags', 'passwords', 'issues',
   'artifacts', 'codeLibrary', 'calendar', 'graph',
 ]);
-const HOME_LEFT_BLOCKS = new Set(['quickCapture', 'myTasks', 'issuesByStatus']);
-const HOME_RIGHT_BLOCKS = new Set(['recentNotes', 'favorites', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage']);
+// Blocks can live in either column (the user drags freely between them), so
+// validation only checks each key is a known block and appears at most once
+// across both columns combined — not which column it's in.
+const HOME_BLOCK_KEYS = new Set(['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage']);
 
 function makeUpload(subdir) {
   const storage = multer.diskStorage({
@@ -120,8 +122,14 @@ router.patch('/', async (req, res) => {
           }));
   }
   if (homeLayout !== undefined) {
-    const validCol = (arr, keys) => Array.isArray(arr) && arr.every((k) => keys.has(k)) && new Set(arr).size === arr.length;
-    const valid = homeLayout === null || (homeLayout && validCol(homeLayout.left, HOME_LEFT_BLOCKS) && validCol(homeLayout.right, HOME_RIGHT_BLOCKS));
+    const isArr = (v) => Array.isArray(v);
+    const valid =
+      homeLayout === null ||
+      (homeLayout &&
+        isArr(homeLayout.left) &&
+        isArr(homeLayout.right) &&
+        [...homeLayout.left, ...homeLayout.right].every((k) => HOME_BLOCK_KEYS.has(k)) &&
+        new Set([...homeLayout.left, ...homeLayout.right]).size === homeLayout.left.length + homeLayout.right.length);
     if (!valid) return res.status(400).json({ error: 'homeLayout must be { left: [...], right: [...] } with known, non-duplicate block keys' });
     data.homeLayout = homeLayout;
   }

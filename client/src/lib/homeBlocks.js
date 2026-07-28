@@ -1,36 +1,44 @@
 // Single source of truth for every reorderable block on the Home dashboard.
-// Blocks are split into two fixed columns (matching the page's two-column
-// layout); the user can drag to reorder blocks within each column, and any
-// new block always appears in the appropriate default column.
-export const HOME_COLUMNS = {
-  left: ['quickCapture', 'myTasks', 'issuesByStatus'],
-  right: ['recentNotes', 'favorites', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage'],
+// Blocks live in one of two columns; unlike the sidebar reorder (a single
+// list), a block here can be dragged into either column and to any position
+// within it, so the user controls both the order and how many blocks sit in
+// each column (e.g. 3 left / 4 right instead of a fixed split).
+export const HOME_BLOCKS = ['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage'];
+
+// Only used to place a block the first time it's ever seen (brand new
+// account, or a block added to the app after the user last saved a layout).
+const DEFAULT_COLUMN = {
+  quickCapture: 'left',
+  myTasks: 'left',
+  issuesByStatus: 'left',
+  recentNotes: 'right',
+  favorites: 'right',
+  weeklySummary: 'right',
+  sapNewsTeaser: 'right',
+  vpsDiskUsage: 'right',
 };
 
-function resolveColumn(saved, key) {
-  const known = new Set(HOME_COLUMNS[key]);
-  const ordered = [];
+export function resolveHomeLayout(saved) {
+  const known = new Set(HOME_BLOCKS);
   const seen = new Set();
-  if (Array.isArray(saved)) {
-    for (const blockKey of saved) {
-      if (known.has(blockKey) && !seen.has(blockKey)) {
-        ordered.push(blockKey);
-        seen.add(blockKey);
+  const left = [];
+  const right = [];
+  if (saved && Array.isArray(saved.left) && Array.isArray(saved.right)) {
+    for (const key of saved.left) {
+      if (known.has(key) && !seen.has(key)) {
+        left.push(key);
+        seen.add(key);
+      }
+    }
+    for (const key of saved.right) {
+      if (known.has(key) && !seen.has(key)) {
+        right.push(key);
+        seen.add(key);
       }
     }
   }
-  for (const blockKey of HOME_COLUMNS[key]) {
-    if (!seen.has(blockKey)) ordered.push(blockKey);
+  for (const key of HOME_BLOCKS) {
+    if (!seen.has(key)) (DEFAULT_COLUMN[key] === 'left' ? left : right).push(key);
   }
-  return ordered;
-}
-
-// Merges the user's saved column layout with the master list above, so a
-// block added to the app after the user last saved their layout still shows
-// up (appended in its default column) instead of silently disappearing.
-export function resolveHomeLayout(saved) {
-  return {
-    left: resolveColumn(saved?.left, 'left'),
-    right: resolveColumn(saved?.right, 'right'),
-  };
+  return { left, right };
 }
