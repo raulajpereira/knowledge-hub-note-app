@@ -111,6 +111,187 @@ function TeamCard({ theme, t, card, outlineButton }) {
   );
 }
 
+function AdminCard({ theme, t, card, outlineButton }) {
+  const confirm = useConfirm();
+  const [codes, setCodes] = useState(null);
+  const [users, setUsers] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+  const [busyUserId, setBusyUserId] = useState(null);
+
+  const load = () => {
+    api.listInviteCodes().then((r) => setCodes(r.codes));
+    api.listAdminUsers().then((r) => setUsers(r.users));
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const generateCode = async () => {
+    setGenerating(true);
+    try {
+      await api.createInviteCode();
+      const { codes: fresh } = await api.listInviteCodes();
+      setCodes(fresh);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const copyCode = async (c) => {
+    try {
+      await navigator.clipboard.writeText(c.code);
+      setCopiedId(c.id);
+      setTimeout(() => setCopiedId((v) => (v === c.id ? null : v)), 1500);
+    } catch {
+      /* clipboard unavailable — user can still select and copy the text manually */
+    }
+  };
+
+  const revokeCode = async (c) => {
+    const ok = await confirm({ message: t('settings.confirmRevokeCode', { code: c.code }) });
+    if (!ok) return;
+    await api.revokeInviteCode(c.id);
+    const { codes: fresh } = await api.listInviteCodes();
+    setCodes(fresh);
+  };
+
+  const toggleSuspend = async (u) => {
+    setBusyUserId(u.id);
+    try {
+      await api.updateAdminUser(u.id, { status: u.status === 'suspended' ? 'active' : 'suspended' });
+      const { users: fresh } = await api.listAdminUsers();
+      setUsers(fresh);
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
+  const toggleRole = async (u) => {
+    setBusyUserId(u.id);
+    try {
+      await api.updateAdminUser(u.id, { role: u.role === 'admin' ? 'member' : 'admin' });
+      const { users: fresh } = await api.listAdminUsers();
+      setUsers(fresh);
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
+  const deleteAccount = async (u) => {
+    const ok = await confirm({ message: t('settings.confirmDeleteAccount', { name: u.name }), tone: 'danger', confirmLabel: t('common.delete') });
+    if (!ok) return;
+    setBusyUserId(u.id);
+    try {
+      await api.deleteAdminUser(u.id);
+      const { users: fresh } = await api.listAdminUsers();
+      setUsers(fresh);
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
+  if (!codes || !users) return null;
+
+  const activeCodes = codes.filter((c) => !c.usedAt && !c.revokedAt);
+
+  return (
+    <div style={card}>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.admin')}</div>
+        <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.adminDesc')}</div>
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700 }}>{t('settings.inviteCodes')}</div>
+          <button onClick={generateCode} disabled={generating} style={{ ...outlineButton, opacity: generating ? 0.6 : 1 }}>
+            {generating ? t('settings.generating') : t('settings.generateCode')}
+          </button>
+        </div>
+        {codes.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noCodesYet')}</div>}
+        {codes.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {codes.map((c) => {
+              const status = c.usedAt ? 'used' : c.revokedAt ? 'revoked' : 'pending';
+              const statusLabel = { pending: t('settings.codePending'), used: t('settings.codeUsed', { name: c.usedBy?.name || '' }), revoked: t('settings.codeRevoked') }[status];
+              const statusColor = { pending: theme.accentText, used: theme.textMuted, revoked: 'oklch(0.55 0.18 25)' }[status];
+              return (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: theme.subtleBg }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, letterSpacing: '0.03em' }}>{c.code}</span>
+                  {status === 'pending' && (
+                    <span onClick={() => copyCode(c)} style={{ cursor: 'pointer', fontSize: 11, fontWeight: 700, color: theme.accentText }}>
+                      {copiedId === c.id ? t('settings.copied') : t('common.copy')}
+                    </span>
+                  )}
+                  <span style={{ flex: 1, fontSize: 11.5, color: statusColor, fontWeight: 600, textAlign: 'right' }}>{statusLabel}</span>
+                  {status === 'pending' && (
+                    <span onClick={() => revokeCode(c)} title={t('settings.revokeCode')} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 2px' }}>
+                      &times;
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {activeCodes.length > 0 && (
+          <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 6 }}>{t('settings.codesHint')}</div>
+        )}
+      </div>
+
+      <div>
+        <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 10 }}>{t('settings.manageAccounts')}</div>
+        {users.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noAccountsYet')}</div>}
+        {users.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {users.map((u) => {
+              const busy = busyUserId === u.id;
+              return (
+                <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 8, background: theme.subtleBg, flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {u.name}
+                      {u.status === 'suspended' && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'oklch(0.6 0.16 50)', background: 'oklch(0.6 0.16 50 / 0.15)', padding: '1px 6px', borderRadius: 5 }}>
+                          {t('settings.statusSuspended')}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12, color: theme.textMuted }}>{u.email}</div>
+                  </div>
+                  <button
+                    onClick={() => toggleRole(u)}
+                    disabled={busy}
+                    style={{ ...outlineButton, padding: '5px 10px', fontSize: 11.5, opacity: busy ? 0.5 : 1 }}
+                  >
+                    {u.role === 'admin' ? t('settings.roleAdmin') : t('settings.roleMember')}
+                  </button>
+                  <button
+                    onClick={() => toggleSuspend(u)}
+                    disabled={busy}
+                    style={{ ...outlineButton, padding: '5px 10px', fontSize: 11.5, opacity: busy ? 0.5 : 1 }}
+                  >
+                    {u.status === 'suspended' ? t('settings.reactivate') : t('settings.pause')}
+                  </button>
+                  <span
+                    onClick={() => (busy ? null : deleteAccount(u))}
+                    title={t('common.delete')}
+                    style={{ cursor: busy ? 'default' : 'pointer', color: 'oklch(0.55 0.18 25)', fontSize: 16, padding: '0 4px', opacity: busy ? 0.5 : 1 }}
+                  >
+                    &times;
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function formatMb(mb) {
   if (mb == null) return null;
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`;
@@ -625,6 +806,10 @@ export default function Settings() {
       </div>
 
       <TeamCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
+
+      {(user?.role === 'admin' || user?.role === 'super_admin') && (
+        <AdminCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
+      )}
 
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>

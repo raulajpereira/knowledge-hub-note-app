@@ -1377,72 +1377,6 @@ export default function Notes() {
             )}
           </div>
 
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Icon name="link" size={12} /> {t('notes.linkedNotes')}
-              </div>
-              <span onClick={openLinkPicker} style={{ fontSize: 11, fontWeight: 700, color: theme.accentText, cursor: 'pointer' }}>
-                {t('notes.addLink')}
-              </span>
-            </div>
-            {(selected.links || []).length === 0 ? (
-              <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('notes.noLinkedNotes')}</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {(selected.links || []).map((link) => {
-                  const target = notes.find((n) => n.id === link.noteId);
-                  if (!target) return null;
-                  return (
-                    <div
-                      key={link.noteId}
-                      onClick={() => setPreviewNoteId(link.noteId)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: theme.subtleBg }}
-                    >
-                      <Icon name="doc" size={14} color={theme.textMuted} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {link.label && (
-                          <div style={{ fontSize: 10.5, fontWeight: 700, color: theme.accentText }}>{link.label}</div>
-                        )}
-                        <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{target.title}</div>
-                      </div>
-                      <span
-                        onClick={(e) => { e.stopPropagation(); removeLink(link.noteId); }}
-                        title={t('notes.removeLink')}
-                        style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 4px', flexShrink: 0 }}
-                      >
-                        &times;
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Icon name="link" size={12} /> {t('notes.linkedFrom')}
-            </div>
-            {backlinks.length === 0 ? (
-              <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('notes.noBacklinks')}</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {backlinks.map((n) => (
-                  <div
-                    key={n.id}
-                    onClick={() => setSelectedId(n.id)}
-                    style={{ padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, background: theme.subtleBg }}
-                  >
-                    {n.title}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <LinkedItemsPanel entityType="note" entityId={selected.id} theme={theme} t={t} />
-
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={addTextBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addText')}
@@ -1456,8 +1390,77 @@ export default function Notes() {
             <button onClick={addChecklistBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addChecklist')}
             </button>
-            <input ref={fileInputRef} type="file" onChange={onFileInputChange} style={{ display: 'none' }} />
           </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 10, paddingTop: 18, borderTop: `1px solid ${theme.border}` }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="link" size={12} /> {t('notes.linkedNotes')}
+                </div>
+                <span onClick={openLinkPicker} style={{ fontSize: 11, fontWeight: 700, color: theme.accentText, cursor: 'pointer' }}>
+                  {t('notes.addLink')}
+                </span>
+              </div>
+              {(selected.links || []).length === 0 ? (
+                <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('notes.noLinkedNotes')}</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {(selected.links || []).map((link) => {
+                    const target = notes.find((n) => n.id === link.noteId);
+                    if (!target) return null;
+                    return (
+                      <div
+                        key={link.noteId}
+                        onClick={() => setPreviewNoteId(link.noteId)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: theme.subtleBg }}
+                      >
+                        <Icon name="doc" size={14} color={theme.textMuted} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {link.label && (
+                            <div style={{ fontSize: 10.5, fontWeight: 700, color: theme.accentText }}>{link.label}</div>
+                          )}
+                          <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{target.title}</div>
+                        </div>
+                        <span
+                          onClick={(e) => { e.stopPropagation(); removeLink(link.noteId); }}
+                          title={t('notes.removeLink')}
+                          style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 4px', flexShrink: 0 }}
+                        >
+                          &times;
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="link" size={12} /> {t('notes.linkedFrom')}
+              </div>
+              {backlinks.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('notes.noBacklinks')}</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {backlinks.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => setSelectedId(n.id)}
+                      style={{ padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, background: theme.subtleBg }}
+                    >
+                      {n.title}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <LinkedItemsPanel entityType="note" entityId={selected.id} theme={theme} t={t} />
+
+          <input ref={fileInputRef} type="file" onChange={onFileInputChange} style={{ display: 'none' }} />
         </div>
       ) : (
         <div style={{ flex: '1 1 480px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>

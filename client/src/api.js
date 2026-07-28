@@ -42,6 +42,13 @@ export const api = {
   inviteTeamMember: (payload) => request('/auth/team/invite', { method: 'POST', body: payload }),
   removeTeamMember: (id) => request(`/auth/team/${id}`, { method: 'DELETE' }),
 
+  listInviteCodes: () => request('/auth/invite-codes'),
+  createInviteCode: () => request('/auth/invite-codes', { method: 'POST' }),
+  revokeInviteCode: (id) => request(`/auth/invite-codes/${id}`, { method: 'DELETE' }),
+  listAdminUsers: () => request('/auth/admin/users'),
+  updateAdminUser: (id, payload) => request(`/auth/admin/users/${id}`, { method: 'PATCH', body: payload }),
+  deleteAdminUser: (id) => request(`/auth/admin/users/${id}`, { method: 'DELETE' }),
+
   listNotes: (trashed = false) => request(`/notes${trashed ? '?trashed=true' : ''}`),
   getNote: (id) => request(`/notes/${id}`),
   createNote: (payload) => request('/notes', { method: 'POST', body: payload }),

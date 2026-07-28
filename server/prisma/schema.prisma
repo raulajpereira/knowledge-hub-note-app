@@ -7,14 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// member: regular account. admin: can generate invite codes and manage
+// member/admin accounts. super_admin: the operator's own account — only
+// modifiable by itself, never by other admins (exactly one super_admin is
+// expected to exist, seeded via migration).
+enum UserRole {
+  member
+  admin
+  super_admin
+}
+
+// active: normal access. suspended: login/API blocked (data kept) — set by
+// an admin who wants to pause an account without deleting it.
+enum UserStatus {
+  active
+  suspended
+}
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String     @id @default(uuid())
+  email        String     @unique
   passwordHash String
   name         String
   teamOwnerId  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         UserRole   @default(member)
+  status       UserStatus @default(active)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   settings        Settings?
   folders         Folder[]
@@ -31,10 +50,26 @@ model User {
   codeFolders     CodeFolder[]
   codeItems       CodeItem[]
   links           Link[]
+  inviteCodes     InviteCode[] @relation("InviteCodeCreator")
+  usedInviteCode  InviteCode?  @relation("InviteCodeUser")
   teamOwner       User?    @relation("TeamMembers", fields: [teamOwnerId], references: [id], onDelete: SetNull)
   teamMembers     User[]   @relation("TeamMembers")
 
   @@map("users")
+}
+
+model InviteCode {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  createdById   String
+  createdBy     User      @relation("InviteCodeCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  usedById      String?   @unique
+  usedBy        User?     @relation("InviteCodeUser", fields: [usedById], references: [id], onDelete: SetNull)
+  usedAt        DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@map("invite_codes")
 }
 
 model Settings {

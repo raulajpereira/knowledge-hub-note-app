@@ -19,6 +19,7 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -31,7 +32,7 @@ export default function Register() {
     }
     setSubmitting(true);
     try {
-      await register(email, password, name);
+      await register(email, password, name, inviteCode);
       navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || t('register.errDefault'));
@@ -80,6 +81,7 @@ export default function Register() {
             { label: t('register.email'), value: email, setter: setEmail, type: 'email', placeholder: t('register.emailPlaceholder') },
             { label: t('register.password'), value: password, setter: setPassword, type: 'password', placeholder: t('register.passwordPlaceholder') },
             { label: t('register.confirmPassword'), value: confirm, setter: setConfirm, type: 'password', placeholder: t('register.confirmPasswordPlaceholder') },
+            { label: t('register.inviteCode'), value: inviteCode, setter: (v) => setInviteCode(v.toUpperCase()), type: 'text', placeholder: t('register.inviteCodePlaceholder') },
           ].map((f) => (
             <div key={f.label} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{f.label}</div>

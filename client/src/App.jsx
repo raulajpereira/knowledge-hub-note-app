@@ -7,6 +7,7 @@ import { ConfirmProvider } from './context/ConfirmContext.jsx';
 import { CountsProvider } from './context/CountsContext.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import SuspendedAccount from './pages/SuspendedAccount.jsx';
 import AppLayout from './components/AppLayout.jsx';
 import Home from './pages/Home.jsx';
 import Notes from './pages/Notes.jsx';
@@ -54,6 +55,10 @@ export default function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
+  }
+
+  if (user.status === 'suspended') {
+    return <SuspendedAccount />;
   }
 
   return (
