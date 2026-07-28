@@ -10,6 +10,7 @@ import CodeBlock from '../components/CodeBlock.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
+import { backdropClose } from '../lib/backdropClose.js';
 
 const URL_ONLY_RE = /^(https?:\/\/|www\.)\S+$/i;
 const BARE_URL_RE = /(https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/g;
@@ -190,6 +191,8 @@ export default function Notes() {
   const [newFolderParentId, setNewFolderParentId] = useState(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
+  const [editingFolderId, setEditingFolderId] = useState(null);
+  const [editFolderName, setEditFolderName] = useState('');
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -648,6 +651,45 @@ export default function Notes() {
     updateBlock(blockId, { value: el.innerHTML, format: 'html' });
   };
 
+  // Font family/size are applied via <select> dropdowns, which steal focus
+  // (and collapse the contentEditable selection) the moment they're
+  // interacted with — so the Range has to be captured on mousedown, before
+  // the browser moves focus, and reused on change. Wraps the selection in a
+  // styled <span> by hand (same technique as inline code) rather than the
+  // deprecated execCommand('fontName'/'fontSize'), which emits legacy tags.
+  const savedRangeRef = useRef(null);
+
+  const saveSelectionRange = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
+  const applyInlineStyle = (styleProp, value) => {
+    const blockId = editingTextBlockId;
+    const el = blockId && textareaRefsRef.current[blockId];
+    const range = savedRangeRef.current;
+    if (!selected || !el || !range || !el.contains(range.commonAncestorContainer)) return;
+    const span = document.createElement('span');
+    span.style[styleProp] = value;
+    try {
+      range.surroundContents(span);
+    } catch {
+      const contents = range.extractContents();
+      span.appendChild(contents);
+      range.insertNode(span);
+    }
+    el.focus();
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.addRange(newRange);
+    savedRangeRef.current = newRange.cloneRange();
+    updateBlock(blockId, { value: el.innerHTML, format: 'html' });
+  };
+
   const addChecklistBlock = () => {
     if (!selected) return;
     updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'checklist', items: [{ id: newBlockId(), text: '', done: false }] }]);
@@ -700,6 +742,30 @@ export default function Notes() {
     setNewFolderParentId(null);
   };
 
+  const startEditFolder = (f) => {
+    setEditingFolderId(f.id);
+    setEditFolderName(f.name);
+  };
+
+  const commitFolderRename = async () => {
+    const id = editingFolderId;
+    const name = editFolderName.trim();
+    setEditingFolderId(null);
+    const target = folders.find((f) => f.id === id);
+    if (!target || !name || name === target.name) return;
+    const { folder } = await api.renameFolder(id, { name });
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...folder } : f)));
+  };
+
+  const removeFolder = async (f, e) => {
+    e.stopPropagation();
+    const ok = await confirm({ message: t('notes.confirmDeleteFolder', { name: f.name }) });
+    if (!ok) return;
+    await api.deleteFolder(f.id);
+    if (activeFolder === f.id) setActiveFolder('all');
+    await load();
+  };
+
   const rowStyle = (isActive) => ({
     display: 'flex',
     flexDirection: 'column',
@@ -748,13 +814,39 @@ export default function Notes() {
             <span style={{ width: 11, flexShrink: 0 }} />
           )}
           <Icon name="folder" size={15} />
-          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
+          {editingFolderId === f.id ? (
+            <input
+              value={editFolderName}
+              onChange={(e) => setEditFolderName(e.target.value)}
+              onBlur={commitFolderRename}
+              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+              style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, border: `1px solid ${theme.accent}`, borderRadius: 6, padding: '2px 6px', background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
+            />
+          ) : (
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
+          )}
+          <span
+            onClick={(e) => { e.stopPropagation(); startEditFolder(f); }}
+            title={t('notes.renameFolder')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="edit" size={12} />
+          </span>
           <span
             onClick={(e) => { e.stopPropagation(); setNewFolderParentId(f.id); setNewFolderOpen(true); }}
             title={t('codeLibrary.newSubfolder')}
             style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
           >
             <Icon name="plus" size={12} />
+          </span>
+          <span
+            onClick={(e) => removeFolder(f, e)}
+            title={t('notes.deleteFolder')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="trash" size={12} />
           </span>
           <span style={{ fontSize: 11.5, opacity: 0.7, flexShrink: 0 }}>{f.noteCount}</span>
         </div>
@@ -1044,7 +1136,7 @@ export default function Notes() {
               );
             })}
             <span
-              onClick={() => setTagPickerOpen((v) => !v)}
+              onClick={() => { setTagPickerOpen((v) => !v); setNewTagInput(''); }}
               style={{ fontSize: 11, fontWeight: 700, border: `1px dashed ${theme.border}`, color: theme.textMuted, padding: '3px 9px', borderRadius: 6, cursor: 'pointer' }}
             >
               {t('notes.addTag')}
@@ -1053,57 +1145,100 @@ export default function Notes() {
 
           {tagPickerOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 10 }}>
-              {tags.filter((t) => !(selected.tags || []).includes(t.name)).length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {tags
-                    .filter((t) => !(selected.tags || []).includes(t.name))
-                    .map((t) => (
-                      <span
-                        key={t.id}
-                        onClick={() => addTagToNote(t.name)}
-                        style={{ fontSize: 11, fontWeight: 700, background: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.textPrimary, padding: '4px 9px', borderRadius: 6, cursor: 'pointer' }}
-                      >
-                        {t.name}
-                      </span>
-                    ))}
-                </div>
-              )}
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   value={newTagInput}
                   onChange={(e) => setNewTagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && createAndAddTag()}
                   placeholder={t('notes.newTagPlaceholder')}
+                  autoFocus
                   style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
                 />
                 <button onClick={createAndAddTag} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   {t('common.add')}
                 </button>
               </div>
+              {newTagInput.trim() && (() => {
+                const q = newTagInput.trim().toLowerCase();
+                const matches = tags.filter((t) => !(selected.tags || []).includes(t.name) && t.name.toLowerCase().includes(q)).slice(0, 8);
+                return matches.length > 0 ? (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {matches.map((t) => (
+                      <span
+                        key={t.id}
+                        onClick={() => { addTagToNote(t.name); setNewTagInput(''); }}
+                        style={{ fontSize: 11, fontWeight: 700, background: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.textPrimary, padding: '4px 9px', borderRadius: 6, cursor: 'pointer' }}
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11.5, color: theme.textMuted }}>{t('tags.createNewTag', { name: newTagInput.trim() })}</div>
+                );
+              })()}
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 4, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 9, padding: 4, width: 'fit-content' }}>
-            {[
-              { key: 'bold', label: 'B', command: 'bold', style: { fontWeight: 800 } },
-              { key: 'italic', label: 'I', command: 'italic', style: { fontStyle: 'italic' } },
-              { key: 'underline', label: 'U', command: 'underline', style: { textDecoration: 'underline' } },
-              { key: 'code', label: '</>', command: 'code', style: { fontFamily: 'var(--font-mono)', fontSize: 11 } },
-            ].map((btn) => (
-              <button
-                key={btn.key}
-                title={t(`notes.format${btn.key.charAt(0).toUpperCase()}${btn.key.slice(1)}`)}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => applyFormatting(btn.command)}
-                style={{
-                  width: 30, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', color: theme.textPrimary,
-                  fontSize: 13, ...btn.style,
-                }}
-              >
-                {btn.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 4, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 9, padding: 4, width: 'fit-content' }}>
+              {[
+                { key: 'bold', label: 'B', command: 'bold', style: { fontWeight: 800 } },
+                { key: 'italic', label: 'I', command: 'italic', style: { fontStyle: 'italic' } },
+                { key: 'underline', label: 'U', command: 'underline', style: { textDecoration: 'underline' } },
+                { key: 'code', label: '</>', command: 'code', style: { fontFamily: 'var(--font-mono)', fontSize: 11 } },
+              ].map((btn) => (
+                <button
+                  key={btn.key}
+                  title={t(`notes.format${btn.key.charAt(0).toUpperCase()}${btn.key.slice(1)}`)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => applyFormatting(btn.command)}
+                  style={{
+                    width: 30, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'transparent', border: 'none', borderRadius: 6, cursor: 'pointer', color: theme.textPrimary,
+                    fontSize: 13, ...btn.style,
+                  }}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+
+            <select
+              title={t('notes.fontFamily')}
+              defaultValue=""
+              onMouseDown={saveSelectionRange}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value) applyInlineStyle('fontFamily', value);
+                e.target.value = '';
+              }}
+              style={{ height: 28, border: `1px solid ${theme.border}`, borderRadius: 7, background: theme.subtleBg, color: theme.textPrimary, fontSize: 12, padding: '0 6px', cursor: 'pointer' }}
+            >
+              <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontFamily')}</option>
+              <option value="'Inter', -apple-system, sans-serif" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontSans')}</option>
+              <option value="Georgia, 'Times New Roman', serif" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontSerif')}</option>
+              <option value="'JetBrains Mono', ui-monospace, monospace" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontMono')}</option>
+            </select>
+
+            <select
+              title={t('notes.fontSize')}
+              defaultValue=""
+              onMouseDown={saveSelectionRange}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value) applyInlineStyle('fontSize', value);
+                e.target.value = '';
+              }}
+              style={{ height: 28, border: `1px solid ${theme.border}`, borderRadius: 7, background: theme.subtleBg, color: theme.textPrimary, fontSize: 12, padding: '0 6px', cursor: 'pointer' }}
+            >
+              <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.fontSize')}</option>
+              <option value="12px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeSmall')}</option>
+              <option value="14px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeNormal')}</option>
+              <option value="17px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeMedium')}</option>
+              <option value="21px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeLarge')}</option>
+              <option value="27px" style={{ color: '#1a1a1a', background: '#fff' }}>{t('notes.sizeXLarge')}</option>
+            </select>
           </div>
 
           <div onPaste={handlePaste} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1332,7 +1467,7 @@ export default function Notes() {
 
       {linkPickerOpen && (
         <div
-          onClick={() => setLinkPickerOpen(false)}
+          onMouseDown={backdropClose(() => setLinkPickerOpen(false))}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
         >
           <div
@@ -1411,7 +1546,7 @@ export default function Notes() {
 
       {previewNote && (
         <div
-          onClick={() => setPreviewNoteId(null)}
+          onMouseDown={backdropClose(() => setPreviewNoteId(null))}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
         >
           <div

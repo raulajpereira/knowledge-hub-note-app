@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from './Icon.jsx';
+import { backdropClose } from '../lib/backdropClose.js';
 
 function userInitials(name) {
   if (!name) return '?';
@@ -92,7 +93,7 @@ export default function AccountModal({ onClose }) {
 
   return (
     <div
-      onClick={onClose}
+      onMouseDown={backdropClose(onClose)}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
     >
       <div

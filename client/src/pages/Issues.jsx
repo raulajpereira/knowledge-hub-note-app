@@ -9,6 +9,7 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import DateInput from '../components/DateInput.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
+import { backdropClose } from '../lib/backdropClose.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35, Critical: 20 };
@@ -93,6 +94,12 @@ export default function Issues() {
   const [statusDraft, setStatusDraft] = useState([]);
   const [originalStatusNames, setOriginalStatusNames] = useState([]);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+  const [projectDraft, setProjectDraft] = useState('');
+  const [waitingOnDraft, setWaitingOnDraft] = useState('');
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [notesDraft, setNotesDraft] = useState('');
 
   const statusConfig = user?.settings?.issueStatuses?.length ? user.settings.issueStatuses : DEFAULT_STATUSES;
   const STATUS_NAMES = statusConfig.map((s) => s.name);
@@ -179,10 +186,42 @@ export default function Issues() {
     [issues, search]
   );
 
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const sortValue = (issue, key) => {
+    if (key === 'priority') return PRIORITIES.indexOf(issue.priority);
+    if (key === 'status') return STATUS_NAMES.indexOf(issue.status);
+    return (issue[key] || '').toString().toLowerCase();
+  };
+
+  const sorted = useMemo(() => {
+    if (!sortKey) return filtered;
+    const arr = [...filtered].sort((a, b) => {
+      const va = sortValue(a, sortKey);
+      const vb = sortValue(b, sortKey);
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return arr;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, sortKey, sortDir, statusConfig]);
+
   const selected = issues.find((i) => i.id === selectedId) || null;
 
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
+    setProjectDraft(selected?.project ?? '');
+    setWaitingOnDraft(selected?.waitingOn ?? '');
+    setDescriptionDraft(selected?.description ?? '');
+    setNotesDraft(selected?.notes ?? '');
   }, [selected?.id]);
 
   const patch = async (id, payload) => {
@@ -202,6 +241,15 @@ export default function Issues() {
     const { issue } = await api.updateIssue(selected.id, { title: titleDraft });
     setIssues((prev) => prev.map((i) => (i.id === issue.id ? issue : i)));
     setTitleDraft(issue.title);
+  };
+
+  // Text fields are edited via local draft state and only sent to the server
+  // on blur — patching on every keystroke caused an async round-trip per
+  // character, which reset the input's value (and cursor position) from the
+  // server response mid-typing and scrambled fast input.
+  const commitField = (field, value) => {
+    if (!selected || value === (selected[field] || '')) return;
+    patch(selected.id, { [field]: value });
   };
 
   const openNewIssue = () => {
@@ -297,13 +345,22 @@ export default function Issues() {
           <div style={{ flex: '1 1 640px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflow: 'auto' }}>
             <div style={{ display: 'grid', gridTemplateColumns: [...columns.map((c) => `${c.width}px`), '1fr'].join(' '), gap: 0, minWidth: '100%' }}>
               {columns.map((col, i) => (
-                <div key={col.key} style={{ position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `1px solid ${theme.border}` }}>
+                <div
+                  key={col.key}
+                  onClick={() => toggleSort(col.key)}
+                  style={{ position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+                >
                   {t(col.labelKey)}
+                  {sortKey === col.key && (
+                    <span style={{ display: 'flex', opacity: 0.8, transform: sortDir === 'asc' ? 'rotate(-90deg)' : 'rotate(90deg)' }}>
+                      <Icon name="chevron" size={9} strokeWidth={2.5} />
+                    </span>
+                  )}
                   <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} />
                 </div>
               ))}
               <div style={{ borderBottom: `1px solid ${theme.border}` }} />
-              {filtered.map((issue) => (
+              {sorted.map((issue) => (
                 <Fragment key={issue.id}>
                   <div
                     onClick={() => setSelectedId(issue.id)}
@@ -383,7 +440,7 @@ export default function Issues() {
 
       {selected && (
         <div
-          onClick={() => setSelectedId(null)}
+          onMouseDown={backdropClose(() => setSelectedId(null))}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
         >
           <div
@@ -453,8 +510,10 @@ export default function Issues() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.project')}</div>
               <input
-                value={selected.project || ''}
-                onChange={(e) => patch(selected.id, { project: e.target.value })}
+                value={projectDraft}
+                onChange={(e) => setProjectDraft(e.target.value)}
+                onBlur={() => commitField('project', projectDraft)}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
             </div>
@@ -471,8 +530,10 @@ export default function Issues() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.waitingOn')}</div>
               <input
-                value={selected.waitingOn || ''}
-                onChange={(e) => patch(selected.id, { waitingOn: e.target.value })}
+                value={waitingOnDraft}
+                onChange={(e) => setWaitingOnDraft(e.target.value)}
+                onBlur={() => commitField('waitingOn', waitingOnDraft)}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
             </div>
@@ -494,8 +555,9 @@ export default function Issues() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.description')}</div>
               <textarea
-                value={selected.description || ''}
-                onChange={(e) => patch(selected.id, { description: e.target.value })}
+                value={descriptionDraft}
+                onChange={(e) => setDescriptionDraft(e.target.value)}
+                onBlur={() => commitField('description', descriptionDraft)}
                 rows={3}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
               />
@@ -504,8 +566,9 @@ export default function Issues() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{t('issues.notes')}</div>
               <textarea
-                value={selected.notes || ''}
-                onChange={(e) => patch(selected.id, { notes: e.target.value })}
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                onBlur={() => commitField('notes', notesDraft)}
                 rows={3}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, fontSize: 12.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
               />
@@ -518,7 +581,7 @@ export default function Issues() {
 
       {newIssueOpen && (
         <div
-          onClick={() => setNewIssueOpen(false)}
+          onMouseDown={backdropClose(() => setNewIssueOpen(false))}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
         >
           <div
@@ -660,7 +723,7 @@ export default function Issues() {
 
       {statusConfigOpen && (
         <div
-          onClick={() => setStatusConfigOpen(false)}
+          onMouseDown={backdropClose(() => setStatusConfigOpen(false))}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
         >
           <div

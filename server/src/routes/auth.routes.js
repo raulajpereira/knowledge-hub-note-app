@@ -31,6 +31,7 @@ function publicUser(user) {
           issueStatuses: user.settings.issueStatuses,
           trashRetentionDays: user.settings.trashRetentionDays,
           sidebarLayout: user.settings.sidebarLayout,
+          homeLayout: user.settings.homeLayout,
         }
       : null,
   };

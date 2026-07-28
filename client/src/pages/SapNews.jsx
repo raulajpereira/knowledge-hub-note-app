@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { backdropClose } from '../lib/backdropClose.js';
 
 function timeAgo(dateStr, t) {
   if (!dateStr) return '';
@@ -199,7 +200,7 @@ export default function SapNews() {
 
       {selected && (
         <div
-          onClick={() => setSelected(null)}
+          onMouseDown={backdropClose(() => setSelected(null))}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
         >
           <div

@@ -14,6 +14,8 @@ const SIDEBAR_KEYS = new Set([
   'home', 'notes', 'voice', 'tasks', 'tags', 'passwords', 'issues',
   'artifacts', 'codeLibrary', 'calendar', 'graph',
 ]);
+const HOME_LEFT_BLOCKS = new Set(['quickCapture', 'myTasks', 'issuesByStatus']);
+const HOME_RIGHT_BLOCKS = new Set(['recentNotes', 'favorites', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage']);
 
 function makeUpload(subdir) {
   const storage = multer.diskStorage({
@@ -54,7 +56,7 @@ const FONT_FAMILIES = ['inter', 'grotesk', 'system', 'serif', 'mono'];
 const LANGUAGES = ['pt', 'en'];
 
 router.patch('/', async (req, res) => {
-  const { theme, accentColor, accentHue, fontFamily, language, vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout } = req.body || {};
+  const { theme, accentColor, accentHue, fontFamily, language, vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout } = req.body || {};
   const data = {};
   if (theme !== undefined) {
     if (!['dark', 'light'].includes(theme)) return res.status(400).json({ error: 'Invalid theme' });
@@ -116,6 +118,12 @@ router.patch('/', async (req, res) => {
             labelPt: s.labelPt?.trim().slice(0, 40) || undefined,
             labelEn: s.labelEn?.trim().slice(0, 40) || undefined,
           }));
+  }
+  if (homeLayout !== undefined) {
+    const validCol = (arr, keys) => Array.isArray(arr) && arr.every((k) => keys.has(k)) && new Set(arr).size === arr.length;
+    const valid = homeLayout === null || (homeLayout && validCol(homeLayout.left, HOME_LEFT_BLOCKS) && validCol(homeLayout.right, HOME_RIGHT_BLOCKS));
+    if (!valid) return res.status(400).json({ error: 'homeLayout must be { left: [...], right: [...] } with known, non-duplicate block keys' });
+    data.homeLayout = homeLayout;
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },

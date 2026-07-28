@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { useTheme } from './ThemeContext.jsx';
 import { useLanguage } from './LanguageContext.jsx';
+import { backdropClose } from '../lib/backdropClose.js';
 
 const ConfirmContext = createContext(null);
 
@@ -34,7 +35,7 @@ function ConfirmDialog({ request, onClose }) {
   const { t } = useLanguage();
   return (
     <div
-      onClick={() => onClose(false)}
+      onMouseDown={backdropClose(() => onClose(false))}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }}
     >
       <div

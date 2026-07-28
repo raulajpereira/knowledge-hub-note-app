@@ -41,6 +41,8 @@ export default function Artifacts() {
   const [newFolderName, setNewFolderName] = useState('');
   const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
   const [dragOverFolder, setDragOverFolder] = useState(null);
+  const [editingFolderId, setEditingFolderId] = useState(null);
+  const [editFolderName, setEditFolderName] = useState('');
 
   const load = async () => {
     const [{ artifacts }, { folders }, { tags }] = await Promise.all([api.listArtifacts(), api.listArtifactFolders(), api.listTags()]);
@@ -186,6 +188,30 @@ export default function Artifacts() {
     setNewFolderParentId(null);
   };
 
+  const startEditFolder = (f) => {
+    setEditingFolderId(f.id);
+    setEditFolderName(f.name);
+  };
+
+  const commitFolderRename = async () => {
+    const id = editingFolderId;
+    const name = editFolderName.trim();
+    setEditingFolderId(null);
+    const target = folders.find((f) => f.id === id);
+    if (!target || !name || name === target.name) return;
+    const { folder } = await api.renameArtifactFolder(id, { name });
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...folder } : f)));
+  };
+
+  const removeFolder = async (f, e) => {
+    e.stopPropagation();
+    const ok = await confirm({ message: t('artifacts.confirmDeleteFolder', { name: f.name }) });
+    if (!ok) return;
+    await api.deleteArtifactFolder(f.id);
+    if (activeFolder === f.id) setActiveFolder('all');
+    await load();
+  };
+
   const rowStyle = (isActive) => ({
     display: 'flex',
     flexDirection: 'column',
@@ -244,13 +270,39 @@ export default function Artifacts() {
             <span style={{ width: 11, flexShrink: 0 }} />
           )}
           <Icon name="folder" size={15} />
-          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
+          {editingFolderId === f.id ? (
+            <input
+              value={editFolderName}
+              onChange={(e) => setEditFolderName(e.target.value)}
+              onBlur={commitFolderRename}
+              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+              style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, border: `1px solid ${theme.accent}`, borderRadius: 6, padding: '2px 6px', background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
+            />
+          ) : (
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
+          )}
+          <span
+            onClick={(e) => { e.stopPropagation(); startEditFolder(f); }}
+            title={t('artifacts.renameFolder')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="edit" size={12} />
+          </span>
           <span
             onClick={(e) => { e.stopPropagation(); setNewFolderParentId(f.id); setNewFolderOpen(true); }}
             title={t('codeLibrary.newSubfolder')}
             style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
           >
             <Icon name="plus" size={12} />
+          </span>
+          <span
+            onClick={(e) => removeFolder(f, e)}
+            title={t('artifacts.deleteFolder')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="trash" size={12} />
           </span>
           <span style={{ fontSize: 11.5, opacity: 0.7, flexShrink: 0 }}>{f.artifactCount}</span>
         </div>
@@ -428,7 +480,7 @@ export default function Artifacts() {
               );
             })}
             <span
-              onClick={() => setTagPickerOpen((v) => !v)}
+              onClick={() => { setTagPickerOpen((v) => !v); setNewTagInput(''); }}
               style={{ fontSize: 11, fontWeight: 700, border: `1px dashed ${theme.border}`, color: theme.textMuted, padding: '3px 9px', borderRadius: 6, cursor: 'pointer' }}
             >
               {t('artifacts.addTag')}
@@ -437,33 +489,38 @@ export default function Artifacts() {
 
           {tagPickerOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 10 }}>
-              {tags.filter((t) => !(selected.tags || []).includes(t.name)).length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {tags
-                    .filter((t) => !(selected.tags || []).includes(t.name))
-                    .map((t) => (
-                      <span
-                        key={t.id}
-                        onClick={() => addTagToArtifact(t.name)}
-                        style={{ fontSize: 11, fontWeight: 700, background: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.textPrimary, padding: '4px 9px', borderRadius: 6, cursor: 'pointer' }}
-                      >
-                        {t.name}
-                      </span>
-                    ))}
-                </div>
-              )}
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   value={newTagInput}
                   onChange={(e) => setNewTagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && createAndAddTag()}
                   placeholder={t('artifacts.newTagPlaceholder')}
+                  autoFocus
                   style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
                 />
                 <button onClick={createAndAddTag} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   {t('common.add')}
                 </button>
               </div>
+              {newTagInput.trim() && (() => {
+                const q = newTagInput.trim().toLowerCase();
+                const matches = tags.filter((t) => !(selected.tags || []).includes(t.name) && t.name.toLowerCase().includes(q)).slice(0, 8);
+                return matches.length > 0 ? (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {matches.map((t) => (
+                      <span
+                        key={t.id}
+                        onClick={() => { addTagToArtifact(t.name); setNewTagInput(''); }}
+                        style={{ fontSize: 11, fontWeight: 700, background: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.textPrimary, padding: '4px 9px', borderRadius: 6, cursor: 'pointer' }}
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11.5, color: theme.textMuted }}>{t('tags.createNewTag', { name: newTagInput.trim() })}</div>
+                );
+              })()}
             </div>
           )}
 

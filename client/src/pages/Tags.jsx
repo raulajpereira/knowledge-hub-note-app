@@ -129,7 +129,6 @@ export default function Tags() {
               ) : (
                 <>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
-                  <span style={{ fontSize: 11.5, color: theme.textMuted }}>{t.count}</span>
                   <span onClick={(e) => { e.stopPropagation(); startEdit(t); }} style={{ opacity: 0.5, cursor: 'pointer', padding: 2 }}>
                     &#9998;
                   </span>

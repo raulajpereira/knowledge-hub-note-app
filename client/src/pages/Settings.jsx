@@ -11,6 +11,7 @@ import ColorWheel from '../components/ColorWheel.jsx';
 import SidebarSettingsModal from '../components/SidebarSettingsModal.jsx';
 import logoDefault from '../assets/logo-default.png';
 import logoIcon from '../assets/logo-icon.png';
+import { backdropClose } from '../lib/backdropClose.js';
 
 const APP_VERSION = '1.0.0';
 
@@ -678,7 +679,7 @@ export default function Settings() {
 
       {aboutOpen && (
         <div
-          onClick={() => setAboutOpen(false)}
+          onMouseDown={backdropClose(() => setAboutOpen(false))}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
         >
           <div
@@ -723,7 +724,7 @@ export default function Settings() {
 
       {newAgentOpen && (
         <div
-          onClick={() => setNewAgentOpen(false)}
+          onMouseDown={backdropClose(() => setNewAgentOpen(false))}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
         >
           <div

@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import Icon from './Icon.jsx';
 import { resolveSidebarLayout, sidebarItemLabel } from '../lib/sidebarItems.js';
 import { translate } from '../i18n/translations.js';
+import { backdropClose } from '../lib/backdropClose.js';
 
 export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
   const { user, updateUserSettings } = useAuth();
@@ -46,7 +47,7 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
 
   return (
     <div
-      onClick={onClose}
+      onMouseDown={backdropClose(onClose)}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
     >
       <div
