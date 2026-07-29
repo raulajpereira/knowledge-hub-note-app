@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   { path: '/settings', labelKey: 'nav.settings', icon: 'settings' },
 ];
 
-export default function HeaderSearch() {
+export default function HeaderSearch({ compact = false, focusSignal }) {
   const { theme, mode, setMode } = useTheme();
   const { t } = useLanguage();
   const { refresh: refreshCounts } = useCounts();
@@ -36,6 +36,12 @@ export default function HeaderSearch() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (!focusSignal) return;
+    inputRef.current?.focus();
+    setOpen(true);
+  }, [focusSignal]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -237,7 +243,7 @@ export default function HeaderSearch() {
           placeholder={t('search.placeholder')}
           style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: theme.textPrimary, fontSize: 14 }}
         />
-        {!query && (
+        {!query && !compact && (
           <span style={{ fontSize: 11, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 5, padding: '2px 6px', color: theme.textMuted, flexShrink: 0 }}>
             {isMac ? '⌘K' : 'Ctrl K'}
           </span>

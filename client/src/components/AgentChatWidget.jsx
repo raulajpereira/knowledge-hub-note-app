@@ -8,6 +8,7 @@ import Icon from './Icon.jsx';
 import { parseReplyToBlocks, titleFromContent } from '../lib/parseAgentReply.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 import { navigateToEntity } from '../lib/entityNav.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 function SourceChips({ sources, theme, t }) {
   const navigate = useNavigate();
@@ -82,6 +83,7 @@ function SaveAsNoteButton({ content, agentName, theme, t }) {
 export default function AgentChatWidget() {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   const { agents, updateAgent } = useAgents();
   const activeAgents = agents.filter((a) => a.active);
   const [open, setOpen] = useState(false);
@@ -143,7 +145,10 @@ export default function AgentChatWidget() {
       {open && (
         <div
           style={{
-            position: 'fixed', bottom: 88, right: 24, width: 340, maxWidth: 'calc(100vw - 48px)', height: 460,
+            position: 'fixed',
+            bottom: isMobile ? 'calc(var(--mobile-nav-height) + var(--safe-bottom) + 76px)' : 88,
+            right: isMobile ? 12 : 24,
+            width: 340, maxWidth: isMobile ? 'calc(100vw - 24px)' : 'calc(100vw - 48px)', height: 460,
             background: theme.modalBg, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
             border: `1px solid ${theme.border}`, borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
             display: 'flex', flexDirection: 'column', zIndex: 60, overflow: 'hidden',
@@ -253,7 +258,10 @@ export default function AgentChatWidget() {
         onClick={() => setOpen((v) => !v)}
         title={t('settings.aiAgents')}
         style={{
-          position: 'fixed', bottom: 24, right: 24, width: 52, height: 52, borderRadius: '50%',
+          position: 'fixed',
+          bottom: isMobile ? 'calc(var(--mobile-nav-height) + var(--safe-bottom) + 14px)' : 24,
+          right: isMobile ? 14 : 24,
+          width: 52, height: 52, borderRadius: '50%',
           background: `linear-gradient(135deg, ${theme.accent}, ${theme.accentDark})`, color: '#fff',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
           boxShadow: '0 10px 30px rgba(0,0,0,0.3)', zIndex: 60,

@@ -6,14 +6,22 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 import Icon from './Icon.jsx';
 import AgentChatWidget from './AgentChatWidget.jsx';
 import AccountModal from './AccountModal.jsx';
 import HeaderSearch from './HeaderSearch.jsx';
 import TransactionsQuickSearch from './TransactionsQuickSearch.jsx';
 import NewsTicker from './NewsTicker.jsx';
+import MobileMoreSheet from './MobileMoreSheet.jsx';
 import logoDefault from '../assets/logo-default.png';
 import { resolveSidebarLayout, sidebarItemLabel } from '../lib/sidebarItems.js';
+
+const MOBILE_TABS = [
+  { key: 'home', to: '/', end: true, icon: 'home', labelKey: 'nav.home' },
+  { key: 'notes', to: '/notes', icon: 'doc', labelKey: 'nav.notes' },
+  { key: 'tasks', to: '/tasks', icon: 'check', labelKey: 'nav.tasks' },
+];
 
 function userInitials(name) {
   if (!name) return '?';
@@ -27,8 +35,11 @@ export default function AppLayout() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [accountOpen, setAccountOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [searchFocusTick, setSearchFocusTick] = useState(0);
   const { counts, issueAlerts } = useCounts();
   const notifRef = useRef(null);
   useClickOutside(notifRef, () => setNotifOpen(false), notifOpen);
@@ -83,6 +94,7 @@ export default function AppLayout() {
       }}
     >
       <div style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', position: 'relative', zIndex: 1 }}>
+        {!isMobile && (
         <div
           style={{
             width: 260, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`,
@@ -213,29 +225,39 @@ export default function AppLayout() {
             </div>
           </div>
         </div>
+        )}
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto', background: theme.pageBg }}>
+        <div
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto', background: theme.pageBg,
+            paddingBottom: isMobile ? 'calc(var(--mobile-nav-height) + var(--safe-bottom))' : 0,
+          }}
+        >
           <div
             style={{
-              display: 'flex', alignItems: 'center', gap: 16, padding: '18px 28px',
+              display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16,
+              padding: isMobile ? 'calc(10px + var(--safe-top)) 14px 10px' : '18px 28px',
               background: theme.sidebarBg, borderBottom: `1px solid ${theme.border}`,
+              position: isMobile ? 'sticky' : 'static', top: 0, zIndex: isMobile ? 40 : 'auto',
             }}
           >
-            <HeaderSearch />
+            <HeaderSearch compact={isMobile} focusSignal={searchFocusTick} />
 
-            <span
-              onClick={() => navigate('/sap-news')}
-              title={t('nav.sapNews')}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
-                cursor: 'pointer', flexShrink: 0, color: '#fff',
-                background: location.pathname === '/sap-news' ? theme.accentDark : theme.accent,
-              }}
-            >
-              <Icon name="news" size={17} color="#fff" />
-            </span>
+            {!isMobile && (
+              <span
+                onClick={() => navigate('/sap-news')}
+                title={t('nav.sapNews')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                  cursor: 'pointer', flexShrink: 0, color: '#fff',
+                  background: location.pathname === '/sap-news' ? theme.accentDark : theme.accent,
+                }}
+              >
+                <Icon name="news" size={17} color="#fff" />
+              </span>
+            )}
 
-            <TransactionsQuickSearch />
+            {!isMobile && <TransactionsQuickSearch />}
 
             <div style={{ flex: 1 }} />
 
@@ -263,7 +285,8 @@ export default function AppLayout() {
               {notifOpen && (
                 <div
                   style={{
-                    position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 300, maxHeight: 360, overflowY: 'auto',
+                    position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                    width: isMobile ? 'min(300px, calc(100vw - 28px))' : 300, maxHeight: 360, overflowY: 'auto',
                     background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff',
                     border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', padding: 14, zIndex: 50,
                   }}
@@ -314,7 +337,64 @@ export default function AppLayout() {
         </div>
       </div>
 
-      <NewsTicker />
+      {!isMobile && <NewsTicker />}
+
+      {isMobile && (
+        <div
+          style={{
+            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 80,
+            display: 'flex', alignItems: 'stretch',
+            height: 'calc(var(--mobile-nav-height) + var(--safe-bottom))',
+            paddingBottom: 'var(--safe-bottom)',
+            background: theme.dark ? 'oklch(0.15 0.02 255 / 0.97)' : 'rgba(255,255,255,0.94)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            borderTop: `1px solid ${theme.border}`,
+          }}
+        >
+          {MOBILE_TABS.map((tab) => (
+            <NavLink
+              key={tab.key}
+              to={tab.to}
+              end={tab.end}
+              style={({ isActive }) => ({
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                textDecoration: 'none', color: isActive ? theme.accentText : theme.textMuted,
+              })}
+            >
+              <Icon name={tab.icon} size={21} />
+              <span style={{ fontSize: 10.5, fontWeight: 600 }}>{t(tab.labelKey)}</span>
+            </NavLink>
+          ))}
+          <div
+            onClick={() => setSearchFocusTick((v) => v + 1)}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: theme.textMuted, cursor: 'pointer' }}
+          >
+            <Icon name="search" size={21} />
+            <span style={{ fontSize: 10.5, fontWeight: 600 }}>{t('nav.search')}</span>
+          </div>
+          <div
+            onClick={() => setMoreOpen(true)}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: moreOpen ? theme.accentText : theme.textMuted, cursor: 'pointer' }}
+          >
+            <Icon name="dots" size={21} />
+            <span style={{ fontSize: 10.5, fontWeight: 600 }}>{t('nav.more')}</span>
+          </div>
+        </div>
+      )}
+
+      {isMobile && moreOpen && (
+        <MobileMoreSheet
+          theme={theme}
+          t={t}
+          lang={lang}
+          user={user}
+          items={sidebarItems.filter((i) => i.type !== 'spacer')}
+          counts={counts}
+          onClose={() => setMoreOpen(false)}
+          onOpenAccount={() => setAccountOpen(true)}
+          onLogout={logout}
+        />
+      )}
 
       {accountOpen && <AccountModal onClose={() => setAccountOpen(false)} />}
 

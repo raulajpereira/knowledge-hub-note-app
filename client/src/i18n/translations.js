@@ -19,6 +19,8 @@ export const translations = {
       trash: 'Trash',
       settings: 'Settings',
       logout: 'Log out',
+      more: 'More',
+      search: 'Search',
     },
     codeLibrary: {
       searchPlaceholder: 'Search folders...',
@@ -966,6 +968,8 @@ export const translations = {
       trash: 'Lixo',
       settings: 'Definições',
       logout: 'Terminar sessão',
+      more: 'Mais',
+      search: 'Pesquisar',
     },
     codeLibrary: {
       searchPlaceholder: 'Pesquisar pastas...',
