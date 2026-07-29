@@ -614,7 +614,7 @@ export default function Documentacao() {
       </div>
 
       {/* Detail */}
-        <div style={{ flex: '1 1 480px', maxWidth: 720, minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', padding: activeDoc ? 24 : 0 }}>
+        <div style={{ flex: '1 1 auto', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', padding: activeDoc ? 24 : 0 }}>
           {!activeDoc ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 13, color: theme.textMuted }}>
               {t('documentacao.selectPrompt')}

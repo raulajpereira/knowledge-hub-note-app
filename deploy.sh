@@ -41,12 +41,20 @@ git pull origin main
 # offline), the PDF export button will just return a clear error at runtime.
 if ! command -v soffice >/dev/null 2>&1; then
   echo "==> soffice not found; attempting to install LibreOffice for PDF export (best-effort)"
-  if command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
-    sudo apt-get update -y && sudo apt-get install -y --no-install-recommends libreoffice-writer \
-      && echo "==> LibreOffice installed" \
-      || echo "WARNING: LibreOffice install failed; PDF export will be unavailable until this is resolved manually."
+  if command -v apt-get >/dev/null 2>&1; then
+    if [ "$(id -u)" = "0" ]; then
+      apt-get update -y && apt-get install -y --no-install-recommends libreoffice-writer \
+        && echo "==> LibreOffice installed" \
+        || echo "WARNING: LibreOffice install failed; PDF export will be unavailable until this is resolved manually."
+    elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+      sudo apt-get update -y && sudo apt-get install -y --no-install-recommends libreoffice-writer \
+        && echo "==> LibreOffice installed" \
+        || echo "WARNING: LibreOffice install failed; PDF export will be unavailable until this is resolved manually."
+    else
+      echo "WARNING: not root and no passwordless sudo; PDF export will be unavailable until LibreOffice is installed manually. Run once on the VPS: sudo apt-get install -y --no-install-recommends libreoffice-writer"
+    fi
   else
-    echo "WARNING: no passwordless sudo/apt-get available; PDF export will be unavailable until LibreOffice is installed manually."
+    echo "WARNING: apt-get not available; PDF export will be unavailable until LibreOffice is installed manually."
   fi
 fi
 

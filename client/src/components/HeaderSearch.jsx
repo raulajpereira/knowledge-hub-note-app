@@ -63,11 +63,12 @@ export default function HeaderSearch() {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const [{ notes }, { tasks }, { voiceNotes }, { artifacts }] = await Promise.all([
+        const [{ notes }, { tasks }, { voiceNotes }, { artifacts }, { transactions }] = await Promise.all([
           api.listNotes(),
           api.listTasks(),
           api.listVoiceNotes(),
           api.listArtifacts(),
+          api.listTransactions(),
         ]);
         const noteHits = notes
           .filter((n) => n.title.toLowerCase().includes(q) || (n.content || '').toLowerCase().includes(q))
@@ -85,7 +86,11 @@ export default function HeaderSearch() {
           .filter((a) => a.title.toLowerCase().includes(q))
           .slice(0, 5)
           .map((a) => ({ type: 'artifact', id: a.id, label: a.title }));
-        setResults([...noteHits, ...taskHits, ...voiceHits, ...artifactHits].slice(0, 8));
+        const txHits = transactions
+          .filter((tx) => tx.tcode.toLowerCase().includes(q) || tx.description.toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((tx) => ({ type: 'tx', id: tx.id, label: `${tx.tcode} — ${tx.description}` }));
+        setResults([...noteHits, ...taskHits, ...voiceHits, ...artifactHits, ...txHits].slice(0, 8));
       } finally {
         setLoading(false);
       }
@@ -167,8 +172,8 @@ export default function HeaderSearch() {
     return commands.filter((c) => c.label.toLowerCase().includes(q));
   }, [commands, query]);
 
-  const typeLabel = { note: t('search.typeNote'), task: t('search.typeTask'), voice: t('search.typeVoice'), artifact: t('search.typeArtifact') };
-  const typeIcon = { note: 'doc', task: 'check', voice: 'mic', artifact: 'code' };
+  const typeLabel = { note: t('search.typeNote'), task: t('search.typeTask'), voice: t('search.typeVoice'), artifact: t('search.typeArtifact'), tx: t('search.typeTx') };
+  const typeIcon = { note: 'doc', task: 'check', voice: 'mic', artifact: 'code', tx: 'terminal' };
 
   const resultItems = results.map((r) => ({
     id: `${r.type}-${r.id}`,
@@ -180,6 +185,7 @@ export default function HeaderSearch() {
       if (r.type === 'note') navigate('/notes', { state: { noteId: r.id } });
       else if (r.type === 'task') navigate('/tasks', { state: { taskId: r.id } });
       else if (r.type === 'artifact') navigate('/artifacts', { state: { artifactId: r.id } });
+      else if (r.type === 'tx') navigate('/transactions');
       else navigate('/voice', { state: { voiceId: r.id } });
     },
   }));

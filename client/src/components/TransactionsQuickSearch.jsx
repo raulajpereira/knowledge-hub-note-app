@@ -53,7 +53,7 @@ export default function TransactionsQuickSearch() {
   const [copiedId, setCopiedId] = useState(null);
 
   useEffect(() => {
-    if (open && transactions.length === 0) {
+    if (open) {
       api.listTransactions().then(({ transactions }) => setTransactions(transactions));
     }
   }, [open]);
