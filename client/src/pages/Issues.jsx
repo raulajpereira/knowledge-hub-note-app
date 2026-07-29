@@ -7,6 +7,7 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import ColorSelect from '../components/ColorSelect.jsx';
 import TemplateMenu from '../components/TemplateMenu.jsx';
 import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
@@ -86,24 +87,6 @@ function FieldLabel({ children, theme }) {
   );
 }
 
-function Pill({ label, hue, active, onClick, theme }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-        background: active ? `oklch(0.90 0.11 ${hue})` : theme.cardBg,
-        color: active ? `oklch(0.32 0.17 ${hue})` : theme.textMuted,
-        border: `1px solid ${active ? `oklch(0.90 0.11 ${hue})` : theme.border}`,
-        display: 'flex', alignItems: 'center', gap: 6,
-      }}
-    >
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: active ? `oklch(0.55 0.20 ${hue})` : theme.textMuted, flexShrink: 0, opacity: active ? 1 : 0.5 }} />
-      {label}
-    </div>
-  );
-}
-
 export default function Issues() {
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -144,6 +127,9 @@ export default function Issues() {
   const [waitingOnDraft, setWaitingOnDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [notesDraft, setNotesDraft] = useState('');
+  const [projectNames, setProjectNames] = useState([]);
+  const [projectCustomMode, setProjectCustomMode] = useState(false);
+  const [newProjectMode, setNewProjectMode] = useState('select');
 
   const statusConfig = user?.settings?.issueStatuses?.length ? user.settings.issueStatuses : DEFAULT_STATUSES;
   const STATUS_NAMES = statusConfig.map((s) => s.name);
@@ -219,6 +205,7 @@ export default function Issues() {
       setIssues(issues);
       setLoading(false);
     });
+    api.listProjects().then(({ projects }) => setProjectNames(projects.map((p) => p.name)));
   }, []);
 
   useEffect(() => {
@@ -296,9 +283,11 @@ export default function Issues() {
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
     setProjectDraft(selected?.project ?? '');
+    setProjectCustomMode(!!selected?.project && !projectNames.includes(selected.project));
     setWaitingOnDraft(selected?.waitingOn ?? '');
     setDescriptionDraft(selected?.description ?? '');
     setNotesDraft(selected?.notes ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
   const patch = async (id, payload) => {
@@ -330,8 +319,10 @@ export default function Issues() {
   };
 
   const openNewIssue = (tpl) => {
+    const tplProject = tpl?.data.project || '';
     setNewTitle(tpl?.data.title || '');
-    setNewProject(tpl?.data.project || '');
+    setNewProject(tplProject);
+    setNewProjectMode(tplProject && !projectNames.includes(tplProject) ? 'custom' : 'select');
     setNewPriority(tpl?.data.priority || 'Medium');
     setNewStatus(STATUS_NAMES[0] || 'Open');
     setNewDue('');
@@ -573,32 +564,57 @@ export default function Issues() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.status')}</FieldLabel>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {STATUS_NAMES.map((s) => (
-                      <Pill key={s} label={s} hue={hueFor(s)} active={selected.status === s} onClick={() => patch(selected.id, { status: s })} theme={theme} />
-                    ))}
-                  </div>
+                  <ColorSelect
+                    value={selected.status}
+                    options={STATUS_NAMES.map((s) => ({ value: s, label: s, hue: hueFor(s) }))}
+                    onChange={(v) => patch(selected.id, { status: v })}
+                    theme={theme}
+                  />
                 </div>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.priority')}</FieldLabel>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {PRIORITIES.map((p) => (
-                      <Pill key={p} label={p} hue={PRIORITY_HUES[p]} active={selected.priority === p} onClick={() => patch(selected.id, { priority: p })} theme={theme} />
-                    ))}
-                  </div>
+                  <ColorSelect
+                    value={selected.priority}
+                    options={PRIORITIES.map((p) => ({ value: p, label: p, hue: PRIORITY_HUES[p] }))}
+                    onChange={(v) => patch(selected.id, { priority: v })}
+                    theme={theme}
+                  />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.project')}</FieldLabel>
-                  <input
-                    value={projectDraft}
-                    onChange={(e) => setProjectDraft(e.target.value)}
-                    onBlur={() => commitField('project', projectDraft)}
-                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                  <select
+                    value={projectCustomMode ? '__other__' : selected.project || ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === '__other__') {
+                        setProjectCustomMode(true);
+                      } else {
+                        setProjectCustomMode(false);
+                        setProjectDraft(v);
+                        patch(selected.id, { project: v });
+                      }
+                    }}
                     style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  >
+                    <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('issues.projectNone')}</option>
+                    {projectNames.map((p) => (
+                      <option key={p} value={p} style={{ color: '#1a1a1a', background: '#fff' }}>{p}</option>
+                    ))}
+                    <option value="__other__" style={{ color: '#1a1a1a', background: '#fff' }}>{t('issues.projectOther')}</option>
+                  </select>
+                  {projectCustomMode && (
+                    <input
+                      value={projectDraft}
+                      onChange={(e) => setProjectDraft(e.target.value)}
+                      onBlur={() => commitField('project', projectDraft)}
+                      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                      placeholder={t('issues.projectCustomPlaceholder')}
+                      style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box', marginTop: 6 }}
+                    />
+                  )}
                 </div>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.dueDate')}</FieldLabel>
@@ -691,11 +707,34 @@ export default function Issues() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.project')}</FieldLabel>
-                  <input
-                    value={newProject}
-                    onChange={(e) => setNewProject(e.target.value)}
+                  <select
+                    value={newProjectMode === 'custom' ? '__other__' : newProject}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === '__other__') {
+                        setNewProjectMode('custom');
+                        setNewProject('');
+                      } else {
+                        setNewProjectMode('select');
+                        setNewProject(v);
+                      }
+                    }}
                     style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  >
+                    <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('issues.projectNone')}</option>
+                    {projectNames.map((p) => (
+                      <option key={p} value={p} style={{ color: '#1a1a1a', background: '#fff' }}>{p}</option>
+                    ))}
+                    <option value="__other__" style={{ color: '#1a1a1a', background: '#fff' }}>{t('issues.projectOther')}</option>
+                  </select>
+                  {newProjectMode === 'custom' && (
+                    <input
+                      value={newProject}
+                      onChange={(e) => setNewProject(e.target.value)}
+                      placeholder={t('issues.projectCustomPlaceholder')}
+                      style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box', marginTop: 6 }}
+                    />
+                  )}
                 </div>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.dueDate')}</FieldLabel>
@@ -710,19 +749,21 @@ export default function Issues() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.priority')}</FieldLabel>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {PRIORITIES.map((p) => (
-                      <Pill key={p} label={p} hue={PRIORITY_HUES[p]} active={newPriority === p} onClick={() => setNewPriority(p)} theme={theme} />
-                    ))}
-                  </div>
+                  <ColorSelect
+                    value={newPriority}
+                    options={PRIORITIES.map((p) => ({ value: p, label: p, hue: PRIORITY_HUES[p] }))}
+                    onChange={setNewPriority}
+                    theme={theme}
+                  />
                 </div>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.status')}</FieldLabel>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {STATUS_NAMES.map((s) => (
-                      <Pill key={s} label={s} hue={hueFor(s)} active={newStatus === s} onClick={() => setNewStatus(s)} theme={theme} />
-                    ))}
-                  </div>
+                  <ColorSelect
+                    value={newStatus}
+                    options={STATUS_NAMES.map((s) => ({ value: s, label: s, hue: hueFor(s) }))}
+                    onChange={setNewStatus}
+                    theme={theme}
+                  />
                 </div>
               </div>
 

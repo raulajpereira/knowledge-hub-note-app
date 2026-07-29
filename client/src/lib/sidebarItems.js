@@ -10,6 +10,7 @@ export const SIDEBAR_ITEMS = [
   { key: 'tasks', to: '/tasks', icon: 'check', countKey: 'tasks' },
   { key: 'tags', to: '/tags', icon: 'tag', countKey: 'tags' },
   { key: 'passwords', to: '/passwords', icon: 'lock' },
+  { key: 'projects', to: '/projects', icon: 'users', countKey: 'projects' },
   { key: 'issues', to: '/issues', icon: 'archive', countKey: 'issues' },
   { key: 'artifacts', to: '/artifacts', icon: 'code', countKey: 'artifacts' },
   { key: 'codeLibrary', to: '/code-library', icon: 'folder', countKey: 'codeLibrary' },

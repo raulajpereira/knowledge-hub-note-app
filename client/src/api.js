@@ -137,6 +137,11 @@ export const api = {
   listIssues: () => request('/issues'),
   createIssue: (payload) => request('/issues', { method: 'POST', body: payload }),
   generateIssuesReport: (project) => request('/issues/report', { method: 'POST', body: { project } }),
+
+  listProjects: () => request('/projects'),
+  createProject: (payload) => request('/projects', { method: 'POST', body: payload }),
+  updateProject: (id, payload) => request(`/projects/${id}`, { method: 'PATCH', body: payload }),
+  deleteProject: (id) => request(`/projects/${id}`, { method: 'DELETE' }),
   updateIssue: (id, payload) => request(`/issues/${id}`, { method: 'PATCH', body: payload }),
   deleteIssue: (id) => request(`/issues/${id}`, { method: 'DELETE' }),
 

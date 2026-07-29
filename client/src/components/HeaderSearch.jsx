@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { path: '/tags', labelKey: 'nav.tags', icon: 'tag' },
   { path: '/voice', labelKey: 'nav.voice', icon: 'mic' },
   { path: '/passwords', labelKey: 'nav.passwords', icon: 'lock' },
+  { path: '/projects', labelKey: 'nav.projects', icon: 'users' },
   { path: '/issues', labelKey: 'nav.issues', icon: 'archive' },
   { path: '/artifacts', labelKey: 'nav.artifacts', icon: 'code' },
   { path: '/code-library', labelKey: 'nav.codeLibrary', icon: 'folder' },
