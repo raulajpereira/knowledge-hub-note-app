@@ -533,6 +533,7 @@ export const translations = {
     },
     documentacao: {
       title: 'Documentation',
+      allDocuments: 'All documents',
       subtitle: 'Fill in a template and generate a finished Word document',
       searchPlaceholder: 'Search documentation...',
       newDocument: '+ New Documentation',
@@ -564,6 +565,13 @@ export const translations = {
       blockTextPlaceholder: 'Write here…',
       blockCodePlaceholder: 'Paste or write code…',
       uploadImage: 'Upload image',
+      otherOption: 'Other…',
+      customPlaceholder: 'Type a value…',
+      exportFormat: 'Export format',
+      exportDocx: 'Word (.docx)',
+      exportPdf: 'PDF',
+      exportBoth: 'Both',
+      exportConfirm: 'Generate',
     },
     transactions: {
       title: 'SAP Transactions',
@@ -1458,6 +1466,7 @@ export const translations = {
     },
     documentacao: {
       title: 'Documentação',
+      allDocuments: 'Todos os documentos',
       subtitle: 'Preenche um modelo e gera um documento Word completo',
       searchPlaceholder: 'Pesquisar documentação...',
       newDocument: '+ Nova Documentação',
@@ -1489,6 +1498,13 @@ export const translations = {
       blockTextPlaceholder: 'Escreve aqui…',
       blockCodePlaceholder: 'Cola ou escreve código…',
       uploadImage: 'Carregar imagem',
+      otherOption: 'Outro…',
+      customPlaceholder: 'Escrever um valor…',
+      exportFormat: 'Formato de exportação',
+      exportDocx: 'Word (.docx)',
+      exportPdf: 'PDF',
+      exportBoth: 'Ambos',
+      exportConfirm: 'Gerar',
     },
     transactions: {
       title: 'Transações SAP',

@@ -120,7 +120,7 @@ function setCellFirstRunText(cellXml, value) {
 function textParagraphs(text) {
   const lines = String(text || '').split('\n');
   return lines
-    .map((line) => `<w:p><w:pPr><w:pStyle w:val="PargrafodaLista"/><w:ind w:left="0"/><w:jc w:val="both"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr></w:pPr>${
+    .map((line) => `<w:p><w:pPr><w:pStyle w:val="PargrafodaLista"/><w:spacing w:before="160" w:after="160"/><w:ind w:left="0"/><w:jc w:val="both"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr></w:pPr>${
       line ? `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr><w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r>` : ''
     }</w:p>`)
     .join('');
@@ -129,7 +129,16 @@ function textParagraphs(text) {
 function codeParagraphs(code) {
   const lines = String(code || '').split('\n');
   return lines
-    .map((line) => `<w:p><w:pPr><w:pStyle w:val="PargrafodaLista"/><w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/><w:ind w:left="0"/><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t xml:space="preserve">${escapeXml(line.replace(/\t/g, '    ')) || ' '}</w:t></w:r></w:p>`)
+    .map((line, i) => {
+      const spacing = i === 0 && i === lines.length - 1
+        ? '<w:spacing w:before="160" w:after="160"/>'
+        : i === 0
+          ? '<w:spacing w:before="160" w:after="0"/>'
+          : i === lines.length - 1
+            ? '<w:spacing w:before="0" w:after="160"/>'
+            : '<w:spacing w:before="0" w:after="0"/>';
+      return `<w:p><w:pPr><w:pStyle w:val="PargrafodaLista"/><w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/>${spacing}<w:ind w:left="0"/><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t xml:space="preserve">${escapeXml(line.replace(/\t/g, '    ')) || ' '}</w:t></w:r></w:p>`;
+    })
     .join('');
 }
 
@@ -147,7 +156,7 @@ async function imageParagraph(state, url, resolveImagePath) {
   const { cx, cy } = scaleToMaxWidthEmu(width, height, MAX_IMAGE_WIDTH_EMU);
   const rId = state.registerImage(buffer, ext);
   const docPrId = Math.floor(Math.random() * 1_000_000) + 100000;
-  return `<w:p><w:pPr><w:pStyle w:val="PargrafodaLista"/><w:ind w:left="0"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${docPrId}" name="Picture ${docPrId}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${docPrId}" name="Picture ${docPrId}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+  return `<w:p><w:pPr><w:pStyle w:val="PargrafodaLista"/><w:spacing w:before="160" w:after="160"/><w:ind w:left="0"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${docPrId}" name="Picture ${docPrId}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${docPrId}" name="Picture ${docPrId}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
 }
 
 async function blocksToParagraphs(state, blocks, resolveImagePath) {

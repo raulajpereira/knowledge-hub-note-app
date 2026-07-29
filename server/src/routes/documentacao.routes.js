@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { fillDocx } from '../lib/docxFill/engine.js';
+import { convertDocxToPdf } from '../lib/docxFill/pdfConvert.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const docImageDir = path.join(__dirname, '..', '..', 'uploads', 'documentacao');
@@ -287,6 +288,34 @@ router.post('/:id/generate', async (req, res) => {
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(document.title)}.docx"`);
   res.send(buffer);
+});
+
+router.post('/:id/pdf', async (req, res) => {
+  const document = await prisma.document.findFirst({
+    where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null },
+    include: { template: true },
+  });
+  if (!document) return res.status(404).json({ error: 'Document not found' });
+
+  let docxBuffer;
+  try {
+    docxBuffer = await generateDocxBuffer(document);
+  } catch (err) {
+    console.error('Failed to generate document for PDF conversion', err);
+    return res.status(500).json({ error: 'Failed to generate document' });
+  }
+
+  let pdfBuffer;
+  try {
+    pdfBuffer = await convertDocxToPdf(docxBuffer);
+  } catch (err) {
+    console.error('PDF conversion failed', err);
+    return res.status(503).json({ error: 'PDF export is not available on this server right now.' });
+  }
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(document.title)}.pdf"`);
+  res.send(pdfBuffer);
 });
 
 router.get('/:id/versions', async (req, res) => {

@@ -16,6 +16,48 @@ function fieldStyle(theme) {
   };
 }
 
+// Dropdown of known options with an "Other…" entry that reveals a free-text
+// fallback — for select fields whose value may not match any known option.
+function ComboField({ value, options, onChange, theme, t }) {
+  const [forcedCustom, setForcedCustom] = useState(false);
+  const [draft, setDraft] = useState(value || '');
+  const customMode = forcedCustom || (!!value && !options.includes(value));
+
+  return (
+    <div>
+      <select
+        value={customMode ? '__other__' : value || ''}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === '__other__') {
+            setForcedCustom(true);
+            setDraft(value || '');
+          } else {
+            setForcedCustom(false);
+            setDraft(v);
+            onChange(v);
+          }
+        }}
+        style={fieldStyle(theme)}
+      >
+        <option value="" style={{ color: '#1a1a1a', background: '#fff' }} />
+        {options.map((o) => <option key={o} value={o} style={{ color: '#1a1a1a', background: '#fff' }}>{o}</option>)}
+        <option value="__other__" style={{ color: '#1a1a1a', background: '#fff' }}>{t('documentacao.otherOption')}</option>
+      </select>
+      {customMode && (
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => onChange(draft)}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+          placeholder={t('documentacao.customPlaceholder')}
+          style={{ ...fieldStyle(theme), marginTop: 6 }}
+        />
+      )}
+    </div>
+  );
+}
+
 function FieldLabel({ children, help, theme }) {
   return (
     <div style={{ marginBottom: 6 }}>
@@ -176,7 +218,10 @@ function FieldEditor({ field, value, onChange, theme, t }) {
       {field.type === 'date' && (
         <DateInput value={value || ''} onChange={onChange} style={fieldStyle(theme)} />
       )}
-      {field.type === 'select' && (
+      {field.type === 'select' && field.allowCustom && (
+        <ComboField value={value} options={field.options} onChange={onChange} theme={theme} t={t} />
+      )}
+      {field.type === 'select' && !field.allowCustom && (
         <select value={value || ''} onChange={(e) => onChange(e.target.value)} style={fieldStyle(theme)}>
           <option value="" style={{ color: '#1a1a1a', background: '#fff' }} />
           {field.options.map((o) => <option key={o} value={o} style={{ color: '#1a1a1a', background: '#fff' }}>{o}</option>)}
@@ -231,8 +276,11 @@ export default function Documentacao() {
   const [selectedId, setSelectedId] = useState(null);
   const [activeDoc, setActiveDoc] = useState(null);
   const [fieldsData, setFieldsData] = useState({});
+  const [dragOverFolder, setDragOverFolder] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState('');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState('docx');
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [versions, setVersions] = useState(null);
   const saveTimer = useRef(null);
@@ -244,6 +292,10 @@ export default function Documentacao() {
       setTemplates(tpl.templates);
       setLoading(false);
     });
+  };
+
+  const refreshFolders = () => {
+    api.listDocFolders().then((f) => setFolders(f.folders));
   };
 
   useEffect(load, []);
@@ -327,12 +379,33 @@ export default function Documentacao() {
     if (activeFolder === f.id) setActiveFolder(null);
   };
 
+  const moveDocumentToFolder = async (docId, folderId) => {
+    const { document } = await api.updateDocument(docId, { folderId });
+    setDocuments((prev) => prev.map((d) => (d.id === document.id ? { ...d, ...document } : d)));
+    refreshFolders();
+  };
+
+  const reparentFolder = async (folderId, parentId) => {
+    if (folderId === parentId) return;
+    const target = folders.find((f) => f.id === folderId);
+    if (!target || target.parentId === parentId) return;
+    let ancestor = parentId;
+    while (ancestor) {
+      if (ancestor === folderId) return;
+      ancestor = folders.find((f) => f.id === ancestor)?.parentId || null;
+    }
+    setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, parentId } : f)));
+    const { folder } = await api.updateDocFolder(folderId, { parentId });
+    setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, ...folder } : f)));
+  };
+
   const createDocument = async (templateId) => {
     const template = templates.find((tp) => tp.id === templateId);
     const { document } = await api.createDocument({ templateId, folderId: activeFolder, title: template?.name });
     setDocuments((prev) => [document, ...prev]);
     setPickTemplateOpen(false);
     setSelectedId(document.id);
+    refreshFolders();
   };
 
   const renameActiveDoc = async (title) => {
@@ -351,6 +424,7 @@ export default function Documentacao() {
     await api.trashDocument(id);
     setDocuments((prev) => prev.filter((d) => d.id !== id));
     if (selectedId === id) setSelectedId(null);
+    refreshFolders();
   };
 
   const generateDocument = async () => {
@@ -359,10 +433,15 @@ export default function Documentacao() {
     setGenerateError('');
     try {
       const { blob, filename } = await api.generateDocument(selectedId);
-      downloadBlob(blob, filename);
+      if (exportFormat !== 'pdf') downloadBlob(blob, filename);
+      if (exportFormat !== 'docx') {
+        const { blob: pdfBlob, filename: pdfFilename } = await api.generateDocumentPdf(selectedId);
+        downloadBlob(pdfBlob, pdfFilename);
+      }
       const { document } = await api.getDocument(selectedId);
       setActiveDoc(document);
       setDocuments((prev) => prev.map((d) => (d.id === selectedId ? { ...d, exportedAt: document.exportedAt } : d)));
+      setExportOpen(false);
     } catch (err) {
       setGenerateError(err.message || t('documentacao.generateError'));
     } finally {
@@ -389,12 +468,25 @@ export default function Documentacao() {
     return (
       <div key={f.id}>
         <div
+          draggable
+          onDragStart={(e) => e.dataTransfer.setData('text/doc-folder-id', f.id)}
           onClick={() => setActiveFolder(f.id)}
+          onDragOver={(e) => { e.preventDefault(); setDragOverFolder(f.id); }}
+          onDragLeave={() => setDragOverFolder((v) => (v === f.id ? null : v))}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverFolder(null);
+            const docId = e.dataTransfer.getData('text/document-id');
+            const draggedFolderId = e.dataTransfer.getData('text/doc-folder-id');
+            if (docId) moveDocumentToFolder(docId, f.id);
+            else if (draggedFolderId) reparentFolder(draggedFolderId, f.id);
+          }}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 8, cursor: 'pointer',
             paddingLeft: 8 + depth * 16,
             background: activeFolder === f.id ? theme.accentSoftBg : 'transparent',
             color: activeFolder === f.id ? theme.accentText : theme.textMuted,
+            outline: dragOverFolder === f.id ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
           }}
         >
           {hasKids ? (
@@ -437,16 +529,25 @@ export default function Documentacao() {
   return (
     <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 20, minHeight: 0 }}>
       {/* Folder tree */}
-      <div style={{ width: 220, flexShrink: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ width: 260, flexShrink: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div
           onClick={() => setActiveFolder(null)}
+          onDragOver={(e) => { e.preventDefault(); setDragOverFolder('__root__'); }}
+          onDragLeave={() => setDragOverFolder((v) => (v === '__root__' ? null : v))}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverFolder(null);
+            const docId = e.dataTransfer.getData('text/document-id');
+            if (docId) moveDocumentToFolder(docId, null);
+          }}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', marginBottom: 4,
             background: activeFolder === null ? theme.accentSoftBg : 'transparent',
             color: activeFolder === null ? theme.accentText : theme.textMuted, fontWeight: 700, fontSize: 13,
+            outline: dragOverFolder === '__root__' ? `2px dashed ${theme.accent}` : 'none', outlineOffset: -2,
           }}
         >
-          <Icon name="doc" size={14} /> {t('documentacao.title')}
+          <Icon name="doc" size={14} /> {t('documentacao.allDocuments')}
         </div>
         {folders.filter((f) => !f.parentId).map((f) => renderFolderNode(f, 0))}
         <div onClick={() => openNewFolder(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px', marginTop: 6, borderRadius: 8, cursor: 'pointer', fontSize: 12.5, color: theme.accentText, fontWeight: 700 }}>
@@ -483,6 +584,8 @@ export default function Documentacao() {
           {filteredDocuments.map((d) => (
             <div
               key={d.id}
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData('text/document-id', d.id)}
               onClick={() => setSelectedId(d.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', cursor: 'pointer',
@@ -511,7 +614,7 @@ export default function Documentacao() {
       </div>
 
       {/* Detail */}
-        <div style={{ flex: 1, minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', padding: activeDoc ? 24 : 0 }}>
+        <div style={{ flex: '1 1 480px', maxWidth: 720, minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', padding: activeDoc ? 24 : 0 }}>
           {!activeDoc ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 13, color: theme.textMuted }}>
               {t('documentacao.selectPrompt')}
@@ -530,15 +633,14 @@ export default function Documentacao() {
                     {t('documentacao.versions')}
                   </span>
                   <button
-                    onClick={generateDocument}
+                    onClick={() => { setGenerateError(''); setExportOpen(true); }}
                     disabled={generating}
                     style={{ display: 'flex', alignItems: 'center', gap: 7, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: generating ? 'default' : 'pointer', opacity: generating ? 0.6 : 1 }}
                   >
-                    <Icon name="download" size={14} color="#fff" /> {generating ? t('documentacao.generating') : t('documentacao.generate')}
+                    <Icon name="download" size={14} color="#fff" /> {t('documentacao.generate')}
                   </button>
                 </div>
               </div>
-              {generateError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)' }}>{generateError}</div>}
 
               {activeDoc.template?.fields?.map((field) => (
                 <FieldEditor
@@ -592,6 +694,40 @@ export default function Documentacao() {
                 {tpl.description && <div style={{ fontSize: 12, color: theme.textMuted }}>{tpl.description}</div>}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {exportOpen && (
+        <div onMouseDown={backdropClose(() => !generating && setExportOpen(false))} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 380, maxWidth: '100%', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`, borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 24px 70px rgba(0,0,0,0.45)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>{t('documentacao.exportFormat')}</div>
+              <span onClick={() => !generating && setExportOpen(false)} style={{ cursor: generating ? 'default' : 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1 }}>&times;</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { value: 'docx', label: t('documentacao.exportDocx') },
+                { value: 'pdf', label: t('documentacao.exportPdf') },
+                { value: 'both', label: t('documentacao.exportBoth') },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${exportFormat === opt.value ? theme.accent : theme.border}`, cursor: 'pointer', background: exportFormat === opt.value ? theme.accentSoftBg : theme.subtleBg }}
+                >
+                  <input type="radio" name="exportFormat" checked={exportFormat === opt.value} onChange={() => setExportFormat(opt.value)} />
+                  <span style={{ fontSize: 13.5, fontWeight: 600 }}>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            {generateError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)' }}>{generateError}</div>}
+            <button
+              onClick={generateDocument}
+              disabled={generating}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: generating ? 'default' : 'pointer', opacity: generating ? 0.6 : 1 }}
+            >
+              <Icon name="download" size={14} color="#fff" /> {generating ? t('documentacao.generating') : t('documentacao.exportConfirm')}
+            </button>
           </div>
         </div>
       )}

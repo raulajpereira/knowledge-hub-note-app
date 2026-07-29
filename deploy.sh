@@ -36,6 +36,20 @@ fi
 echo "==> Pulling latest code"
 git pull origin main
 
+# Best-effort: PDF export (Documentação) shells out to LibreOffice. Never
+# fail the deploy over this — if it can't be installed (no sudo, no apt,
+# offline), the PDF export button will just return a clear error at runtime.
+if ! command -v soffice >/dev/null 2>&1; then
+  echo "==> soffice not found; attempting to install LibreOffice for PDF export (best-effort)"
+  if command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+    sudo apt-get update -y && sudo apt-get install -y --no-install-recommends libreoffice-writer \
+      && echo "==> LibreOffice installed" \
+      || echo "WARNING: LibreOffice install failed; PDF export will be unavailable until this is resolved manually."
+  else
+    echo "WARNING: no passwordless sudo/apt-get available; PDF export will be unavailable until LibreOffice is installed manually."
+  fi
+fi
+
 echo "==> Installing server dependencies"
 cd "$APP_DIR/server"
 npm install --omit=dev

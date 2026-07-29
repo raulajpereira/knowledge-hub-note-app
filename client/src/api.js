@@ -244,6 +244,7 @@ export const api = {
     return request('/documentacao/images', { method: 'POST', body: form, isForm: true });
   },
   generateDocument: (id) => requestBlob(`/documentacao/${id}/generate`, { method: 'POST' }),
+  generateDocumentPdf: (id) => requestBlob(`/documentacao/${id}/pdf`, { method: 'POST' }),
   listDocumentVersions: (id) => request(`/documentacao/${id}/versions`),
   downloadDocumentVersion: (id, versionId) => requestBlob(`/documentacao/${id}/versions/${versionId}/download`),
 
