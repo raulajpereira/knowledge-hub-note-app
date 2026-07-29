@@ -191,9 +191,24 @@ function applyLiteral(state, field, value) {
 }
 
 async function applyHeading(state, field, value, resolveImagePath) {
-  const headings = findParagraphsByStyle(state.documentXml, 'ITtitle');
-  const idx = headings.findIndex((h) => h.text === field.anchor.text);
+  let headings = findParagraphsByStyle(state.documentXml, 'ITtitle');
+  let idx = headings.findIndex((h) => h.text === field.anchor.text);
   if (idx === -1) return;
+
+  // The ITtitle style carries no spacing of its own, so the gap above each
+  // chapter title otherwise depends entirely on whatever paragraph happens
+  // to precede it (a table, an untouched template stub, a shaded code
+  // block) and ends up inconsistent between chapters. Force it explicitly.
+  const heading = headings[idx];
+  const headingXml = state.documentXml.slice(heading.start, heading.end);
+  const pPrEnd = headingXml.indexOf('</w:pPr>');
+  if (pPrEnd !== -1 && !/<w:spacing\b/.test(headingXml.slice(0, pPrEnd))) {
+    const updated = headingXml.replace('<w:pStyle w:val="ITtitle"/>', '<w:pStyle w:val="ITtitle"/><w:spacing w:before="160" w:after="160"/>');
+    state.documentXml = state.documentXml.slice(0, heading.start) + updated + state.documentXml.slice(heading.end);
+    headings = findParagraphsByStyle(state.documentXml, 'ITtitle');
+    idx = headings.findIndex((h) => h.text === field.anchor.text);
+  }
+
   const regionStart = headings[idx].end;
   const regionEnd = idx + 1 < headings.length ? headings[idx + 1].start : regionStart;
   const paragraphs = await blocksToParagraphs(state, value, resolveImagePath);

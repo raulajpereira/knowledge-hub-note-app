@@ -12,7 +12,7 @@ const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
 const ACCENT_COLORS = ['purple', 'blue', 'green', 'yellow', 'pink', 'orange', 'red', 'teal'];
 const SIDEBAR_KEYS = new Set([
   'home', 'notes', 'voice', 'tasks', 'tags', 'passwords', 'issues',
-  'artifacts', 'codeLibrary', 'transactions', 'calendar', 'graph', 'projects',
+  'artifacts', 'codeLibrary', 'documentacao', 'transactions', 'calendar', 'graph', 'projects',
 ]);
 // Blocks can live in either column (the user drags freely between them), so
 // validation only checks each key is a known block and appears at most once
