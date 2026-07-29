@@ -10,6 +10,7 @@ import Icon from './Icon.jsx';
 import AgentChatWidget from './AgentChatWidget.jsx';
 import AccountModal from './AccountModal.jsx';
 import HeaderSearch from './HeaderSearch.jsx';
+import TransactionsQuickSearch from './TransactionsQuickSearch.jsx';
 import NewsTicker from './NewsTicker.jsx';
 import logoDefault from '../assets/logo-default.png';
 import { resolveSidebarLayout, sidebarItemLabel } from '../lib/sidebarItems.js';
@@ -221,6 +222,8 @@ export default function AppLayout() {
             >
               <Icon name="news" size={17} color="#fff" />
             </span>
+
+            <TransactionsQuickSearch />
 
             <div style={{ flex: 1 }} />
 

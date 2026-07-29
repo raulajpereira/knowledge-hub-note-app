@@ -46,6 +46,9 @@ npx prisma migrate deploy
 echo "==> Regenerating Prisma client"
 npx prisma generate
 
+echo "==> Backfilling default SAP transactions for existing users"
+node scripts/seed-transactions.js
+
 echo "==> Building client"
 cd "$APP_DIR/client"
 npm install

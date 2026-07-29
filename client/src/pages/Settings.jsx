@@ -14,6 +14,11 @@ import logoIcon from '../assets/logo-icon.png';
 import { backdropClose } from '../lib/backdropClose.js';
 
 const APP_VERSION = '1.0.0';
+const MANUAL_ARTIFACT_URL = 'https://claude.ai/code/artifact/031978de-342a-47c7-9d8f-1c68c193de48';
+const MANUAL_PDF_BY_LANG = {
+  pt: { href: '/manual/Knowledge-Hub-Manual-PT.pdf', filename: 'Knowledge-Hub-Manual-PT.pdf' },
+  en: { href: '/manual/Knowledge-Hub-Manual-EN.pdf', filename: 'Knowledge-Hub-Manual-EN.pdf' },
+};
 
 function userInitials(name) {
   if (!name) return '?';
@@ -950,6 +955,47 @@ export default function Settings() {
             <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               {t('settings.version')} {APP_VERSION}
             </div>
+
+            <div
+              onClick={() => window.open(MANUAL_ARTIFACT_URL, '_blank', 'noopener,noreferrer')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%', marginTop: 18,
+                padding: '10px 10px 10px 12px', borderRadius: 13, background: theme.accentSoftBg,
+                border: `1px solid ${theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'}`,
+                cursor: 'pointer', boxSizing: 'border-box', textAlign: 'left',
+              }}
+            >
+              <span
+                style={{
+                  width: 32, height: 32, borderRadius: 9, background: theme.accent, color: '#fff', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <Icon name="doc" size={16} color="#fff" />
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: theme.textPrimary }}>{t('settings.manual')}</div>
+                <div style={{ fontSize: 11, color: theme.textMuted }}>{t('settings.manualDesc')}</div>
+              </span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const pdf = MANUAL_PDF_BY_LANG[lang] || MANUAL_PDF_BY_LANG.pt;
+                  const a = document.createElement('a');
+                  a.href = pdf.href;
+                  a.download = pdf.filename;
+                  a.click();
+                }}
+                title={t('settings.manualDownload')}
+                style={{
+                  width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: theme.textPrimary, background: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)',
+                }}
+              >
+                <Icon name="download" size={15} />
+              </span>
+            </div>
+
             <div style={{ fontSize: 13, marginTop: 10 }}>
               {t('settings.developedBy')} <span style={{ fontWeight: 700 }}>Raul Pereira</span>
             </div>

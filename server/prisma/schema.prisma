@@ -52,6 +52,7 @@ model User {
   links           Link[]
   templates       Template[]
   projects        Project[]
+  sapTransactions SapTransaction[]
   inviteCodes     InviteCode[] @relation("InviteCodeCreator")
   usedInviteCode  InviteCode?  @relation("InviteCodeUser")
   teamOwner       User?    @relation("TeamMembers", fields: [teamOwnerId], references: [id], onDelete: SetNull)
@@ -424,6 +425,30 @@ model Link {
   @@index([userId, fromType, fromId])
   @@index([userId, toType, toId])
   @@map("links")
+}
+
+// A personal catalog of SAP transaction codes / apps the user wants to keep
+// track of. `usageCount` is bumped every time an entry is opened from the
+// header quick-search popup or the page itself, powering "most searched".
+model SapTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  tcode       String // T-code or SuccessFactors admin-tool name, e.g. "PA30"
+  description String   @db.Text
+  module      String // e.g. "HCM · PA", "ABAP", "SuccessFactors · EC", "Basis"
+  moduleGroup String // "ABAP" | "HCM" | "SuccessFactors" | "Basis" | "Outros"
+  program     String? // underlying ABAP program, blank for SF/Fiori entries
+  type        String   @default("Transação Standard")
+  notes       String?  @db.Text
+  favorite    Boolean  @default(false)
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sap_transactions")
 }
 
 // A saved starting point for a new Note/Task/Issue — `data` holds whatever

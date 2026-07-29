@@ -145,6 +145,12 @@ export const api = {
   updateIssue: (id, payload) => request(`/issues/${id}`, { method: 'PATCH', body: payload }),
   deleteIssue: (id) => request(`/issues/${id}`, { method: 'DELETE' }),
 
+  listTransactions: () => request('/transactions'),
+  createTransaction: (payload) => request('/transactions', { method: 'POST', body: payload }),
+  updateTransaction: (id, payload) => request(`/transactions/${id}`, { method: 'PATCH', body: payload }),
+  deleteTransaction: (id) => request(`/transactions/${id}`, { method: 'DELETE' }),
+  useTransaction: (id) => request(`/transactions/${id}/use`, { method: 'POST' }),
+
   listAgents: () => request('/agents'),
   createAgent: (payload) => request('/agents', { method: 'POST', body: payload }),
   updateAgent: (id, payload) => request(`/agents/${id}`, { method: 'PATCH', body: payload }),

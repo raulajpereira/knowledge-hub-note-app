@@ -144,6 +144,16 @@ const PATHS = {
     ['path', { d: 'M16 8.5a3 3 0 1 0 0-6' }],
     ['path', { d: 'M14.8 14.2c2.6 0.3 4.7 2.3 4.7 5.3' }],
   ],
+  download: [
+    ['path', { d: 'M12 3.5v11.5' }],
+    ['path', { d: 'M7.5 10.5 12 15l4.5-4.5' }],
+    ['path', { d: 'M4.5 17v2.5a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V17' }],
+  ],
+  terminal: [
+    ['rect', { x: 3.5, y: 4.5, width: 17, height: 15, rx: 2 }],
+    ['path', { d: 'M7 9.5 10.5 12.5 7 15.5' }],
+    ['path', { d: 'M12.5 15.5h4.5' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

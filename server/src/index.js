@@ -24,6 +24,7 @@ import vpsRoutes from './routes/vps.routes.js';
 import templatesRoutes from './routes/templates.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import projectsRoutes from './routes/projects.routes.js';
+import transactionsRoutes from './routes/transactions.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,7 @@ app.use('/api/vps', vpsRoutes);
 app.use('/api/templates', templatesRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/projects', projectsRoutes);
+app.use('/api/transactions', transactionsRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

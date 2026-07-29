@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireAuthAllowSuspended, requireAdmin } from '../middleware/auth.js';
+import { DEFAULT_TRANSACTIONS } from '../lib/defaultTransactions.js';
 
 const router = Router();
 
@@ -81,6 +82,9 @@ router.post('/register', async (req, res) => {
       include: { settings: true },
     });
     await tx.inviteCode.update({ where: { id: invite.id }, data: { usedAt: new Date(), usedById: created.id } });
+    await tx.sapTransaction.createMany({
+      data: DEFAULT_TRANSACTIONS.map((t) => ({ ...t, userId: created.id })),
+    });
     return created;
   });
 
