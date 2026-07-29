@@ -239,6 +239,7 @@ export const translations = {
     common: {
       delete: 'Delete',
       deleteForever: 'Delete Forever',
+      edit: 'Edit',
       cancel: 'Cancel',
       create: 'Create',
       save: 'Save',
@@ -753,6 +754,8 @@ export const translations = {
       confirmRevokeCode: 'Revoke code "{code}"? It will no longer work for registration.',
       manageAccounts: 'Manage accounts',
       noAccountsYet: 'No accounts yet.',
+      docTemplates: 'Documentation templates',
+      noDocTemplatesYet: 'No templates yet.',
       statusSuspended: 'Paused',
       roleAdmin: 'Admin',
       roleMember: 'Member',
@@ -1157,6 +1160,7 @@ export const translations = {
     common: {
       delete: 'Eliminar',
       deleteForever: 'Eliminar Definitivamente',
+      edit: 'Editar',
       cancel: 'Cancelar',
       create: 'Criar',
       save: 'Guardar',
@@ -1671,6 +1675,8 @@ export const translations = {
       confirmRevokeCode: 'Revogar o código "{code}"? Deixa de funcionar para registo.',
       manageAccounts: 'Gerir contas',
       noAccountsYet: 'Ainda sem contas.',
+      docTemplates: 'Modelos de documentação',
+      noDocTemplatesYet: 'Ainda sem modelos.',
       statusSuspended: 'Pausada',
       roleAdmin: 'Admin',
       roleMember: 'Membro',

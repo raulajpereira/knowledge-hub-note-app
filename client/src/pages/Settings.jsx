@@ -123,10 +123,27 @@ function AdminCard({ theme, t, card, outlineButton }) {
   const [generating, setGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [busyUserId, setBusyUserId] = useState(null);
+  const [docTemplates, setDocTemplates] = useState(null);
+  const [editingTemplateId, setEditingTemplateId] = useState(null);
+  const [editTemplateName, setEditTemplateName] = useState('');
 
   const load = () => {
     api.listInviteCodes().then((r) => setCodes(r.codes));
     api.listAdminUsers().then((r) => setUsers(r.users));
+    api.listDocTemplatesAdmin().then((r) => setDocTemplates(r.templates));
+  };
+
+  const startEditTemplate = (tpl) => {
+    setEditingTemplateId(tpl.id);
+    setEditTemplateName(tpl.name);
+  };
+
+  const commitTemplateRename = async () => {
+    const id = editingTemplateId;
+    setEditingTemplateId(null);
+    if (!id || !editTemplateName.trim()) return;
+    const { template } = await api.updateDocTemplate(id, { name: editTemplateName.trim() });
+    setDocTemplates((prev) => prev.map((tpl) => (tpl.id === id ? template : tpl)));
   };
 
   useEffect(() => {
@@ -197,7 +214,7 @@ function AdminCard({ theme, t, card, outlineButton }) {
     }
   };
 
-  if (!codes || !users) return null;
+  if (!codes || !users || !docTemplates) return null;
 
   const activeCodes = codes.filter((c) => !c.usedAt && !c.revokedAt);
   const suspendedCount = users.filter((u) => u.status === 'suspended').length;
@@ -341,6 +358,36 @@ function AdminCard({ theme, t, card, outlineButton }) {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ position: 'relative' }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="doc" size={13} color={theme.textMuted} /> {t('settings.docTemplates')}
+        </div>
+        {docTemplates.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noDocTemplatesYet')}</div>}
+        {docTemplates.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {docTemplates.map((tpl) => (
+              <div key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 8, background: theme.subtleBg }}>
+                {editingTemplateId === tpl.id ? (
+                  <input
+                    value={editTemplateName}
+                    onChange={(e) => setEditTemplateName(e.target.value)}
+                    onBlur={commitTemplateRename}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    autoFocus
+                    style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, border: `1px solid ${theme.accent}`, borderRadius: 6, padding: '3px 7px', background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
+                  />
+                ) : (
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tpl.name}</span>
+                )}
+                <span onClick={() => startEditTemplate(tpl)} title={t('common.edit')} style={{ display: 'flex', opacity: 0.6, cursor: 'pointer', flexShrink: 0 }}>
+                  <Icon name="edit" size={13} color={theme.textMuted} />
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -199,6 +199,8 @@ export const api = {
   updateDocFolder: (id, payload) => request(`/documentacao/folders/${id}`, { method: 'PATCH', body: payload }),
   deleteDocFolder: (id) => request(`/documentacao/folders/${id}`, { method: 'DELETE' }),
   listDocTemplates: () => request('/documentacao/templates'),
+  listDocTemplatesAdmin: () => request('/documentacao/templates/admin'),
+  updateDocTemplate: (id, payload) => request(`/documentacao/templates/${id}`, { method: 'PATCH', body: payload }),
   listDocuments: (trashed) => request(`/documentacao${trashed ? '?trashed=true' : ''}`),
   getDocument: (id) => request(`/documentacao/${id}`),
   createDocument: (payload) => request('/documentacao', { method: 'POST', body: payload }),

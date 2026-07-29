@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const docImageDir = path.join(__dirname, '..', '..', 'uploads', 'documentacao');
@@ -110,6 +110,31 @@ router.get('/templates', async (req, res) => {
     select: { id: true, name: true, description: true, fields: true, createdAt: true },
   });
   res.json({ templates });
+});
+
+// Admin-only: full list (ignores restrictions) for management screens.
+router.get('/templates/admin', requireAdmin, async (req, res) => {
+  const templates = await prisma.docTemplate.findMany({
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, description: true, createdAt: true, updatedAt: true },
+  });
+  res.json({ templates });
+});
+
+// Admin-only: rename/redescribe a template. The field schema and source
+// docx are only ever changed via a deploy (scripts/seed-doc-templates.js).
+router.patch('/templates/:id', requireAdmin, async (req, res) => {
+  const template = await prisma.docTemplate.findUnique({ where: { id: req.params.id } });
+  if (!template) return res.status(404).json({ error: 'Template not found' });
+  const { name, description } = req.body || {};
+  const data = {};
+  if (name !== undefined) {
+    if (!name.trim()) return res.status(400).json({ error: 'name cannot be empty' });
+    data.name = name.trim();
+  }
+  if (description !== undefined) data.description = description?.trim() || null;
+  const updated = await prisma.docTemplate.update({ where: { id: template.id }, data });
+  res.json({ template: updated });
 });
 
 // --- Documents ---

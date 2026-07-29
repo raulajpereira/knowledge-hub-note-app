@@ -30,8 +30,7 @@ export const IT0291405_TEMPLATE = {
       anchor: { type: 'shapeFill', shapeName: 'Oval 3' },
     },
     {
-      key: 'empresa', type: 'select', label: 'Escolha a Empresa',
-      options: ['ITGest - Software e Sistemas Informáticos, Lda.', 'ITGest, Lda.', 'ITGest Moçambique, Lda.'],
+      key: 'empresa', type: 'text', label: 'Escolha a Empresa',
       anchor: { type: 'contentControl', tag: 'Escolha a Empresa' },
     },
     { key: 'dataCapa', type: 'date', label: 'Data', anchor: { type: 'literal', text: 'DD/MM/AAAA', occurrence: 1 } },
