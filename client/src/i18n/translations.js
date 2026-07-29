@@ -931,6 +931,9 @@ export const translations = {
       title: 'Customize Sidebar',
       subtitle: 'Drag to reorder (also works directly in the sidebar), uncheck to hide. Trash and Settings always stay put.',
       rename: 'Rename (PT / EN)',
+      addSpacer: 'Add spacer',
+      spacerLabel: 'Spacer',
+      removeSpacer: 'Remove spacer',
     },
   },
   pt: {
@@ -1865,6 +1868,9 @@ export const translations = {
       title: 'Personalizar Barra Lateral',
       subtitle: 'Arrasta para reorganizar (também funciona diretamente na barra lateral), desmarca para ocultar. Lixo e Definições ficam sempre fixos.',
       rename: 'Renomear (PT / EN)',
+      addSpacer: 'Adicionar espaço',
+      spacerLabel: 'Espaço',
+      removeSpacer: 'Remover espaço',
     },
   },
 };

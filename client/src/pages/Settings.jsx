@@ -20,12 +20,6 @@ const MANUAL_PDF_BY_LANG = {
   en: { href: '/manual/Knowledge-Hub-Manual-EN.pdf', filename: 'Knowledge-Hub-Manual-EN.pdf' },
 };
 
-function userInitials(name) {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
-}
-
 function TeamCard({ theme, t, card, outlineButton }) {
   const confirm = useConfirm();
   const [team, setTeam] = useState(null);
@@ -979,19 +973,6 @@ export default function Settings() {
       </div>
 
       <VpsCard theme={theme} t={t} card={card} user={user} refreshMe={refreshMe} />
-
-      <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.account')}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: theme.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 17, flexShrink: 0 }}>
-            {userInitials(user?.name)}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 700 }}>{user?.name}</div>
-            <div style={{ fontSize: 12.5, color: theme.textMuted }}>{user?.email}</div>
-          </div>
-        </div>
-      </div>
 
       <TeamCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
 

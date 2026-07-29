@@ -56,7 +56,7 @@ export default function AppLayout() {
     setDraggedKey(null);
     const hiddenItems = resolveSidebarLayout(user?.settings?.sidebarLayout).filter((i) => i.hidden);
     const sidebarLayout = [
-      ...sidebarItems.map((i) => ({ key: i.key, hidden: false, labelPt: i.labelPt, labelEn: i.labelEn })),
+      ...sidebarItems.map((i) => (i.type === 'spacer' ? { key: i.key, type: 'spacer' } : { key: i.key, hidden: false, labelPt: i.labelPt, labelEn: i.labelEn })),
       ...hiddenItems.map((i) => ({ key: i.key, hidden: true, labelPt: i.labelPt, labelEn: i.labelEn })),
     ];
     const { settings } = await api.updateSettings({ sidebarLayout });
@@ -105,7 +105,18 @@ export default function AppLayout() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {sidebarItems.map((item, index) => (
+            {sidebarItems.map((item, index) =>
+              item.type === 'spacer' ? (
+                <div
+                  key={item.key}
+                  draggable
+                  onDragStart={() => setDraggedKey(item.key)}
+                  onDragOver={(e) => onSidebarDragOver(e, index)}
+                  onDrop={onSidebarDrop}
+                  onDragEnd={onSidebarDrop}
+                  style={{ height: 14, opacity: draggedKey === item.key ? 0.5 : 1 }}
+                />
+              ) : (
               <div
                 key={item.key}
                 draggable
@@ -139,7 +150,8 @@ export default function AppLayout() {
                   )}
                 </NavLink>
               </div>
-            ))}
+              ),
+            )}
           </div>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>

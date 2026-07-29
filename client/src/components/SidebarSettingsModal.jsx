@@ -21,6 +21,14 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
     setItems((prev) => prev.map((i) => (i.key === key ? { ...i, [field]: value } : i)));
   };
 
+  const addSpacer = () => {
+    setItems((prev) => [...prev, { key: `spacer-${crypto.randomUUID()}`, type: 'spacer' }]);
+  };
+
+  const removeSpacer = (key) => {
+    setItems((prev) => prev.filter((i) => i.key !== key));
+  };
+
   const onDragOver = (e, index) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
@@ -36,7 +44,9 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
   const save = async () => {
     setSaving(true);
     try {
-      const sidebarLayout = items.map((i) => ({ key: i.key, hidden: !!i.hidden, labelPt: i.labelPt, labelEn: i.labelEn }));
+      const sidebarLayout = items.map((i) =>
+        i.type === 'spacer' ? { key: i.key, type: 'spacer' } : { key: i.key, hidden: !!i.hidden, labelPt: i.labelPt, labelEn: i.labelEn },
+      );
       const { settings } = await api.updateSettings({ sidebarLayout });
       updateUserSettings(settings);
       onClose();
@@ -63,7 +73,31 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {items.map((item, index) => (
+          {items.map((item, index) =>
+            item.type === 'spacer' ? (
+              <div
+                key={item.key}
+                draggable
+                onDragStart={() => setDraggedIndex(index)}
+                onDragOver={(e) => onDragOver(e, index)}
+                onDragEnd={() => setDraggedIndex(null)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 9,
+                  background: draggedIndex === index ? theme.accentSoftBg : 'transparent',
+                  border: `1px dashed ${theme.border}`,
+                }}
+              >
+                <span style={{ cursor: 'grab', color: theme.textMuted, fontSize: 14, letterSpacing: '-2px', flexShrink: 0, userSelect: 'none' }}>⠿⠿</span>
+                <span style={{ flex: 1, fontSize: 12, color: theme.textMuted, fontStyle: 'italic' }}>{t('sidebarSettings.spacerLabel')}</span>
+                <span
+                  onClick={() => removeSpacer(item.key)}
+                  title={t('sidebarSettings.removeSpacer')}
+                  style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex', flexShrink: 0, opacity: 0.85 }}
+                >
+                  <Icon name="trash" size={14} />
+                </span>
+              </div>
+            ) : (
             <div
               key={item.key}
               draggable={editingKey !== item.key}
@@ -120,8 +154,16 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
                 </div>
               )}
             </div>
-          ))}
+            ),
+          )}
         </div>
+
+        <button
+          onClick={addSpacer}
+          style={{ alignSelf: 'flex-start', background: 'transparent', border: `1px dashed ${theme.border}`, color: theme.textMuted, borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+        >
+          + {t('sidebarSettings.addSpacer')}
+        </button>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
           <button

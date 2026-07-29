@@ -31,6 +31,10 @@ export function resolveSidebarLayout(saved) {
 
   if (Array.isArray(saved)) {
     for (const entry of saved) {
+      if (entry?.type === 'spacer') {
+        ordered.push({ key: entry.key, type: 'spacer' });
+        continue;
+      }
       const item = byKey.get(entry?.key);
       if (item && !seen.has(item.key)) {
         ordered.push({ ...item, hidden: !!entry.hidden, labelPt: entry.labelPt || '', labelEn: entry.labelEn || '' });

@@ -107,19 +107,25 @@ router.patch('/', async (req, res) => {
   }
   if (sidebarLayout !== undefined) {
     const validLabel = (v) => v === undefined || typeof v === 'string';
+    const isSpacer = (s) => s?.type === 'spacer' && typeof s.key === 'string' && s.key.startsWith('spacer-');
     const valid =
       sidebarLayout === null ||
-      (Array.isArray(sidebarLayout) && sidebarLayout.every((s) => s && SIDEBAR_KEYS.has(s.key) && validLabel(s.labelPt) && validLabel(s.labelEn)));
-    if (!valid) return res.status(400).json({ error: 'sidebarLayout must be an array of { key, hidden?, labelPt?, labelEn? } with known keys' });
+      (Array.isArray(sidebarLayout) &&
+        sidebarLayout.every((s) => s && (isSpacer(s) || (SIDEBAR_KEYS.has(s.key) && validLabel(s.labelPt) && validLabel(s.labelEn)))));
+    if (!valid) return res.status(400).json({ error: 'sidebarLayout must be an array of { key, hidden?, labelPt?, labelEn? } or spacer entries { key, type: "spacer" }' });
     data.sidebarLayout =
       sidebarLayout === null
         ? null
-        : sidebarLayout.map((s) => ({
-            key: s.key,
-            hidden: !!s.hidden,
-            labelPt: s.labelPt?.trim().slice(0, 40) || undefined,
-            labelEn: s.labelEn?.trim().slice(0, 40) || undefined,
-          }));
+        : sidebarLayout.map((s) =>
+            isSpacer(s)
+              ? { key: s.key, type: 'spacer' }
+              : {
+                  key: s.key,
+                  hidden: !!s.hidden,
+                  labelPt: s.labelPt?.trim().slice(0, 40) || undefined,
+                  labelEn: s.labelEn?.trim().slice(0, 40) || undefined,
+                },
+          );
   }
   if (homeLayout !== undefined) {
     const isArr = (v) => Array.isArray(v);
