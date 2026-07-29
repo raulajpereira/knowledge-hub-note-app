@@ -137,6 +137,36 @@ router.patch('/templates/:id', requireAdmin, async (req, res) => {
   res.json({ template: updated });
 });
 
+// Admin-only: per-user template access (default-allow blacklist model).
+router.get('/template-access/:userId', requireAdmin, async (req, res) => {
+  const [templates, restrictions] = await Promise.all([
+    prisma.docTemplate.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    prisma.docTemplateRestriction.findMany({ where: { userId: req.params.userId }, select: { templateId: true } }),
+  ]);
+  const deniedIds = new Set(restrictions.map((r) => r.templateId));
+  res.json({
+    templates: templates.map((t) => ({ id: t.id, name: t.name, allowed: !deniedIds.has(t.id) })),
+  });
+});
+
+router.put('/template-access/:userId', requireAdmin, async (req, res) => {
+  const { allowedTemplateIds } = req.body || {};
+  if (!Array.isArray(allowedTemplateIds)) return res.status(400).json({ error: 'allowedTemplateIds must be an array' });
+  const templates = await prisma.docTemplate.findMany({ select: { id: true } });
+  const allowedSet = new Set(allowedTemplateIds);
+  const deniedIds = templates.map((t) => t.id).filter((id) => !allowedSet.has(id));
+
+  await prisma.$transaction([
+    prisma.docTemplateRestriction.deleteMany({ where: { userId: req.params.userId } }),
+    ...(deniedIds.length
+      ? [prisma.docTemplateRestriction.createMany({
+          data: deniedIds.map((templateId) => ({ userId: req.params.userId, templateId })),
+        })]
+      : []),
+  ]);
+  res.status(204).end();
+});
+
 // --- Documents ---
 
 router.get('/', async (req, res) => {

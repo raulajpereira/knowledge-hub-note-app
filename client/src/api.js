@@ -201,6 +201,8 @@ export const api = {
   listDocTemplates: () => request('/documentacao/templates'),
   listDocTemplatesAdmin: () => request('/documentacao/templates/admin'),
   updateDocTemplate: (id, payload) => request(`/documentacao/templates/${id}`, { method: 'PATCH', body: payload }),
+  getDocTemplateAccess: (userId) => request(`/documentacao/template-access/${userId}`),
+  setDocTemplateAccess: (userId, allowedTemplateIds) => request(`/documentacao/template-access/${userId}`, { method: 'PUT', body: { allowedTemplateIds } }),
   listDocuments: (trashed) => request(`/documentacao${trashed ? '?trashed=true' : ''}`),
   getDocument: (id) => request(`/documentacao/${id}`),
   createDocument: (payload) => request('/documentacao', { method: 'POST', body: payload }),

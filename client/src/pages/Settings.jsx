@@ -123,27 +123,11 @@ function AdminCard({ theme, t, card, outlineButton }) {
   const [generating, setGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [busyUserId, setBusyUserId] = useState(null);
-  const [docTemplates, setDocTemplates] = useState(null);
-  const [editingTemplateId, setEditingTemplateId] = useState(null);
-  const [editTemplateName, setEditTemplateName] = useState('');
+  const [templateAccessUser, setTemplateAccessUser] = useState(null);
 
   const load = () => {
     api.listInviteCodes().then((r) => setCodes(r.codes));
     api.listAdminUsers().then((r) => setUsers(r.users));
-    api.listDocTemplatesAdmin().then((r) => setDocTemplates(r.templates));
-  };
-
-  const startEditTemplate = (tpl) => {
-    setEditingTemplateId(tpl.id);
-    setEditTemplateName(tpl.name);
-  };
-
-  const commitTemplateRename = async () => {
-    const id = editingTemplateId;
-    setEditingTemplateId(null);
-    if (!id || !editTemplateName.trim()) return;
-    const { template } = await api.updateDocTemplate(id, { name: editTemplateName.trim() });
-    setDocTemplates((prev) => prev.map((tpl) => (tpl.id === id ? template : tpl)));
   };
 
   useEffect(() => {
@@ -214,7 +198,7 @@ function AdminCard({ theme, t, card, outlineButton }) {
     }
   };
 
-  if (!codes || !users || !docTemplates) return null;
+  if (!codes || !users) return null;
 
   const activeCodes = codes.filter((c) => !c.usedAt && !c.revokedAt);
   const suspendedCount = users.filter((u) => u.status === 'suspended').length;
@@ -222,6 +206,7 @@ function AdminCard({ theme, t, card, outlineButton }) {
   const goldButton = { ...outlineButton, border: `1px solid ${gold}`, color: gold, fontWeight: 700 };
 
   return (
+    <>
     <div
       style={{
         ...card,
@@ -348,6 +333,13 @@ function AdminCard({ theme, t, card, outlineButton }) {
                   >
                     {u.status === 'suspended' ? t('settings.reactivate') : t('settings.pause')}
                   </button>
+                  <button
+                    onClick={() => setTemplateAccessUser(u)}
+                    disabled={busy}
+                    style={{ ...outlineButton, padding: '5px 10px', fontSize: 11.5, opacity: busy ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 5 }}
+                  >
+                    <Icon name="doc" size={12} /> {t('settings.manageDocTemplates')}
+                  </button>
                   <span
                     onClick={() => (busy ? null : deleteAccount(u))}
                     title={t('common.delete')}
@@ -361,36 +353,129 @@ function AdminCard({ theme, t, card, outlineButton }) {
           </div>
         )}
       </div>
+    </div>
+    {templateAccessUser && (
+      <TemplateAccessModal theme={theme} t={t} user={templateAccessUser} onClose={() => setTemplateAccessUser(null)} />
+    )}
+    </>
+  );
+}
 
-      <div style={{ position: 'relative' }}>
-        <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="doc" size={13} color={theme.textMuted} /> {t('settings.docTemplates')}
+function TemplateAccessModal({ theme, t, user, onClose }) {
+  const [templates, setTemplates] = useState(null);
+  const [allowed, setAllowed] = useState(new Set());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.getDocTemplateAccess(user.id).then((r) => {
+      setTemplates(r.templates);
+      setAllowed(new Set(r.templates.filter((tpl) => tpl.allowed).map((tpl) => tpl.id)));
+    });
+  }, [user.id]);
+
+  const toggle = (id) => {
+    setAllowed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.setDocTemplateAccess(user.id, [...allowed]);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: theme.cardBg, borderRadius: 14, padding: 22, width: 420, maxWidth: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 14, border: `1px solid ${theme.border}` }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800 }}>{t('settings.manageDocTemplates')}</div>
+          <div style={{ fontSize: 12.5, color: theme.textMuted }}>{user.name}</div>
         </div>
-        {docTemplates.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noDocTemplatesYet')}</div>}
-        {docTemplates.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {docTemplates.map((tpl) => (
-              <div key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 8, background: theme.subtleBg }}>
-                {editingTemplateId === tpl.id ? (
-                  <input
-                    value={editTemplateName}
-                    onChange={(e) => setEditTemplateName(e.target.value)}
-                    onBlur={commitTemplateRename}
-                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                    autoFocus
-                    style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, border: `1px solid ${theme.accent}`, borderRadius: 6, padding: '3px 7px', background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
-                  />
-                ) : (
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tpl.name}</span>
-                )}
-                <span onClick={() => startEditTemplate(tpl)} title={t('common.edit')} style={{ display: 'flex', opacity: 0.6, cursor: 'pointer', flexShrink: 0 }}>
-                  <Icon name="edit" size={13} color={theme.textMuted} />
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', flex: 1, minHeight: 40 }}>
+          {templates == null && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('common.loading')}</div>}
+          {templates?.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noDocTemplatesYet')}</div>}
+          {templates?.map((tpl) => (
+            <label key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: theme.subtleBg, cursor: 'pointer' }}>
+              <input type="checkbox" checked={allowed.has(tpl.id)} onChange={() => toggle(tpl.id)} />
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{tpl.name}</span>
+            </label>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', color: theme.textPrimary }}>
+            {t('common.cancel')}
+          </button>
+          <button onClick={save} disabled={saving || templates == null} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+            {saving ? t('common.saving') : t('common.save')}
+          </button>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function TemplateManagementCard({ theme, t, card }) {
+  const [templates, setTemplates] = useState(null);
+  const [editingTemplateId, setEditingTemplateId] = useState(null);
+  const [editTemplateName, setEditTemplateName] = useState('');
+
+  useEffect(() => {
+    api.listDocTemplatesAdmin().then((r) => setTemplates(r.templates));
+  }, []);
+
+  const startEditTemplate = (tpl) => {
+    setEditingTemplateId(tpl.id);
+    setEditTemplateName(tpl.name);
+  };
+
+  const commitTemplateRename = async () => {
+    const id = editingTemplateId;
+    setEditingTemplateId(null);
+    if (!id || !editTemplateName.trim()) return;
+    const { template } = await api.updateDocTemplate(id, { name: editTemplateName.trim() });
+    setTemplates((prev) => prev.map((tpl) => (tpl.id === id ? template : tpl)));
+  };
+
+  if (!templates) return null;
+
+  return (
+    <div style={card}>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.templateManagement')}</div>
+        <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.templateManagementDesc')}</div>
+      </div>
+      {templates.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.noDocTemplatesYet')}</div>}
+      {templates.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {templates.map((tpl) => (
+            <div key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 8, background: theme.subtleBg }}>
+              {editingTemplateId === tpl.id ? (
+                <input
+                  value={editTemplateName}
+                  onChange={(e) => setEditTemplateName(e.target.value)}
+                  onBlur={commitTemplateRename}
+                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                  autoFocus
+                  style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, border: `1px solid ${theme.accent}`, borderRadius: 6, padding: '3px 7px', background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
+                />
+              ) : (
+                <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tpl.name}</span>
+              )}
+              <span onClick={() => startEditTemplate(tpl)} title={t('common.edit')} style={{ display: 'flex', opacity: 0.6, cursor: 'pointer', flexShrink: 0 }}>
+                <Icon name="edit" size={13} color={theme.textMuted} />
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -911,7 +996,10 @@ export default function Settings() {
       <TeamCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
 
       {(user?.role === 'admin' || user?.role === 'super_admin') && (
-        <AdminCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
+        <>
+          <AdminCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
+          <TemplateManagementCard theme={theme} t={t} card={card} />
+        </>
       )}
 
       <div style={card}>

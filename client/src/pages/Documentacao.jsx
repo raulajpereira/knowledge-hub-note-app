@@ -398,52 +398,48 @@ export default function Documentacao() {
   const exportDate = activeDoc?.exportedAt ? new Date(activeDoc.exportedAt).toLocaleString(lang === 'pt' ? 'pt-PT' : 'en-GB') : null;
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 800 }}>{t('documentacao.title')}</div>
-          <div style={{ fontSize: 12.5, color: theme.textMuted, marginTop: 2 }}>{t('documentacao.subtitle')}</div>
+    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 20, minHeight: 0 }}>
+      {/* Folder tree */}
+      <div style={{ width: 220, flexShrink: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div
+          onClick={() => setActiveFolder(null)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', marginBottom: 4,
+            background: activeFolder === null ? theme.accentSoftBg : 'transparent',
+            color: activeFolder === null ? theme.accentText : theme.textMuted, fontWeight: 700, fontSize: 13,
+          }}
+        >
+          <Icon name="doc" size={14} /> {t('documentacao.title')}
         </div>
+        {folders.filter((f) => !f.parentId).map((f) => renderFolderNode(f, 0))}
+        <div onClick={() => openNewFolder(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px', marginTop: 6, borderRadius: 8, cursor: 'pointer', fontSize: 12.5, color: theme.accentText, fontWeight: 700 }}>
+          <Icon name="plus" size={12} /> {t('documentacao.newFolder')}
+        </div>
+      </div>
+
+      {/* Document list */}
+      <div style={{ flex: '1 1 280px', maxWidth: 320, minWidth: 240, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '8px 12px' }}>
-            <Icon name="search" size={14} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: 1, minWidth: 0 }}>
+            <span style={{ opacity: 0.5, display: 'flex' }}>
+              <Icon name="search" size={15} />
+            </span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('documentacao.searchPlaceholder')}
-              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textPrimary, width: 190 }}
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
             />
           </div>
           <button
             onClick={() => setPickTemplateOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+            title={t('documentacao.newDocument')}
+            style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}
           >
-            <Icon name="plus" size={14} color="#fff" /> {t('documentacao.newDocument')}
+            <Icon name="plus" size={16} color="#fff" />
           </button>
         </div>
-      </div>
-
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 20 }}>
-        {/* Folder tree */}
-        <div style={{ width: 220, flexShrink: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <div
-            onClick={() => setActiveFolder(null)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', marginBottom: 4,
-              background: activeFolder === null ? theme.accentSoftBg : 'transparent',
-              color: activeFolder === null ? theme.accentText : theme.textMuted, fontWeight: 700, fontSize: 13,
-            }}
-          >
-            <Icon name="doc" size={14} /> {t('documentacao.title')}
-          </div>
-          {folders.filter((f) => !f.parentId).map((f) => renderFolderNode(f, 0))}
-          <div onClick={() => openNewFolder(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px', marginTop: 6, borderRadius: 8, cursor: 'pointer', fontSize: 12.5, color: theme.accentText, fontWeight: 700 }}>
-            <Icon name="plus" size={12} /> {t('documentacao.newFolder')}
-          </div>
-        </div>
-
-        {/* Document list */}
-        <div style={{ width: 280, flexShrink: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {!loading && filteredDocuments.length === 0 && (
             <div style={{ padding: 20, fontSize: 12.5, color: theme.textMuted, textAlign: 'center' }}>{t('documentacao.noneYet')}</div>
           )}
@@ -475,8 +471,9 @@ export default function Documentacao() {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Detail */}
+      {/* Detail */}
         <div style={{ flex: 1, minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', padding: activeDoc ? 24 : 0 }}>
           {!activeDoc ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 13, color: theme.textMuted }}>
@@ -514,7 +511,6 @@ export default function Documentacao() {
             </div>
           )}
         </div>
-      </div>
 
       {newFolderOpen && (
         <div onMouseDown={backdropClose(() => setNewFolderOpen(false))} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
