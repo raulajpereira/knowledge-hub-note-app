@@ -8,6 +8,7 @@ import DateInput from '../components/DateInput.jsx';
 import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 function fieldStyle(theme) {
   return {
@@ -256,6 +257,7 @@ export default function Documentacao() {
   const { theme } = useTheme();
   const { t, lang } = useLanguage();
   const confirm = useConfirm();
+  const isMobile = useIsMobile();
 
   const [folders, setFolders] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -525,11 +527,13 @@ export default function Documentacao() {
   };
 
   const exportDate = activeDoc?.exportedAt ? new Date(activeDoc.exportedAt).toLocaleString(lang === 'pt' ? 'pt-PT' : 'en-GB') : null;
+  const mobileShowDetail = isMobile && !!selectedId;
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 20, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 20, minHeight: 0 }}>
       {/* Folder tree */}
-      <div style={{ width: 260, flexShrink: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {(!isMobile || !mobileShowDetail) && (
+      <div style={{ width: isMobile ? '100%' : 260, flexShrink: 0, maxHeight: isMobile ? 140 : 'none', background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div
           onClick={() => setActiveFolder(null)}
           onDragOver={(e) => { e.preventDefault(); setDragOverFolder('__root__'); }}
@@ -554,9 +558,11 @@ export default function Documentacao() {
           <Icon name="plus" size={12} /> {t('documentacao.newFolder')}
         </div>
       </div>
+      )}
 
       {/* Document list */}
-      <div style={{ flex: '1 1 280px', maxWidth: 320, minWidth: 240, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
+      {(!isMobile || !mobileShowDetail) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 280px', maxWidth: isMobile ? 'none' : 320, minWidth: isMobile ? 0 : 240, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: 1, minWidth: 0 }}>
             <span style={{ opacity: 0.5, display: 'flex' }}>
@@ -612,9 +618,11 @@ export default function Documentacao() {
           ))}
         </div>
       </div>
+      )}
 
       {/* Detail */}
-        <div style={{ flex: '1 1 auto', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', padding: activeDoc ? 24 : 0 }}>
+      {(!isMobile || mobileShowDetail) && (
+        <div style={{ flex: '1 1 auto', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflowY: 'auto', padding: activeDoc ? (isMobile ? 16 : 24) : 0 }}>
           {!activeDoc ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 13, color: theme.textMuted }}>
               {t('documentacao.selectPrompt')}
@@ -622,6 +630,11 @@ export default function Documentacao() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                {isMobile && (
+                  <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                    <Icon name="chevron" size={18} />
+                  </span>
+                )}
                 <input
                   value={activeDoc.title || ''}
                   onChange={(e) => renameActiveDoc(e.target.value)}
@@ -655,6 +668,7 @@ export default function Documentacao() {
             </div>
           )}
         </div>
+      )}
 
       {newFolderOpen && (
         <div onMouseDown={backdropClose(() => setNewFolderOpen(false))} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
