@@ -6,6 +6,7 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 function timeAgo(dateStr, t) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -24,6 +25,7 @@ export default function Artifacts() {
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [artifacts, setArtifacts] = useState([]);
   const [folders, setFolders] = useState([]);
   const [tags, setTags] = useState([]);
@@ -68,10 +70,11 @@ export default function Artifacts() {
   }, [artifacts, activeFolder, search]);
 
   const selected = artifacts.find((a) => a.id === selectedId) || filtered[0] || null;
+  const mobileShowDetail = isMobile && !!selectedId;
 
   useEffect(() => {
-    if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
+    if (!isMobile && !selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
+  }, [filtered, selectedId, isMobile]);
 
   useEffect(() => {
     if (location.state?.artifactId) {
@@ -314,8 +317,9 @@ export default function Artifacts() {
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-      <div style={{ flex: '1 1 300px', minWidth: 260, maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+      {(!isMobile || !mobileShowDetail) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 300px', minWidth: isMobile ? 0 : 260, maxWidth: isMobile ? 'none' : 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: 1, minWidth: 0 }}>
             <span style={{ opacity: 0.5, display: 'flex' }}>
@@ -417,10 +421,16 @@ export default function Artifacts() {
           ))}
         </div>
       </div>
+      )}
 
-      {selected ? (
-        <div style={{ flex: '1 1 640px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 20, display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+      {(!isMobile || mobileShowDetail) && (selected ? (
+        <div style={{ flex: isMobile ? '1 1 auto' : '1 1 640px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 14 : 20, display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {isMobile && (
+              <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                <Icon name="chevron" size={18} />
+              </span>
+            )}
             <input
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
@@ -544,7 +554,7 @@ export default function Artifacts() {
         <div style={{ flex: '1 1 640px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
           {t('artifacts.selectOrCreate')}
         </div>
-      )}
+      ))}
     </div>
   );
 }

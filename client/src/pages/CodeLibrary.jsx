@@ -9,6 +9,7 @@ import Icon from '../components/Icon.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { useClickOutside } from '../lib/useClickOutside.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const FOLDER_KINDS = ['program', 'class', 'function_module', 'other'];
 const ITEM_TYPES = ['snippet', 'characteristics', 'table', 'data_element', 'domain'];
@@ -588,6 +589,7 @@ export default function CodeLibrary() {
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   const [folders, setFolders] = useState([]);
   const [selectedFolderId, setSelectedFolderId] = useState(null);
@@ -632,7 +634,7 @@ export default function CodeLibrary() {
       setFolders(folders);
       const wanted = location.state?.folderId;
       if (wanted && folders.some((f) => f.id === wanted)) setSelectedFolderId(wanted);
-      else if (folders.length > 0) setSelectedFolderId(folders[0].id);
+      else if (!isMobile && folders.length > 0) setSelectedFolderId(folders[0].id);
       setLoading(false);
     });
   }, []);
@@ -647,12 +649,15 @@ export default function CodeLibrary() {
       setItems(items);
       const wantedItem = location.state?.itemId;
       if (wantedItem && items.some((i) => i.id === wantedItem)) setSelectedItemId(wantedItem);
-      else setSelectedItemId(items[0]?.id || null);
+      else if (!isMobile) setSelectedItemId(items[0]?.id || null);
+      else setSelectedItemId(null);
     });
   }, [selectedFolderId]);
 
   const selectedFolder = folders.find((f) => f.id === selectedFolderId) || null;
   const selectedItem = items.find((i) => i.id === selectedItemId) || null;
+  const mobileShowItems = isMobile && !!selectedFolderId;
+  const mobileShowDetail = isMobile && !!selectedItemId;
   const filteredFolders = folders.filter((f) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
@@ -880,8 +885,9 @@ export default function CodeLibrary() {
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-      <div style={{ flex: '1 1 280px', minWidth: 240, maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+      {(!isMobile || !mobileShowItems) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 280px', minWidth: isMobile ? 0 : 240, maxWidth: isMobile ? 'none' : 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
           <span style={{ opacity: 0.5, display: 'flex' }}><Icon name="search" size={15} /></span>
           <input
@@ -946,11 +952,18 @@ export default function CodeLibrary() {
           )}
         </div>
       </div>
+      )}
 
-      <div style={{ flex: '1 1 240px', minWidth: 220, maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {(!isMobile || (mobileShowItems && !mobileShowDetail)) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 240px', minWidth: isMobile ? 0 : 220, maxWidth: isMobile ? 'none' : 280, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {selectedFolder ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {isMobile && (
+                <span onClick={() => setSelectedFolderId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                  <Icon name="chevron" size={18} />
+                </span>
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedFolder.name}</div>
                 <div style={{ fontSize: 11.5, color: theme.textMuted }}>{kindLabel(selectedFolder.kind)}</div>
@@ -1099,17 +1112,24 @@ export default function CodeLibrary() {
           <div style={{ padding: 20, fontSize: 13, color: theme.textMuted }}>{t('codeLibrary.selectFolder')}</div>
         )}
       </div>
+      )}
 
-      <div style={{ flex: 2, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', padding: '2px 18px 24px 2px' }}>
+      {(!isMobile || mobileShowDetail) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : 2, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', padding: isMobile ? '2px 2px 24px 2px' : '2px 18px 24px 2px' }}>
         {selectedItem && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {isMobile && (
+                <span onClick={() => setSelectedItemId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                  <Icon name="chevron" size={18} />
+                </span>
+              )}
               <input
                 value={selectedItem.name}
                 onChange={(e) => setItems((prev) => prev.map((i) => (i.id === selectedItem.id ? { ...i, name: e.target.value } : i)))}
                 onBlur={(e) => updateItem({ name: e.target.value })}
                 placeholder={t('codeLibrary.itemNamePlaceholder')}
-                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: theme.textPrimary }}
+                style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: theme.textPrimary }}
               />
               <span onClick={() => deleteItem(selectedItem.id)} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
                 <Icon name="trash" size={16} />
@@ -1187,6 +1207,7 @@ export default function CodeLibrary() {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
