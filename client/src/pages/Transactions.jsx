@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { MODULE_GROUPS, TYPE_OPTIONS, hueForModule } from '../lib/transactionsMeta.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const DEFAULT_COLUMNS = [
   { key: 'tcode', labelKey: 'transactions.colTcode', width: 150 },
@@ -82,6 +83,7 @@ export default function Transactions() {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const confirm = useConfirm();
+  const isMobile = useIsMobile();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -176,7 +178,7 @@ export default function Transactions() {
   const groupLabel = (g) => (g === 'Todos' ? t('transactions.groupAll') : g === 'Outros' ? t('transactions.groupOther') : g);
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16, minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800 }}>{t('transactions.title')}</div>
@@ -189,7 +191,7 @@ export default function Transactions() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('transactions.searchPlaceholder')}
-              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textPrimary, width: 190 }}
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textPrimary, width: isMobile ? 140 : 190 }}
             />
           </div>
           <button
