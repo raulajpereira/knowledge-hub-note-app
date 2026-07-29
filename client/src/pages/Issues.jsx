@@ -8,6 +8,7 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import ColorSelect from '../components/ColorSelect.jsx';
+import ProjectSelect from '../components/ProjectSelect.jsx';
 import TemplateMenu from '../components/TemplateMenu.jsx';
 import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
@@ -123,13 +124,10 @@ export default function Issues() {
   const [statusSaving, setStatusSaving] = useState(false);
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
-  const [projectDraft, setProjectDraft] = useState('');
   const [waitingOnDraft, setWaitingOnDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [notesDraft, setNotesDraft] = useState('');
   const [projectNames, setProjectNames] = useState([]);
-  const [projectCustomMode, setProjectCustomMode] = useState(false);
-  const [newProjectMode, setNewProjectMode] = useState('select');
 
   const statusConfig = user?.settings?.issueStatuses?.length ? user.settings.issueStatuses : DEFAULT_STATUSES;
   const STATUS_NAMES = statusConfig.map((s) => s.name);
@@ -282,8 +280,6 @@ export default function Issues() {
 
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
-    setProjectDraft(selected?.project ?? '');
-    setProjectCustomMode(!!selected?.project && !projectNames.includes(selected.project));
     setWaitingOnDraft(selected?.waitingOn ?? '');
     setDescriptionDraft(selected?.description ?? '');
     setNotesDraft(selected?.notes ?? '');
@@ -319,10 +315,8 @@ export default function Issues() {
   };
 
   const openNewIssue = (tpl) => {
-    const tplProject = tpl?.data.project || '';
     setNewTitle(tpl?.data.title || '');
-    setNewProject(tplProject);
-    setNewProjectMode(tplProject && !projectNames.includes(tplProject) ? 'custom' : 'select');
+    setNewProject(tpl?.data.project || '');
     setNewPriority(tpl?.data.priority || 'Medium');
     setNewStatus(STATUS_NAMES[0] || 'Open');
     setNewDue('');
@@ -585,36 +579,15 @@ export default function Issues() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.project')}</FieldLabel>
-                  <select
-                    value={projectCustomMode ? '__other__' : selected.project || ''}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === '__other__') {
-                        setProjectCustomMode(true);
-                      } else {
-                        setProjectCustomMode(false);
-                        setProjectDraft(v);
-                        patch(selected.id, { project: v });
-                      }
-                    }}
+                  <ProjectSelect
+                    key={selected.id}
+                    value={selected.project}
+                    projectNames={projectNames}
+                    onCommit={(v) => patch(selected.id, { project: v })}
+                    theme={theme}
+                    t={t}
                     style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
-                  >
-                    <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('issues.projectNone')}</option>
-                    {projectNames.map((p) => (
-                      <option key={p} value={p} style={{ color: '#1a1a1a', background: '#fff' }}>{p}</option>
-                    ))}
-                    <option value="__other__" style={{ color: '#1a1a1a', background: '#fff' }}>{t('issues.projectOther')}</option>
-                  </select>
-                  {projectCustomMode && (
-                    <input
-                      value={projectDraft}
-                      onChange={(e) => setProjectDraft(e.target.value)}
-                      onBlur={() => commitField('project', projectDraft)}
-                      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                      placeholder={t('issues.projectCustomPlaceholder')}
-                      style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 12.5, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box', marginTop: 6 }}
-                    />
-                  )}
+                  />
                 </div>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.dueDate')}</FieldLabel>
@@ -707,34 +680,14 @@ export default function Issues() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.project')}</FieldLabel>
-                  <select
-                    value={newProjectMode === 'custom' ? '__other__' : newProject}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === '__other__') {
-                        setNewProjectMode('custom');
-                        setNewProject('');
-                      } else {
-                        setNewProjectMode('select');
-                        setNewProject(v);
-                      }
-                    }}
+                  <ProjectSelect
+                    value={newProject}
+                    projectNames={projectNames}
+                    onCommit={setNewProject}
+                    theme={theme}
+                    t={t}
                     style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
-                  >
-                    <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('issues.projectNone')}</option>
-                    {projectNames.map((p) => (
-                      <option key={p} value={p} style={{ color: '#1a1a1a', background: '#fff' }}>{p}</option>
-                    ))}
-                    <option value="__other__" style={{ color: '#1a1a1a', background: '#fff' }}>{t('issues.projectOther')}</option>
-                  </select>
-                  {newProjectMode === 'custom' && (
-                    <input
-                      value={newProject}
-                      onChange={(e) => setNewProject(e.target.value)}
-                      placeholder={t('issues.projectCustomPlaceholder')}
-                      style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box', marginTop: 6 }}
-                    />
-                  )}
+                  />
                 </div>
                 <div>
                   <FieldLabel theme={theme}>{t('issues.dueDate')}</FieldLabel>

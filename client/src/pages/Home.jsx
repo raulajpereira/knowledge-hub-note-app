@@ -26,7 +26,7 @@ function timeAgo(dateStr, t) {
   return t('common.daysAgo', { n: days });
 }
 
-const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
+const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35, Critical: 20 };
 
 function toKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -272,6 +272,19 @@ export default function Home() {
     },
   ];
 
+  // Issues in the terminal status (last column of the user's configured
+  // workflow, e.g. "Done") count as resolved, same as a checked-off task.
+  const terminalIssueStatus = statusConfig[statusConfig.length - 1]?.name;
+  const openTasksAndIssues = [
+    ...tasks.filter((tk) => !tk.done).map((tk) => ({ id: tk.id, kind: 'task', title: tk.title, project: tk.project, due: tk.due, priority: tk.priority, raw: tk })),
+    ...issues.filter((is) => is.status !== terminalIssueStatus).map((is) => ({ id: is.id, kind: 'issue', title: is.title, project: is.project, due: is.due, priority: is.priority, raw: is })),
+  ].sort((a, b) => {
+    if (a.due && b.due) return a.due.localeCompare(b.due);
+    if (a.due) return -1;
+    if (b.due) return 1;
+    return 0;
+  });
+
   const blockContent = {
     quickCapture: (
       <div>
@@ -329,36 +342,45 @@ export default function Home() {
         </div>
         <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
           {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('common.loading')}</div>}
-          {!loading && tasks.filter((tk) => !tk.done).length === 0 && (
+          {!loading && openTasksAndIssues.length === 0 && (
             <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.noOpenTasks')}</div>
           )}
-          {tasks
-            .filter((task) => !task.done)
+          {openTasksAndIssues
             .slice(0, 8)
-            .map((task) => {
-              const hue = PRIORITY_HUES[task.priority];
+            .map((item) => {
+              const hue = PRIORITY_HUES[item.priority];
               return (
                 <div
-                  key={task.id}
-                  onClick={() => navigate('/tasks', { state: { taskId: task.id } })}
+                  key={`${item.kind}-${item.id}`}
+                  onClick={() =>
+                    item.kind === 'task'
+                      ? navigate('/tasks', { state: { taskId: item.id } })
+                      : navigate('/issues', { state: { issueId: item.id } })
+                  }
                   style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
                 >
-                  <div
-                    onClick={(e) => toggleTaskDone(e, task)}
-                    style={{
-                      width: 19, height: 19, borderRadius: 6, border: `1.5px solid ${theme.border}`, background: 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
-                    }}
-                  />
+                  {item.kind === 'task' ? (
+                    <div
+                      onClick={(e) => toggleTaskDone(e, item.raw)}
+                      style={{
+                        width: 19, height: 19, borderRadius: 6, border: `1.5px solid ${theme.border}`, background: 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div style={{ width: 19, height: 19, borderRadius: 6, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon name="archive" size={11} color={theme.accentText} />
+                    </div>
+                  )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title}</div>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
                     <div style={{ fontSize: 11.5, color: theme.textMuted }}>
-                      {task.project || t('common.noProject')}
-                      {task.due ? ` · ${t('common.due', { date: task.due })}` : ''}
+                      {item.project || t('common.noProject')}
+                      {item.due ? ` · ${t('common.due', { date: item.due })}` : ''}
                     </div>
                   </div>
                   <div style={{ fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, flexShrink: 0, background: `oklch(0.93 0.06 ${hue})`, color: `oklch(0.45 0.14 ${hue})` }}>
-                    {task.priority}
+                    {item.priority}
                   </div>
                 </div>
               );

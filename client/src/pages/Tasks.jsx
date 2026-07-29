@@ -7,6 +7,7 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import TemplateMenu from '../components/TemplateMenu.jsx';
+import ProjectSelect from '../components/ProjectSelect.jsx';
 import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
@@ -67,12 +68,14 @@ export default function Tasks() {
   const [dragOverStatus, setDragOverStatus] = useState(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [projectNames, setProjectNames] = useState([]);
 
   useEffect(() => {
     api.listTasks().then(({ tasks }) => {
       setTasks(tasks);
       setLoading(false);
     });
+    api.listProjects().then(({ projects }) => setProjectNames(projects.map((p) => p.name)));
   }, []);
 
   const filtered = useMemo(() => {
@@ -447,10 +450,13 @@ export default function Tasks() {
             </div>
             <div style={{ flex: '1 1 160px' }}>
               <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('tasks.project')}</div>
-              <input
-                value={selected.project || ''}
-                onChange={(e) => patch(selected.id, { project: e.target.value })}
-                placeholder={t('tasks.projectPlaceholder')}
+              <ProjectSelect
+                key={selected.id}
+                value={selected.project}
+                projectNames={projectNames}
+                onCommit={(v) => patch(selected.id, { project: v })}
+                theme={theme}
+                t={t}
                 style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               />
             </div>
