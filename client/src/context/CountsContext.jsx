@@ -30,7 +30,7 @@ export function CountsProvider({ children }) {
       artifacts: artifactsR.artifacts.length,
       issues: issuesR.issues.length,
       codeLibrary: codeFoldersR.folders.length,
-      projects: projectsR.projects.length,
+      projects: projectsR.projects.filter((p) => p.status === 'Ativo').length,
       trash: trashedNotesR.notes.length + trashedTasksR.tasks.length + trashedVoiceR.voiceNotes.length,
     });
     // Computed from the same issues list already fetched above, so every
