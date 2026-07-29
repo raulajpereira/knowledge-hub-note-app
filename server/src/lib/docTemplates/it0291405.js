@@ -70,7 +70,7 @@ export const IT0291405_TEMPLATE = {
     {
       key: 'ordensTransporte', type: 'repeatableTable', label: '8. Outras Considerações — Ordens de Transporte',
       help: 'Formato do código: AAAAMMDD-XX-YY (Ano, Mês, Dia, Iniciais de quem cria, Área: SD/MM/FI/RH).',
-      anchor: { type: 'table', afterText: 'Ordens de Transporte' },
+      anchor: { type: 'table', afterText: 'Ordens de Transporte:' },
       columns: [
         { key: 'codigo', label: 'Código da Ordem', type: 'text' },
         { key: 'descricao', label: 'Descrição', type: 'text' },

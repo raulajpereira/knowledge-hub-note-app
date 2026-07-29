@@ -2,12 +2,24 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { fillDocx } from '../lib/docxFill/engine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const docImageDir = path.join(__dirname, '..', '..', 'uploads', 'documentacao');
+const templatesDir = path.join(__dirname, '..', '..', 'templates');
+
+function resolveImagePath(url) {
+  if (!url || !url.startsWith('/uploads/documentacao/')) return null;
+  return path.join(docImageDir, path.basename(url));
+}
+
+function safeFilename(title) {
+  return (title || 'documento').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'documento';
+}
 
 const uploadImage = multer({
   storage: multer.diskStorage({
@@ -245,6 +257,74 @@ router.patch('/:id', async (req, res) => {
     include: { template: { select: { id: true, name: true } } },
   });
   res.json({ document: updated });
+});
+
+async function generateDocxBuffer(document) {
+  const sourceBuffer = await fs.readFile(path.join(templatesDir, document.template.sourceDocx));
+  return fillDocx(sourceBuffer, document.template, document.fieldsData || {}, { resolveImagePath });
+}
+
+router.post('/:id/generate', async (req, res) => {
+  const document = await prisma.document.findFirst({
+    where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null },
+    include: { template: true },
+  });
+  if (!document) return res.status(404).json({ error: 'Document not found' });
+
+  let buffer;
+  try {
+    buffer = await generateDocxBuffer(document);
+  } catch (err) {
+    console.error('Failed to generate document', err);
+    return res.status(500).json({ error: 'Failed to generate document' });
+  }
+
+  await prisma.$transaction([
+    prisma.documentVersion.create({ data: { documentId: document.id, fieldsData: document.fieldsData } }),
+    prisma.document.update({ where: { id: document.id }, data: { exportedAt: new Date() } }),
+  ]);
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(document.title)}.docx"`);
+  res.send(buffer);
+});
+
+router.get('/:id/versions', async (req, res) => {
+  const document = await prisma.document.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
+  if (!document) return res.status(404).json({ error: 'Document not found' });
+  const versions = await prisma.documentVersion.findMany({
+    where: { documentId: document.id },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, createdAt: true },
+  });
+  res.json({ versions });
+});
+
+router.get('/:id/versions/:versionId/download', async (req, res) => {
+  const document = await prisma.document.findFirst({
+    where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null },
+    include: { template: true },
+  });
+  if (!document) return res.status(404).json({ error: 'Document not found' });
+  const version = await prisma.documentVersion.findFirst({ where: { id: req.params.versionId, documentId: document.id } });
+  if (!version) return res.status(404).json({ error: 'Version not found' });
+
+  let buffer;
+  try {
+    buffer = await fillDocx(
+      await fs.readFile(path.join(templatesDir, document.template.sourceDocx)),
+      document.template,
+      version.fieldsData || {},
+      { resolveImagePath },
+    );
+  } catch (err) {
+    console.error('Failed to regenerate document version', err);
+    return res.status(500).json({ error: 'Failed to regenerate document' });
+  }
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(document.title)}.docx"`);
+  res.send(buffer);
 });
 
 router.post('/:id/trash', async (req, res) => {

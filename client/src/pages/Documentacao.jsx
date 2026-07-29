@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
-import { api } from '../api.js';
+import { api, downloadBlob } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import DateInput from '../components/DateInput.jsx';
 import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
+import CodeBlock from '../components/CodeBlock.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 
 function fieldStyle(theme) {
@@ -29,7 +30,7 @@ function BlockField({ value, onChange, theme, t }) {
   const blocks = Array.isArray(value) ? value : [];
   const update = (idx, patch) => onChange(blocks.map((b, i) => (i === idx ? { ...b, ...patch } : b)));
   const remove = (idx) => onChange(blocks.filter((_, i) => i !== idx));
-  const add = (type) => onChange([...blocks, { type, value: '' }]);
+  const add = (type) => onChange([...blocks, type === 'code' ? { type, value: '', language: 'abap' } : { type, value: '' }]);
   const uploadImg = async (idx, file) => {
     const { url } = await api.uploadDocImage(file);
     update(idx, { value: url });
@@ -38,40 +39,43 @@ function BlockField({ value, onChange, theme, t }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {blocks.map((b, idx) => (
-        <div key={idx} style={{ position: 'relative', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, background: theme.subtleBg }}>
-          <span
-            onClick={() => remove(idx)}
-            style={{ position: 'absolute', top: 6, right: 8, cursor: 'pointer', opacity: 0.5, fontSize: 15, lineHeight: 1 }}
-          >
-            &times;
-          </span>
-          {b.type === 'text' && (
-            <AutoResizeTextarea
-              value={b.value}
-              onChange={(e) => update(idx, { value: e.target.value })}
-              placeholder={t('documentacao.blockTextPlaceholder')}
-              style={{ ...fieldStyle(theme), background: 'transparent', border: 'none', padding: '2px 20px 2px 2px', fontFamily: 'inherit' }}
-            />
-          )}
-          {b.type === 'code' && (
-            <AutoResizeTextarea
-              value={b.value}
-              onChange={(e) => update(idx, { value: e.target.value })}
-              placeholder={t('documentacao.blockCodePlaceholder')}
-              style={{ ...fieldStyle(theme), background: theme.dark ? 'oklch(0.14 0.02 255)' : '#1e1e2e', color: '#e2e2ea', border: 'none', padding: '10px 20px 10px 10px', fontFamily: 'var(--font-mono)', fontSize: 12.5, borderRadius: 6 }}
-            />
-          )}
-          {b.type === 'image' && (
-            b.value ? (
-              <img src={b.value} alt="" style={{ maxWidth: '100%', borderRadius: 6, display: 'block' }} />
-            ) : (
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 80, border: `1px dashed ${theme.border}`, borderRadius: 6, cursor: 'pointer', fontSize: 12.5, color: theme.textMuted }}>
-                {t('documentacao.uploadImage')}
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files?.[0] && uploadImg(idx, e.target.files[0])} />
-              </label>
-            )
-          )}
-        </div>
+        b.type === 'code' ? (
+          <CodeBlock
+            key={idx}
+            value={b.value}
+            language={b.language || 'abap'}
+            onChange={(v) => update(idx, { value: v })}
+            onLanguageChange={(language) => update(idx, { language })}
+            onDelete={() => remove(idx)}
+          />
+        ) : (
+          <div key={idx} style={{ position: 'relative', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, background: theme.subtleBg }}>
+            <span
+              onClick={() => remove(idx)}
+              style={{ position: 'absolute', top: 6, right: 8, cursor: 'pointer', opacity: 0.5, fontSize: 15, lineHeight: 1 }}
+            >
+              &times;
+            </span>
+            {b.type === 'text' && (
+              <AutoResizeTextarea
+                value={b.value}
+                onChange={(e) => update(idx, { value: e.target.value })}
+                placeholder={t('documentacao.blockTextPlaceholder')}
+                style={{ ...fieldStyle(theme), background: 'transparent', border: 'none', padding: '2px 20px 2px 2px', fontFamily: 'inherit' }}
+              />
+            )}
+            {b.type === 'image' && (
+              b.value ? (
+                <img src={b.value} alt="" style={{ maxWidth: '100%', borderRadius: 6, display: 'block' }} />
+              ) : (
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 80, border: `1px dashed ${theme.border}`, borderRadius: 6, cursor: 'pointer', fontSize: 12.5, color: theme.textMuted }}>
+                  {t('documentacao.uploadImage')}
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files?.[0] && uploadImg(idx, e.target.files[0])} />
+                </label>
+              )
+            )}
+          </div>
+        )
       ))}
       <div style={{ display: 'flex', gap: 8 }}>
         <span onClick={() => add('text')} style={{ fontSize: 12, fontWeight: 700, color: theme.accentText, cursor: 'pointer' }}>{t('documentacao.addTextBlock')}</span>
@@ -141,8 +145,8 @@ function RepeatableTableField({ field, value, onChange, theme, t }) {
                   <td key={c.key} style={{ padding: '4px 8px' }}>
                     {c.type === 'select' ? (
                       <select value={row[c.key] || ''} onChange={(e) => setCell(idx, c.key, e.target.value)} style={{ ...fieldStyle(theme), padding: '6px 8px' }}>
-                        <option value="" />
-                        {c.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                        <option value="" style={{ color: '#1a1a1a', background: '#fff' }} />
+                        {c.options.map((o) => <option key={o} value={o} style={{ color: '#1a1a1a', background: '#fff' }}>{o}</option>)}
                       </select>
                     ) : (
                       <input value={row[c.key] || ''} onChange={(e) => setCell(idx, c.key, e.target.value)} style={{ ...fieldStyle(theme), padding: '6px 8px' }} />
@@ -174,8 +178,8 @@ function FieldEditor({ field, value, onChange, theme, t }) {
       )}
       {field.type === 'select' && (
         <select value={value || ''} onChange={(e) => onChange(e.target.value)} style={fieldStyle(theme)}>
-          <option value="" />
-          {field.options.map((o) => <option key={o} value={o}>{o}</option>)}
+          <option value="" style={{ color: '#1a1a1a', background: '#fff' }} />
+          {field.options.map((o) => <option key={o} value={o} style={{ color: '#1a1a1a', background: '#fff' }}>{o}</option>)}
         </select>
       )}
       {field.type === 'image' && (
@@ -227,6 +231,10 @@ export default function Documentacao() {
   const [selectedId, setSelectedId] = useState(null);
   const [activeDoc, setActiveDoc] = useState(null);
   const [fieldsData, setFieldsData] = useState({});
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [versions, setVersions] = useState(null);
   const saveTimer = useRef(null);
 
   const load = () => {
@@ -343,6 +351,35 @@ export default function Documentacao() {
     await api.trashDocument(id);
     setDocuments((prev) => prev.filter((d) => d.id !== id));
     if (selectedId === id) setSelectedId(null);
+  };
+
+  const generateDocument = async () => {
+    if (!selectedId || generating) return;
+    setGenerating(true);
+    setGenerateError('');
+    try {
+      const { blob, filename } = await api.generateDocument(selectedId);
+      downloadBlob(blob, filename);
+      const { document } = await api.getDocument(selectedId);
+      setActiveDoc(document);
+      setDocuments((prev) => prev.map((d) => (d.id === selectedId ? { ...d, exportedAt: document.exportedAt } : d)));
+    } catch (err) {
+      setGenerateError(err.message || t('documentacao.generateError'));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const openVersions = async () => {
+    setVersionsOpen(true);
+    setVersions(null);
+    const { versions: list } = await api.listDocumentVersions(selectedId);
+    setVersions(list);
+  };
+
+  const downloadVersion = async (versionId) => {
+    const { blob, filename } = await api.downloadDocumentVersion(selectedId, versionId);
+    downloadBlob(blob, filename);
   };
 
   const renderFolderNode = (f, depth) => {
@@ -489,14 +526,19 @@ export default function Documentacao() {
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   {exportDate && <span style={{ fontSize: 11.5, color: theme.textMuted }}>{t('documentacao.lastGenerated', { date: exportDate })}</span>}
+                  <span onClick={openVersions} style={{ fontSize: 11.5, fontWeight: 700, color: theme.accentText, cursor: 'pointer' }}>
+                    {t('documentacao.versions')}
+                  </span>
                   <button
-                    title={t('documentacao.generateComingSoon')}
-                    style={{ display: 'flex', alignItems: 'center', gap: 7, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: 'not-allowed', opacity: 0.55 }}
+                    onClick={generateDocument}
+                    disabled={generating}
+                    style={{ display: 'flex', alignItems: 'center', gap: 7, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: generating ? 'default' : 'pointer', opacity: generating ? 0.6 : 1 }}
                   >
-                    <Icon name="download" size={14} color="#fff" /> {t('documentacao.generate')}
+                    <Icon name="download" size={14} color="#fff" /> {generating ? t('documentacao.generating') : t('documentacao.generate')}
                   </button>
                 </div>
               </div>
+              {generateError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)' }}>{generateError}</div>}
 
               {activeDoc.template?.fields?.map((field) => (
                 <FieldEditor
@@ -548,6 +590,29 @@ export default function Documentacao() {
               >
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: theme.textPrimary }}>{tpl.name}</div>
                 {tpl.description && <div style={{ fontSize: 12, color: theme.textMuted }}>{tpl.description}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {versionsOpen && (
+        <div onMouseDown={backdropClose(() => setVersionsOpen(false))} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 420, maxWidth: '100%', maxHeight: '80vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`, borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 24px 70px rgba(0,0,0,0.45)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>{t('documentacao.versions')}</div>
+              <span onClick={() => setVersionsOpen(false)} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1 }}>&times;</span>
+            </div>
+            {versions == null && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('common.loading')}</div>}
+            {versions?.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('documentacao.versionsEmpty')}</div>}
+            {versions?.map((v) => (
+              <div
+                key={v.id}
+                onClick={() => downloadVersion(v.id)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${theme.border}`, cursor: 'pointer', background: theme.subtleBg }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{new Date(v.createdAt).toLocaleString(lang === 'pt' ? 'pt-PT' : 'en-GB')}</span>
+                <Icon name="download" size={14} color={theme.textMuted} />
               </div>
             ))}
           </div>

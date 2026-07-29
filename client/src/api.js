@@ -31,6 +31,34 @@ async function request(path, { method = 'GET', body, isForm = false } = {}) {
   return data;
 }
 
+async function requestBlob(path, { method = 'GET' } = {}) {
+  const headers = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`/api${path}`, { method, headers });
+  if (!res.ok) {
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    const data = isJson ? await res.json() : null;
+    throw new Error(data?.error || `Request failed (${res.status})`);
+  }
+  const disposition = res.headers.get('content-disposition') || '';
+  const filenameMatch = /filename="([^"]+)"/.exec(disposition);
+  const blob = await res.blob();
+  return { blob, filename: filenameMatch?.[1] || 'documento.docx' };
+}
+
+export function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
@@ -215,6 +243,9 @@ export const api = {
     form.append('image', file);
     return request('/documentacao/images', { method: 'POST', body: form, isForm: true });
   },
+  generateDocument: (id) => requestBlob(`/documentacao/${id}/generate`, { method: 'POST' }),
+  listDocumentVersions: (id) => request(`/documentacao/${id}/versions`),
+  downloadDocumentVersion: (id, versionId) => requestBlob(`/documentacao/${id}/versions/${versionId}/download`),
 
   listCodeFolders: () => request('/code-library/folders'),
   createCodeFolder: (payload) => request('/code-library/folders', { method: 'POST', body: payload }),
