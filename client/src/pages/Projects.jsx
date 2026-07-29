@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const STATUSES = ['Ativo', 'Pausado', 'Concluído'];
 const STATUS_HUES = { Ativo: 145, Pausado: 60, Concluído: 250 };
@@ -40,6 +41,7 @@ export default function Projects() {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const confirm = useConfirm();
+  const isMobile = useIsMobile();
   const [projects, setProjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
@@ -62,6 +64,7 @@ export default function Projects() {
 
   const filtered = projects.filter((p) => !search.trim() || p.name.toLowerCase().includes(search.toLowerCase()));
   const selected = projects.find((p) => p.id === selectedId) || null;
+  const mobileShowDetail = isMobile && !!selectedId;
 
   useEffect(() => {
     setNameDraft(selected?.name ?? '');
@@ -108,8 +111,9 @@ export default function Projects() {
   const areaStyle = { ...fieldStyle, background: theme.subtleBg, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit' };
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-      <div style={{ flex: '1 1 300px', minWidth: 260, maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+      {(!isMobile || !mobileShowDetail) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 300px', minWidth: isMobile ? 0 : 260, maxWidth: isMobile ? 'none' : 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 22, fontWeight: 800 }}>{t('projects.title')}</div>
           <button onClick={addProject} title={t('projects.newProject')} style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer' }}>
@@ -144,17 +148,24 @@ export default function Projects() {
           ))}
         </div>
       </div>
+      )}
 
-      <div style={{ flex: '1 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {(!isMobile || mobileShowDetail) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {selected ? (
-          <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
+          <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 16 : 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {isMobile && (
+                <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                  <Icon name="chevron" size={18} />
+                </span>
+              )}
               <input
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}
                 onBlur={() => commitField('name', nameDraft)}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 19, fontWeight: 800, color: theme.textPrimary }}
+                style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 19, fontWeight: 800, color: theme.textPrimary }}
               />
               <span onClick={() => patch(selected.id, { favorite: !selected.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
                 <Icon name="pin" size={17} color={selected.favorite ? theme.accentText : theme.textMuted} />
@@ -239,7 +250,7 @@ export default function Projects() {
               {contactsDraft.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('projects.noContacts')}</div>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {contactsDraft.map((c, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: 6, alignItems: 'center', background: theme.subtleBg, borderRadius: 8, padding: 8 }}>
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr auto', gap: 6, alignItems: 'center', background: theme.subtleBg, borderRadius: 8, padding: 8 }}>
                     <input
                       value={c.name || ''}
                       placeholder={t('projects.contactName')}
@@ -282,6 +293,7 @@ export default function Projects() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

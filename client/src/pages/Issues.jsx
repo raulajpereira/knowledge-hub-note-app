@@ -14,6 +14,7 @@ import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35, Critical: 20 };
@@ -95,6 +96,7 @@ export default function Issues() {
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [issues, setIssues] = useState([]);
   const [view, setView] = useState('table');
   const [search, setSearch] = useState('');
@@ -366,10 +368,10 @@ export default function Issues() {
   const viewLabel = { table: t('issues.table'), kanban: t('issues.kanban') };
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16, minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 22, fontWeight: 800 }}>{t('issues.title')}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
           <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
             {['table', 'kanban'].map((v) => (
               <div
@@ -390,7 +392,7 @@ export default function Issues() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('issues.filterPlaceholder')}
-              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textPrimary, width: 140 }}
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: theme.textPrimary, width: isMobile ? 100 : 140 }}
             />
           </div>
           <button onClick={openStatusConfig} title={t('issues.configureStatuses')} style={{ display: 'flex', alignItems: 'center', background: theme.subtleBg, border: 'none', color: theme.textPrimary, borderRadius: 9, padding: '9px 10px', cursor: 'pointer' }}>
@@ -530,13 +532,13 @@ export default function Issues() {
               borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
               <input
                 value={titleDraft}
                 onChange={(e) => setTitleDraft(e.target.value)}
                 onBlur={commitTitle}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 17, fontWeight: 800, color: theme.textPrimary }}
+                style={{ flex: '1 1 140px', minWidth: 140, border: 'none', outline: 'none', background: 'transparent', fontSize: 17, fontWeight: 800, color: theme.textPrimary }}
               />
               <span onClick={() => patch(selected.id, { favorite: !selected.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
                 <Icon name="pin" size={16} color={selected.favorite ? theme.accentText : theme.textMuted} />
@@ -789,7 +791,7 @@ export default function Issues() {
               <select
                 value={reportProject}
                 onChange={(e) => setReportProject(e.target.value)}
-                style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+                style={{ flex: 1, minWidth: 0, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               >
                 {projectOptions.map((p) => (
                   <option key={p} value={p} style={{ color: '#1a1a1a', background: '#fff' }}>{p}</option>
@@ -849,7 +851,7 @@ export default function Issues() {
                   <input
                     value={s.name}
                     onChange={(e) => renameDraftStatus(s._key, e.target.value)}
-                    style={{ flex: 1, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+                    style={{ flex: 1, minWidth: 0, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 13, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
                   />
                   <span
                     onClick={() => removeDraftStatus(s._key)}
