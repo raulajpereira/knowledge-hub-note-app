@@ -14,6 +14,7 @@ import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 import { backdropClose } from '../lib/backdropClose.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const URL_ONLY_RE = /^(https?:\/\/|www\.)\S+$/i;
 const BARE_URL_RE = /(https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/g;
@@ -182,6 +183,7 @@ export default function Notes() {
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [notes, setNotes] = useState([]);
   const [folders, setFolders] = useState([]);
   const [tags, setTags] = useState([]);
@@ -274,6 +276,7 @@ export default function Notes() {
   }, [notes, activeFolder, search]);
 
   const selected = notes.find((n) => n.id === selectedId) || filtered[0] || null;
+  const mobileShowDetail = isMobile && (!!selectedId || showTrash);
 
   const backlinks = useMemo(
     () => (selected ? notes.filter((n) => n.id !== selected.id && (n.links || []).some((l) => l.noteId === selected.id)) : []),
@@ -288,8 +291,8 @@ export default function Notes() {
   }, [notes, selected, linkPickerSearch]);
 
   useEffect(() => {
-    if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
+    if (!isMobile && !selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
+  }, [filtered, selectedId, isMobile]);
 
   // Selection is scoped to whatever's currently visible — switching folders
   // mid-selection left stale, invisible notes counted as "selected", which
@@ -1023,8 +1026,9 @@ export default function Notes() {
   }
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-      <div style={{ flex: '1 1 320px', minWidth: 280, maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+      {(!isMobile || !mobileShowDetail) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 320px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: 1, minWidth: 0 }}>
             <span style={{ opacity: 0.5, display: 'flex' }}>
@@ -1218,10 +1222,18 @@ export default function Notes() {
           {showTrash ? t('notes.hideTrash') : t('notes.viewTrash')}
         </div>
       </div>
+      )}
 
-      {showTrash ? (
-        <div style={{ flex: '1 1 480px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
-          <div style={{ fontSize: 17, fontWeight: 800 }}>{t('notes.trash')}</div>
+      {(!isMobile || mobileShowDetail) && (showTrash ? (
+        <div style={{ flex: isMobile ? '1 1 auto' : '1 1 480px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isMobile && (
+              <span onClick={() => setShowTrash(false)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)' }}>
+                <Icon name="chevron" size={18} />
+              </span>
+            )}
+            <div style={{ fontSize: 17, fontWeight: 800 }}>{t('notes.trash')}</div>
+          </div>
           {trashedNotes.length === 0 && <div style={{ fontSize: 13, color: theme.textMuted }}>{t('notes.trashEmpty')}</div>}
           {trashedNotes.map((n) => (
             <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: theme.subtleBg }}>
@@ -1239,8 +1251,13 @@ export default function Notes() {
           ))}
         </div>
       ) : selected ? (
-        <div style={{ flex: '1 1 480px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
+        <div style={{ flex: isMobile ? '1 1 auto' : '1 1 480px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {isMobile && (
+              <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                <Icon name="chevron" size={18} />
+              </span>
+            )}
             <input
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
@@ -1786,7 +1803,7 @@ export default function Notes() {
         <div style={{ flex: '1 1 480px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
           {t('notes.selectOrCreate')}
         </div>
-      )}
+      ))}
 
       {linkPickerOpen && (
         <div

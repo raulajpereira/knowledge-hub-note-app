@@ -7,6 +7,7 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 function formatDuration(sec) {
   const m = Math.floor(sec / 60);
@@ -31,6 +32,7 @@ export default function Voice() {
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [voiceNotes, setVoiceNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
@@ -70,8 +72,10 @@ export default function Voice() {
   const selected = voiceNotes.find((v) => v.id === selectedId) || filtered[0] || null;
 
   useEffect(() => {
-    if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
+    if (!isMobile && !selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
+  }, [filtered, selectedId, isMobile]);
+
+  const mobileShowDetail = isMobile && !!selectedId;
 
   useEffect(() => {
     if (location.state?.voiceId) setSelectedId(location.state.voiceId);
@@ -184,9 +188,30 @@ export default function Voice() {
 
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
+  const recordBanner = (
+    <div style={{ background: `linear-gradient(135deg, ${theme.accentDark}, ${theme.accent})`, borderRadius: 16, padding: 24, display: 'flex', alignItems: 'center', gap: 20, color: '#fff' }}>
+      <button
+        onClick={recording ? stopRecording : startRecording}
+        style={{
+          width: 64, height: 64, borderRadius: '50%', background: recording ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.2)',
+          border: recording ? '2px solid #fff' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+        }}
+      >
+        <Icon name={recording ? 'check' : 'mic'} size={26} color="#fff" />
+      </button>
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 16 }}>{recording ? t('voice.recording') : t('voice.tapToRecord')}</div>
+        <div style={{ fontSize: 13, opacity: 0.85 }}>{recording ? formatDuration(elapsed) : t('voice.captureMemo')}</div>
+        {error && <div style={{ fontSize: 12, marginTop: 4, color: '#fff' }}>{error}</div>}
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-      <div style={{ flex: '1 1 320px', minWidth: 280, maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 24, minHeight: 0 }}>
+      {isMobile && !mobileShowDetail && recordBanner}
+      {(!isMobile || !mobileShowDetail) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 320px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
           <span style={{ opacity: 0.5, display: 'flex' }}>
             <Icon name="search" size={15} />
@@ -221,28 +246,20 @@ export default function Voice() {
           ))}
         </div>
       </div>
+      )}
 
-      <div style={{ flex: '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
-        <div style={{ background: `linear-gradient(135deg, ${theme.accentDark}, ${theme.accent})`, borderRadius: 16, padding: 24, display: 'flex', alignItems: 'center', gap: 20, color: '#fff' }}>
-          <button
-            onClick={recording ? stopRecording : startRecording}
-            style={{
-              width: 64, height: 64, borderRadius: '50%', background: recording ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.2)',
-              border: recording ? '2px solid #fff' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
-            }}
-          >
-            <Icon name={recording ? 'check' : 'mic'} size={26} color="#fff" />
-          </button>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>{recording ? t('voice.recording') : t('voice.tapToRecord')}</div>
-            <div style={{ fontSize: 13, opacity: 0.85 }}>{recording ? formatDuration(elapsed) : t('voice.captureMemo')}</div>
-            {error && <div style={{ fontSize: 12, marginTop: 4, color: '#fff' }}>{error}</div>}
-          </div>
-        </div>
+      {(!isMobile || mobileShowDetail) && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
+        {!isMobile && recordBanner}
 
         {selected ? (
           <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {isMobile && (
+                <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                  <Icon name="chevron" size={18} />
+                </span>
+              )}
               <input
                 value={titleDraft}
                 onChange={(e) => setTitleDraft(e.target.value)}
@@ -298,6 +315,7 @@ export default function Voice() {
           </div>
         )}
       </div>
+      )}
 
       {suggestedTasks && (
         <div
