@@ -771,6 +771,31 @@ function AgentRow({ agent, theme, t }) {
   );
 }
 
+function SettingsGroup({ theme, title, description, defaultOpen, children }) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <div style={{ border: `1px solid ${theme.border}`, borderRadius: 14, background: theme.cardBg, overflow: 'hidden' }}>
+      <div
+        onClick={() => setOpen((v) => !v)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '18px 22px', cursor: 'pointer' }}
+      >
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800 }}>{title}</div>
+          {description && <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 2 }}>{description}</div>}
+        </div>
+        <span style={{ display: 'flex', flexShrink: 0, color: theme.textMuted, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+          <Icon name="chevron" size={16} />
+        </span>
+      </div>
+      {open && (
+        <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const AUTO_LOCK_OPTIONS = [30, 60, 120, 300, 600];
 
 export default function Settings() {
@@ -820,13 +845,16 @@ export default function Settings() {
   };
 
   const card = { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 22, display: 'flex', flexDirection: 'column', gap: 18 };
+  const nestedCard = { background: theme.subtleBg, border: 'none', borderRadius: 11, padding: 18, display: 'flex', flexDirection: 'column', gap: 18 };
   const outlineButton = { background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '8px 14px', fontWeight: 600, fontSize: 13, cursor: 'pointer' };
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', width: '100%', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ fontSize: 22, fontWeight: 800 }}>{t('settings.title')}</div>
 
-      <div style={card}>
+      <SettingsGroup theme={theme} title={t('settings.groupAppearance')} description={t('settings.groupAppearanceDesc')} defaultOpen>
+      <div style={nestedCard}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.appearance')}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
@@ -902,8 +930,8 @@ export default function Settings() {
         </div>
       </div>
 
-      <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>App logo</div>
+      <div style={nestedCard}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.appLogo')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ width: 220, height: 76, borderRadius: 10, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', border: `1px solid ${theme.border}`, padding: '10px 12px' }}>
             <img
@@ -930,8 +958,10 @@ export default function Settings() {
           </div>
         </div>
       </div>
+      </SettingsGroup>
 
-      <div style={card}>
+      <SettingsGroup theme={theme} title={t('settings.groupAccount')} description={t('settings.groupAccountDesc')}>
+      <div style={nestedCard}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.vault')}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
@@ -952,7 +982,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div style={card}>
+      <div style={nestedCard}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.trash')}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
@@ -971,19 +1001,12 @@ export default function Settings() {
           </select>
         </div>
       </div>
+      </SettingsGroup>
 
-      <VpsCard theme={theme} t={t} card={card} user={user} refreshMe={refreshMe} />
+      <SettingsGroup theme={theme} title={t('settings.groupIntegrations')} description={t('settings.groupIntegrationsDesc')}>
+      <VpsCard theme={theme} t={t} card={nestedCard} user={user} refreshMe={refreshMe} />
 
-      <TeamCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
-
-      {(user?.role === 'admin' || user?.role === 'super_admin') && (
-        <>
-          <AdminCard theme={theme} t={t} card={card} outlineButton={outlineButton} />
-          <TemplateManagementCard theme={theme} t={t} card={card} />
-        </>
-      )}
-
-      <div style={card}>
+      <div style={nestedCard}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.aiAgents')}</div>
@@ -1001,6 +1024,22 @@ export default function Settings() {
           <AgentRow key={agent.id} agent={agent} theme={theme} t={t} />
         ))}
       </div>
+      </SettingsGroup>
+
+      <SettingsGroup
+        theme={theme}
+        title={isAdmin ? t('settings.groupTeamAdmin') : t('settings.groupTeam')}
+        description={isAdmin ? t('settings.groupTeamAdminDesc') : t('settings.groupTeamDesc')}
+      >
+      <TeamCard theme={theme} t={t} card={nestedCard} outlineButton={outlineButton} />
+
+      {isAdmin && (
+        <>
+          <AdminCard theme={theme} t={t} card={nestedCard} outlineButton={outlineButton} />
+          <TemplateManagementCard theme={theme} t={t} card={nestedCard} />
+        </>
+      )}
+      </SettingsGroup>
 
       <div
         onClick={() => setSidebarSettingsOpen(true)}
