@@ -12,12 +12,12 @@ const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
 const ACCENT_COLORS = ['purple', 'blue', 'green', 'yellow', 'pink', 'orange', 'red', 'teal'];
 const SIDEBAR_KEYS = new Set([
   'home', 'notes', 'voice', 'tasks', 'tags', 'passwords', 'issues',
-  'artifacts', 'codeLibrary', 'calendar', 'graph',
+  'artifacts', 'codeLibrary', 'transactions', 'calendar', 'graph', 'projects',
 ]);
 // Blocks can live in either column (the user drags freely between them), so
 // validation only checks each key is a known block and appears at most once
 // across both columns combined — not which column it's in.
-const HOME_BLOCK_KEYS = new Set(['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage']);
+const HOME_BLOCK_KEYS = new Set(['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'resurfacing', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage']);
 
 function makeUpload(subdir) {
   const storage = multer.diskStorage({

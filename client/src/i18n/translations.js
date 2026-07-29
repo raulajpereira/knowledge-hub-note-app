@@ -559,6 +559,7 @@ export const translations = {
       fieldNotes: 'Notes',
       fieldNotesPlaceholder: 'Tips, prerequisites, useful variants…',
       favoriteLabel: 'Mark as favorite',
+      copied: 'Copied to clipboard',
     },
     issues: {
       title: 'Project Issues',
@@ -1442,6 +1443,7 @@ export const translations = {
       fieldNotes: 'Notas',
       fieldNotesPlaceholder: 'Dicas, pré-requisitos, variantes úteis…',
       favoriteLabel: 'Marcar como favorita',
+      copied: 'Copiado para a área de transferência',
     },
     issues: {
       title: 'Project Issues',

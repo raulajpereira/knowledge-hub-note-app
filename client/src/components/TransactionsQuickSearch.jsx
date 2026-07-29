@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
@@ -7,7 +6,7 @@ import { backdropClose } from '../lib/backdropClose.js';
 import Icon from './Icon.jsx';
 import { hueForModule } from '../lib/transactionsMeta.js';
 
-function ResultRow({ tx, theme, onClick }) {
+function ResultRow({ tx, theme, copied, onClick }) {
   const hue = hueForModule(tx.module);
   return (
     <div
@@ -27,14 +26,20 @@ function ResultRow({ tx, theme, onClick }) {
       <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: theme.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {tx.description}
       </span>
-      <span
-        style={{
-          fontSize: 10, fontWeight: 700, color: `oklch(0.32 0.17 ${hue})`, background: `oklch(0.90 0.11 ${hue})`,
-          padding: '2px 7px', borderRadius: 5, flexShrink: 0, whiteSpace: 'nowrap',
-        }}
-      >
-        {tx.module}
-      </span>
+      {copied ? (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 800, color: 'oklch(0.6 0.17 145)', flexShrink: 0 }}>
+          <Icon name="check" size={12} color="oklch(0.6 0.17 145)" />
+        </span>
+      ) : (
+        <span
+          style={{
+            fontSize: 10, fontWeight: 700, color: `oklch(0.32 0.17 ${hue})`, background: `oklch(0.90 0.11 ${hue})`,
+            padding: '2px 7px', borderRadius: 5, flexShrink: 0, whiteSpace: 'nowrap',
+          }}
+        >
+          {tx.module}
+        </span>
+      )}
     </div>
   );
 }
@@ -42,10 +47,10 @@ function ResultRow({ tx, theme, onClick }) {
 export default function TransactionsQuickSearch() {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [transactions, setTransactions] = useState([]);
+  const [copiedId, setCopiedId] = useState(null);
 
   useEffect(() => {
     if (open && transactions.length === 0) {
@@ -75,11 +80,15 @@ export default function TransactionsQuickSearch() {
     );
   }, [transactions, query]);
 
-  const goTo = async (tx) => {
-    setOpen(false);
-    setQuery('');
+  const copyTcode = (tx) => {
+    navigator.clipboard.writeText(tx.tcode).catch(() => {});
     api.useTransaction(tx.id).catch(() => {});
-    navigate('/transactions');
+    setCopiedId(tx.id);
+    setTimeout(() => {
+      setOpen(false);
+      setQuery('');
+      setCopiedId(null);
+    }, 700);
   };
 
   return (
@@ -136,7 +145,7 @@ export default function TransactionsQuickSearch() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {topUsed.map((tx) => (
-                    <ResultRow key={tx.id} tx={tx} theme={theme} onClick={() => goTo(tx)} />
+                    <ResultRow key={tx.id} tx={tx} theme={theme} copied={copiedId === tx.id} onClick={() => copyTcode(tx)} />
                   ))}
                 </div>
               </>
@@ -150,7 +159,7 @@ export default function TransactionsQuickSearch() {
                     <div style={{ fontSize: 12.5, color: theme.textMuted, padding: '10px 2px' }}>{t('transactions.noResults')}</div>
                   )}
                   {results.map((tx) => (
-                    <ResultRow key={tx.id} tx={tx} theme={theme} onClick={() => goTo(tx)} />
+                    <ResultRow key={tx.id} tx={tx} theme={theme} copied={copiedId === tx.id} onClick={() => copyTcode(tx)} />
                   ))}
                 </div>
               </>

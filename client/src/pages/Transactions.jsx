@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
@@ -6,6 +6,43 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { MODULE_GROUPS, TYPE_OPTIONS, hueForModule } from '../lib/transactionsMeta.js';
+
+const DEFAULT_COLUMNS = [
+  { key: 'tcode', labelKey: 'transactions.colTcode', width: 150 },
+  { key: 'description', labelKey: 'transactions.colDescription', width: 340, flex: true },
+  { key: 'module', labelKey: 'transactions.colModule', width: 190 },
+  { key: 'program', labelKey: 'transactions.colProgram', width: 160 },
+  { key: 'type', labelKey: 'transactions.colType', width: 170 },
+  { key: 'favorite', labelKey: '', width: 46 },
+];
+const MIN_COLUMN_WIDTH = 40;
+
+function ResizeHandle({ onResize }) {
+  const dragRef = useRef(null);
+  const onMouseDown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragRef.current = { startX: e.clientX };
+    const onMove = (moveEvent) => {
+      if (!dragRef.current) return;
+      onResize(moveEvent.clientX - dragRef.current.startX);
+      dragRef.current.startX = moveEvent.clientX;
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      style={{ position: 'absolute', right: -3, top: 0, bottom: 0, width: 6, cursor: 'col-resize', zIndex: 1 }}
+    />
+  );
+}
 
 function ModuleBadge({ module, theme }) {
   const hue = hueForModule(module);
@@ -53,6 +90,13 @@ export default function Transactions() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
+  const [columns, setColumns] = useState(DEFAULT_COLUMNS);
+
+  const resizeColumn = (index, deltaX) => {
+    setColumns((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, width: Math.max(MIN_COLUMN_WIDTH, c.width + deltaX) } : c))
+    );
+  };
 
   useEffect(() => {
     api.listTransactions().then(({ transactions }) => {
@@ -174,16 +218,23 @@ export default function Transactions() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflow: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 190px 160px 150px 46px', minWidth: '100%' }}>
-          {[t('transactions.colTcode'), t('transactions.colDescription'), t('transactions.colModule'), t('transactions.colProgram'), t('transactions.colType'), ''].map((h, i) => (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: columns.map((c) => (c.flex ? `minmax(${c.width}px, 1fr)` : `${c.width}px`)).join(' '),
+            minWidth: '100%',
+          }}
+        >
+          {columns.map((col, i) => (
             <div
-              key={i}
+              key={col.key}
               style={{
-                padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase',
+                position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase',
                 letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg,
               }}
             >
-              {h}
+              {col.labelKey ? t(col.labelKey) : ''}
+              <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} />
             </div>
           ))}
           {!loading && filtered.map((tx) => {
@@ -193,9 +244,9 @@ export default function Transactions() {
               cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               background: isHovered ? theme.subtleBg : 'transparent',
             };
-            return (
-              <div key={tx.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(tx.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(tx)}>
-                <div style={cellStyle}>
+            const cellFor = (key) => {
+              if (key === 'tcode') {
+                return (
                   <span
                     style={{
                       fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12.5, color: theme.accentText,
@@ -204,16 +255,28 @@ export default function Transactions() {
                   >
                     {tx.tcode}
                   </span>
-                </div>
-                <div style={{ ...cellStyle, color: theme.textPrimary, fontWeight: 500 }}>{tx.description}</div>
-                <div style={cellStyle}>
-                  <ModuleBadge module={tx.module} theme={theme} />
-                </div>
-                <div style={{ ...cellStyle, fontFamily: 'var(--font-mono)', fontSize: 11.5 }}>{tx.program || '—'}</div>
-                <div style={cellStyle}>{tx.type}</div>
-                <div style={{ ...cellStyle, textAlign: 'center' }} onClick={(e) => toggleFavorite(tx, e)}>
-                  <Icon name={tx.favorite ? 'bookmarkFilled' : 'bookmark'} size={14} color={tx.favorite ? theme.accentText : theme.textMuted} />
-                </div>
+                );
+              }
+              if (key === 'description') return <span style={{ color: theme.textPrimary, fontWeight: 500, whiteSpace: 'normal' }}>{tx.description}</span>;
+              if (key === 'module') return <ModuleBadge module={tx.module} theme={theme} />;
+              if (key === 'program') return <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}>{tx.program || '—'}</span>;
+              if (key === 'type') return tx.type;
+              if (key === 'favorite') {
+                return (
+                  <span onClick={(e) => toggleFavorite(tx, e)} style={{ display: 'flex' }}>
+                    <Icon name={tx.favorite ? 'bookmarkFilled' : 'bookmark'} size={14} color={tx.favorite ? theme.accentText : theme.textMuted} />
+                  </span>
+                );
+              }
+              return null;
+            };
+            return (
+              <div key={tx.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(tx.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(tx)}>
+                {columns.map((col) => (
+                  <div key={col.key} style={{ ...cellStyle, textAlign: col.key === 'favorite' ? 'center' : 'left' }}>
+                    {cellFor(col.key)}
+                  </div>
+                ))}
               </div>
             );
           })}
