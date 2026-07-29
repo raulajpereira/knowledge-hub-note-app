@@ -14,6 +14,7 @@ export const SIDEBAR_ITEMS = [
   { key: 'issues', to: '/issues', icon: 'archive', countKey: 'issues' },
   { key: 'artifacts', to: '/artifacts', icon: 'code', countKey: 'artifacts' },
   { key: 'codeLibrary', to: '/code-library', icon: 'folder', countKey: 'codeLibrary' },
+  { key: 'documentacao', to: '/documentacao', icon: 'doc' },
   { key: 'transactions', to: '/transactions', icon: 'terminal' },
   { key: 'calendar', to: '/calendar', icon: 'calendar' },
   { key: 'graph', to: '/graph', icon: 'graph' },

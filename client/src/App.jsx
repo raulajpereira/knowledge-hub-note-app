@@ -24,6 +24,7 @@ import Calendar from './pages/Calendar.jsx';
 import SapNews from './pages/SapNews.jsx';
 import CodeLibrary from './pages/CodeLibrary.jsx';
 import Transactions from './pages/Transactions.jsx';
+import Documentacao from './pages/Documentacao.jsx';
 import Graph from './pages/Graph.jsx';
 import SharedNote from './pages/SharedNote.jsx';
 
@@ -85,6 +86,7 @@ export default function App() {
                   <Route path="/artifacts" element={<Artifacts />} />
                   <Route path="/code-library" element={<CodeLibrary />} />
                   <Route path="/transactions" element={<Transactions />} />
+                  <Route path="/documentacao" element={<Documentacao />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/graph" element={<Graph />} />
                   <Route path="/sap-news" element={<SapNews />} />

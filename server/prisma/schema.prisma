@@ -53,6 +53,9 @@ model User {
   templates       Template[]
   projects        Project[]
   sapTransactions SapTransaction[]
+  docFolders      DocFolder[]
+  documents       Document[]
+  docTemplateRestrictions DocTemplateRestriction[]
   inviteCodes     InviteCode[] @relation("InviteCodeCreator")
   usedInviteCode  InviteCode?  @relation("InviteCodeUser")
   teamOwner       User?    @relation("TeamMembers", fields: [teamOwnerId], references: [id], onDelete: SetNull)
@@ -466,4 +469,100 @@ model Template {
 
   @@index([userId, entityType])
   @@map("templates")
+}
+
+// Same nested-folder shape as Notes' Folder model, kept separate so a
+// Documentação folder tree doesn't mix with Notes'.
+model DocFolder {
+  id        String   @id @default(uuid())
+  userId    String
+  parentId  String?
+  name      String
+  createdAt DateTime @default(now())
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents Document[]
+  parent    DocFolder?  @relation("DocFolderTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  DocFolder[] @relation("DocFolderTree")
+
+  @@index([userId])
+  @@index([parentId])
+  @@map("doc_folders")
+}
+
+// A document template compiled offline (by analysing a real .docx) and
+// shipped with a deploy — never created at runtime by end users. `fields`
+// holds the ordered field-schema array ({key, type, label, ...config}) used
+// to render the fill-in form; `sourceDocx` points at the tagged working copy
+// (relative to server/templates/) the fill engine merges data into.
+model DocTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  fields      Json
+  sourceDocx  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  restrictions DocTemplateRestriction[]
+  documents    Document[]
+
+  @@map("doc_templates")
+}
+
+// Default-allow: a template is visible to every user except the ones listed
+// here. Keeps a newly added template usable by the whole team without
+// needing to backfill a grant per user.
+model DocTemplateRestriction {
+  id         String @id @default(uuid())
+  templateId String
+  userId     String
+
+  template DocTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, userId])
+  @@map("doc_template_restrictions")
+}
+
+// A filled-in instance of a DocTemplate — the "nota" the user edits before
+// generating the final .docx/pdf. fieldsData is keyed by each template
+// field's `key`. Generated files are never persisted: exporting snapshots
+// fieldsData into a DocumentVersion and streams the merged file on demand.
+model Document {
+  id         String    @id @default(uuid())
+  userId     String
+  folderId   String?
+  templateId String
+  title      String
+  fieldsData Json
+  favorite   Boolean   @default(false)
+  exportedAt DateTime?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder   DocFolder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  template DocTemplate       @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  versions DocumentVersion[]
+
+  @@index([userId])
+  @@index([folderId])
+  @@map("documents")
+}
+
+// Snapshot of a Document's fieldsData taken every time "Gerar Documentação"
+// runs, so past exports can be regenerated on demand without ever storing
+// the generated binary.
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String
+  fieldsData Json
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, createdAt])
+  @@map("document_versions")
 }

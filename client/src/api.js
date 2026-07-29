@@ -194,6 +194,24 @@ export const api = {
   updateSavedNews: (id, payload) => request(`/sap-news/saved/${id}`, { method: 'PATCH', body: payload }),
   deleteSavedNews: (id) => request(`/sap-news/saved/${id}`, { method: 'DELETE' }),
 
+  listDocFolders: () => request('/documentacao/folders'),
+  createDocFolder: (payload) => request('/documentacao/folders', { method: 'POST', body: payload }),
+  updateDocFolder: (id, payload) => request(`/documentacao/folders/${id}`, { method: 'PATCH', body: payload }),
+  deleteDocFolder: (id) => request(`/documentacao/folders/${id}`, { method: 'DELETE' }),
+  listDocTemplates: () => request('/documentacao/templates'),
+  listDocuments: (trashed) => request(`/documentacao${trashed ? '?trashed=true' : ''}`),
+  getDocument: (id) => request(`/documentacao/${id}`),
+  createDocument: (payload) => request('/documentacao', { method: 'POST', body: payload }),
+  updateDocument: (id, payload) => request(`/documentacao/${id}`, { method: 'PATCH', body: payload }),
+  trashDocument: (id) => request(`/documentacao/${id}/trash`, { method: 'POST' }),
+  restoreDocument: (id) => request(`/documentacao/${id}/restore`, { method: 'POST' }),
+  deleteDocumentForever: (id) => request(`/documentacao/${id}`, { method: 'DELETE' }),
+  uploadDocImage: (file) => {
+    const form = new FormData();
+    form.append('image', file);
+    return request('/documentacao/images', { method: 'POST', body: form, isForm: true });
+  },
+
   listCodeFolders: () => request('/code-library/folders'),
   createCodeFolder: (payload) => request('/code-library/folders', { method: 'POST', body: payload }),
   updateCodeFolder: (id, payload) => request(`/code-library/folders/${id}`, { method: 'PATCH', body: payload }),

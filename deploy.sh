@@ -49,6 +49,9 @@ npx prisma generate
 echo "==> Backfilling default SAP transactions for existing users"
 node scripts/seed-transactions.js
 
+echo "==> Syncing document templates"
+node scripts/seed-doc-templates.js
+
 echo "==> Building client"
 cd "$APP_DIR/client"
 npm install
