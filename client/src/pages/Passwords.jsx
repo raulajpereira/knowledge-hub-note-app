@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { useIsMobile } from '../lib/useIsMobile.js';
 import {
   setupVault as cryptoSetupVault,
   unlockWithPassword,
@@ -48,6 +49,7 @@ export default function Passwords() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const confirm = useConfirm();
+  const isMobile = useIsMobile();
   const autoLockMs = (user?.settings?.vaultAutoLockSeconds ?? 60) * 1000;
   const [phase, setPhase] = useState('checking'); // checking | setup | gate | recovery | unlocked
   const [vaultInfo, setVaultInfo] = useState(null);
@@ -219,8 +221,10 @@ export default function Passwords() {
   }, [selectedId]);
 
   useEffect(() => {
-    if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
+    if (!isMobile && !selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
+  }, [filtered, selectedId, isMobile]);
+
+  const mobileShowDetail = isMobile && !!selectedId;
 
   const addEntry = async () => {
     const obj = { title: t('passwords.newEntry'), username: '', password: '', url: '', notes: '', group: '' };
@@ -489,7 +493,9 @@ export default function Passwords() {
 
   // phase === 'unlocked'
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 18, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 18, minHeight: 0 }}>
+      {!mobileShowDetail && (
+      <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 22, fontWeight: 800 }}>{t('passwords.title')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -530,9 +536,12 @@ export default function Passwords() {
           )}
         </div>
       )}
+      </>
+      )}
 
-      <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0 }}>
-        <div style={{ flex: '1 1 340px', minWidth: 280, maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', gap: isMobile ? 0 : 24, flex: 1, minHeight: 0 }}>
+        {(!isMobile || !mobileShowDetail) && (
+        <div style={{ flex: isMobile ? '1 1 auto' : '1 1 340px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 420, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
             <span style={{ opacity: 0.5, display: 'flex' }}>
               <Icon name="search" size={15} />
@@ -570,10 +579,16 @@ export default function Passwords() {
             ))}
           </div>
         </div>
+        )}
 
-        {selected ? (
-          <div style={{ flex: '1 1 380px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
+        {(!isMobile || mobileShowDetail) && (selected ? (
+          <div style={{ flex: isMobile ? '1 1 auto' : '1 1 380px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 16 : 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+              {isMobile && (
+                <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0, marginTop: 12 }}>
+                  <Icon name="chevron" size={18} />
+                </span>
+              )}
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div
                   onClick={() => iconInputRef.current?.click()}
@@ -691,7 +706,7 @@ export default function Passwords() {
           <div style={{ flex: '1 1 380px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
             {t('passwords.selectOrCreate')}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
