@@ -14,7 +14,7 @@ import logoIcon from '../assets/logo-icon.png';
 import { backdropClose } from '../lib/backdropClose.js';
 
 const APP_VERSION = '1.0.0';
-const MANUAL_ARTIFACT_URL = 'https://claude.ai/code/artifact/031978de-342a-47c7-9d8f-1c68c193de48';
+const MANUAL_URL = '/manual/index.html';
 const MANUAL_PDF_BY_LANG = {
   pt: { href: '/manual/Knowledge-Hub-Manual-PT.pdf', filename: 'Knowledge-Hub-Manual-PT.pdf' },
   en: { href: '/manual/Knowledge-Hub-Manual-EN.pdf', filename: 'Knowledge-Hub-Manual-EN.pdf' },
@@ -957,7 +957,7 @@ export default function Settings() {
             </div>
 
             <div
-              onClick={() => window.open(MANUAL_ARTIFACT_URL, '_blank', 'noopener,noreferrer')}
+              onClick={() => window.open(MANUAL_URL, '_blank', 'noopener,noreferrer')}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, width: '100%', marginTop: 18,
                 padding: '10px 10px 10px 12px', borderRadius: 13, background: theme.accentSoftBg,
