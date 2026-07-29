@@ -6,6 +6,7 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const HUE_ROTATION = [290, 250, 190, 150, 70, 20, 340, 25];
 
@@ -15,6 +16,7 @@ export default function Tags() {
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState([]);
   const [search, setSearch] = useState('');
@@ -44,8 +46,10 @@ export default function Tags() {
   const selected = tags.find((t) => t.id === selectedId) || filtered[0] || null;
 
   useEffect(() => {
-    if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
+    if (!isMobile && !selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
+  }, [filtered, selectedId, isMobile]);
+
+  const mobileShowDetail = isMobile && !!selectedId;
 
   const notesForSelected = selected ? notes.filter((n) => Array.isArray(n.tags) && n.tags.includes(selected.name)) : [];
 
@@ -90,8 +94,9 @@ export default function Tags() {
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-      <div style={{ flex: '1 1 300px', minWidth: 260, maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+      {!mobileShowDetail && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 300px', minWidth: isMobile ? 0 : 260, maxWidth: isMobile ? 'none' : 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
           <span style={{ opacity: 0.5, display: 'flex' }}>
             <Icon name="search" size={15} />
@@ -169,10 +174,16 @@ export default function Tags() {
           )}
         </div>
       </div>
+      )}
 
-      {selected ? (
-        <div style={{ flex: '1 1 420px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
+      {(!isMobile || mobileShowDetail) && (selected ? (
+        <div style={{ flex: isMobile ? '1 1 auto' : '1 1 420px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isMobile && (
+              <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                <Icon name="chevron" size={18} />
+              </span>
+            )}
             <span style={{ width: 12, height: 12, borderRadius: '50%', background: `oklch(0.6 0.19 ${selected.hue})`, flexShrink: 0 }} />
             <div style={{ fontSize: 19, fontWeight: 800 }}>{selected.name}</div>
             <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('tags.notesCount', { count: notesForSelected.length })}</div>
@@ -197,7 +208,7 @@ export default function Tags() {
         <div style={{ flex: '1 1 420px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
           {t('tags.createToStart')}
         </div>
-      )}
+      ))}
     </div>
   );
 }

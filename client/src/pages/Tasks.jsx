@@ -11,6 +11,7 @@ import ProjectSelect from '../components/ProjectSelect.jsx';
 import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
@@ -57,6 +58,7 @@ export default function Tasks() {
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('active');
   const [sortBy, setSortBy] = useState('recent');
@@ -91,8 +93,10 @@ export default function Tasks() {
   const selected = tasks.find((t) => t.id === selectedId) || filtered[0] || null;
 
   useEffect(() => {
-    if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
+    if (!isMobile && !selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
+  }, [filtered, selectedId, isMobile]);
+
+  const mobileShowDetail = isMobile && view === 'list' && !!selectedId;
 
   useEffect(() => {
     if (location.state?.taskId) {
@@ -198,8 +202,10 @@ export default function Tasks() {
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 16, minHeight: 0 }}>
+      {!mobileShowDetail && (
+      <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: '1 1 260px', minWidth: 0, maxWidth: 400 }}>
           <span style={{ opacity: 0.5, display: 'flex' }}>
             <Icon name="search" size={15} />
@@ -292,6 +298,8 @@ export default function Tasks() {
           </span>
         </div>
       )}
+      </>
+      )}
 
       {view === 'board' ? (
         <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, overflowX: 'auto' }}>
@@ -335,8 +343,9 @@ export default function Tasks() {
           })}
         </div>
       ) : (
-      <div style={{ flex: 1, display: 'flex', gap: 24, minHeight: 0 }}>
-      <div style={{ flex: '1 1 340px', minWidth: 280, maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+      {!mobileShowDetail && (
+      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 340px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 400, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('tasks.noTasksHere')}</div>}
           {filtered.map((task) => {
@@ -385,10 +394,16 @@ export default function Tasks() {
           })}
         </div>
       </div>
+      )}
 
-      {selected ? (
-        <div style={{ flex: '1 1 420px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
+      {(!isMobile || mobileShowDetail) && (selected ? (
+        <div style={{ flex: isMobile ? '1 1 auto' : '1 1 420px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {isMobile && (
+              <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+                <Icon name="chevron" size={18} />
+              </span>
+            )}
             <input
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
@@ -492,7 +507,7 @@ export default function Tasks() {
         <div style={{ flex: '1 1 420px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
           {t('tasks.selectOrCreate')}
         </div>
-      )}
+      ))}
       </div>
       )}
     </div>
