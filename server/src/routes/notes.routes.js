@@ -109,7 +109,11 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { title, content, blocks, folderId, tags, links } = req.body || {};
+  const { title, content, blocks, folderId, tags, links, parentNoteId } = req.body || {};
+  if (parentNoteId) {
+    const parent = await prisma.note.findFirst({ where: { id: parentNoteId, userId: req.effectiveUserId, deletedAt: null } });
+    if (!parent) return res.status(404).json({ error: 'Parent note not found' });
+  }
   const note = await prisma.note.create({
     data: {
       userId: req.effectiveUserId,
@@ -117,6 +121,7 @@ router.post('/', async (req, res) => {
       content: content || '',
       blocks: Array.isArray(blocks) ? blocks : undefined,
       folderId: folderId || null,
+      parentNoteId: parentNoteId || null,
       tags: Array.isArray(tags) ? tags : [],
       links: Array.isArray(links) ? links : [],
     },

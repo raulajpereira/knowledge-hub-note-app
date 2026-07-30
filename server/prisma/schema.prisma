@@ -160,6 +160,7 @@ model Note {
   id        String    @id @default(uuid())
   userId    String
   folderId  String?
+  parentNoteId String? // set = this note is a nested "page" living inside another note
   title     String
   content   String    @db.LongText
   blocks    Json?
@@ -173,10 +174,13 @@ model Note {
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  parentNote Note?  @relation("NoteParent", fields: [parentNoteId], references: [id], onDelete: SetNull)
+  childNotes Note[] @relation("NoteParent")
   versions NoteVersion[]
 
   @@index([userId])
   @@index([folderId])
+  @@index([parentNoteId])
   @@map("notes")
 }
 

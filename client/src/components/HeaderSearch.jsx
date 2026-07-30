@@ -69,12 +69,20 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const [{ notes }, { tasks }, { voiceNotes }, { artifacts }, { transactions }] = await Promise.all([
+        const [
+          { notes }, { tasks }, { voiceNotes }, { artifacts }, { transactions },
+          { issues }, { clients }, { systems: sapSystems }, { contacts }, { transportRequests },
+        ] = await Promise.all([
           api.listNotes(),
           api.listTasks(),
           api.listVoiceNotes(),
           api.listArtifacts(),
           api.listTransactions(),
+          api.listIssues(),
+          api.listClients(),
+          api.listSapSystems(),
+          api.listContacts(),
+          api.listTransportRequests(),
         ]);
         const noteHits = notes
           .filter((n) => n.title.toLowerCase().includes(q) || (n.content || '').toLowerCase().includes(q))
@@ -96,7 +104,32 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
           .filter((tx) => tx.tcode.toLowerCase().includes(q) || tx.description.toLowerCase().includes(q))
           .slice(0, 5)
           .map((tx) => ({ type: 'tx', id: tx.id, label: `${tx.tcode} — ${tx.description}` }));
-        setResults([...noteHits, ...taskHits, ...voiceHits, ...artifactHits, ...txHits].slice(0, 8));
+        const issueHits = issues
+          .filter((i) => i.title.toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((i) => ({ type: 'issue', id: i.id, label: i.title }));
+        const clientHits = clients
+          .filter((c) => c.name.toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((c) => ({ type: 'client', id: c.id, label: c.name }));
+        const sapSystemHits = sapSystems
+          .filter((s) => s.name.toLowerCase().includes(q) || (s.sid || '').toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((s) => ({ type: 'sapSystem', id: s.id, label: s.sid ? `${s.name} (${s.sid})` : s.name }));
+        const contactHits = contacts
+          .filter((c) => c.name.toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((c) => ({ type: 'contact', id: c.id, label: c.name }));
+        const transportRequestHits = transportRequests
+          .filter((tr) => tr.code.toLowerCase().includes(q) || tr.description.toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((tr) => ({ type: 'transportRequest', id: tr.id, label: `${tr.code} — ${tr.description}` }));
+        setResults(
+          [
+            ...noteHits, ...taskHits, ...voiceHits, ...artifactHits, ...txHits,
+            ...issueHits, ...clientHits, ...sapSystemHits, ...contactHits, ...transportRequestHits,
+          ].slice(0, 8)
+        );
       } finally {
         setLoading(false);
       }
@@ -178,8 +211,15 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
     return commands.filter((c) => c.label.toLowerCase().includes(q));
   }, [commands, query]);
 
-  const typeLabel = { note: t('search.typeNote'), task: t('search.typeTask'), voice: t('search.typeVoice'), artifact: t('search.typeArtifact'), tx: t('search.typeTx') };
-  const typeIcon = { note: 'doc', task: 'check', voice: 'mic', artifact: 'code', tx: 'terminal' };
+  const typeLabel = {
+    note: t('search.typeNote'), task: t('search.typeTask'), voice: t('search.typeVoice'), artifact: t('search.typeArtifact'), tx: t('search.typeTx'),
+    issue: t('search.typeIssue'), client: t('search.typeClient'), sapSystem: t('search.typeSapSystem'),
+    contact: t('search.typeContact'), transportRequest: t('search.typeTransportRequest'),
+  };
+  const typeIcon = {
+    note: 'doc', task: 'check', voice: 'mic', artifact: 'code', tx: 'terminal',
+    issue: 'archive', client: 'building', sapSystem: 'server', contact: 'idCard', transportRequest: 'truck',
+  };
 
   const resultItems = results.map((r) => ({
     id: `${r.type}-${r.id}`,
@@ -192,6 +232,11 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
       else if (r.type === 'task') navigate('/tasks', { state: { taskId: r.id } });
       else if (r.type === 'artifact') navigate('/artifacts', { state: { artifactId: r.id } });
       else if (r.type === 'tx') navigate('/transactions');
+      else if (r.type === 'issue') navigate('/issues', { state: { issueId: r.id } });
+      else if (r.type === 'client') navigate('/clients');
+      else if (r.type === 'sapSystem') navigate('/sap-systems');
+      else if (r.type === 'contact') navigate('/contacts');
+      else if (r.type === 'transportRequest') navigate('/transport-requests');
       else navigate('/voice', { state: { voiceId: r.id } });
     },
   }));

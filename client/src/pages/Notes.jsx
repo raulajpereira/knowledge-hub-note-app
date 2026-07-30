@@ -155,6 +155,80 @@ function TextBlockEditor({ block, theme, placeholder, elRefCallback, onChange, o
   );
 }
 
+// Single-line contentEditable for heading blocks — plain text only (no rich
+// formatting) so headings can double as reliable, greppable TOC anchors.
+function HeadingBlockEditor({ block, theme, placeholder, elRefCallback, onChange }) {
+  const elRef = useRef(null);
+  const sizeByLevel = { 1: 22, 2: 18, 3: 15.5 };
+
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el || document.activeElement === el) return;
+    if (el.textContent !== (block.value || '')) el.textContent = block.value || '';
+  }, [block.value]);
+
+  return (
+    <div
+      ref={(el) => { elRef.current = el; elRefCallback(el); }}
+      contentEditable
+      suppressContentEditableWarning
+      data-placeholder={placeholder}
+      onInput={(e) => onChange(e.currentTarget.textContent)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+      }}
+      style={{
+        border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--font-display)',
+        fontWeight: 800, fontSize: sizeByLevel[block.level] || 18, color: theme.textPrimary, flex: 1, minWidth: 0, wordBreak: 'break-word',
+      }}
+    />
+  );
+}
+
+const SLASH_COMMAND_LABEL_KEYS = {
+  heading1: 'notes.slashHeading1',
+  heading2: 'notes.slashHeading2',
+  heading3: 'notes.slashHeading3',
+  toggle: 'notes.slashToggle',
+  checklist: 'notes.slashChecklist',
+  code: 'notes.slashCode',
+  toc: 'notes.slashToc',
+  page: 'notes.slashPage',
+};
+
+// Floating menu triggered by typing "/" as the only content of an empty text
+// block — filters live as the user keeps typing after the slash.
+function SlashMenu({ theme, t, query, commands, loading, onSelect }) {
+  const filtered = commands.filter((c) => {
+    const label = t(SLASH_COMMAND_LABEL_KEYS[c.key]).toLowerCase();
+    return !query || label.includes(query) || c.key.includes(query);
+  });
+  return (
+    <div
+      onMouseDown={(e) => e.preventDefault()}
+      style={{
+        position: 'absolute', top: '100%', left: 0, marginTop: 4, background: theme.dark ? 'oklch(0.2 0.02 255)' : '#fff',
+        border: `1px solid ${theme.border}`, borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', padding: 6, minWidth: 230, zIndex: 20,
+      }}
+    >
+      {filtered.length === 0 && <div style={{ padding: '8px 10px', fontSize: 12, color: theme.textMuted }}>{t('notes.slashNoMatch')}</div>}
+      {filtered.map((c) => (
+        <div
+          key={c.key}
+          onClick={() => !loading && onSelect(c)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 7,
+            cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1, fontSize: 13, fontWeight: 600, color: theme.textPrimary,
+          }}
+        >
+          <Icon name={c.icon} size={14} color={theme.textMuted} />
+          {t(SLASH_COMMAND_LABEL_KEYS[c.key])}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 let blockIdCounter = 0;
 const newBlockId = () => `b${Date.now()}-${blockIdCounter++}`;
 
@@ -167,10 +241,12 @@ function getBlocks(note) {
 
 function contentFromBlocks(blocks) {
   return blocks
-    .filter((b) => b.type !== 'image' && b.type !== 'file')
+    .filter((b) => b.type !== 'image' && b.type !== 'file' && b.type !== 'toc')
     .map((b) => {
       if (b.type === 'checklist') return (b.items || []).map((it) => it.text).join(' ');
       if (b.type === 'text' && b.format === 'html') return htmlToPlainText(b.value);
+      if (b.type === 'toggle') return `${b.summary || ''} ${htmlToPlainText(b.value || '')}`.trim();
+      if (b.type === 'page') return b.title || '';
       return b.value || '';
     })
     .join('\n\n')
@@ -216,9 +292,13 @@ export default function Notes() {
   const [linkLabelDraft, setLinkLabelDraft] = useState('');
   const [previewNoteId, setPreviewNoteId] = useState(null);
   const [editingTextBlockId, setEditingTextBlockId] = useState(null);
+  const [slashMenuBlockId, setSlashMenuBlockId] = useState(null);
+  const [slashMenuQuery, setSlashMenuQuery] = useState('');
+  const [creatingChildPage, setCreatingChildPage] = useState(false);
   const blockSaveTimerRef = useRef(null);
   const pendingBlockSaveRef = useRef(null);
   const textareaRefsRef = useRef({});
+  const blockElRefsRef = useRef({});
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
@@ -914,6 +994,83 @@ export default function Notes() {
     updateBlocks(blocks.length > 0 ? blocks : [{ id: newBlockId(), type: 'text', value: '' }]);
   };
 
+  // --- Slash-command-insertable block types: headings (TOC anchors), toggle
+  // (collapsible) sections, an auto table-of-contents, and nested pages. ---
+
+  const replaceBlockAt = (blockId, factory) => {
+    if (!selected) return;
+    const blocks = getBlocks(selected).map((b) => (b.id === blockId ? factory(b) : b));
+    updateBlocks(blocks);
+    setSlashMenuBlockId(null);
+    setSlashMenuQuery('');
+  };
+
+  const addHeadingBlock = (level) => {
+    if (!selected) return;
+    updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'heading', level, value: '' }]);
+  };
+
+  const addToggleBlock = () => {
+    if (!selected) return;
+    updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'toggle', summary: '', value: '', open: true }]);
+  };
+
+  const addTocBlock = () => {
+    if (!selected) return;
+    updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'toc' }]);
+  };
+
+  const toggleToggleOpen = (blockId) => {
+    if (!selected) return;
+    const blocks = getBlocks(selected).map((b) => (b.id === blockId ? { ...b, open: !b.open } : b));
+    updateBlocks(blocks);
+  };
+
+  const scrollToBlock = (blockId) => {
+    blockElRefsRef.current[blockId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Creates a real child Note (parentNoteId = the note currently open) and
+  // drops an inline "page" block referencing it — Notion-style pages inside
+  // pages. Navigating into the child just swaps `selectedId`, since it's a
+  // normal note already present in the `notes` list.
+  const createChildPage = async (replaceBlockId) => {
+    if (!selected || creatingChildPage) return;
+    setCreatingChildPage(true);
+    try {
+      const parentId = selected.id;
+      const { note: child } = await api.createNote({
+        title: t('notes.untitledNote'),
+        content: '',
+        blocks: [{ id: newBlockId(), type: 'text', value: '' }],
+        parentNoteId: parentId,
+      });
+      setNotes((prev) => [child, ...prev]);
+      const pageBlock = { id: newBlockId(), type: 'page', childNoteId: child.id, title: child.title };
+      const currentBlocks = getBlocks(selected);
+      const blocks = replaceBlockId
+        ? currentBlocks.map((b) => (b.id === replaceBlockId ? pageBlock : b))
+        : [...currentBlocks, pageBlock];
+      await patchNoteById(parentId, { blocks, content: contentFromBlocks(blocks) });
+      setSlashMenuBlockId(null);
+      setSlashMenuQuery('');
+      setSelectedId(child.id);
+    } finally {
+      setCreatingChildPage(false);
+    }
+  };
+
+  const SLASH_COMMANDS = [
+    { key: 'heading1', icon: 'doc', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'heading', level: 1, value: '' })) },
+    { key: 'heading2', icon: 'doc', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'heading', level: 2, value: '' })) },
+    { key: 'heading3', icon: 'doc', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'heading', level: 3, value: '' })) },
+    { key: 'toggle', icon: 'chevron', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'toggle', summary: '', value: '', open: true })) },
+    { key: 'checklist', icon: 'check', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'checklist', items: [{ id: newBlockId(), text: '', done: false }] })) },
+    { key: 'code', icon: 'code', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'code', language: 'abap', value: '' })) },
+    { key: 'toc', icon: 'archive', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'toc' })) },
+    { key: 'page', icon: 'doc', run: (blockId) => createChildPage(blockId) },
+  ];
+
   const createFolder = async () => {
     if (!newFolderName.trim()) return;
     const { folder } = await api.createFolder({ name: newFolderName.trim(), parentId: newFolderParentId });
@@ -1267,6 +1424,20 @@ export default function Notes() {
         </div>
       ) : selected ? (
         <div style={{ flex: isMobile ? '1 1 auto' : '1 1 480px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
+          {selected.parentNoteId && (() => {
+            const parent = notes.find((n) => n.id === selected.parentNoteId);
+            return (
+              <div
+                onClick={() => setSelectedId(selected.parentNoteId)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: theme.textMuted, fontSize: 12, fontWeight: 600 }}
+              >
+                <span style={{ display: 'flex', transform: 'rotate(180deg)' }}>
+                  <Icon name="chevron" size={13} color={theme.textMuted} />
+                </span>
+                {t('notes.backToParent', { title: parent ? parent.title : t('notes.untitledNote') })}
+              </div>
+            );
+          })()}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             {isMobile && (
               <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
@@ -1708,21 +1879,156 @@ export default function Notes() {
                     {t('notes.addChecklistItem')}
                   </div>
                 </div>
-              ) : (
-                <div key={block.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <TextBlockEditor
+              ) : block.type === 'heading' ? (
+                <div key={block.id} style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: block.level === 1 ? 6 : 2 }}>
+                  <HeadingBlockEditor
                     block={block}
                     theme={theme}
-                    placeholder={t('notes.writePlaceholder')}
-                    elRefCallback={(el) => { textareaRefsRef.current[block.id] = el; }}
-                    onChange={(html) => updateBlock(block.id, { value: html, format: 'html' })}
-                    onFocusBlock={() => setEditingTextBlockId(block.id)}
-                    onBlurBlock={() => { setEditingTextBlockId((v) => (v === block.id ? null : v)); flushBlockSave(); }}
+                    placeholder={t('notes.headingPlaceholder')}
+                    elRefCallback={(el) => { blockElRefsRef.current[block.id] = el; }}
+                    onChange={(value) => updateBlock(block.id, { value })}
                   />
-                  {getBlocks(selected).length > 1 && (
+                  <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
+                    &times;
+                  </span>
+                </div>
+              ) : block.type === 'toggle' ? (
+                <div
+                  key={block.id}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 6, border: `1px solid ${theme.border}`, borderRadius: 10, padding: '10px 12px', background: theme.subtleBg }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span
+                      onClick={() => toggleToggleOpen(block.id)}
+                      style={{ display: 'flex', cursor: 'pointer', transform: block.open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}
+                    >
+                      <Icon name="chevron" size={14} color={theme.textMuted} />
+                    </span>
+                    <input
+                      value={block.summary || ''}
+                      onChange={(e) => updateBlock(block.id, { summary: e.target.value })}
+                      onBlur={flushBlockSave}
+                      placeholder={t('notes.togglePlaceholder')}
+                      style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, fontWeight: 700, color: theme.textPrimary, fontFamily: 'inherit' }}
+                    />
                     <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
                       &times;
                     </span>
+                  </div>
+                  {block.open && (
+                    <div style={{ paddingLeft: 22 }}>
+                      <TextBlockEditor
+                        block={{ id: block.id, value: block.value, format: block.format }}
+                        theme={theme}
+                        placeholder={t('notes.writePlaceholder')}
+                        elRefCallback={(el) => { textareaRefsRef.current[`${block.id}-toggle`] = el; }}
+                        onChange={(html) => updateBlock(block.id, { value: html, format: 'html' })}
+                        onFocusBlock={() => setEditingTextBlockId(`${block.id}-toggle`)}
+                        onBlurBlock={() => { setEditingTextBlockId((v) => (v === `${block.id}-toggle` ? null : v)); flushBlockSave(); }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : block.type === 'toc' ? (
+                (() => {
+                  const headings = getBlocks(selected).filter((b) => b.type === 'heading');
+                  return (
+                    <div
+                      key={block.id}
+                      style={{ display: 'flex', flexDirection: 'column', gap: 4, border: `1px solid ${theme.border}`, borderRadius: 10, padding: '10px 12px', background: theme.subtleBg }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {t('notes.tocTitle')}
+                        </div>
+                        <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
+                          &times;
+                        </span>
+                      </div>
+                      {headings.length === 0 ? (
+                        <div style={{ fontSize: 12, color: theme.textMuted }}>{t('notes.tocEmpty')}</div>
+                      ) : (
+                        headings.map((h) => (
+                          <div
+                            key={h.id}
+                            onClick={() => scrollToBlock(h.id)}
+                            style={{
+                              fontSize: 13, fontWeight: h.level === 1 ? 700 : 500, cursor: 'pointer', color: theme.accentText,
+                              paddingLeft: (h.level - 1) * 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {h.value?.trim() || t('notes.headingPlaceholder')}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })()
+              ) : block.type === 'page' ? (
+                (() => {
+                  const child = notes.find((n) => n.id === block.childNoteId);
+                  return (
+                    <div
+                      key={block.id}
+                      onClick={() => setSelectedId(block.childNoteId)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: `1px solid ${theme.border}`, background: theme.subtleBg, cursor: 'pointer' }}
+                    >
+                      <Icon name="doc" size={16} color={theme.textMuted} />
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {child ? child.title : block.title || t('notes.untitledNote')}
+                      </div>
+                      <Icon name="chevron" size={14} color={theme.textMuted} />
+                      <span
+                        onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }}
+                        style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px', flexShrink: 0 }}
+                      >
+                        &times;
+                      </span>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div key={block.id} style={{ display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <TextBlockEditor
+                      block={block}
+                      theme={theme}
+                      placeholder={t('notes.writePlaceholder')}
+                      elRefCallback={(el) => { textareaRefsRef.current[block.id] = el; }}
+                      onChange={(html) => {
+                        const plain = htmlToPlainText(html);
+                        if (plain.startsWith('/')) {
+                          setSlashMenuBlockId(block.id);
+                          setSlashMenuQuery(plain.slice(1).toLowerCase());
+                        } else if (slashMenuBlockId === block.id) {
+                          setSlashMenuBlockId(null);
+                          setSlashMenuQuery('');
+                        }
+                        updateBlock(block.id, { value: html, format: 'html' });
+                      }}
+                      onFocusBlock={() => setEditingTextBlockId(block.id)}
+                      onBlurBlock={() => {
+                        setEditingTextBlockId((v) => (v === block.id ? null : v));
+                        setSlashMenuBlockId((v) => (v === block.id ? null : v));
+                        setSlashMenuQuery('');
+                        flushBlockSave();
+                      }}
+                    />
+                    {getBlocks(selected).length > 1 && (
+                      <span onClick={() => deleteBlock(block.id)} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '2px 6px' }}>
+                        &times;
+                      </span>
+                    )}
+                  </div>
+                  {slashMenuBlockId === block.id && (
+                    <SlashMenu
+                      theme={theme}
+                      t={t}
+                      query={slashMenuQuery}
+                      commands={SLASH_COMMANDS}
+                      loading={creatingChildPage}
+                      onSelect={(cmd) => cmd.run(block.id)}
+                    />
                   )}
                 </div>
               )
@@ -1741,6 +2047,22 @@ export default function Notes() {
             </button>
             <button onClick={addChecklistBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addChecklist')}
+            </button>
+            <button onClick={() => addHeadingBlock(2)} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+              {t('notes.addHeading')}
+            </button>
+            <button onClick={addToggleBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+              {t('notes.addToggle')}
+            </button>
+            <button onClick={addTocBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+              {t('notes.addToc')}
+            </button>
+            <button
+              onClick={() => createChildPage()}
+              disabled={creatingChildPage}
+              style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: creatingChildPage ? 'default' : 'pointer', opacity: creatingChildPage ? 0.6 : 1 }}
+            >
+              {t('notes.addPage')}
             </button>
           </div>
 
