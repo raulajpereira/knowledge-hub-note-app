@@ -23,3 +23,10 @@
   `Claude <noreply@anthropic.com>`.
 - The `.patch` files in the repo root are intentionally kept (gitignored where
   applicable) — don't treat them as stray.
+
+## UI change approval
+
+- Any brand-new page/screen built this session must be shown to the user as
+  rendered screenshots (not just described) before being considered done, so
+  they can approve the look before it ships. Changes to *existing* pages
+  don't need this unless asked.
