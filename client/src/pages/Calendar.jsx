@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const WEEKDAY_KEYS = ['calendar.mon', 'calendar.tue', 'calendar.wed', 'calendar.thu', 'calendar.fri', 'calendar.sat', 'calendar.sun'];
 
@@ -26,6 +27,7 @@ export default function Calendar() {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [tasks, setTasks] = useState([]);
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ export default function Calendar() {
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16, minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 22, fontWeight: 800, textTransform: 'capitalize' }}>{monthLabel}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -107,8 +109,8 @@ export default function Calendar() {
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 20 }}>
-        <div style={{ flex: '1 1 640px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 20 }}>
+        <div style={{ flex: isMobile ? '1 1 auto' : '1 1 640px', minWidth: 0, minHeight: isMobile ? 280 : 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 8 : 12, display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
             {WEEKDAY_KEYS.map((k) => (
               <div key={k} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', padding: '4px 0' }}>
@@ -163,7 +165,7 @@ export default function Calendar() {
           </div>
         </div>
 
-        <div style={{ flex: '0 0 300px', width: 300, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
+        <div style={{ flex: isMobile ? '0 0 auto' : '0 0 300px', width: isMobile ? '100%' : 300, maxHeight: isMobile ? 260 : 'none', background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 14 : 18, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>
             {selectedDay ? new Date(selectedDay).toLocaleDateString(t('calendar.locale'), { weekday: 'long', day: 'numeric', month: 'long' }) : t('calendar.selectDay')}
           </div>

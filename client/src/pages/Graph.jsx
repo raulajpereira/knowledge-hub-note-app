@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { navigateToEntity } from '../lib/entityNav.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const TYPE_HUE = { note: 290, issue: 25, task: 230, code: 145 };
 
@@ -81,12 +82,15 @@ export default function Graph() {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [data, setData] = useState({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
   const [visibleTypes, setVisibleTypes] = useState(() => new Set(['note', 'issue', 'task', 'code']));
   const [hoveredKey, setHoveredKey] = useState(null);
   const [view, setView] = useState({ scale: 1, tx: 0, ty: 0 });
   const dragState = useRef(null);
+  const viewRef = useRef(view);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     api.getLinksGraph().then((res) => {
@@ -138,6 +142,42 @@ export default function Graph() {
     dragState.current = null;
   };
 
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  // Touch drag-to-pan (single finger) — mirrors the mouse handlers above,
+  // since React's synthetic touchmove listeners are passive and can't
+  // preventDefault, so this needs a native listener.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || !isMobile) return undefined;
+    const onTouchStart = (e) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      dragState.current = { startX: t.clientX, startY: t.clientY, tx: viewRef.current.tx, ty: viewRef.current.ty };
+    };
+    const onTouchMove = (e) => {
+      if (!dragState.current || e.touches.length !== 1) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const dx = t.clientX - dragState.current.startX;
+      const dy = t.clientY - dragState.current.startY;
+      setView((v) => ({ ...v, tx: dragState.current.tx + dx, ty: dragState.current.ty + dy }));
+    };
+    const onTouchEnd = () => {
+      dragState.current = null;
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [isMobile]);
+
   const filterChips = [
     { type: 'note', label: t('graph.filterNotes') },
     { type: 'issue', label: t('graph.filterIssues') },
@@ -146,7 +186,7 @@ export default function Graph() {
   ];
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16, minHeight: 0 }}>
       <div>
         <div style={{ fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Icon name="graph" size={20} color={theme.textPrimary} /> {t('graph.title')}
@@ -178,9 +218,11 @@ export default function Graph() {
       </div>
 
       <div
+        ref={canvasRef}
         style={{
           flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14,
           overflow: 'hidden', position: 'relative', cursor: dragState.current ? 'grabbing' : 'grab',
+          touchAction: isMobile ? 'none' : 'auto',
         }}
         onWheel={onWheel}
         onMouseDown={onMouseDown}
