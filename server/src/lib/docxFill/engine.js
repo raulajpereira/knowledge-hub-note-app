@@ -2,6 +2,7 @@ import JSZip from 'jszip';
 import {
   escapeXml,
   replaceExactRunText,
+  replaceExactParagraphText,
   replaceNthExactRunText,
   replaceContentControlText,
 } from './xmlHelpers.js';
@@ -176,7 +177,13 @@ async function blocksToParagraphs(state, blocks, resolveImagePath) {
 
 function applyLabelParagraph(state, field, value) {
   if (!value) return;
-  state.documentXml = replaceExactRunText(state.documentXml, field.anchor.text, value);
+  // Most labels survive as a single whole run, but Word sometimes splits
+  // one across adjacent runs (a spell-check boundary) — fall back to
+  // matching the paragraph's concatenated text when no single run has it.
+  const singleRunExists = new RegExp(`<w:t(?:\\s[^>]*)?>${escapeXml(field.anchor.text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</w:t>`).test(state.documentXml);
+  state.documentXml = singleRunExists
+    ? replaceExactRunText(state.documentXml, field.anchor.text, value)
+    : replaceExactParagraphText(state.documentXml, field.anchor.text, value);
 }
 
 function applyContentControl(state, field, value) {
@@ -191,11 +198,12 @@ function applyLiteral(state, field, value) {
 }
 
 async function applyHeading(state, field, value, resolveImagePath) {
-  let headings = findParagraphsByStyle(state.documentXml, 'ITtitle');
+  const style = field.anchor.style || 'ITtitle';
+  let headings = findParagraphsByStyle(state.documentXml, style);
   let idx = headings.findIndex((h) => h.text === field.anchor.text);
   if (idx === -1) return;
 
-  // The ITtitle style carries no spacing of its own, so the gap above each
+  // The heading style carries no spacing of its own, so the gap above each
   // chapter title otherwise depends entirely on whatever paragraph happens
   // to precede it (a table, an untouched template stub, a shaded code
   // block) and ends up inconsistent between chapters. Force it explicitly.
@@ -203,16 +211,36 @@ async function applyHeading(state, field, value, resolveImagePath) {
   const headingXml = state.documentXml.slice(heading.start, heading.end);
   const pPrEnd = headingXml.indexOf('</w:pPr>');
   if (pPrEnd !== -1 && !/<w:spacing\b/.test(headingXml.slice(0, pPrEnd))) {
-    const updated = headingXml.replace('<w:pStyle w:val="ITtitle"/>', '<w:pStyle w:val="ITtitle"/><w:spacing w:before="160" w:after="160"/>');
+    const updated = headingXml.replace(`<w:pStyle w:val="${style}"/>`, `<w:pStyle w:val="${style}"/><w:spacing w:before="160" w:after="160"/>`);
     state.documentXml = state.documentXml.slice(0, heading.start) + updated + state.documentXml.slice(heading.end);
-    headings = findParagraphsByStyle(state.documentXml, 'ITtitle');
+    headings = findParagraphsByStyle(state.documentXml, style);
     idx = headings.findIndex((h) => h.text === field.anchor.text);
   }
 
   const regionStart = headings[idx].end;
-  const regionEnd = idx + 1 < headings.length ? headings[idx + 1].start : regionStart;
+  const regionEnd = idx + 1 < headings.length
+    ? headings[idx + 1].start
+    : findTrailingBackCoverStart(state.documentXml, regionStart) ?? regionStart;
   const paragraphs = await blocksToParagraphs(state, value, resolveImagePath);
   state.documentXml = state.documentXml.slice(0, regionStart) + paragraphs + state.documentXml.slice(regionEnd);
+}
+
+// When a heading is the last of its style, there's no next heading to bound
+// its replaceable region — every source document in this family closes the
+// body with one full-page decorative back-cover image (a floating
+// <wp:anchor>, unlike the <wp:inline> images block content uses) right
+// before </w:body>. Stop the region at that paragraph so it survives, and
+// only fall back to a zero-length region (old stub content left in place)
+// if that convention isn't found.
+function findTrailingBackCoverStart(xml, after) {
+  const bodyEnd = xml.lastIndexOf('</w:body>');
+  if (bodyEnd === -1) return null;
+  const sectPrStart = xml.lastIndexOf('<w:sectPr', bodyEnd);
+  const tailEnd = sectPrStart === -1 ? bodyEnd : sectPrStart;
+  const tail = xml.slice(after, tailEnd);
+  if (!/<wp:anchor\b/.test(tail)) return null;
+  const lastParaOpen = Math.max(tail.lastIndexOf('<w:p '), tail.lastIndexOf('<w:p>'));
+  return lastParaOpen === -1 ? null : after + lastParaOpen;
 }
 
 function applyFixedTable(state, field, value) {
@@ -261,23 +289,26 @@ function applyRepeatableTable(state, field, value) {
   const headerRow = rows[0];
   const templateRow = rows[1];
   const dataRows = Array.isArray(value) ? value : [];
+  const hasNumberColumn = field.hasNumberColumn !== false;
 
   const built = dataRows.map((entry, idx) => {
     const cells = getCells(templateRow.xml);
     let rowXml = templateRow.xml;
-    // Row-number cell (index 0), back-to-front for the rest.
+    // Data columns sit after the row-number cell when one is present.
     for (let ci = field.columns.length - 1; ci >= 0; ci -= 1) {
-      const cellIdx = ci + 1;
+      const cellIdx = hasNumberColumn ? ci + 1 : ci;
       if (cellIdx >= cells.length) continue;
       const col = field.columns[ci];
       const raw = entry[col.key] || '';
       const newCellXml = setCellFirstRunText(cells[cellIdx].xml, raw);
       rowXml = rowXml.slice(0, cells[cellIdx].start) + newCellXml + rowXml.slice(cells[cellIdx].end);
     }
-    const numberCell = getCells(rowXml)[0];
-    if (numberCell) {
-      const newNumberCell = setCellFirstRunText(numberCell.xml, String(idx + 1));
-      rowXml = rowXml.slice(0, numberCell.start) + newNumberCell + rowXml.slice(numberCell.end);
+    if (hasNumberColumn) {
+      const numberCell = getCells(rowXml)[0];
+      if (numberCell) {
+        const newNumberCell = setCellFirstRunText(numberCell.xml, String(idx + 1));
+        rowXml = rowXml.slice(0, numberCell.start) + newNumberCell + rowXml.slice(numberCell.end);
+      }
     }
     // Give every clone unique paragraph/sdt ids so Word doesn't collide them.
     rowXml = rowXml.replace(/w14:paraId="[0-9A-F]+"/g, () => `w14:paraId="${randomHexId()}"`);

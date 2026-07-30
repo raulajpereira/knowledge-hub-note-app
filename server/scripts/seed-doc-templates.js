@@ -3,10 +3,12 @@
 // instead of creating duplicates.
 import { PrismaClient } from '@prisma/client';
 import { IT0291405_TEMPLATE } from '../src/lib/docTemplates/it0291405.js';
+import { IT0881503_TEMPLATE } from '../src/lib/docTemplates/it0881503.js';
+import { IT0911503_TEMPLATE } from '../src/lib/docTemplates/it0911503.js';
 
 const prisma = new PrismaClient();
 
-const TEMPLATES = [IT0291405_TEMPLATE];
+const TEMPLATES = [IT0291405_TEMPLATE, IT0881503_TEMPLATE, IT0911503_TEMPLATE];
 
 async function main() {
   for (const t of TEMPLATES) {

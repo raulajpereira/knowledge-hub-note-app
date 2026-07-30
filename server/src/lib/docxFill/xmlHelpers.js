@@ -37,6 +37,28 @@ export function replaceNthExactRunText(xml, literal, occurrence, value) {
   });
 }
 
+// Like replaceExactRunText, but for labels Word has split across multiple
+// adjacent runs within the same paragraph (e.g. a spell-check boundary) —
+// replaceExactRunText can only match a label that survives as one whole
+// run's text, so this compares the paragraph's *concatenated* text instead,
+// puts the value in the first run, and blanks the rest of the paragraph's
+// runs so their fragments don't linger.
+export function replaceExactParagraphText(xml, label, value) {
+  const replacement = escapeXml(value);
+  return xml.replace(/<w:p\b[^>]*>.*?<\/w:p>/gs, (paragraph) => {
+    const runTexts = [...paragraph.matchAll(/<w:t(?:\s[^>]*)?>(.*?)<\/w:t>/gs)];
+    if (runTexts.length < 2) return paragraph;
+    const concatenated = runTexts.map((m) => m[1]).join('');
+    if (concatenated !== label) return paragraph;
+    let first = true;
+    return paragraph.replace(/(<w:t(?:\s[^>]*)?>)(.*?)(<\/w:t>)/gs, (match, open, _old, close) => {
+      const text = first ? replacement : '';
+      first = false;
+      return `${open}${text}${close}`;
+    });
+  });
+}
+
 // Replace the display text of every content control identified by `tag`.
 export function replaceContentControlText(xml, tag, value) {
   const replacement = escapeXml(value);
