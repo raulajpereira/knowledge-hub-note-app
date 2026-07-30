@@ -294,6 +294,21 @@ export default function Notes() {
     if (!isMobile && !selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [filtered, selectedId, isMobile]);
 
+  // Tapping the "Notas" mobile tab while already on this page (e.g. deep in
+  // a note's editor) doesn't trigger a route change, so react-router won't
+  // reset anything on its own — the bottom nav broadcasts this event so we
+  // can return to the list ourselves.
+  useEffect(() => {
+    if (!isMobile) return undefined;
+    const onTabTap = (e) => {
+      if (e.detail !== 'notes') return;
+      setSelectedId(null);
+      setShowTrash(false);
+    };
+    window.addEventListener('mobile-tab-tap', onTabTap);
+    return () => window.removeEventListener('mobile-tab-tap', onTabTap);
+  }, [isMobile]);
+
   // Selection is scoped to whatever's currently visible — switching folders
   // mid-selection left stale, invisible notes counted as "selected", which
   // read as the bulk toolbar being stuck/confused.

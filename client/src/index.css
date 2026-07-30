@@ -11,6 +11,16 @@
   --mobile-nav-height: 58px;
 }
 * { box-sizing: border-box; }
+/* iOS Safari's 100vh is the *largest* possible viewport (toolbar collapsed),
+   taller than what's actually visible when the address bar is showing — the
+   app shell would then extend below the fold and the page itself becomes
+   scrollable, fighting the shell's own internal scroll regions. 100dvh
+   tracks the real visible height; on desktop (no dynamic toolbar) it's
+   identical to 100vh, so this is a no-op there. */
+.app-shell-height {
+  height: 100vh;
+  height: 100dvh;
+}
 html, body {
   margin: 0;
   /* Stops the iOS rubber-band page bounce in standalone PWA mode; the app's

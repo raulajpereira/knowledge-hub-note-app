@@ -88,8 +88,9 @@ export default function AppLayout() {
 
   return (
     <div
+      className="app-shell-height"
       style={{
-        display: 'flex', flexDirection: 'column', height: '100vh', width: '100%',
+        display: 'flex', flexDirection: 'column', width: '100%',
         background: theme.pageBg, color: theme.textPrimary, position: 'relative', overflow: 'hidden',
       }}
     >
@@ -356,6 +357,7 @@ export default function AppLayout() {
               key={tab.key}
               to={tab.to}
               end={tab.end}
+              onClick={() => window.dispatchEvent(new CustomEvent('mobile-tab-tap', { detail: tab.key }))}
               style={({ isActive }) => ({
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
                 textDecoration: 'none', color: isActive ? theme.accentText : theme.textMuted,

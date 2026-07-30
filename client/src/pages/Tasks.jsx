@@ -98,6 +98,20 @@ export default function Tasks() {
 
   const mobileShowDetail = isMobile && view === 'list' && !!selectedId;
 
+  // Tapping the "Tarefas" mobile tab while already on this page doesn't
+  // trigger a route change, so react-router won't reset anything on its
+  // own — the bottom nav broadcasts this event so we can return to the list.
+  useEffect(() => {
+    if (!isMobile) return undefined;
+    const onTabTap = (e) => {
+      if (e.detail !== 'tasks') return;
+      setSelectedId(null);
+      setView('list');
+    };
+    window.addEventListener('mobile-tab-tap', onTabTap);
+    return () => window.removeEventListener('mobile-tab-tap', onTabTap);
+  }, [isMobile]);
+
   useEffect(() => {
     if (location.state?.taskId) {
       setFilter('all');
