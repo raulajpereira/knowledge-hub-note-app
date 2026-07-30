@@ -10,10 +10,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
 
 const ACCENT_COLORS = ['purple', 'blue', 'green', 'yellow', 'pink', 'orange', 'red', 'teal'];
-const SIDEBAR_KEYS = new Set([
-  'home', 'notes', 'voice', 'tasks', 'tags', 'passwords', 'issues',
-  'artifacts', 'codeLibrary', 'documentacao', 'transactions', 'calendar', 'graph', 'projects',
-]);
 // Blocks can live in either column (the user drags freely between them), so
 // validation only checks each key is a known block and appears at most once
 // across both columns combined — not which column it's in.
@@ -106,12 +102,20 @@ router.patch('/', async (req, res) => {
     data.trashRetentionDays = n;
   }
   if (sidebarLayout !== undefined) {
+    // Deliberately doesn't check `key` against a fixed catalog of known nav
+    // items — that list only exists client-side (client/src/lib/sidebarItems.js)
+    // and changes every time a page is added, so mirroring it here as an
+    // allowlist meant every new page silently broke saving this until the
+    // duplicate got updated too. This is just a display preference (order/
+    // visibility/labels), not a permission, so validating shape rather than
+    // a specific set of keys is enough: resolveSidebarLayout() on the client
+    // already drops any key it doesn't recognize.
     const validLabel = (v) => v === undefined || typeof v === 'string';
     const isSpacer = (s) => s?.type === 'spacer' && typeof s.key === 'string' && s.key.startsWith('spacer-');
     const valid =
       sidebarLayout === null ||
       (Array.isArray(sidebarLayout) &&
-        sidebarLayout.every((s) => s && (isSpacer(s) || (SIDEBAR_KEYS.has(s.key) && validLabel(s.labelPt) && validLabel(s.labelEn)))));
+        sidebarLayout.every((s) => s && (isSpacer(s) || (typeof s.key === 'string' && s.key.length > 0 && validLabel(s.labelPt) && validLabel(s.labelEn)))));
     if (!valid) return res.status(400).json({ error: 'sidebarLayout must be an array of { key, hidden?, labelPt?, labelEn? } or spacer entries { key, type: "spacer" }' });
     data.sidebarLayout =
       sidebarLayout === null
