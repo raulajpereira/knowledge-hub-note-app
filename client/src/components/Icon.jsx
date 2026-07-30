@@ -154,6 +154,28 @@ const PATHS = {
     ['path', { d: 'M7 9.5 10.5 12.5 7 15.5' }],
     ['path', { d: 'M12.5 15.5h4.5' }],
   ],
+  building: [
+    ['rect', { x: 5, y: 3.5, width: 11, height: 17, rx: 1 }],
+    ['path', { d: 'M16 10.5h3v10h-3' }],
+    ['path', { d: 'M8 7.5h1.5M11.5 7.5H13M8 11h1.5M11.5 11H13M8 14.5h1.5M11.5 14.5H13M8 18h1.5M11.5 18H13' }],
+  ],
+  server: [
+    ['rect', { x: 3.5, y: 4, width: 17, height: 6.5, rx: 1.5 }],
+    ['rect', { x: 3.5, y: 13.5, width: 17, height: 6.5, rx: 1.5 }],
+    ['path', { d: 'M7 7.2h.01M7 16.7h.01' }],
+  ],
+  truck: [
+    ['rect', { x: 2.5, y: 7.5, width: 11, height: 9, rx: 1 }],
+    ['path', { d: 'M13.5 10.5H17l3.5 3.5v2.5h-3.5' }],
+    ['circle', { cx: 7, cy: 18.5, r: 1.8 }],
+    ['circle', { cx: 17, cy: 18.5, r: 1.8 }],
+  ],
+  idCard: [
+    ['rect', { x: 2.5, y: 5, width: 19, height: 14, rx: 2 }],
+    ['circle', { cx: 8, cy: 11, r: 2 }],
+    ['path', { d: 'M5 16c0-1.8 1.4-3 3-3s3 1.2 3 3' }],
+    ['path', { d: 'M14 9.5h4.5M14 13h4.5' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

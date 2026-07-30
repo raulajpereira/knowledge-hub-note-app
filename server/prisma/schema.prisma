@@ -60,6 +60,10 @@ model User {
   usedInviteCode  InviteCode?  @relation("InviteCodeUser")
   teamOwner       User?    @relation("TeamMembers", fields: [teamOwnerId], references: [id], onDelete: SetNull)
   teamMembers     User[]   @relation("TeamMembers")
+  clients             Client[]
+  sapSystems          SapSystem[]
+  contacts            Contact[]
+  transportRequests   TransportRequest[]
 
   @@map("users")
 }
@@ -83,6 +87,7 @@ model Project {
   updatedAt   DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transportRequests TransportRequest[]
 
   @@index([userId])
   @@map("projects")
@@ -565,4 +570,109 @@ model DocumentVersion {
 
   @@index([documentId, createdAt])
   @@map("document_versions")
+}
+
+// A client company the team works with. Root of the SAP landscape data:
+// Systems and Contacts hang off it, and Projects reference it by name today
+// (Project.company stays free text — not migrated — so this is additive).
+model Client {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  industry  String?
+  notes     String?  @db.Text
+  color     String?
+  favorite  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  systems  SapSystem[]
+  contacts Contact[]
+
+  @@index([userId])
+  @@map("clients")
+}
+
+// A single SAP system/environment in a client's landscape (e.g. "S/4HANA
+// Produção", SID "PS1", mandante "100"). `environment` is free text so it
+// isn't locked to DEV/QAS/PRD when a client's landscape uses more stages.
+model SapSystem {
+  id          String   @id @default(uuid())
+  userId      String
+  clientId    String?
+  name        String
+  sid         String?
+  mandante    String?
+  environment String   @default("PRD")
+  module      String?
+  url         String?  @db.Text
+  notes       String?  @db.Text
+  favorite    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client            Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  contacts          Contact[]
+  transportRequests TransportRequest[]
+
+  @@index([userId])
+  @@index([clientId])
+  @@map("sap_systems")
+}
+
+// A key-contact entry (Basis, key user, functional consultant, …) for a
+// Client and/or a specific SapSystem — both are optional so a contact can be
+// client-wide or scoped to one system.
+model Contact {
+  id        String   @id @default(uuid())
+  userId    String
+  clientId  String?
+  systemId  String?
+  name      String
+  role      String?
+  email     String?
+  phone     String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  system SapSystem? @relation(fields: [systemId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([systemId])
+  @@map("contacts")
+}
+
+// A live, queryable Transport Request registry — the same data that ends up
+// baked into a Documentação "Ordens de Transporte" table, but kept as
+// structured rows per project so its liberada/QAS/PRD state is actually
+// searchable instead of living only inside generated .docx files.
+model TransportRequest {
+  id           String   @id @default(uuid())
+  userId       String
+  projectId    String?
+  systemId     String?
+  code         String // e.g. "20260730-RP-FI"
+  description  String   @db.Text
+  environment  String? // "Ambiente Mandante e Origem" free text, matches the docx column
+  liberada     Boolean  @default(false)
+  transportQas Boolean  @default(false)
+  transportPrd Boolean  @default(false)
+  plannedDate  String? // surfaced on the Calendar page when set
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  system  SapSystem? @relation(fields: [systemId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+  @@map("transport_requests")
 }

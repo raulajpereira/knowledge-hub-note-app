@@ -26,6 +26,10 @@ import publicRoutes from './routes/public.routes.js';
 import projectsRoutes from './routes/projects.routes.js';
 import transactionsRoutes from './routes/transactions.routes.js';
 import documentacaoRoutes from './routes/documentacao.routes.js';
+import clientsRoutes from './routes/clients.routes.js';
+import sapSystemsRoutes from './routes/sapsystems.routes.js';
+import contactsRoutes from './routes/contacts.routes.js';
+import transportRequestsRoutes from './routes/transportrequests.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -60,6 +64,10 @@ app.use('/api/public', publicRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/transactions', transactionsRoutes);
 app.use('/api/documentacao', documentacaoRoutes);
+app.use('/api/clients', clientsRoutes);
+app.use('/api/sap-systems', sapSystemsRoutes);
+app.use('/api/contacts', contactsRoutes);
+app.use('/api/transport-requests', transportRequestsRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

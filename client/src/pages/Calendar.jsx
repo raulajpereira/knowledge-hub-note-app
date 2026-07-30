@@ -16,6 +16,12 @@ function toKey(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+const KIND_HUES = { task: 250, issue: 20, transport: 150 };
+function kindColors(kind) {
+  const hue = KIND_HUES[kind] ?? 250;
+  return { background: `oklch(0.9 0.07 ${hue})`, color: `oklch(0.4 0.13 ${hue})` };
+}
+
 function startOfCalendarGrid(year, month) {
   const first = new Date(year, month, 1);
   const weekday = (first.getDay() + 6) % 7; // Monday = 0
@@ -30,6 +36,7 @@ export default function Calendar() {
   const isMobile = useIsMobile();
   const [tasks, setTasks] = useState([]);
   const [issues, setIssues] = useState([]);
+  const [transportRequests, setTransportRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
@@ -38,10 +45,11 @@ export default function Calendar() {
   const [selectedDay, setSelectedDay] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.listTasks(), api.listIssues()])
-      .then(([{ tasks }, { issues }]) => {
+    Promise.all([api.listTasks(), api.listIssues(), api.listTransportRequests()])
+      .then(([{ tasks }, { issues }, { transportRequests }]) => {
         setTasks(tasks);
         setIssues(issues);
+        setTransportRequests(transportRequests);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -56,8 +64,12 @@ export default function Calendar() {
       if (!issue.due) continue;
       (map[issue.due] ||= []).push({ kind: 'issue', id: issue.id, title: issue.title, done: issue.status === 'Done' });
     }
+    for (const tr of transportRequests) {
+      if (!tr.plannedDate) continue;
+      (map[tr.plannedDate] ||= []).push({ kind: 'transport', id: tr.id, title: `${tr.code} — ${tr.description}`, done: tr.transportPrd });
+    }
     return map;
-  }, [tasks, issues]);
+  }, [tasks, issues, transportRequests]);
 
   const todayKey = toKey(new Date());
   const gridStart = startOfCalendarGrid(cursor.year, cursor.month);
@@ -85,7 +97,8 @@ export default function Calendar() {
 
   const goToItem = (item) => {
     if (item.kind === 'task') navigate('/tasks', { state: { taskId: item.id } });
-    else navigate('/issues', { state: { issueId: item.id } });
+    else if (item.kind === 'issue') navigate('/issues', { state: { issueId: item.id } });
+    else navigate('/transport-requests');
   };
 
   const selectedItems = selectedDay ? itemsByDay[selectedDay] || [] : [];
@@ -146,8 +159,7 @@ export default function Calendar() {
                         style={{
                           fontSize: 10.5, fontWeight: 600, padding: '2px 5px', borderRadius: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                           textDecoration: item.done ? 'line-through' : 'none', opacity: item.done ? 0.55 : 1,
-                          background: item.kind === 'task' ? 'oklch(0.9 0.07 250)' : 'oklch(0.9 0.07 20)',
-                          color: item.kind === 'task' ? 'oklch(0.4 0.13 250)' : 'oklch(0.4 0.13 20)',
+                          ...kindColors(item.kind),
                         }}
                       >
                         {item.title}
@@ -181,11 +193,10 @@ export default function Calendar() {
               <span
                 style={{
                   fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, flexShrink: 0,
-                  background: item.kind === 'task' ? 'oklch(0.9 0.07 250)' : 'oklch(0.9 0.07 20)',
-                  color: item.kind === 'task' ? 'oklch(0.4 0.13 250)' : 'oklch(0.4 0.13 20)',
+                  ...kindColors(item.kind),
                 }}
               >
-                {item.kind === 'task' ? t('calendar.task') : t('calendar.issue')}
+                {item.kind === 'task' ? t('calendar.task') : item.kind === 'issue' ? t('calendar.issue') : t('calendar.transport')}
               </span>
               <span style={{ fontSize: 13, fontWeight: 600, textDecoration: item.done ? 'line-through' : 'none', opacity: item.done ? 0.6 : 1, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {item.title}

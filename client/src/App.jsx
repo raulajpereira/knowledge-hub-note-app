@@ -25,6 +25,10 @@ import SapNews from './pages/SapNews.jsx';
 import CodeLibrary from './pages/CodeLibrary.jsx';
 import Transactions from './pages/Transactions.jsx';
 import Documentacao from './pages/Documentacao.jsx';
+import Clients from './pages/Clients.jsx';
+import SapSystems from './pages/SapSystems.jsx';
+import TransportRequests from './pages/TransportRequests.jsx';
+import Contacts from './pages/Contacts.jsx';
 import Graph from './pages/Graph.jsx';
 import SharedNote from './pages/SharedNote.jsx';
 
@@ -87,6 +91,10 @@ export default function App() {
                   <Route path="/code-library" element={<CodeLibrary />} />
                   <Route path="/transactions" element={<Transactions />} />
                   <Route path="/documentacao" element={<Documentacao />} />
+                  <Route path="/clients" element={<Clients />} />
+                  <Route path="/sap-systems" element={<SapSystems />} />
+                  <Route path="/transport-requests" element={<TransportRequests />} />
+                  <Route path="/contacts" element={<Contacts />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/graph" element={<Graph />} />
                   <Route path="/sap-news" element={<SapNews />} />

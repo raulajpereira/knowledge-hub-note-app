@@ -179,6 +179,26 @@ export const api = {
   deleteTransaction: (id) => request(`/transactions/${id}`, { method: 'DELETE' }),
   useTransaction: (id) => request(`/transactions/${id}/use`, { method: 'POST' }),
 
+  listClients: () => request('/clients'),
+  createClient: (payload) => request('/clients', { method: 'POST', body: payload }),
+  updateClient: (id, payload) => request(`/clients/${id}`, { method: 'PATCH', body: payload }),
+  deleteClient: (id) => request(`/clients/${id}`, { method: 'DELETE' }),
+
+  listSapSystems: () => request('/sap-systems'),
+  createSapSystem: (payload) => request('/sap-systems', { method: 'POST', body: payload }),
+  updateSapSystem: (id, payload) => request(`/sap-systems/${id}`, { method: 'PATCH', body: payload }),
+  deleteSapSystem: (id) => request(`/sap-systems/${id}`, { method: 'DELETE' }),
+
+  listContacts: () => request('/contacts'),
+  createContact: (payload) => request('/contacts', { method: 'POST', body: payload }),
+  updateContact: (id, payload) => request(`/contacts/${id}`, { method: 'PATCH', body: payload }),
+  deleteContact: (id) => request(`/contacts/${id}`, { method: 'DELETE' }),
+
+  listTransportRequests: (projectId) => request(`/transport-requests${projectId ? `?projectId=${projectId}` : ''}`),
+  createTransportRequest: (payload) => request('/transport-requests', { method: 'POST', body: payload }),
+  updateTransportRequest: (id, payload) => request(`/transport-requests/${id}`, { method: 'PATCH', body: payload }),
+  deleteTransportRequest: (id) => request(`/transport-requests/${id}`, { method: 'DELETE' }),
+
   listAgents: () => request('/agents'),
   createAgent: (payload) => request('/agents', { method: 'POST', body: payload }),
   updateAgent: (id, payload) => request(`/agents/${id}`, { method: 'PATCH', body: payload }),
