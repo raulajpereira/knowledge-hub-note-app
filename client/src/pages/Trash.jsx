@@ -5,6 +5,7 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const FILTERS = [
   { key: 'all', labelKey: 'trash.filterAll' },
@@ -20,6 +21,7 @@ export default function Trash() {
   const { t } = useLanguage();
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
+  const isMobile = useIsMobile();
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -104,7 +106,7 @@ export default function Trash() {
   const typeLabel = { note: t('trash.typeNote'), task: t('trash.typeTask'), voice: t('trash.typeVoice') };
 
   return (
-    <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 18, minHeight: 0, overflowY: 'auto' }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 18, minHeight: 0, overflowY: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800 }}>{t('trash.title')}</div>

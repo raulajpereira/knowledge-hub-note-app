@@ -12,6 +12,7 @@ import SidebarSettingsModal from '../components/SidebarSettingsModal.jsx';
 import logoDefault from '../assets/logo-default.png';
 import logoIcon from '../assets/logo-icon.png';
 import { backdropClose } from '../lib/backdropClose.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 const APP_VERSION = '1.0.0';
 const MANUAL_URL = '/manual/index.html';
@@ -803,6 +804,7 @@ export default function Settings() {
   const { user, updateUserSettings, refreshMe } = useAuth();
   const { agents, createAgent } = useAgents();
   const { t, lang, setLanguage } = useLanguage();
+  const isMobile = useIsMobile();
   const fileInputRef = useRef(null);
   const [newAgentOpen, setNewAgentOpen] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
@@ -850,7 +852,7 @@ export default function Settings() {
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', width: '100%', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ maxWidth: 720, margin: '0 auto', width: '100%', padding: isMobile ? 14 : 28, display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20 }}>
       <div style={{ fontSize: 22, fontWeight: 800 }}>{t('settings.title')}</div>
 
       <SettingsGroup theme={theme} title={t('settings.groupAppearance')} description={t('settings.groupAppearanceDesc')} defaultOpen>
