@@ -62,6 +62,13 @@ export function downloadBlob(blob, filename) {
 export const api = {
   register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
+  login2faVerify: (payload) => request('/auth/2fa/login-verify', { method: 'POST', body: payload }),
+  setup2fa: () => request('/auth/2fa/setup', { method: 'POST' }),
+  verify2faSetup: (payload) => request('/auth/2fa/verify-setup', { method: 'POST', body: payload }),
+  disable2fa: (payload) => request('/auth/2fa/disable', { method: 'POST', body: payload }),
+  listSessions: () => request('/auth/sessions'),
+  revokeSession: (id) => request(`/auth/sessions/${id}`, { method: 'DELETE' }),
+  listAuditLog: (params) => request(`/audit-log${params ? `?${new URLSearchParams(params)}` : ''}`),
   me: () => request('/auth/me'),
   updateProfile: (payload) => request('/auth/me', { method: 'PATCH', body: payload }),
   changePassword: (payload) => request('/auth/change-password', { method: 'POST', body: payload }),

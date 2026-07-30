@@ -475,6 +475,99 @@ function TemplateManagementCard({ theme, t, card }) {
   );
 }
 
+const AUDIT_ACTION_HUES = { create: 145, update: 230, delete: 25, login: 145, login_failed: 25, register: 280 };
+
+function AuditActionBadge({ action, theme }) {
+  const hue = AUDIT_ACTION_HUES[action] ?? 280;
+  return (
+    <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, whiteSpace: 'nowrap', background: `oklch(0.90 0.10 ${hue})`, color: `oklch(0.35 0.15 ${hue})` }}>
+      {action}
+    </span>
+  );
+}
+
+// Super-admin-only global activity trail — deliberately not shown to plain
+// admins, unlike the rest of this settings group.
+function AuditLogCard({ theme, t, card }) {
+  const [entries, setEntries] = useState(null);
+  const [entityTypes, setEntityTypes] = useState([]);
+  const [entityType, setEntityType] = useState('');
+  const [nextCursor, setNextCursor] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const load = (params, append) => {
+    api.listAuditLog(params).then((r) => {
+      setEntries((prev) => (append ? [...(prev || []), ...r.entries] : r.entries));
+      setEntityTypes(r.entityTypes);
+      setNextCursor(r.nextCursor);
+    });
+  };
+
+  useEffect(() => {
+    load(entityType ? { entityType } : undefined, false);
+  }, [entityType]);
+
+  const loadMore = async () => {
+    if (!nextCursor) return;
+    setLoadingMore(true);
+    try {
+      const r = await api.listAuditLog({ ...(entityType ? { entityType } : {}), cursor: nextCursor });
+      setEntries((prev) => [...(prev || []), ...r.entries]);
+      setNextCursor(r.nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  if (!entries) return null;
+
+  return (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.auditLog')}</div>
+          <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.auditLogDesc')}</div>
+        </div>
+        <select
+          value={entityType}
+          onChange={(e) => setEntityType(e.target.value)}
+          style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+        >
+          <option value="">{t('settings.auditLogAllTypes')}</option>
+          {entityTypes.map((e) => <option key={e} value={e}>{e}</option>)}
+        </select>
+      </div>
+
+      {entries.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.auditLogEmpty')}</div>}
+
+      {entries.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 340, overflowY: 'auto' }}>
+          {entries.map((e) => (
+            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: theme.subtleBg, fontSize: 12 }}>
+              <AuditActionBadge action={e.action} theme={theme} />
+              <span style={{ fontWeight: 700, flexShrink: 0 }}>{e.entityType}</span>
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: theme.textMuted }}>
+                {e.actorEmail || t('settings.auditLogUnknownActor')}{e.summary ? ` — ${e.summary}` : ''}
+              </span>
+              <span style={{ flexShrink: 0, color: theme.textMuted, fontSize: 10.5 }}>{new Date(e.createdAt).toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {nextCursor && (
+        <button
+          onClick={loadMore}
+          disabled={loadingMore}
+          style={{ alignSelf: 'center', background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: loadingMore ? 0.6 : 1 }}
+        >
+          {t('settings.auditLogLoadMore')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function formatMb(mb) {
   if (mb == null) return null;
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`;
@@ -850,6 +943,7 @@ export default function Settings() {
   const nestedCard = { background: theme.subtleBg, border: 'none', borderRadius: 11, padding: 18, display: 'flex', flexDirection: 'column', gap: 18 };
   const outlineButton = { background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '8px 14px', fontWeight: 600, fontSize: 13, cursor: 'pointer' };
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isSuperAdmin = user?.role === 'super_admin';
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', width: '100%', padding: isMobile ? 14 : 28, display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20 }}>
@@ -1041,6 +1135,7 @@ export default function Settings() {
           <TemplateManagementCard theme={theme} t={t} card={nestedCard} />
         </>
       )}
+      {isSuperAdmin && <AuditLogCard theme={theme} t={t} card={nestedCard} />}
       </SettingsGroup>
 
       <div

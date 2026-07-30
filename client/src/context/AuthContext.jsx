@@ -29,7 +29,15 @@ export function AuthProvider({ children }) {
   }, [refreshMe]);
 
   const login = async (email, password) => {
-    const { token, user } = await api.login({ email, password });
+    const res = await api.login({ email, password });
+    if (res.requires2fa) return res;
+    setToken(res.token);
+    setUser(res.user);
+    return res.user;
+  };
+
+  const completeLogin2fa = async ({ pendingToken, code, backupCode }) => {
+    const { token, user } = await api.login2faVerify({ pendingToken, code, backupCode });
     setToken(token);
     setUser(user);
     return user;
@@ -58,7 +66,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshMe, updateUserSettings, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, completeLogin2fa, register, logout, refreshMe, updateUserSettings, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

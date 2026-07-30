@@ -7,7 +7,7 @@ import PreAuthLanguageToggle from '../components/PreAuthLanguageToggle.jsx';
 import logoIcon from '../assets/logo-icon.png';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, completeLogin2fa } = useAuth();
   const navigate = useNavigate();
   const [lang, setLang] = useState(getPreAuthLanguage);
   const t = (path, vars) => translate(lang, path, vars);
@@ -20,13 +20,36 @@ export default function Login() {
   const [reveal, setReveal] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [pendingToken, setPendingToken] = useState(null);
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [useBackupCode, setUseBackupCode] = useState(false);
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
     try {
-      await login(email, password);
+      const result = await login(email, password);
+      if (result?.requires2fa) {
+        setPendingToken(result.pendingToken);
+      } else {
+        navigate('/', { replace: true });
+      }
+    } catch (err) {
+      setError(err.message || t('login.errDefault'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onSubmit2fa = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      await completeLogin2fa(
+        useBackupCode ? { pendingToken, backupCode: twoFaCode } : { pendingToken, code: twoFaCode }
+      );
       navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || t('login.errDefault'));
@@ -100,7 +123,7 @@ export default function Login() {
         </div>
 
         <form
-          onSubmit={onSubmit}
+          onSubmit={pendingToken ? onSubmit2fa : onSubmit}
           style={{
             width: 380, maxWidth: '100%', flexShrink: 0, background: 'rgba(255,255,255,0.14)',
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -109,6 +132,61 @@ export default function Login() {
             boxShadow: '0 30px 80px rgba(0,0,0,0.35)',
           }}
         >
+          {pendingToken ? (
+            <>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 800 }}>{t('login.twoFaTitle')}</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
+                  {useBackupCode ? t('login.twoFaBackupDesc') : t('login.twoFaDesc')}
+                </div>
+              </div>
+
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
+                <input
+                  value={twoFaCode}
+                  onChange={(e) => setTwoFaCode(e.target.value)}
+                  type="text"
+                  autoFocus
+                  required
+                  placeholder={useBackupCode ? t('login.twoFaBackupPlaceholder') : t('login.twoFaPlaceholder')}
+                  style={{
+                    border: 'none', borderRadius: 11, padding: '13px 14px', fontSize: useBackupCode ? 14 : 20,
+                    letterSpacing: useBackupCode ? 'normal' : '0.3em', textAlign: 'center', fontFamily: 'var(--font-mono)',
+                    background: 'rgba(255,255,255,0.94)', color: '#1a1a1a', outline: 'none', width: '100%', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {error && (
+                <div style={{ fontSize: 12, color: 'oklch(0.8 0.16 25)', fontWeight: 600, alignSelf: 'flex-start' }}>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  background: 'oklch(0.55 0.19 290)', color: '#fff', border: 'none', borderRadius: 11,
+                  padding: '14px 14px', fontWeight: 700, fontSize: 13.5, letterSpacing: '0.04em',
+                  textTransform: 'uppercase', cursor: submitting ? 'default' : 'pointer', width: '100%',
+                  opacity: submitting ? 0.7 : 1,
+                }}
+              >
+                {submitting ? t('login.signingIn') : t('login.verifyCode')}
+              </button>
+
+              <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)' }}>
+                <span
+                  onClick={() => { setUseBackupCode((v) => !v); setTwoFaCode(''); setError(''); }}
+                  style={{ color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {useBackupCode ? t('login.useCodeInstead') : t('login.useBackupCodeInstead')}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>{t('login.welcomeBack')}</div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>{t('login.signInTo')}</div>
@@ -177,6 +255,8 @@ export default function Login() {
               {t('login.createOne')}
             </Link>
           </div>
+            </>
+          )}
         </form>
       </div>
     </div>

@@ -16,7 +16,24 @@ async function authenticate(req, res) {
   }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { teamOwnerId: true, role: true, status: true } });
+    if (payload.purpose) {
+      // A single-purpose token (e.g. the 2FA pending token) — never valid as
+      // a normal bearer credential.
+      res.status(401).json({ error: 'Invalid or expired token' });
+      return null;
+    }
+    // Older tokens signed before session tracking existed carry no jti —
+    // they're grandfathered in without a Session row rather than forced to
+    // log out on deploy.
+    if (payload.jti) {
+      const session = await prisma.session.findUnique({ where: { jti: payload.jti } });
+      if (!session || session.revokedAt) {
+        res.status(401).json({ error: 'Session revoked' });
+        return null;
+      }
+      prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
+    }
+    const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { teamOwnerId: true, role: true, status: true, name: true, email: true } });
     if (!user) {
       res.status(401).json({ error: 'Invalid or expired token' });
       return null;
@@ -24,6 +41,9 @@ async function authenticate(req, res) {
     req.userId = payload.sub;
     req.userRole = user.role;
     req.userStatus = user.status;
+    req.userName = user.name;
+    req.userEmail = user.email;
+    req.sessionJti = payload.jti || null;
     req.effectiveUserId = user.teamOwnerId || req.userId;
     return user;
   } catch {
@@ -53,6 +73,13 @@ export async function requireAuthAllowSuspended(req, res, next) {
 export async function requireAdmin(req, res, next) {
   if (req.userRole !== 'admin' && req.userRole !== 'super_admin') {
     return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
+
+export async function requireSuperAdmin(req, res, next) {
+  if (req.userRole !== 'super_admin') {
+    return res.status(403).json({ error: 'Super admin access required' });
   }
   next();
 }

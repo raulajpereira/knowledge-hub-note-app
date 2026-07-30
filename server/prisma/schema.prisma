@@ -32,6 +32,9 @@ model User {
   teamOwnerId  String?
   role         UserRole   @default(member)
   status       UserStatus @default(active)
+  twoFactorSecret      String?  @db.Text // base32 TOTP secret, only present while 2FA is enabled
+  twoFactorEnabled     Boolean  @default(false)
+  twoFactorBackupCodes Json? // array of bcrypt-hashed one-time recovery codes, consumed on use
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -64,6 +67,8 @@ model User {
   sapSystems          SapSystem[]
   contacts            Contact[]
   transportRequests   TransportRequest[]
+  auditLogs           AuditLog[] @relation("AuditActor")
+  sessions            Session[]
 
   @@map("users")
 }
@@ -675,4 +680,52 @@ model TransportRequest {
   @@index([userId])
   @@index([projectId])
   @@map("transport_requests")
+}
+
+// A cross-team activity trail, visible only to the super_admin account.
+// Written by a generic response-finish hook (see server/src/lib/auditLog.js)
+// covering every authenticated mutating request, so it's complete by
+// construction rather than depending on each route remembering to log —
+// content bodies are never recorded, only what/who/when, so it stays safe
+// even for entities like Passwords whose payloads are sensitive.
+// `actor` is nullable/SetNull so a deleted account's history isn't lost.
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorName  String
+  actorEmail String
+  teamId     String // effectiveUserId of the workspace affected
+  entityType String // URL segment right after /api/, e.g. "notes", "clients"
+  entityId   String?
+  action     String // "create" | "update" | "delete" | "login" | "login_failed" | "register"
+  summary    String? @db.Text
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, createdAt])
+  @@index([actorId])
+  @@index([entityType, createdAt])
+  @@map("audit_logs")
+}
+
+// A tracked login session — lets the account owner see and revoke active
+// sessions, and is the mechanism 2FA hooks into (a session isn't considered
+// fully authenticated until `verifiedAt` is set, if the account has 2FA on).
+model Session {
+  id          String    @id @default(uuid())
+  userId      String
+  jti         String    @unique
+  userAgent   String?
+  ip          String?
+  createdAt   DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  verifiedAt  DateTime?
+  revokedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
 }

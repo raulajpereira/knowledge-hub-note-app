@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
@@ -29,6 +29,218 @@ function RoleBadge({ role, theme, t }) {
       <Icon name={isElevated ? 'shield' : 'users'} size={11} color={isElevated ? gold : theme.textMuted} />
       {label}
     </span>
+  );
+}
+
+function formatRelative(dateStr, t) {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return t('account.justNow');
+  if (mins < 60) return t('account.minutesAgo', { n: mins });
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return t('account.hoursAgo', { n: hours });
+  const days = Math.round(hours / 24);
+  return t('account.daysAgo', { n: days });
+}
+
+function TwoFactorSection({ theme, t, fieldStyle }) {
+  const { user, refreshMe } = useAuth();
+  const enabled = !!user?.twoFactorEnabled;
+  const [step, setStep] = useState('idle'); // idle | enrolling | backupCodes
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [secret, setSecret] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [backupCodes, setBackupCodes] = useState([]);
+  const [disablePw, setDisablePw] = useState('');
+  const [showDisable, setShowDisable] = useState(false);
+
+  const startEnroll = async () => {
+    setError('');
+    setBusy(true);
+    try {
+      const { secret, qrDataUrl } = await api.setup2fa();
+      setSecret(secret);
+      setQrDataUrl(qrDataUrl);
+      setStep('enrolling');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmEnroll = async (e) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      const { backupCodes } = await api.verify2faSetup({ code });
+      setBackupCodes(backupCodes);
+      setStep('backupCodes');
+      setCode('');
+    } catch (err) {
+      setError(err.message || t('account.twoFaInvalidCode'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const finishBackupCodes = async () => {
+    setStep('idle');
+    await refreshMe();
+  };
+
+  const disable = async (e) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      await api.disable2fa({ password: disablePw });
+      setDisablePw('');
+      setShowDisable(false);
+      await refreshMe();
+    } catch (err) {
+      setError(err.message || t('account.incorrectPassword'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: 13.5, fontWeight: 700 }}>{t('account.twoFaTitle')}</div>
+          <div style={{ fontSize: 11.5, color: theme.textMuted }}>{t('account.twoFaDesc')}</div>
+        </div>
+        <span
+          style={{
+            fontSize: 10.5, fontWeight: 800, padding: '4px 9px', borderRadius: 6, whiteSpace: 'nowrap',
+            color: enabled ? 'oklch(0.45 0.15 145)' : theme.textMuted,
+            background: enabled ? 'oklch(0.88 0.13 145)' : theme.subtleBg,
+          }}
+        >
+          {enabled ? t('account.twoFaOn') : t('account.twoFaOff')}
+        </span>
+      </div>
+
+      {step === 'idle' && !enabled && (
+        <button
+          onClick={startEnroll}
+          disabled={busy}
+          style={{ alignSelf: 'flex-start', background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.6 : 1 }}
+        >
+          {t('account.twoFaEnable')}
+        </button>
+      )}
+
+      {step === 'idle' && enabled && !showDisable && (
+        <button
+          onClick={() => setShowDisable(true)}
+          style={{ alignSelf: 'flex-start', background: 'transparent', border: `1px solid oklch(0.6 0.2 25)`, color: 'oklch(0.6 0.2 25)', borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
+        >
+          {t('account.twoFaDisable')}
+        </button>
+      )}
+
+      {step === 'idle' && enabled && showDisable && (
+        <form onSubmit={disable} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input value={disablePw} onChange={(e) => setDisablePw(e.target.value)} type="password" placeholder={t('account.currentPassword')} style={fieldStyle} />
+          {error && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.18 25)', fontWeight: 600 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="submit" disabled={busy || !disablePw} style={{ background: 'oklch(0.6 0.2 25)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: busy || !disablePw ? 0.6 : 1 }}>
+              {t('account.twoFaDisable')}
+            </button>
+            <button type="button" onClick={() => { setShowDisable(false); setError(''); }} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {step === 'enrolling' && (
+        <form onSubmit={confirmEnroll} style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', background: theme.subtleBg, borderRadius: 10, padding: 14 }}>
+          <div style={{ fontSize: 11.5, color: theme.textMuted, textAlign: 'center' }}>{t('account.twoFaScanQr')}</div>
+          {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: 160, height: 160, borderRadius: 8, background: '#fff', padding: 6 }} />}
+          <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: theme.textMuted, wordBreak: 'break-all', textAlign: 'center' }}>{secret}</div>
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder={t('account.twoFaEnterCode')}
+            style={{ ...fieldStyle, textAlign: 'center', letterSpacing: '0.3em', fontFamily: 'var(--font-mono)' }}
+          />
+          {error && <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.18 25)', fontWeight: 600 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <button type="submit" disabled={busy || !code} style={{ flex: 1, background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: busy || !code ? 0.6 : 1 }}>
+              {t('account.twoFaConfirm')}
+            </button>
+            <button type="button" onClick={() => { setStep('idle'); setError(''); }} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {step === 'backupCodes' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: theme.subtleBg, borderRadius: 10, padding: 14 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700 }}>{t('account.twoFaBackupCodesTitle')}</div>
+          <div style={{ fontSize: 11, color: theme.textMuted }}>{t('account.twoFaBackupCodesDesc')}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 12.5 }}>
+            {backupCodes.map((c) => (
+              <div key={c} style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>{c}</div>
+            ))}
+          </div>
+          <button onClick={finishBackupCodes} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+            {t('account.twoFaSavedCodes')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SessionsSection({ theme, t }) {
+  const { logout } = useAuth();
+  const [sessions, setSessions] = useState(null);
+
+  useEffect(() => {
+    api.listSessions().then(({ sessions }) => setSessions(sessions));
+  }, []);
+
+  const revoke = async (session) => {
+    await api.revokeSession(session.id);
+    if (session.isCurrent) {
+      logout();
+      return;
+    }
+    setSessions((prev) => prev.filter((s) => s.id !== session.id));
+  };
+
+  if (!sessions) return null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div>
+        <div style={{ fontSize: 13.5, fontWeight: 700 }}>{t('account.sessionsTitle')}</div>
+        <div style={{ fontSize: 11.5, color: theme.textMuted }}>{t('account.sessionsDesc')}</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {sessions.map((s) => (
+          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: theme.subtleBg, borderRadius: 9, padding: '9px 11px' }}>
+            <Icon name="terminal" size={14} color={theme.textMuted} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.userAgent || t('account.sessionUnknownDevice')} {s.isCurrent && <span style={{ color: theme.accentText, fontWeight: 800 }}>· {t('account.sessionCurrent')}</span>}
+              </div>
+              <div style={{ fontSize: 10.5, color: theme.textMuted }}>{s.ip || '—'} · {formatRelative(s.lastSeenAt, t)}</div>
+            </div>
+            <span onClick={() => revoke(s)} style={{ cursor: 'pointer', flexShrink: 0 }}>
+              <Icon name="trash" size={13} color="oklch(0.6 0.2 25)" />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -230,6 +442,14 @@ export default function AccountModal({ onClose }) {
             {pwSaving ? t('account.saving') : t('account.changePassword')}
           </button>
         </form>
+
+        <div style={{ height: 1, background: theme.border }} />
+
+        <TwoFactorSection theme={theme} t={t} fieldStyle={fieldStyle} />
+
+        <div style={{ height: 1, background: theme.border }} />
+
+        <SessionsSection theme={theme} t={t} />
 
         <div style={{ height: 1, background: theme.border }} />
 

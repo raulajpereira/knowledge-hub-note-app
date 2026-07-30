@@ -5,11 +5,28 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireAuthAllowSuspended, requireAdmin } from '../middleware/auth.js';
 import { DEFAULT_TRANSACTIONS } from '../lib/defaultTransactions.js';
+import { logAuditEvent } from '../lib/auditLog.js';
+import { generateSecret, generateEnrollmentQr, verifyToken, generateBackupCodes } from '../lib/twoFactor.js';
 
 const router = Router();
 
-function signToken(userId) {
-  return jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
+function signToken(userId, jti) {
+  return jwt.sign({ sub: userId, jti }, process.env.JWT_SECRET, { expiresIn: '30d' });
+}
+
+// Short-lived, single-purpose token issued after a correct password but
+// before the 2FA code is verified — deliberately can't be used as a normal
+// bearer token (see the `purpose` check in middleware/auth.js).
+function signPendingToken(userId) {
+  return jwt.sign({ sub: userId, purpose: '2fa-pending' }, process.env.JWT_SECRET, { expiresIn: '10m' });
+}
+
+async function createSession(user, req) {
+  const jti = crypto.randomUUID();
+  await prisma.session.create({
+    data: { userId: user.id, jti, userAgent: req.headers['user-agent'] || null, ip: req.ip, verifiedAt: new Date() },
+  });
+  return jti;
 }
 
 function generateInviteCode() {
@@ -25,6 +42,7 @@ function publicUser(user) {
     isTeamMember: !!user.teamOwnerId,
     role: user.role,
     status: user.status,
+    twoFactorEnabled: !!user.twoFactorEnabled,
     hostingerConnected: !!user.settings?.hostingerApiTokenEnc,
     settings: user.settings
       ? {
@@ -88,7 +106,9 @@ router.post('/register', async (req, res) => {
     return created;
   });
 
-  const token = signToken(user.id);
+  const jti = await createSession(user, req);
+  const token = signToken(user.id, jti);
+  logAuditEvent({ actorId: user.id, actorName: user.name, actorEmail: user.email, teamId: user.id, entityType: 'auth', action: 'register', summary: 'Account registered', ip: req.ip });
   res.status(201).json({ token, user: publicUser(user) });
 });
 
@@ -100,13 +120,123 @@ router.post('/login', async (req, res) => {
     where: { email: email.toLowerCase() },
     include: { settings: true },
   });
-  if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+  if (!user) {
+    logAuditEvent({ actorId: null, actorName: '', actorEmail: email.toLowerCase(), teamId: '', entityType: 'auth', action: 'login_failed', summary: 'Unknown email', ip: req.ip });
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
+  if (!valid) {
+    logAuditEvent({ actorId: user.id, actorName: user.name, actorEmail: user.email, teamId: user.teamOwnerId || user.id, entityType: 'auth', action: 'login_failed', summary: 'Wrong password', ip: req.ip });
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
 
-  const token = signToken(user.id);
+  if (user.twoFactorEnabled) {
+    return res.json({ requires2fa: true, pendingToken: signPendingToken(user.id) });
+  }
+
+  const jti = await createSession(user, req);
+  const token = signToken(user.id, jti);
+  logAuditEvent({ actorId: user.id, actorName: user.name, actorEmail: user.email, teamId: user.teamOwnerId || user.id, entityType: 'auth', action: 'login', summary: 'Login', ip: req.ip });
   res.json({ token, user: publicUser(user) });
+});
+
+// Second step of login when the account has 2FA enabled — exchanges the
+// short-lived pendingToken plus a TOTP code (or a one-time backup code) for
+// a real session token.
+router.post('/2fa/login-verify', async (req, res) => {
+  const { pendingToken, code, backupCode } = req.body || {};
+  if (!pendingToken || (!code && !backupCode)) return res.status(400).json({ error: 'pendingToken and code are required' });
+
+  let payload;
+  try {
+    payload = jwt.verify(pendingToken, process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired pending token' });
+  }
+  if (payload.purpose !== '2fa-pending') return res.status(401).json({ error: 'Invalid pending token' });
+
+  const user = await prisma.user.findUnique({ where: { id: payload.sub }, include: { settings: true } });
+  if (!user || !user.twoFactorEnabled) return res.status(401).json({ error: 'Invalid request' });
+
+  let ok = false;
+  if (code) {
+    ok = verifyToken(code, user.twoFactorSecret);
+  } else {
+    const codes = Array.isArray(user.twoFactorBackupCodes) ? user.twoFactorBackupCodes : [];
+    for (let i = 0; i < codes.length; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      if (await bcrypt.compare(backupCode.trim().toUpperCase(), codes[i])) {
+        ok = true;
+        codes.splice(i, 1);
+        // eslint-disable-next-line no-await-in-loop
+        await prisma.user.update({ where: { id: user.id }, data: { twoFactorBackupCodes: codes } });
+        break;
+      }
+    }
+  }
+
+  if (!ok) {
+    logAuditEvent({ actorId: user.id, actorName: user.name, actorEmail: user.email, teamId: user.teamOwnerId || user.id, entityType: 'auth', action: 'login_failed', summary: 'Invalid 2FA code', ip: req.ip });
+    return res.status(401).json({ error: 'Invalid code' });
+  }
+
+  const jti = await createSession(user, req);
+  const token = signToken(user.id, jti);
+  logAuditEvent({ actorId: user.id, actorName: user.name, actorEmail: user.email, teamId: user.teamOwnerId || user.id, entityType: 'auth', action: 'login', summary: 'Login (2FA)', ip: req.ip });
+  res.json({ token, user: publicUser(user) });
+});
+
+// --- Two-factor authentication (enable/disable on the caller's own account) --
+
+router.post('/2fa/setup', requireAuth, async (req, res) => {
+  const secret = generateSecret();
+  await prisma.user.update({ where: { id: req.userId }, data: { twoFactorSecret: secret, twoFactorEnabled: false } });
+  const qrDataUrl = await generateEnrollmentQr(req.userEmail, secret);
+  res.json({ secret, qrDataUrl });
+});
+
+router.post('/2fa/verify-setup', requireAuth, async (req, res) => {
+  const { code } = req.body || {};
+  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (!user?.twoFactorSecret) return res.status(400).json({ error: '2FA setup was not started' });
+  if (!verifyToken(code, user.twoFactorSecret)) return res.status(400).json({ error: 'Invalid code' });
+
+  const backupCodes = generateBackupCodes();
+  const hashed = await Promise.all(backupCodes.map((c) => bcrypt.hash(c, 10)));
+  await prisma.user.update({ where: { id: user.id }, data: { twoFactorEnabled: true, twoFactorBackupCodes: hashed } });
+  logAuditEvent({ actorId: user.id, actorName: user.name, actorEmail: user.email, teamId: user.teamOwnerId || user.id, entityType: 'auth', action: 'update', summary: '2FA enabled', ip: req.ip });
+  res.json({ backupCodes });
+});
+
+router.post('/2fa/disable', requireAuth, async (req, res) => {
+  const { password } = req.body || {};
+  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  const valid = await bcrypt.compare(password || '', user.passwordHash);
+  if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+
+  await prisma.user.update({ where: { id: user.id }, data: { twoFactorEnabled: false, twoFactorSecret: null, twoFactorBackupCodes: null } });
+  logAuditEvent({ actorId: user.id, actorName: user.name, actorEmail: user.email, teamId: user.teamOwnerId || user.id, entityType: 'auth', action: 'update', summary: '2FA disabled', ip: req.ip });
+  res.json({ ok: true });
+});
+
+// --- Session management (the caller's own logins only) -----------------
+
+router.get('/sessions', requireAuth, async (req, res) => {
+  const sessions = await prisma.session.findMany({ where: { userId: req.userId, revokedAt: null }, orderBy: { lastSeenAt: 'desc' } });
+  res.json({
+    sessions: sessions.map((s) => ({
+      id: s.id, userAgent: s.userAgent, ip: s.ip, createdAt: s.createdAt, lastSeenAt: s.lastSeenAt,
+      isCurrent: s.jti === req.sessionJti,
+    })),
+  });
+});
+
+router.delete('/sessions/:id', requireAuth, async (req, res) => {
+  const session = await prisma.session.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  await prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
+  res.status(204).end();
 });
 
 router.get('/me', requireAuthAllowSuspended, async (req, res) => {

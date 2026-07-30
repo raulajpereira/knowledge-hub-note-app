@@ -30,7 +30,9 @@ import clientsRoutes from './routes/clients.routes.js';
 import sapSystemsRoutes from './routes/sapsystems.routes.js';
 import contactsRoutes from './routes/contacts.routes.js';
 import transportRequestsRoutes from './routes/transportrequests.routes.js';
+import auditLogRoutes from './routes/auditlog.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
+import { auditMiddleware } from './lib/auditLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,6 +41,7 @@ const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
 app.use(express.json({ limit: '5mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use(auditMiddleware);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
@@ -68,6 +71,7 @@ app.use('/api/clients', clientsRoutes);
 app.use('/api/sap-systems', sapSystemsRoutes);
 app.use('/api/contacts', contactsRoutes);
 app.use('/api/transport-requests', transportRequestsRoutes);
+app.use('/api/audit-log', auditLogRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
