@@ -26,6 +26,10 @@ html, body {
   /* Stops the iOS rubber-band page bounce in standalone PWA mode; the app's
      own containers (not the page body) own their scroll regions already. */
   overscroll-behavior-y: none;
+  /* Belt-and-braces alongside the viewport meta's user-scalable=no: drops
+     the double-tap-to-zoom gesture some mobile browsers still honor
+     regardless, and removes the ~300ms tap delay for a snappier feel. */
+  touch-action: manipulation;
 }
 body {
   font-family: var(--font-body);
