@@ -94,7 +94,11 @@ export default function AppLayout() {
         background: theme.pageBg, color: theme.textPrimary, position: 'relative', overflow: 'hidden',
       }}
     >
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', position: 'relative', zIndex: 1 }}>
+      {/* zoom (not the outer 100vh/100dvh shell) so the "text size" setting scales
+          content without fighting the shell's own viewport-height sizing — any
+          extra space it needs is absorbed by this row's own internal scroll
+          regions (sidebar, main content), not the page itself. */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', position: 'relative', zIndex: 1, zoom: 'var(--app-zoom, 1)' }}>
         {!isMobile && (
         <div
           style={{

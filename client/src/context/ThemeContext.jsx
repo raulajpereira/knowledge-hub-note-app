@@ -5,12 +5,17 @@ import { useAuth } from './AuthContext.jsx';
 
 const ThemeContext = createContext(null);
 
+const FONT_SCALE_ZOOM = { small: 0.94, medium: 1, large: 1.1 };
+
 export function ThemeProvider({ children }) {
   const { user, updateUserSettings } = useAuth();
   const mode = user?.settings?.theme || 'dark';
   const accentColor = user?.settings?.accentColor || 'purple';
   const accentHue = user?.settings?.accentHue;
   const fontFamily = user?.settings?.fontFamily || 'inter';
+  const fontScale = user?.settings?.fontScale || 'medium';
+  const radiusStyle = user?.settings?.radiusStyle || 'default';
+  const faviconUrl = user?.settings?.faviconUrl;
 
   const theme = useMemo(() => getTheme(mode, accentColor, accentHue), [mode, accentColor, accentHue]);
 
@@ -19,6 +24,19 @@ export function ThemeProvider({ children }) {
     document.documentElement.style.setProperty('--font-body', stack.body);
     document.documentElement.style.setProperty('--font-display', stack.display);
   }, [fontFamily]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--app-zoom', String(FONT_SCALE_ZOOM[fontScale] ?? 1));
+  }, [fontScale]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-radius', radiusStyle);
+  }, [radiusStyle]);
+
+  useEffect(() => {
+    const link = document.getElementById('dynamic-favicon');
+    if (link) link.href = faviconUrl || '/icon.png';
+  }, [faviconUrl]);
 
   const setMode = async (nextMode) => {
     const { settings } = await api.updateSettings({ theme: nextMode });
@@ -40,8 +58,23 @@ export function ThemeProvider({ children }) {
     updateUserSettings(settings);
   };
 
+  const setFontScale = async (nextScale) => {
+    const { settings } = await api.updateSettings({ fontScale: nextScale });
+    updateUserSettings(settings);
+  };
+
+  const setRadiusStyle = async (nextStyle) => {
+    const { settings } = await api.updateSettings({ radiusStyle: nextStyle });
+    updateUserSettings(settings);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, mode, accentColor, accentHue, fontFamily, setMode, setAccentColor, setAccentHue, setFontFamily }}>
+    <ThemeContext.Provider
+      value={{
+        theme, mode, accentColor, accentHue, fontFamily, fontScale, radiusStyle,
+        setMode, setAccentColor, setAccentHue, setFontFamily, setFontScale, setRadiusStyle,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

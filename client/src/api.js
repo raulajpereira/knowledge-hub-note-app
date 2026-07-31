@@ -129,6 +129,12 @@ export const api = {
     return request('/settings/logo', { method: 'POST', body: form, isForm: true });
   },
   resetLogo: () => request('/settings/logo', { method: 'DELETE' }),
+  uploadFavicon: (file) => {
+    const form = new FormData();
+    form.append('favicon', file);
+    return request('/settings/favicon', { method: 'POST', body: form, isForm: true });
+  },
+  resetFavicon: () => request('/settings/favicon', { method: 'DELETE' }),
   uploadAvatar: (file) => {
     const form = new FormData();
     form.append('avatar', file);

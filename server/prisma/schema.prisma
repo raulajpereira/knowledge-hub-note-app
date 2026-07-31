@@ -119,8 +119,11 @@ model Settings {
   accentColor             String   @default("purple")
   accentHue               Int?
   fontFamily              String?
+  fontScale               String   @default("medium") // "small" | "medium" | "large"
+  radiusStyle             String   @default("default") // "sharp" | "default" | "round"
   language                String   @default("pt") // "pt" | "en"
   logoUrl                 String?
+  faviconUrl              String?
   avatarUrl               String?
   vaultSalt               String?  @db.Text
   vaultWrappedKey         String?  @db.Text

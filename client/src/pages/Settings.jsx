@@ -896,12 +896,13 @@ function SettingsGroup({ theme, title, description, defaultOpen, children }) {
 const AUTO_LOCK_OPTIONS = [30, 60, 120, 300, 600];
 
 export default function Settings() {
-  const { theme, mode, accentHue, fontFamily, setMode, setAccentHue, setFontFamily } = useTheme();
+  const { theme, mode, accentHue, fontFamily, fontScale, radiusStyle, setMode, setAccentHue, setFontFamily, setFontScale, setRadiusStyle } = useTheme();
   const { user, updateUserSettings, refreshMe } = useAuth();
   const { agents, createAgent } = useAgents();
   const { t, lang, setLanguage } = useLanguage();
   const isMobile = useIsMobile();
   const fileInputRef = useRef(null);
+  const faviconInputRef = useRef(null);
   const [newAgentOpen, setNewAgentOpen] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
   const [newAgentToken, setNewAgentToken] = useState('');
@@ -929,6 +930,18 @@ export default function Settings() {
 
   const onResetLogo = async () => {
     const { settings } = await api.resetLogo();
+    updateUserSettings(settings);
+  };
+
+  const onFaviconUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const { settings } = await api.uploadFavicon(file);
+    updateUserSettings(settings);
+  };
+
+  const onResetFavicon = async () => {
+    const { settings } = await api.resetFavicon();
     updateUserSettings(settings);
   };
 
@@ -1009,6 +1022,46 @@ export default function Settings() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.fontScale')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.fontScaleDesc')}</div>
+          </div>
+          <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
+            {['small', 'medium', 'large'].map((s) => (
+              <div
+                key={s}
+                onClick={() => setFontScale(s)}
+                style={{
+                  padding: '7px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                  background: (fontScale || 'medium') === s ? theme.cardBg : 'transparent', color: (fontScale || 'medium') === s ? theme.textPrimary : theme.textMuted,
+                }}
+              >
+                {t(`settings.fontScale${s.charAt(0).toUpperCase()}${s.slice(1)}`)}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.radiusStyle')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.radiusStyleDesc')}</div>
+          </div>
+          <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
+            {['sharp', 'default', 'round'].map((s) => (
+              <div
+                key={s}
+                onClick={() => setRadiusStyle(s)}
+                style={{
+                  padding: '7px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                  background: (radiusStyle || 'default') === s ? theme.cardBg : 'transparent', color: (radiusStyle || 'default') === s ? theme.textPrimary : theme.textMuted,
+                }}
+              >
+                {t(`settings.radiusStyle${s.charAt(0).toUpperCase()}${s.slice(1)}`)}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
             <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.language')}</div>
             <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.languageDesc')}</div>
           </div>
@@ -1052,6 +1105,27 @@ export default function Settings() {
               </label>
               <button onClick={onResetLogo} style={{ ...outlineButton, alignSelf: 'flex-start' }}>
                 {t('settings.resetLogo')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={nestedCard}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.favicon')}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 8, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
+            <img src={user?.settings?.faviconUrl || '/icon.png'} alt="Favicon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 200 }}>
+            <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.faviconDesc')}</div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <label style={{ ...outlineButton, alignSelf: 'flex-start' }}>
+                {t('settings.uploadFavicon')}
+                <input ref={faviconInputRef} type="file" accept="image/*" onChange={onFaviconUpload} style={{ display: 'none' }} />
+              </label>
+              <button onClick={onResetFavicon} style={{ ...outlineButton, alignSelf: 'flex-start' }}>
+                {t('settings.resetFavicon')}
               </button>
             </div>
           </div>

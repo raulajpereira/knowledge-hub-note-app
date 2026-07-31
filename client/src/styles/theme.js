@@ -41,6 +41,26 @@ export const FONT_OPTIONS = [
     body: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
     display: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
   },
+  {
+    id: 'poppins',
+    body: "'Poppins', 'Inter', -apple-system, sans-serif",
+    display: "'Poppins', 'Inter', -apple-system, sans-serif",
+  },
+  {
+    id: 'lora',
+    body: "'Lora', Georgia, 'Times New Roman', serif",
+    display: "'Lora', Georgia, 'Times New Roman', serif",
+  },
+  {
+    id: 'firacode',
+    body: "'Fira Code', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+    display: "'Fira Code', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+  },
+  {
+    id: 'playfair',
+    body: "'Playfair Display', Georgia, 'Times New Roman', serif",
+    display: "'Playfair Display', Georgia, 'Times New Roman', serif",
+  },
 ];
 
 export function fontStackFor(id) {

@@ -37,6 +37,7 @@ function makeUpload(subdir) {
 
 const uploadLogo = makeUpload('logos');
 const uploadAvatar = makeUpload('avatars');
+const uploadFavicon = makeUpload('favicons');
 
 const router = Router();
 router.use(requireAuth);
@@ -50,11 +51,16 @@ router.get('/', async (req, res) => {
   res.json({ settings });
 });
 
-const FONT_FAMILIES = ['inter', 'grotesk', 'system', 'serif', 'mono'];
+const FONT_FAMILIES = ['inter', 'grotesk', 'system', 'serif', 'mono', 'poppins', 'lora', 'firacode', 'playfair'];
+const FONT_SCALES = ['small', 'medium', 'large'];
+const RADIUS_STYLES = ['sharp', 'default', 'round'];
 const LANGUAGES = ['pt', 'en'];
 
 router.patch('/', async (req, res) => {
-  const { theme, accentColor, accentHue, fontFamily, language, vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout } = req.body || {};
+  const {
+    theme, accentColor, accentHue, fontFamily, fontScale, radiusStyle, language,
+    vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout,
+  } = req.body || {};
   const data = {};
   if (theme !== undefined) {
     if (!['dark', 'light'].includes(theme)) return res.status(400).json({ error: 'Invalid theme' });
@@ -74,6 +80,14 @@ router.patch('/', async (req, res) => {
   if (fontFamily !== undefined) {
     if (fontFamily !== null && !FONT_FAMILIES.includes(fontFamily)) return res.status(400).json({ error: 'Invalid fontFamily' });
     data.fontFamily = fontFamily;
+  }
+  if (fontScale !== undefined) {
+    if (!FONT_SCALES.includes(fontScale)) return res.status(400).json({ error: 'Invalid fontScale' });
+    data.fontScale = fontScale;
+  }
+  if (radiusStyle !== undefined) {
+    if (!RADIUS_STYLES.includes(radiusStyle)) return res.status(400).json({ error: 'Invalid radiusStyle' });
+    data.radiusStyle = radiusStyle;
   }
   if (language !== undefined) {
     if (!LANGUAGES.includes(language)) return res.status(400).json({ error: 'Invalid language' });
@@ -166,6 +180,26 @@ router.delete('/logo', async (req, res) => {
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },
     update: { logoUrl: null },
+    create: { userId: req.userId },
+  });
+  res.json({ settings });
+});
+
+router.post('/favicon', uploadFavicon.single('favicon'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const faviconUrl = `/uploads/favicons/${req.file.filename}`;
+  const settings = await prisma.settings.upsert({
+    where: { userId: req.userId },
+    update: { faviconUrl },
+    create: { userId: req.userId, faviconUrl },
+  });
+  res.json({ settings });
+});
+
+router.delete('/favicon', async (req, res) => {
+  const settings = await prisma.settings.upsert({
+    where: { userId: req.userId },
+    update: { faviconUrl: null },
     create: { userId: req.userId },
   });
   res.json({ settings });

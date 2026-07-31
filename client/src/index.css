@@ -2,6 +2,7 @@
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --font-display: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --app-zoom: 1;
   /* iOS PWA (standalone) safe-area insets — 0px on desktop/browsers without a notch/home-indicator. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -80,4 +81,16 @@ input, textarea { font-family: inherit; }
 @keyframes kh-wave-bounce {
   0%, 100% { transform: scaleY(0.28); }
   50% { transform: scaleY(1); }
+}
+
+/* "Corner style" setting — most of the app sets border-radius as an inline
+   style per element rather than through a shared CSS variable, so this is a
+   blunt global override rather than a per-component refactor. The `:not`
+   guard skips anything already using a 50%/pill radius (avatars, the record
+   button, round badges, …) so circles stay circles in every mode. */
+html[data-radius="sharp"] *:not([style*="50%"]) {
+  border-radius: 3px !important;
+}
+html[data-radius="round"] *:not([style*="50%"]) {
+  border-radius: 16px !important;
 }
