@@ -824,7 +824,7 @@ export default function CodeLibrary() {
   const itemTypesFor = (kind) => (kind === 'other' ? ITEM_TYPES.filter((t) => t !== 'characteristics') : ITEM_TYPES);
 
   const rowStyle = (isActive) => ({
-    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: 8, padding: 'var(--kh-list-row-py, 10px) 12px', borderRadius: 10, cursor: 'pointer',
     background: isActive ? theme.accentSoftBg : 'transparent', color: isActive ? theme.accentText : theme.textMuted,
   });
 

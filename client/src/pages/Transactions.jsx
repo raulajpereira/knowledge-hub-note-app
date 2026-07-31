@@ -242,7 +242,7 @@ export default function Transactions() {
           {!loading && filtered.map((tx) => {
             const isHovered = hoveredId === tx.id;
             const cellStyle = {
-              padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`,
+              padding: 'var(--kh-row-py, 12px) 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`,
               cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               background: isHovered ? theme.subtleBg : 'transparent',
             };

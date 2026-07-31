@@ -442,7 +442,7 @@ export default function Issues() {
                 const isSelected = selectedId === issue.id;
                 const isHovered = hoveredId === issue.id;
                 const rowBg = isSelected ? theme.accentSoftBg : isHovered ? theme.subtleBg : 'transparent';
-                const cellStyle = { padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: rowBg };
+                const cellStyle = { padding: 'var(--kh-row-py, 12px) 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: rowBg };
                 return (
                   <Fragment key={issue.id}>
                     <div

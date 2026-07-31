@@ -121,6 +121,7 @@ model Settings {
   fontFamily              String?
   fontScale               String   @default("medium") // "small" | "medium" | "large"
   radiusStyle             String   @default("default") // "sharp" | "default" | "round"
+  density                 String   @default("comfortable") // "comfortable" | "compact"
   language                String   @default("pt") // "pt" | "en"
   logoUrl                 String?
   faviconUrl              String?

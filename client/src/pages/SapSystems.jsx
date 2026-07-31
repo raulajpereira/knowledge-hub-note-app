@@ -164,10 +164,10 @@ export default function SapSystems() {
           ))}
           {!loading && filtered.map((s) => {
             const isHovered = hoveredId === s.id;
-            const cell = { padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: isHovered ? theme.subtleBg : 'transparent', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+            const cell = { padding: 'var(--kh-row-py, 12px) 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: isHovered ? theme.subtleBg : 'transparent', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
             if (isMobile) {
               return (
-                <div key={s.id} onClick={() => openEdit(s)} style={{ padding: '12px 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
+                <div key={s.id} onClick={() => openEdit(s)} style={{ padding: 'var(--kh-row-py, 12px) 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontWeight: 700, fontSize: 13.5, color: theme.textPrimary }}>{s.name}</span>
                     <EnvBadge env={s.environment} />

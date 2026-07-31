@@ -52,6 +52,7 @@ function publicUser(user) {
           fontFamily: user.settings.fontFamily,
           fontScale: user.settings.fontScale,
           radiusStyle: user.settings.radiusStyle,
+          density: user.settings.density,
           language: user.settings.language,
           logoUrl: user.settings.logoUrl,
           faviconUrl: user.settings.faviconUrl,

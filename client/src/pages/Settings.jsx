@@ -900,7 +900,7 @@ function TabBar({ theme, tabs, active, onChange, isMobile }) {
 const AUTO_LOCK_OPTIONS = [30, 60, 120, 300, 600];
 
 export default function Settings() {
-  const { theme, mode, accentHue, fontFamily, fontScale, radiusStyle, setMode, setAccentHue, setFontFamily, setFontScale, setRadiusStyle } = useTheme();
+  const { theme, mode, accentHue, fontFamily, fontScale, radiusStyle, density, setMode, setAccentHue, setFontFamily, setFontScale, setRadiusStyle, setDensity } = useTheme();
   const { user, updateUserSettings, refreshMe } = useAuth();
   const { agents, createAgent } = useAgents();
   const { t, lang, setLanguage } = useLanguage();
@@ -1071,6 +1071,26 @@ export default function Settings() {
                 }}
               >
                 {t(`settings.radiusStyle${s.charAt(0).toUpperCase()}${s.slice(1)}`)}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.density')}</div>
+            <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.densityDesc')}</div>
+          </div>
+          <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
+            {['comfortable', 'compact'].map((s) => (
+              <div
+                key={s}
+                onClick={() => setDensity(s)}
+                style={{
+                  padding: '7px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                  background: (density || 'comfortable') === s ? theme.cardBg : 'transparent', color: (density || 'comfortable') === s ? theme.textPrimary : theme.textMuted,
+                }}
+              >
+                {t(`settings.density${s.charAt(0).toUpperCase()}${s.slice(1)}`)}
               </div>
             ))}
           </div>

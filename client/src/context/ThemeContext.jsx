@@ -15,6 +15,7 @@ export function ThemeProvider({ children }) {
   const fontFamily = user?.settings?.fontFamily || 'inter';
   const fontScale = user?.settings?.fontScale || 'medium';
   const radiusStyle = user?.settings?.radiusStyle || 'default';
+  const density = user?.settings?.density || 'comfortable';
   const faviconUrl = user?.settings?.faviconUrl;
 
   const theme = useMemo(() => getTheme(mode, accentColor, accentHue), [mode, accentColor, accentHue]);
@@ -32,6 +33,10 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-radius', radiusStyle);
   }, [radiusStyle]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-density', density);
+  }, [density]);
 
   useEffect(() => {
     const link = document.getElementById('dynamic-favicon');
@@ -68,11 +73,16 @@ export function ThemeProvider({ children }) {
     updateUserSettings(settings);
   };
 
+  const setDensity = async (nextDensity) => {
+    const { settings } = await api.updateSettings({ density: nextDensity });
+    updateUserSettings(settings);
+  };
+
   return (
     <ThemeContext.Provider
       value={{
-        theme, mode, accentColor, accentHue, fontFamily, fontScale, radiusStyle,
-        setMode, setAccentColor, setAccentHue, setFontFamily, setFontScale, setRadiusStyle,
+        theme, mode, accentColor, accentHue, fontFamily, fontScale, radiusStyle, density,
+        setMode, setAccentColor, setAccentHue, setFontFamily, setFontScale, setRadiusStyle, setDensity,
       }}
     >
       {children}

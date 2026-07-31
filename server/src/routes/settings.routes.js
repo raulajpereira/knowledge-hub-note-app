@@ -54,11 +54,12 @@ router.get('/', async (req, res) => {
 const FONT_FAMILIES = ['inter', 'grotesk', 'system', 'serif', 'mono', 'poppins', 'lora', 'firacode', 'playfair'];
 const FONT_SCALES = ['small', 'medium', 'large'];
 const RADIUS_STYLES = ['sharp', 'default', 'round'];
+const DENSITY_OPTIONS = ['comfortable', 'compact'];
 const LANGUAGES = ['pt', 'en'];
 
 router.patch('/', async (req, res) => {
   const {
-    theme, accentColor, accentHue, fontFamily, fontScale, radiusStyle, language,
+    theme, accentColor, accentHue, fontFamily, fontScale, radiusStyle, density, language,
     vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout,
   } = req.body || {};
   const data = {};
@@ -88,6 +89,10 @@ router.patch('/', async (req, res) => {
   if (radiusStyle !== undefined) {
     if (!RADIUS_STYLES.includes(radiusStyle)) return res.status(400).json({ error: 'Invalid radiusStyle' });
     data.radiusStyle = radiusStyle;
+  }
+  if (density !== undefined) {
+    if (!DENSITY_OPTIONS.includes(density)) return res.status(400).json({ error: 'Invalid density' });
+    data.density = density;
   }
   if (language !== undefined) {
     if (!LANGUAGES.includes(language)) return res.status(400).json({ error: 'Invalid language' });

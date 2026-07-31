@@ -143,10 +143,10 @@ export default function Contacts() {
           ))}
           {!loading && filtered.map((c) => {
             const isHovered = hoveredId === c.id;
-            const cell = { padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: isHovered ? theme.subtleBg : 'transparent', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+            const cell = { padding: 'var(--kh-row-py, 12px) 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: isHovered ? theme.subtleBg : 'transparent', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
             if (isMobile) {
               return (
-                <div key={c.id} onClick={() => openEdit(c)} style={{ padding: '12px 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
+                <div key={c.id} onClick={() => openEdit(c)} style={{ padding: 'var(--kh-row-py, 12px) 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
                   <div style={{ fontWeight: 700, fontSize: 13.5, color: theme.textPrimary }}>{c.name}</div>
                   <div style={{ fontSize: 11.5, color: theme.textMuted }}>{[c.role, c.client?.name].filter(Boolean).join(' · ') || '—'}</div>
                 </div>

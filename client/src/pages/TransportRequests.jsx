@@ -179,7 +179,7 @@ export default function TransportRequests() {
           ))}
           {!loading && filtered.map((tr) => {
             const isHovered = hoveredId === tr.id;
-            const cell = { padding: '12px 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: isHovered ? theme.subtleBg : 'transparent', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+            const cell = { padding: 'var(--kh-row-py, 12px) 14px', fontSize: 12.5, color: theme.textMuted, borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: isHovered ? theme.subtleBg : 'transparent', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
             const statusPills = (
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                 <FlagPill label={t('transportRequests.flagLiberada')} on={tr.liberada} theme={theme} />
@@ -189,7 +189,7 @@ export default function TransportRequests() {
             );
             if (isMobile) {
               return (
-                <div key={tr.id} onClick={() => openEdit(tr)} style={{ padding: '12px 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
+                <div key={tr.id} onClick={() => openEdit(tr)} style={{ padding: 'var(--kh-row-py, 12px) 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12.5, color: theme.accentText, background: theme.accentSoftBg, padding: '3px 8px', borderRadius: 6 }}>{tr.code}</span>
                     {tr.project && <span style={{ fontSize: 11, color: theme.textMuted }}>{tr.project.name}</span>}

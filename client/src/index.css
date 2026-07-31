@@ -3,6 +3,8 @@
   --font-display: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --app-zoom: 1;
+  --kh-row-py: 12px;
+  --kh-list-row-py: 10px;
   /* iOS PWA (standalone) safe-area insets — 0px on desktop/browsers without a notch/home-indicator. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -93,4 +95,12 @@ html[data-radius="sharp"] *:not([style*="50%"]) {
 }
 html[data-radius="round"] *:not([style*="50%"]) {
   border-radius: 16px !important;
+}
+
+/* Density mode: shrinks vertical row padding on tabular pages (Issues,
+   Transações SAP, Sistemas SAP, Contactos, Ordens de Transporte, Biblioteca
+   de Código). Horizontal padding is untouched — only row height changes. */
+html[data-density="compact"] {
+  --kh-row-py: 6px;
+  --kh-list-row-py: 5px;
 }
