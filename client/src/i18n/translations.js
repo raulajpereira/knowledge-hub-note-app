@@ -1136,6 +1136,8 @@ export const translations = {
       addSpacer: 'Add spacer',
       spacerLabel: 'Spacer',
       removeSpacer: 'Remove spacer',
+      collapse: 'Collapse sidebar',
+      expand: 'Expand sidebar',
     },
   },
   pt: {
@@ -2275,6 +2277,8 @@ export const translations = {
       addSpacer: 'Adicionar espaço',
       spacerLabel: 'Espaço',
       removeSpacer: 'Remover espaço',
+      collapse: 'Colapsar barra lateral',
+      expand: 'Expandir barra lateral',
     },
   },
 };

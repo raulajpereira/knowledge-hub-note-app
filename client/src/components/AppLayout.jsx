@@ -15,6 +15,7 @@ import TransactionsQuickSearch from './TransactionsQuickSearch.jsx';
 import NewsTicker from './NewsTicker.jsx';
 import MobileMoreSheet from './MobileMoreSheet.jsx';
 import logoDefault from '../assets/logo-default.png';
+import logoIcon from '../assets/logo-icon.png';
 import { resolveSidebarLayout, sidebarItemLabel } from '../lib/sidebarItems.js';
 
 const MOBILE_TABS = [
@@ -50,6 +51,12 @@ export default function AppLayout() {
     setSidebarItems(resolveSidebarLayout(user?.settings?.sidebarLayout).filter((item) => !item.hidden));
   }, [user?.settings?.sidebarLayout]);
 
+  const sidebarCollapsed = !isMobile && !!user?.settings?.sidebarCollapsed;
+  const toggleSidebarCollapsed = async () => {
+    const { settings } = await api.updateSettings({ sidebarCollapsed: !user?.settings?.sidebarCollapsed });
+    updateUserSettings(settings);
+  };
+
   const onSidebarDragOver = (e, index) => {
     e.preventDefault();
     const fromIndex = sidebarItems.findIndex((i) => i.key === draggedKey);
@@ -77,8 +84,9 @@ export default function AppLayout() {
   const navItemStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
+    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
     gap: 12,
-    padding: '10px 12px',
+    padding: sidebarCollapsed ? '10px' : '10px 12px',
     borderRadius: 10,
     cursor: 'pointer',
     textDecoration: 'none',
@@ -102,23 +110,43 @@ export default function AppLayout() {
         {!isMobile && (
         <div
           style={{
-            width: 260, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`,
-            display: 'flex', flexDirection: 'column', padding: '20px 16px 16px', gap: 24, overflowY: 'auto', minHeight: 0,
+            width: sidebarCollapsed ? 76 : 260, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`,
+            display: 'flex', flexDirection: 'column', padding: sidebarCollapsed ? '20px 10px 16px' : '20px 16px 16px', gap: 24, overflowY: 'auto', minHeight: 0,
+            transition: 'width 0.15s',
           }}
         >
           <div
             onClick={() => navigate('/')}
-            style={{ height: 60, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '4px 8px', cursor: 'pointer' }}
+            style={{
+              height: 60, boxSizing: 'border-box', display: 'flex', alignItems: 'center',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '4px 0' : '4px 8px', cursor: 'pointer',
+            }}
           >
-            <img
-              src={user?.settings?.logoUrl || logoDefault}
-              alt="Knowledge Hub"
-              style={{
-                height: '100%', width: '100%', display: 'block',
-                objectFit: user?.settings?.logoUrl ? 'cover' : 'contain',
-                objectPosition: user?.settings?.logoUrl ? 'center' : 'left center',
-              }}
-            />
+            {sidebarCollapsed ? (
+              <img src={logoIcon} alt="Knowledge Hub" style={{ height: 38, width: 38, objectFit: 'contain', display: 'block' }} />
+            ) : (
+              <img
+                src={user?.settings?.logoUrl || logoDefault}
+                alt="Knowledge Hub"
+                style={{
+                  height: '100%', width: '100%', display: 'block',
+                  objectFit: user?.settings?.logoUrl ? 'cover' : 'contain',
+                  objectPosition: user?.settings?.logoUrl ? 'center' : 'left center',
+                }}
+              />
+            )}
+          </div>
+
+          <div
+            onClick={toggleSidebarCollapsed}
+            title={sidebarCollapsed ? t('sidebarSettings.expand') : t('sidebarSettings.collapse')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: theme.textMuted,
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '6px' : '6px 4px', marginTop: -12,
+            }}
+          >
+            <Icon name="sidebar" size={16} />
+            {!sidebarCollapsed && <span style={{ fontSize: 12, fontWeight: 600 }}>{t('sidebarSettings.collapse')}</span>}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -147,23 +175,31 @@ export default function AppLayout() {
                   to={item.to}
                   end={item.end}
                   draggable={false}
+                  title={sidebarCollapsed ? sidebarItemLabel(item, lang, t) : undefined}
                   style={({ isActive }) => navItemStyle(isActive)}
                 >
-                  <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
                     <Icon name={item.icon} size={18} />
+                    {sidebarCollapsed && item.countKey && counts[item.countKey] > 0 && (
+                      <span style={{ position: 'absolute', top: -4, right: -6, width: 8, height: 8, borderRadius: '50%', background: theme.accent }} />
+                    )}
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {sidebarItemLabel(item, lang, t)}
-                  </span>
-                  {item.countKey && counts[item.countKey] > 0 && (
-                    <span
-                      style={{
-                        fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
-                        background: theme.subtleBg, color: theme.textMuted,
-                      }}
-                    >
-                      {counts[item.countKey]}
-                    </span>
+                  {!sidebarCollapsed && (
+                    <>
+                      <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {sidebarItemLabel(item, lang, t)}
+                      </span>
+                      {item.countKey && counts[item.countKey] > 0 && (
+                        <span
+                          style={{
+                            fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
+                            background: theme.subtleBg, color: theme.textMuted,
+                          }}
+                        >
+                          {counts[item.countKey]}
+                        </span>
+                      )}
+                    </>
                   )}
                 </NavLink>
               </div>
@@ -173,34 +209,45 @@ export default function AppLayout() {
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <NavLink to="/trash" style={({ isActive }) => navItemStyle(isActive)}>
-                <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <NavLink to="/trash" title={sidebarCollapsed ? t('nav.trash') : undefined} style={({ isActive }) => navItemStyle(isActive)}>
+                <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
                   <Icon name="trash" size={18} />
+                  {sidebarCollapsed && counts.trash > 0 && (
+                    <span style={{ position: 'absolute', top: -4, right: -6, width: 8, height: 8, borderRadius: '50%', background: theme.accent }} />
+                  )}
                 </span>
-                <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {t('nav.trash')}
-                </span>
-                {counts.trash > 0 && (
-                  <span
-                    style={{
-                      fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
-                      background: theme.subtleBg, color: theme.textMuted,
-                    }}
-                  >
-                    {counts.trash}
-                  </span>
+                {!sidebarCollapsed && (
+                  <>
+                    <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {t('nav.trash')}
+                    </span>
+                    {counts.trash > 0 && (
+                      <span
+                        style={{
+                          fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
+                          background: theme.subtleBg, color: theme.textMuted,
+                        }}
+                      >
+                        {counts.trash}
+                      </span>
+                    )}
+                  </>
                 )}
               </NavLink>
-              <NavLink to="/settings" style={({ isActive }) => navItemStyle(isActive)}>
+              <NavLink to="/settings" title={sidebarCollapsed ? t('nav.settings') : undefined} style={({ isActive }) => navItemStyle(isActive)}>
                 <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon name="settings" size={18} />
                 </span>
-                <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('nav.settings')}</span>
+                {!sidebarCollapsed && <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('nav.settings')}</span>}
               </NavLink>
 
               <div
                 onClick={() => setAccountOpen(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, background: theme.subtleBg, cursor: 'pointer' }}
+                title={sidebarCollapsed ? user?.name : undefined}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, background: theme.subtleBg, cursor: 'pointer',
+                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                }}
               >
                 <div
                   style={{
@@ -214,6 +261,7 @@ export default function AppLayout() {
                     userInitials(user?.name)
                   )}
                 </div>
+                {!sidebarCollapsed && (
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {user?.name}
@@ -222,12 +270,15 @@ export default function AppLayout() {
                     {user?.email}
                   </div>
                 </div>
+                )}
               </div>
             </div>
 
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em', color: theme.textMuted, textAlign: 'left' }}>
-              <span style={{ color: theme.accentText, fontWeight: 700 }}>{t('common.brand')}</span>{t('common.brandRest')} &copy; {new Date().getFullYear()}
-            </div>
+            {!sidebarCollapsed && (
+              <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em', color: theme.textMuted, textAlign: 'left' }}>
+                <span style={{ color: theme.accentText, fontWeight: 700 }}>{t('common.brand')}</span>{t('common.brandRest')} &copy; {new Date().getFullYear()}
+              </div>
+            )}
           </div>
         </div>
         )}

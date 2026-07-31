@@ -60,7 +60,7 @@ const LANGUAGES = ['pt', 'en'];
 router.patch('/', async (req, res) => {
   const {
     theme, accentColor, accentHue, fontFamily, fontScale, radiusStyle, density, language,
-    vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout,
+    vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout, sidebarCollapsed,
   } = req.body || {};
   const data = {};
   if (theme !== undefined) {
@@ -162,6 +162,7 @@ router.patch('/', async (req, res) => {
     if (!valid) return res.status(400).json({ error: 'homeLayout must be { left: [...], right: [...] } with known, non-duplicate block keys' });
     data.homeLayout = homeLayout;
   }
+  if (sidebarCollapsed !== undefined) data.sidebarCollapsed = !!sidebarCollapsed;
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },
     update: data,
