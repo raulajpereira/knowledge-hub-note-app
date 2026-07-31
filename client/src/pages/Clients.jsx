@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import IconPicker from '../components/IconPicker.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 
@@ -99,6 +100,12 @@ export default function Clients() {
     setClients((prev) => prev.map((x) => (x.id === client.id ? { ...client, _count: x._count } : x)));
   };
 
+  const setIcon = async (c, icon) => {
+    const { client } = await api.updateClient(c.id, { icon });
+    setClients((prev) => prev.map((x) => (x.id === client.id ? { ...client, _count: x._count } : x)));
+    setEditing((prev) => (prev && prev.id === client.id ? { ...prev, icon: client.icon } : prev));
+  };
+
   return (
     <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16, minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -139,8 +146,8 @@ export default function Clients() {
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon name="building" size={17} color={theme.accentText} />
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>
+                  {c.icon || <Icon name="building" size={17} color={theme.accentText} />}
                 </div>
                 <div>
                   <div style={{ fontSize: 14.5, fontWeight: 800 }}>{c.name}</div>
@@ -171,9 +178,18 @@ export default function Clients() {
               border: `1px solid ${theme.border}`, borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 17, fontWeight: 800 }}>{editing?.id ? editing.name : t('clients.newClient')}</div>
-              <span onClick={closeModal} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1 }}>&times;</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                {editing?.id && (
+                  <IconPicker
+                    theme={theme} t={t} value={editing.icon} onChange={(icon) => setIcon(editing, icon)}
+                    size={32} fallback={<Icon name="building" size={16} color={theme.accentText} />}
+                    triggerStyle={{ background: theme.accentSoftBg }}
+                  />
+                )}
+                <div style={{ fontSize: 17, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{editing?.id ? editing.name : t('clients.newClient')}</div>
+              </div>
+              <span onClick={closeModal} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1, flexShrink: 0 }}>&times;</span>
             </div>
 
             <Field label={t('clients.fieldName')} theme={theme}>

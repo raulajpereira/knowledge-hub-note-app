@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
     include: { _count: { select: { notes: { where: { deletedAt: null } } } } },
   });
   res.json({
-    folders: folders.map((f) => ({ id: f.id, name: f.name, parentId: f.parentId, createdAt: f.createdAt, noteCount: f._count.notes })),
+    folders: folders.map((f) => ({ id: f.id, name: f.name, icon: f.icon, parentId: f.parentId, createdAt: f.createdAt, noteCount: f._count.notes })),
   });
 });
 
@@ -41,8 +41,9 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!folder) return res.status(404).json({ error: 'Folder not found' });
-  const { name, parentId } = req.body || {};
+  const { name, parentId, icon } = req.body || {};
   const data = { name: name?.trim() || folder.name };
+  if (icon !== undefined) data.icon = icon || null;
   if (parentId !== undefined) {
     if (!parentId) {
       data.parentId = null;

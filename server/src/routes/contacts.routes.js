@@ -48,7 +48,7 @@ router.patch('/:id', async (req, res) => {
   const contact = await prisma.contact.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!contact) return res.status(404).json({ error: 'Contact not found' });
 
-  const { name, clientId, systemId, role, email, phone, notes } = req.body || {};
+  const { name, clientId, systemId, role, email, phone, notes, icon } = req.body || {};
   if (clientId !== undefined && clientId) {
     const client = await prisma.client.findFirst({ where: { id: clientId, userId: req.effectiveUserId } });
     if (!client) return res.status(400).json({ error: 'Invalid clientId' });
@@ -59,6 +59,7 @@ router.patch('/:id', async (req, res) => {
   }
   const data = {};
   if (name !== undefined) data.name = name.trim() || contact.name;
+  if (icon !== undefined) data.icon = icon || null;
   if (clientId !== undefined) data.clientId = clientId || null;
   if (systemId !== undefined) data.systemId = systemId || null;
   if (role !== undefined) data.role = role || null;

@@ -6,6 +6,7 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import IconPicker from '../components/IconPicker.jsx';
 import { htmlToMarkdown, markdownToHtml } from '../lib/markdown.js';
 import TemplateMenu from '../components/TemplateMenu.jsx';
 import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
@@ -1095,6 +1096,11 @@ export default function Notes() {
     setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...folder } : f)));
   };
 
+  const setFolderIcon = async (f, icon) => {
+    const { folder } = await api.renameFolder(f.id, { icon });
+    setFolders((prev) => prev.map((x) => (x.id === folder.id ? { ...x, ...folder } : x)));
+  };
+
   const removeFolder = async (f, e) => {
     e.stopPropagation();
     const ok = await confirm({ message: t('notes.confirmDeleteFolder', { name: f.name }) });
@@ -1151,7 +1157,10 @@ export default function Notes() {
           ) : (
             <span style={{ width: 11, flexShrink: 0 }} />
           )}
-          <Icon name="folder" size={15} />
+          <IconPicker
+            theme={theme} t={t} value={f.icon} onChange={(icon) => setFolderIcon(f, icon)}
+            size={20} fallback={<Icon name="folder" size={15} />}
+          />
           {editingFolderId === f.id ? (
             <input
               value={editFolderName}
@@ -1372,7 +1381,7 @@ export default function Notes() {
                   </span>
                 )}
                 {n.pinned && <Icon name="pin" size={13} color={theme.accentText} />}
-                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.icon ? `${n.icon} ` : ''}{n.title}</div>
               </div>
               <div style={{ fontSize: 12, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {n.content?.slice(0, 60) || t('common.noAdditionalText')}
@@ -1444,6 +1453,11 @@ export default function Notes() {
                 <Icon name="chevron" size={18} />
               </span>
             )}
+            <IconPicker
+              theme={theme} t={t} value={selected.icon} onChange={(icon) => patchSelected({ icon })}
+              size={30} fallback={<Icon name="doc" size={15} color={theme.accentText} />}
+              triggerStyle={{ background: theme.accentSoftBg }}
+            />
             <input
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}

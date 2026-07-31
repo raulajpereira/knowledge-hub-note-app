@@ -41,9 +41,10 @@ router.patch('/:id', async (req, res) => {
   const project = await prisma.project.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  const { name, scope, description, company, notes, manager, contacts, status, startDate, endDate, color, favorite } = req.body || {};
+  const { name, scope, description, company, notes, manager, contacts, status, startDate, endDate, color, favorite, icon } = req.body || {};
   const data = {};
   if (name !== undefined) data.name = name.trim() || project.name;
+  if (icon !== undefined) data.icon = icon || null;
   if (scope !== undefined) data.scope = scope || null;
   if (description !== undefined) data.description = description || null;
   if (company !== undefined) data.company = company || null;

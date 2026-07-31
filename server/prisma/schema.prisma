@@ -77,6 +77,7 @@ model Project {
   id          String    @id @default(uuid())
   userId      String
   name        String
+  icon        String? // emoji shown next to the project's name (Notion-style), null = default type icon
   scope       String?   @db.Text // "Âmbito"
   description String?   @db.Text
   company     String?
@@ -149,6 +150,7 @@ model Folder {
   userId    String
   parentId  String?
   name      String
+  icon      String? // emoji shown next to the folder's name (Notion-style), null = default folder icon
   createdAt DateTime @default(now())
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -165,6 +167,7 @@ model Note {
   userId    String
   folderId  String?
   parentNoteId String? // set = this note is a nested "page" living inside another note
+  icon      String? // emoji shown next to the note's title (Notion-style), null = default note icon
   title     String
   content   String    @db.LongText
   blocks    Json?
@@ -553,6 +556,7 @@ model Document {
   userId     String
   folderId   String?
   templateId String
+  icon       String? // emoji shown next to the document's title (Notion-style), null = default doc icon
   title      String
   fieldsData Json
   favorite   Boolean   @default(false)
@@ -593,6 +597,7 @@ model Client {
   id        String   @id @default(uuid())
   userId    String
   name      String
+  icon      String? // emoji shown next to the client's name (Notion-style), null = default client icon
   industry  String?
   notes     String?  @db.Text
   color     String?
@@ -619,6 +624,7 @@ model SapSystem {
   userId            String
   clientId          String?
   name              String // "Descrição" — e.g. "ECP - DEV"
+  icon              String? // emoji shown next to the system's name (Notion-style), null = default system icon
   sid               String? // "ID sist." — 3-char system ID, e.g. "JOG"
   instanceNumber    String? // "Nº da instância" — e.g. "00"
   saprouter         String? @db.Text // "Cadeia de SAProuter"
@@ -649,6 +655,7 @@ model Contact {
   clientId  String?
   systemId  String?
   name      String
+  icon      String? // emoji shown next to the contact's name (Notion-style), null = default contact icon
   role      String?
   email     String?
   phone     String?
@@ -676,6 +683,7 @@ model TransportRequest {
   projectId    String?
   systemId     String?
   code         String // e.g. "20260730-RP-FI"
+  icon         String? // emoji shown next to the transport request's code (Notion-style), null = default icon
   description  String   @db.Text
   environment  String? // "Ambiente Mandante e Origem" free text, matches the docx column
   liberada     Boolean  @default(false)

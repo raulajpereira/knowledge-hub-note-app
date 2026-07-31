@@ -237,11 +237,12 @@ router.patch('/:id', async (req, res) => {
   const document = await prisma.document.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!document) return res.status(404).json({ error: 'Document not found' });
 
-  const { title, fieldsData, folderId, favorite } = req.body || {};
+  const { title, fieldsData, folderId, favorite, icon } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || document.title;
   if (fieldsData !== undefined) data.fieldsData = fieldsData;
   if (favorite !== undefined) data.favorite = !!favorite;
+  if (icon !== undefined) data.icon = icon || null;
   if (folderId !== undefined) {
     if (!folderId) {
       data.folderId = null;

@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import IconPicker from '../components/IconPicker.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 
@@ -81,6 +82,12 @@ export default function Contacts() {
 
   const closeModal = () => setEditing(null);
 
+  const setIcon = async (c, icon) => {
+    const { contact } = await api.updateContact(c.id, { icon });
+    setContacts((prev) => prev.map((x) => (x.id === contact.id ? contact : x)));
+    setEditing((prev) => (prev && prev.id === contact.id ? { ...prev, icon: contact.icon } : prev));
+  };
+
   const save = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
@@ -147,14 +154,14 @@ export default function Contacts() {
             if (isMobile) {
               return (
                 <div key={c.id} onClick={() => openEdit(c)} style={{ padding: 'var(--kh-row-py, 12px) 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
-                  <div style={{ fontWeight: 700, fontSize: 13.5, color: theme.textPrimary }}>{c.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13.5, color: theme.textPrimary }}>{c.icon ? `${c.icon} ` : ''}{c.name}</div>
                   <div style={{ fontSize: 11.5, color: theme.textMuted }}>{[c.role, c.client?.name].filter(Boolean).join(' · ') || '—'}</div>
                 </div>
               );
             }
             return (
               <div key={c.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(c.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(c)}>
-                <div style={cell}><span style={{ color: theme.textPrimary, fontWeight: 600 }}>{c.name}</span></div>
+                <div style={cell}><span style={{ color: theme.textPrimary, fontWeight: 600 }}>{c.icon ? `${c.icon} ` : ''}{c.name}</span></div>
                 <div style={cell}>{c.role || '—'}</div>
                 <div style={cell}>{c.client?.name || '—'}</div>
                 <div style={cell}>{c.system?.name || '—'}</div>
@@ -175,9 +182,18 @@ export default function Contacts() {
               border: `1px solid ${theme.border}`, borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 17, fontWeight: 800 }}>{editing?.id ? editing.name : t('contacts.newContact')}</div>
-              <span onClick={closeModal} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1 }}>&times;</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                {editing?.id && (
+                  <IconPicker
+                    theme={theme} t={t} value={editing.icon} onChange={(icon) => setIcon(editing, icon)}
+                    size={32} fallback={<Icon name="idCard" size={16} color={theme.accentText} />}
+                    triggerStyle={{ background: theme.accentSoftBg }}
+                  />
+                )}
+                <div style={{ fontSize: 17, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{editing?.id ? editing.name : t('contacts.newContact')}</div>
+              </div>
+              <span onClick={closeModal} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1, flexShrink: 0 }}>&times;</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>

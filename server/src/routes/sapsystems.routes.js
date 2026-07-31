@@ -44,13 +44,14 @@ router.patch('/:id', async (req, res) => {
   const system = await prisma.sapSystem.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!system) return res.status(404).json({ error: 'System not found' });
 
-  const { name, clientId, sid, instanceNumber, saprouter, applicationServer, environment, url, notes, favorite } = req.body || {};
+  const { name, clientId, sid, instanceNumber, saprouter, applicationServer, environment, url, notes, favorite, icon } = req.body || {};
   if (clientId !== undefined && clientId) {
     const client = await prisma.client.findFirst({ where: { id: clientId, userId: req.effectiveUserId } });
     if (!client) return res.status(400).json({ error: 'Invalid clientId' });
   }
   const data = {};
   if (name !== undefined) data.name = name.trim() || system.name;
+  if (icon !== undefined) data.icon = icon || null;
   if (clientId !== undefined) data.clientId = clientId || null;
   if (sid !== undefined) data.sid = sid || null;
   if (instanceNumber !== undefined) data.instanceNumber = instanceNumber || null;

@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import IconPicker from '../components/IconPicker.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
 
 const STATUSES = ['Ativo', 'Pausado', 'Concluído'];
@@ -139,7 +140,7 @@ export default function Projects() {
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: `oklch(0.6 0.19 ${p.color || STATUS_HUES[p.status] || 250})`, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.icon ? `${p.icon} ` : ''}{p.name}</div>
                 <div style={{ fontSize: 11.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {p.company || t('projects.noCompany')}
                 </div>
@@ -160,6 +161,11 @@ export default function Projects() {
                   <Icon name="chevron" size={18} />
                 </span>
               )}
+              <IconPicker
+                theme={theme} t={t} value={selected.icon} onChange={(icon) => patch(selected.id, { icon })}
+                size={32} fallback={<Icon name="users" size={16} color={theme.accentText} />}
+                triggerStyle={{ background: theme.accentSoftBg }}
+              />
               <input
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}

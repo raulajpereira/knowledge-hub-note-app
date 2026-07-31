@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api, downloadBlob } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import IconPicker from '../components/IconPicker.jsx';
 import DateInput from '../components/DateInput.jsx';
 import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
@@ -419,6 +420,13 @@ export default function Documentacao() {
     }, 700);
   };
 
+  const setActiveDocIcon = async (icon) => {
+    setActiveDoc((prev) => ({ ...prev, icon }));
+    setDocuments((prev) => prev.map((d) => (d.id === selectedId ? { ...d, icon } : d)));
+    const { document } = await api.updateDocument(selectedId, { icon });
+    setActiveDoc((prev) => (prev?.id === document.id ? { ...prev, icon: document.icon } : prev));
+  };
+
   const removeDocument = async (id, e) => {
     e?.stopPropagation();
     const ok = await confirm({ message: t('common.confirmDeleteMessage') });
@@ -599,7 +607,7 @@ export default function Documentacao() {
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: theme.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.title || t('documentacao.untitled')}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: theme.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.icon ? `${d.icon} ` : ''}{d.title || t('documentacao.untitled')}</div>
                 <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 2 }}>{d.template?.name}</div>
                 <div style={{ marginTop: 5 }}>
                   <span style={{
@@ -635,6 +643,11 @@ export default function Documentacao() {
                     <Icon name="chevron" size={18} />
                   </span>
                 )}
+                <IconPicker
+                  theme={theme} t={t} value={activeDoc.icon} onChange={setActiveDocIcon}
+                  size={30} fallback={<Icon name="doc" size={15} color={theme.accentText} />}
+                  triggerStyle={{ background: theme.accentSoftBg }}
+                />
                 <input
                   value={activeDoc.title || ''}
                   onChange={(e) => renameActiveDoc(e.target.value)}

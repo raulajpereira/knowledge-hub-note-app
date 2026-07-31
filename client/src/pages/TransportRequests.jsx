@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import IconPicker from '../components/IconPicker.jsx';
 import DateInput from '../components/DateInput.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
@@ -99,6 +100,12 @@ export default function TransportRequests() {
 
   const closeModal = () => setEditing(null);
 
+  const setIcon = async (tr, icon) => {
+    const { transportRequest } = await api.updateTransportRequest(tr.id, { icon });
+    setItems((prev) => prev.map((x) => (x.id === transportRequest.id ? transportRequest : x)));
+    setEditing((prev) => (prev && prev.id === transportRequest.id ? { ...prev, icon: transportRequest.icon } : prev));
+  };
+
   const save = async () => {
     if (!form.code.trim()) return;
     setSaving(true);
@@ -191,7 +198,10 @@ export default function TransportRequests() {
               return (
                 <div key={tr.id} onClick={() => openEdit(tr)} style={{ padding: 'var(--kh-row-py, 12px) 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12.5, color: theme.accentText, background: theme.accentSoftBg, padding: '3px 8px', borderRadius: 6 }}>{tr.code}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {tr.icon && <span>{tr.icon}</span>}
+                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12.5, color: theme.accentText, background: theme.accentSoftBg, padding: '3px 8px', borderRadius: 6 }}>{tr.code}</span>
+                    </span>
                     {tr.project && <span style={{ fontSize: 11, color: theme.textMuted }}>{tr.project.name}</span>}
                   </div>
                   <div style={{ fontSize: 12, color: theme.textPrimary }}>{tr.description}</div>
@@ -202,7 +212,10 @@ export default function TransportRequests() {
             return (
               <div key={tr.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(tr.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(tr)}>
                 <div style={cell}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12.5, color: theme.accentText, background: theme.accentSoftBg, padding: '3px 8px', borderRadius: 6 }}>{tr.code}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {tr.icon && <span>{tr.icon}</span>}
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12.5, color: theme.accentText, background: theme.accentSoftBg, padding: '3px 8px', borderRadius: 6 }}>{tr.code}</span>
+                  </span>
                 </div>
                 <div style={{ ...cell, whiteSpace: 'normal' }}><span style={{ color: theme.textPrimary }}>{tr.description}</span></div>
                 <div style={cell}>{tr.project?.name || '—'}</div>
@@ -223,9 +236,18 @@ export default function TransportRequests() {
               border: `1px solid ${theme.border}`, borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 17, fontWeight: 800 }}>{editing?.id ? editing.code : t('transportRequests.newTransport')}</div>
-              <span onClick={closeModal} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1 }}>&times;</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                {editing?.id && (
+                  <IconPicker
+                    theme={theme} t={t} value={editing.icon} onChange={(icon) => setIcon(editing, icon)}
+                    size={32} fallback={<Icon name="truck" size={16} color={theme.accentText} />}
+                    triggerStyle={{ background: theme.accentSoftBg }}
+                  />
+                )}
+                <div style={{ fontSize: 17, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{editing?.id ? editing.code : t('transportRequests.newTransport')}</div>
+              </div>
+              <span onClick={closeModal} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1, flexShrink: 0 }}>&times;</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>

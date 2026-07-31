@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import IconPicker from '../components/IconPicker.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 
@@ -129,6 +130,12 @@ export default function SapSystems() {
     setSystems((prev) => prev.map((x) => (x.id === system.id ? system : x)));
   };
 
+  const setIcon = async (s, icon) => {
+    const { system } = await api.updateSapSystem(s.id, { icon });
+    setSystems((prev) => prev.map((x) => (x.id === system.id ? system : x)));
+    setEditing((prev) => (prev && prev.id === system.id ? { ...prev, icon: system.icon } : prev));
+  };
+
   return (
     <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16, minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -169,7 +176,7 @@ export default function SapSystems() {
               return (
                 <div key={s.id} onClick={() => openEdit(s)} style={{ padding: 'var(--kh-row-py, 12px) 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 700, fontSize: 13.5, color: theme.textPrimary }}>{s.name}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13.5, color: theme.textPrimary }}>{s.icon ? `${s.icon} ` : ''}{s.name}</span>
                     <EnvBadge env={s.environment} />
                   </div>
                   <div style={{ fontSize: 11.5, color: theme.textMuted }}>{s.client?.name || '—'}{s.sid ? ` · ${s.sid}` : ''}</div>
@@ -178,7 +185,7 @@ export default function SapSystems() {
             }
             return (
               <div key={s.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(s.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(s)}>
-                <div style={cell}><span style={{ color: theme.textPrimary, fontWeight: 600 }}>{s.name}</span></div>
+                <div style={cell}><span style={{ color: theme.textPrimary, fontWeight: 600 }}>{s.icon ? `${s.icon} ` : ''}{s.name}</span></div>
                 <div style={cell}>{s.client?.name || '—'}</div>
                 <div style={{ ...cell, fontFamily: 'var(--font-mono)' }}>{s.sid || '—'}</div>
                 <div style={cell}><EnvBadge env={s.environment} /></div>
@@ -202,9 +209,18 @@ export default function SapSystems() {
               border: `1px solid ${theme.border}`, borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 17, fontWeight: 800 }}>{editing?.id ? editing.name : t('sapSystems.newSystem')}</div>
-              <span onClick={closeModal} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1 }}>&times;</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                {editing?.id && (
+                  <IconPicker
+                    theme={theme} t={t} value={editing.icon} onChange={(icon) => setIcon(editing, icon)}
+                    size={32} fallback={<Icon name="server" size={16} color={theme.accentText} />}
+                    triggerStyle={{ background: theme.accentSoftBg }}
+                  />
+                )}
+                <div style={{ fontSize: 17, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{editing?.id ? editing.name : t('sapSystems.newSystem')}</div>
+              </div>
+              <span onClick={closeModal} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 20, lineHeight: 1, flexShrink: 0 }}>&times;</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>

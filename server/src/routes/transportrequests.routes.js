@@ -54,7 +54,7 @@ router.patch('/:id', async (req, res) => {
   const tr = await prisma.transportRequest.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!tr) return res.status(404).json({ error: 'Transport request not found' });
 
-  const { code, description, projectId, systemId, environment, liberada, transportQas, transportPrd, plannedDate, notes } = req.body || {};
+  const { code, description, projectId, systemId, environment, liberada, transportQas, transportPrd, plannedDate, notes, icon } = req.body || {};
   if (projectId !== undefined && projectId) {
     const project = await prisma.project.findFirst({ where: { id: projectId, userId: req.effectiveUserId } });
     if (!project) return res.status(400).json({ error: 'Invalid projectId' });
@@ -65,6 +65,7 @@ router.patch('/:id', async (req, res) => {
   }
   const data = {};
   if (code !== undefined) data.code = code.trim() || tr.code;
+  if (icon !== undefined) data.icon = icon || null;
   if (description !== undefined) data.description = description || '';
   if (projectId !== undefined) data.projectId = projectId || null;
   if (systemId !== undefined) data.systemId = systemId || null;
