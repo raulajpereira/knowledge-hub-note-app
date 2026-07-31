@@ -10,6 +10,7 @@ import { useIsMobile } from '../lib/useIsMobile.js';
 import Icon from './Icon.jsx';
 import AgentChatWidget from './AgentChatWidget.jsx';
 import AccountModal from './AccountModal.jsx';
+import AboutModal from './AboutModal.jsx';
 import HeaderSearch from './HeaderSearch.jsx';
 import TransactionsQuickSearch from './TransactionsQuickSearch.jsx';
 import NewsTicker from './NewsTicker.jsx';
@@ -38,6 +39,7 @@ export default function AppLayout() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
@@ -160,12 +162,13 @@ export default function AppLayout() {
             onClick={toggleSidebarCollapsed}
             title={sidebarCollapsed ? t('sidebarSettings.expand') : t('sidebarSettings.collapse')}
             style={{
-              display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: theme.textMuted,
-              justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '6px' : '6px 4px', marginTop: -12,
+              display: 'flex', alignItems: 'center', cursor: 'pointer', color: theme.textMuted, opacity: 0.5,
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-end', padding: sidebarCollapsed ? '6px' : '6px 2px', marginTop: -12,
             }}
           >
-            <Icon name="sidebar" size={16} />
-            {!sidebarCollapsed && <span style={{ fontSize: 12, fontWeight: 600 }}>{t('sidebarSettings.collapse')}</span>}
+            <span style={{ display: 'flex', transform: sidebarCollapsed ? 'none' : 'rotate(180deg)', transition: 'transform 0.15s' }}>
+              <Icon name="chevron" size={15} strokeWidth={2.2} />
+            </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -259,6 +262,16 @@ export default function AppLayout() {
                 </span>
                 {!sidebarCollapsed && <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('nav.settings')}</span>}
               </NavLink>
+              <div
+                onClick={() => setAboutOpen(true)}
+                title={sidebarCollapsed ? t('settings.about') : undefined}
+                style={navItemStyle(false)}
+              >
+                <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="external" size={18} />
+                </span>
+                {!sidebarCollapsed && <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t('settings.about')}</span>}
+              </div>
 
               <div
                 onClick={() => setAccountOpen(true)}
@@ -503,6 +516,7 @@ export default function AppLayout() {
       )}
 
       {accountOpen && <AccountModal onClose={() => setAccountOpen(false)} />}
+      {aboutOpen && <AboutModal theme={theme} t={t} lang={lang} onClose={() => setAboutOpen(false)} />}
 
       <AgentChatWidget />
     </div>

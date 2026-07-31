@@ -354,7 +354,7 @@ export default function Home() {
 
     myTasks: (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingRight: 22 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.myTasks')}</div>
           <a onClick={() => navigate('/tasks')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
             {t('home.seeAll')}
@@ -436,7 +436,7 @@ export default function Home() {
 
     recentNotes: (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingRight: 22 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.recentNotes')}</div>
           <a onClick={() => navigate('/notes')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
             {t('home.seeAll')}
@@ -563,7 +563,7 @@ export default function Home() {
 
     sapNewsTeaser: (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingRight: 22 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{t('home.sapNewsTeaser')}</div>
           <a onClick={() => navigate('/sap-news')} style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer', color: theme.accentText }}>
             {t('home.seeAll')}
