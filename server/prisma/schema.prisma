@@ -603,23 +603,27 @@ model Client {
   @@map("clients")
 }
 
-// A single SAP system/environment in a client's landscape (e.g. "S/4HANA
-// Produção", SID "PS1", mandante "100"). `environment` is free text so it
-// isn't locked to DEV/QAS/PRD when a client's landscape uses more stages.
+// A single SAP system/environment in a client's landscape. The connection
+// fields (sid, instanceNumber, saprouter, applicationServer) mirror SAP
+// GUI's own "System Entry" dialog; `url` is for web-based systems that don't
+// use that dialog at all (SuccessFactors, Fiori launchpads, ...). `environment`
+// is free text so it isn't locked to DEV/QAS/PRD when a client's landscape
+// uses more stages.
 model SapSystem {
-  id          String   @id @default(uuid())
-  userId      String
-  clientId    String?
-  name        String
-  sid         String?
-  mandante    String?
-  environment String   @default("PRD")
-  module      String?
-  url         String?  @db.Text
-  notes       String?  @db.Text
-  favorite    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(uuid())
+  userId            String
+  clientId          String?
+  name              String // "Descrição" — e.g. "ECP - DEV"
+  sid               String? // "ID sist." — 3-char system ID, e.g. "JOG"
+  instanceNumber    String? // "Nº da instância" — e.g. "00"
+  saprouter         String? @db.Text // "Cadeia de SAProuter"
+  applicationServer String? // "Servidor de aplicação" — e.g. "vaciJOG"
+  environment       String   @default("PRD")
+  url               String?  @db.Text // web-based systems without SAP GUI connection params (SuccessFactors, Fiori, ...)
+  notes             String?  @db.Text
+  favorite          Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   client            Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)

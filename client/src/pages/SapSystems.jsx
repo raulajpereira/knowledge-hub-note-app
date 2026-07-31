@@ -35,7 +35,10 @@ function EnvBadge({ env }) {
   );
 }
 
-const emptyForm = { name: '', clientId: '', sid: '', mandante: '', environment: 'PRD', module: '', url: '', notes: '', favorite: false };
+const emptyForm = {
+  name: '', clientId: '', sid: '', instanceNumber: '', saprouter: '', applicationServer: '',
+  environment: 'PRD', url: '', notes: '', favorite: false,
+};
 
 export default function SapSystems() {
   const { theme } = useTheme();
@@ -73,7 +76,11 @@ export default function SapSystems() {
   };
 
   const openEdit = (s) => {
-    setForm({ name: s.name, clientId: s.clientId || '', sid: s.sid || '', mandante: s.mandante || '', environment: s.environment, module: s.module || '', url: s.url || '', notes: s.notes || '', favorite: s.favorite });
+    setForm({
+      name: s.name, clientId: s.clientId || '', sid: s.sid || '', instanceNumber: s.instanceNumber || '',
+      saprouter: s.saprouter || '', applicationServer: s.applicationServer || '', environment: s.environment,
+      url: s.url || '', notes: s.notes || '', favorite: s.favorite,
+    });
     setEditing(s);
   };
 
@@ -140,7 +147,7 @@ export default function SapSystems() {
 
       <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflow: 'auto' }}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr 0.7fr 0.7fr 1fr 1fr 40px', minWidth: '100%' }}>
-          {!isMobile && ['sapSystems.colName', 'sapSystems.colClient', 'sapSystems.colSid', 'sapSystems.colEnv', 'sapSystems.colModule', 'sapSystems.colMandante', ''].map((k, i) => (
+          {!isMobile && ['sapSystems.colName', 'sapSystems.colClient', 'sapSystems.colSid', 'sapSystems.colEnv', 'sapSystems.colAppServer', 'sapSystems.colInstance', ''].map((k, i) => (
             <div key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg }}>
               {k ? t(k) : ''}
             </div>
@@ -165,8 +172,8 @@ export default function SapSystems() {
                 <div style={cell}>{s.client?.name || '—'}</div>
                 <div style={{ ...cell, fontFamily: 'var(--font-mono)' }}>{s.sid || '—'}</div>
                 <div style={cell}><EnvBadge env={s.environment} /></div>
-                <div style={cell}>{s.module || '—'}</div>
-                <div style={cell}>{s.mandante || '—'}</div>
+                <div style={{ ...cell, fontFamily: 'var(--font-mono)' }}>{s.applicationServer || '—'}</div>
+                <div style={{ ...cell, fontFamily: 'var(--font-mono)' }}>{s.instanceNumber || '—'}</div>
                 <div style={{ ...cell, textAlign: 'center' }} onClick={(e) => toggleFavorite(s, e)}>
                   <Icon name={s.favorite ? 'bookmarkFilled' : 'bookmark'} size={14} color={s.favorite ? theme.accentText : theme.textMuted} />
                 </div>
@@ -191,23 +198,11 @@ export default function SapSystems() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <Field label={t('sapSystems.fieldName')} theme={theme}>
-                <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('sapSystems.fieldNamePlaceholder')} style={inputStyle(theme)} />
-              </Field>
               <Field label={t('sapSystems.fieldClient')} theme={theme}>
                 <select value={form.clientId} onChange={(e) => setForm((f) => ({ ...f, clientId: e.target.value }))} style={inputStyle(theme)}>
                   <option value="">{t('sapSystems.fieldClientNone')}</option>
                   {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
-              </Field>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-              <Field label={t('sapSystems.fieldSid')} theme={theme}>
-                <input value={form.sid} onChange={(e) => setForm((f) => ({ ...f, sid: e.target.value }))} placeholder="PS1" style={{ ...inputStyle(theme), fontFamily: 'var(--font-mono)' }} />
-              </Field>
-              <Field label={t('sapSystems.fieldMandante')} theme={theme}>
-                <input value={form.mandante} onChange={(e) => setForm((f) => ({ ...f, mandante: e.target.value }))} placeholder="100" style={{ ...inputStyle(theme), fontFamily: 'var(--font-mono)' }} />
               </Field>
               <Field label={t('sapSystems.fieldEnv')} theme={theme}>
                 <select value={form.environment} onChange={(e) => setForm((f) => ({ ...f, environment: e.target.value }))} style={inputStyle(theme)}>
@@ -216,9 +211,31 @@ export default function SapSystems() {
               </Field>
             </div>
 
-            <Field label={t('sapSystems.fieldModule')} theme={theme}>
-              <input value={form.module} onChange={(e) => setForm((f) => ({ ...f, module: e.target.value }))} placeholder={t('sapSystems.fieldModulePlaceholder')} style={inputStyle(theme)} />
+            <div style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>
+              {t('sapSystems.connectionParamsTitle')}
+            </div>
+
+            <Field label={t('sapSystems.fieldName')} theme={theme}>
+              <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('sapSystems.fieldNamePlaceholder')} style={inputStyle(theme)} />
             </Field>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <Field label={t('sapSystems.fieldSid')} theme={theme}>
+                <input value={form.sid} onChange={(e) => setForm((f) => ({ ...f, sid: e.target.value }))} placeholder="JOG" style={{ ...inputStyle(theme), fontFamily: 'var(--font-mono)' }} />
+              </Field>
+              <Field label={t('sapSystems.fieldInstanceNumber')} theme={theme}>
+                <input value={form.instanceNumber} onChange={(e) => setForm((f) => ({ ...f, instanceNumber: e.target.value }))} placeholder="00" style={{ ...inputStyle(theme), fontFamily: 'var(--font-mono)' }} />
+              </Field>
+            </div>
+
+            <Field label={t('sapSystems.fieldApplicationServer')} theme={theme}>
+              <input value={form.applicationServer} onChange={(e) => setForm((f) => ({ ...f, applicationServer: e.target.value }))} placeholder="vaciJOG" style={{ ...inputStyle(theme), fontFamily: 'var(--font-mono)' }} />
+            </Field>
+
+            <Field label={t('sapSystems.fieldSaprouter')} theme={theme}>
+              <input value={form.saprouter} onChange={(e) => setForm((f) => ({ ...f, saprouter: e.target.value }))} placeholder={t('sapSystems.fieldSaprouterPlaceholder')} style={{ ...inputStyle(theme), fontFamily: 'var(--font-mono)' }} />
+            </Field>
+
             <Field label={t('sapSystems.fieldUrl')} theme={theme}>
               <input value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} placeholder={t('sapSystems.fieldUrlPlaceholder')} style={inputStyle(theme)} />
             </Field>
