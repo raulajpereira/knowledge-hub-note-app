@@ -868,27 +868,31 @@ function AgentRow({ agent, theme, t }) {
   );
 }
 
-function SettingsGroup({ theme, title, description, defaultOpen, children }) {
-  const [open, setOpen] = useState(!!defaultOpen);
+function TabBar({ theme, tabs, active, onChange, isMobile }) {
   return (
-    <div style={{ border: `1px solid ${theme.border}`, borderRadius: 14, background: theme.cardBg, overflow: 'hidden' }}>
-      <div
-        onClick={() => setOpen((v) => !v)}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '18px 22px', cursor: 'pointer' }}
-      >
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 800 }}>{title}</div>
-          {description && <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 2 }}>{description}</div>}
-        </div>
-        <span style={{ display: 'flex', flexShrink: 0, color: theme.textMuted, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
-          <Icon name="chevron" size={16} />
-        </span>
-      </div>
-      {open && (
-        <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {children}
-        </div>
-      )}
+    <div
+      style={{
+        display: 'flex', gap: isMobile ? 18 : 28, borderBottom: `1px solid ${theme.border}`,
+        overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+      }}
+    >
+      {tabs.map((tab) => {
+        const isActive = tab.id === active;
+        return (
+          <div
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            style={{
+              padding: '11px 2px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+              color: isActive ? theme.textPrimary : theme.textMuted,
+              borderBottom: `2px solid ${isActive ? theme.accent : 'transparent'}`,
+              transition: 'color 0.15s, border-color 0.15s',
+            }}
+          >
+            {tab.label}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -908,6 +912,7 @@ export default function Settings() {
   const [newAgentToken, setNewAgentToken] = useState('');
   const [aboutOpen, setAboutOpen] = useState(false);
   const [sidebarSettingsOpen, setSidebarSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('appearance');
 
   const openNewAgent = () => {
     setNewAgentName('');
@@ -961,11 +966,21 @@ export default function Settings() {
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isSuperAdmin = user?.role === 'super_admin';
 
+  const TABS = [
+    { id: 'appearance', label: t('settings.groupAppearance') },
+    { id: 'account', label: t('settings.groupAccount') },
+    { id: 'integrations', label: t('settings.groupIntegrations') },
+    { id: 'team', label: isAdmin ? t('settings.groupTeamAdmin') : t('settings.groupTeam') },
+  ];
+
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', width: '100%', padding: isMobile ? 14 : 28, display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20 }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', width: '100%', padding: isMobile ? 14 : 28, display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20 }}>
       <div style={{ fontSize: 22, fontWeight: 800 }}>{t('settings.title')}</div>
 
-      <SettingsGroup theme={theme} title={t('settings.groupAppearance')} description={t('settings.groupAppearanceDesc')} defaultOpen>
+      <TabBar theme={theme} tabs={TABS} active={activeTab} onChange={setActiveTab} isMobile={isMobile} />
+
+      {activeTab === 'appearance' && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={nestedCard}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.appearance')}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -995,12 +1010,12 @@ export default function Settings() {
           </div>
           <ColorWheel hue={theme.hue} onChange={setAccentHue} title={t('settings.colorWheelHint')} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
             <div style={{ fontSize: 13.5, fontWeight: 600 }}>{t('settings.font')}</div>
             <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.fontDesc')}</div>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {FONT_OPTIONS.map((f) => {
               const active = (fontFamily || 'inter') === f.id;
               return (
@@ -1131,9 +1146,25 @@ export default function Settings() {
           </div>
         </div>
       </div>
-      </SettingsGroup>
 
-      <SettingsGroup theme={theme} title={t('settings.groupAccount')} description={t('settings.groupAccountDesc')}>
+      <div
+        onClick={() => setSidebarSettingsOpen(true)}
+        style={{ ...nestedCard, flexDirection: 'row', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+      >
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: theme.cardBg, border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon name="sidebar" size={17} color={theme.textPrimary} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 700 }}>{t('sidebarSettings.sectionTitle')}</div>
+          <div style={{ fontSize: 12, color: theme.textMuted }}>{t('sidebarSettings.sectionSubtitle')}</div>
+        </div>
+        <Icon name="external" size={15} color={theme.textMuted} />
+      </div>
+      </div>
+      )}
+
+      {activeTab === 'account' && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={nestedCard}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.vault')}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -1174,9 +1205,11 @@ export default function Settings() {
           </select>
         </div>
       </div>
-      </SettingsGroup>
+      </div>
+      )}
 
-      <SettingsGroup theme={theme} title={t('settings.groupIntegrations')} description={t('settings.groupIntegrationsDesc')}>
+      {activeTab === 'integrations' && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <VpsCard theme={theme} t={t} card={nestedCard} user={user} refreshMe={refreshMe} />
 
       <div style={nestedCard}>
@@ -1197,13 +1230,11 @@ export default function Settings() {
           <AgentRow key={agent.id} agent={agent} theme={theme} t={t} />
         ))}
       </div>
-      </SettingsGroup>
+      </div>
+      )}
 
-      <SettingsGroup
-        theme={theme}
-        title={isAdmin ? t('settings.groupTeamAdmin') : t('settings.groupTeam')}
-        description={isAdmin ? t('settings.groupTeamAdminDesc') : t('settings.groupTeamDesc')}
-      >
+      {activeTab === 'team' && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <TeamCard theme={theme} t={t} card={nestedCard} outlineButton={outlineButton} />
 
       {isAdmin && (
@@ -1213,21 +1244,8 @@ export default function Settings() {
         </>
       )}
       {isSuperAdmin && <AuditLogCard theme={theme} t={t} card={nestedCard} />}
-      </SettingsGroup>
-
-      <div
-        onClick={() => setSidebarSettingsOpen(true)}
-        style={{ ...card, flexDirection: 'row', alignItems: 'center', gap: 14, cursor: 'pointer', padding: 18 }}
-      >
-        <div style={{ width: 38, height: 38, borderRadius: 10, background: theme.subtleBg, border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Icon name="sidebar" size={17} color={theme.textPrimary} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 700 }}>{t('sidebarSettings.sectionTitle')}</div>
-          <div style={{ fontSize: 12, color: theme.textMuted }}>{t('sidebarSettings.sectionSubtitle')}</div>
-        </div>
-        <Icon name="external" size={15} color={theme.textMuted} />
       </div>
+      )}
 
       {sidebarSettingsOpen && (
         <SidebarSettingsModal theme={theme} t={t} lang={lang} onClose={() => setSidebarSettingsOpen(false)} />
