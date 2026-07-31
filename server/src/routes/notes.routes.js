@@ -138,7 +138,7 @@ router.patch('/:id', async (req, res) => {
   const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!note) return res.status(404).json({ error: 'Note not found' });
 
-  const { title, content, blocks, folderId, tags, links, pinned, icon } = req.body || {};
+  const { title, content, blocks, folderId, tags, links, pinned, icon, coverUrl } = req.body || {};
   const data = {};
   if (title !== undefined) data.title = title.trim() || 'Untitled note';
   if (content !== undefined) data.content = content;
@@ -148,6 +148,7 @@ router.patch('/:id', async (req, res) => {
   if (links !== undefined) data.links = Array.isArray(links) ? links : [];
   if (pinned !== undefined) data.pinned = !!pinned;
   if (icon !== undefined) data.icon = icon || null;
+  if (coverUrl !== undefined) data.coverUrl = coverUrl || null;
 
   const contentChanged = data.title !== undefined || data.content !== undefined || data.blocks !== undefined;
   if (contentChanged) {

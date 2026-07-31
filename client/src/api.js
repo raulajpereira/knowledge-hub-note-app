@@ -184,6 +184,11 @@ export const api = {
   createProject: (payload) => request('/projects', { method: 'POST', body: payload }),
   updateProject: (id, payload) => request(`/projects/${id}`, { method: 'PATCH', body: payload }),
   deleteProject: (id) => request(`/projects/${id}`, { method: 'DELETE' }),
+  uploadProjectCover: (file) => {
+    const form = new FormData();
+    form.append('image', file);
+    return request('/projects/covers', { method: 'POST', body: form, isForm: true });
+  },
   updateIssue: (id, payload) => request(`/issues/${id}`, { method: 'PATCH', body: payload }),
   deleteIssue: (id) => request(`/issues/${id}`, { method: 'DELETE' }),
 

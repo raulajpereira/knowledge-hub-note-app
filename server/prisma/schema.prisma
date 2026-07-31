@@ -78,6 +78,7 @@ model Project {
   userId      String
   name        String
   icon        String? // emoji shown next to the project's name (Notion-style), null = default type icon
+  coverUrl    String?   @db.Text // optional banner image shown above the name; never a default, purely opt-in
   scope       String?   @db.Text // "Âmbito"
   description String?   @db.Text
   company     String?
@@ -168,6 +169,7 @@ model Note {
   folderId  String?
   parentNoteId String? // set = this note is a nested "page" living inside another note
   icon      String? // emoji shown next to the note's title (Notion-style), null = default note icon
+  coverUrl  String? @db.Text // optional banner image shown above the title; never a default, purely opt-in
   title     String
   content   String    @db.LongText
   blocks    Json?

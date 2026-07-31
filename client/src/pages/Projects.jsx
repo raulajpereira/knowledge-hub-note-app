@@ -92,6 +92,14 @@ export default function Projects() {
     if (selected) patch(selected.id, { contacts: next });
   };
 
+  const onCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !selected) return;
+    const { url } = await api.uploadProjectCover(file);
+    await patch(selected.id, { coverUrl: url });
+  };
+
   const addProject = async () => {
     const { project } = await api.createProject({ name: t('projects.untitled') });
     setProjects((prev) => [project, ...prev]);
@@ -155,6 +163,28 @@ export default function Projects() {
       <div style={{ flex: isMobile ? '1 1 auto' : '1 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {selected ? (
           <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 16 : 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
+            {selected.coverUrl ? (
+              <div style={{ position: 'relative', margin: isMobile ? '-16px -16px 0' : '-24px -24px 0', borderRadius: '14px 14px 0 0', overflow: 'hidden', height: 180, flexShrink: 0 }}>
+                <img src={selected.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 6 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: 7, padding: '6px 10px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+                    {t('common.changeCover')}
+                    <input type="file" accept="image/*" onChange={onCoverUpload} style={{ display: 'none' }} />
+                  </label>
+                  <span
+                    onClick={() => patch(selected.id, { coverUrl: null })}
+                    style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: 7, padding: '6px 10px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {t('common.removeCover')}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <label style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: theme.textMuted, cursor: 'pointer' }}>
+                <Icon name="plus" size={12} /> {t('common.addCover')}
+                <input type="file" accept="image/*" onChange={onCoverUpload} style={{ display: 'none' }} />
+              </label>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {isMobile && (
                 <span onClick={() => setSelectedId(null)} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>

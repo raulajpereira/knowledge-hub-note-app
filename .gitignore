@@ -24,6 +24,12 @@ server/uploads/password-icons/*
 !server/uploads/documentacao/
 server/uploads/documentacao/*
 !server/uploads/documentacao/.gitkeep
+!server/uploads/favicons/
+server/uploads/favicons/*
+!server/uploads/favicons/.gitkeep
+!server/uploads/project-covers/
+server/uploads/project-covers/*
+!server/uploads/project-covers/.gitkeep
 *.log
 .DS_Store
 .scratch-test/
