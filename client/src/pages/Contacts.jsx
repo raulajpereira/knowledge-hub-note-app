@@ -16,10 +16,20 @@ function Field({ label, children, theme }) {
   );
 }
 
+// Native <option> elements are rendered by the OS/browser chrome, not by our
+// theme — without an explicit color/background they inherit the (light in
+// dark mode) text color onto the browser's own (usually white) dropdown
+// popup background, making them unreadable.
+const optionStyle = { color: '#1a1a1a', background: '#fff' };
+
 function inputStyle(theme) {
   return {
     border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg,
     color: theme.textPrimary, outline: 'none', width: '100%', boxSizing: 'border-box',
+    // Without this, native <select> dropdown popups render with the OS's
+    // default light background while inheriting our light `color` text —
+    // unreadable white-on-white in dark mode.
+    colorScheme: theme.dark ? 'dark' : 'light',
   };
 }
 
@@ -182,14 +192,14 @@ export default function Contacts() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <Field label={t('contacts.fieldClient')} theme={theme}>
                 <select value={form.clientId} onChange={(e) => setForm((f) => ({ ...f, clientId: e.target.value, systemId: '' }))} style={inputStyle(theme)}>
-                  <option value="">{t('contacts.fieldClientNone')}</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="" style={optionStyle}>{t('contacts.fieldClientNone')}</option>
+                  {clients.map((c) => <option key={c.id} value={c.id} style={optionStyle}>{c.name}</option>)}
                 </select>
               </Field>
               <Field label={t('contacts.fieldSystem')} theme={theme}>
                 <select value={form.systemId} onChange={(e) => setForm((f) => ({ ...f, systemId: e.target.value }))} style={inputStyle(theme)}>
-                  <option value="">{t('contacts.fieldSystemNone')}</option>
-                  {systemsForClient(form.clientId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  <option value="" style={optionStyle}>{t('contacts.fieldSystemNone')}</option>
+                  {systemsForClient(form.clientId).map((s) => <option key={s.id} value={s.id} style={optionStyle}>{s.name}</option>)}
                 </select>
               </Field>
             </div>

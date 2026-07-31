@@ -20,6 +20,10 @@ function inputStyle(theme) {
   return {
     border: `1px solid ${theme.border}`, borderRadius: 8, padding: '9px 11px', fontSize: 13, background: theme.subtleBg,
     color: theme.textPrimary, outline: 'none', width: '100%', boxSizing: 'border-box',
+    // Without this, native <select> dropdown popups render with the OS's
+    // default light background while inheriting our light `color` text —
+    // unreadable white-on-white in dark mode.
+    colorScheme: theme.dark ? 'dark' : 'light',
   };
 }
 

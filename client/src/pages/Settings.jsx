@@ -531,10 +531,13 @@ function AuditLogCard({ theme, t, card }) {
         <select
           value={entityType}
           onChange={(e) => setEntityType(e.target.value)}
-          style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+          style={{
+            border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12, background: theme.subtleBg,
+            color: theme.textPrimary, outline: 'none', colorScheme: theme.dark ? 'dark' : 'light',
+          }}
         >
-          <option value="">{t('settings.auditLogAllTypes')}</option>
-          {entityTypes.map((e) => <option key={e} value={e}>{e}</option>)}
+          <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('settings.auditLogAllTypes')}</option>
+          {entityTypes.map((e) => <option key={e} value={e} style={{ color: '#1a1a1a', background: '#fff' }}>{e}</option>)}
         </select>
       </div>
 
