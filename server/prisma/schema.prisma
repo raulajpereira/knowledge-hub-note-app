@@ -239,6 +239,7 @@ model VoiceNote {
   title     String
   audioUrl  String
   duration  Int      @default(0)
+  source    String   @default("mic") // "mic" | "system" — which input was captured
   notes     String?  @db.Text
   favorite  Boolean  @default(false)
   deletedAt DateTime?

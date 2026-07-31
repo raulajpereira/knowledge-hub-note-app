@@ -141,11 +141,12 @@ export const api = {
   deleteTag: (id) => request(`/tags/${id}`, { method: 'DELETE' }),
 
   listVoiceNotes: (trashed = false) => request(`/voice${trashed ? '?trashed=true' : ''}`),
-  uploadVoiceNote: (blob, title, duration) => {
+  uploadVoiceNote: (blob, title, duration, source = 'mic') => {
     const form = new FormData();
     form.append('audio', blob, 'recording.webm');
     form.append('title', title);
     form.append('duration', String(duration));
+    form.append('source', source);
     return request('/voice', { method: 'POST', body: form, isForm: true });
   },
   updateVoiceNote: (id, payload) => request(`/voice/${id}`, { method: 'PATCH', body: payload }),

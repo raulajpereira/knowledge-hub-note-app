@@ -176,6 +176,10 @@ const PATHS = {
     ['path', { d: 'M5 16c0-1.8 1.4-3 3-3s3 1.2 3 3' }],
     ['path', { d: 'M14 9.5h4.5M14 13h4.5' }],
   ],
+  monitor: [
+    ['rect', { x: 3, y: 4, width: 18, height: 12.5, rx: 1.5 }],
+    ['path', { d: 'M8.5 20h7M12 16.5V20' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

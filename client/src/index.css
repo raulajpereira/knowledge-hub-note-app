@@ -73,3 +73,11 @@ input, textarea { font-family: inherit; }
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+@keyframes kh-rec-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.7); opacity: 0.35; }
+}
+@keyframes kh-wave-bounce {
+  0%, 100% { transform: scaleY(0.28); }
+  50% { transform: scaleY(1); }
+}

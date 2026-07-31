@@ -37,6 +37,7 @@ export default function Voice() {
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
   const [recording, setRecording] = useState(false);
+  const [recordSource, setRecordSource] = useState(null); // 'mic' | 'system' while recording
   const [elapsed, setElapsed] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -95,10 +96,30 @@ export default function Voice() {
     setTitleDraft(voiceNote.title);
   };
 
-  const startRecording = async () => {
+  // source: 'mic' uses the normal microphone capture; 'system' asks for a
+  // screen/tab/window share and keeps only its audio track (video is closed
+  // immediately, never recorded) — the only way browsers expose "audio
+  // that's playing on the PC" without native OS-level tooling.
+  const startRecording = async (source) => {
     setError('');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      let stream;
+      if (source === 'system') {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        displayStream.getVideoTracks().forEach((track) => track.stop());
+        const audioTracks = displayStream.getAudioTracks();
+        if (audioTracks.length === 0) {
+          displayStream.getTracks().forEach((track) => track.stop());
+          setError(t('voice.systemAudioNoTrack'));
+          return;
+        }
+        stream = new MediaStream(audioTracks);
+        // The browser's own "Stop sharing" bar can end the share without
+        // going through our stop button — react to that too.
+        audioTracks[0].addEventListener('ended', () => stopRecording());
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
       const recorder = new MediaRecorder(stream);
       chunksRef.current = [];
       recorder.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data);
@@ -107,7 +128,7 @@ export default function Voice() {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const duration = Math.round((Date.now() - startRef.current) / 1000);
         const title = `Recording ${new Date().toLocaleString()}`;
-        const { voiceNote } = await api.uploadVoiceNote(blob, title, duration);
+        const { voiceNote } = await api.uploadVoiceNote(blob, title, duration, source);
         setVoiceNotes((prev) => [voiceNote, ...prev]);
         setSelectedId(voiceNote.id);
         refreshCounts();
@@ -118,15 +139,17 @@ export default function Voice() {
       setElapsed(0);
       timerRef.current = setInterval(() => setElapsed(Math.round((Date.now() - startRef.current) / 1000)), 250);
       setRecording(true);
+      setRecordSource(source);
     } catch (err) {
-      setError(t('voice.micDenied'));
+      setError(source === 'system' ? t('voice.systemAudioDenied') : t('voice.micDenied'));
     }
   };
 
   const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
     clearInterval(timerRef.current);
     setRecording(false);
+    setRecordSource(null);
   };
 
   const patch = async (id, payload) => {
@@ -188,22 +211,75 @@ export default function Voice() {
 
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
+  const sourceLabel = { mic: t('voice.sourceMic'), system: t('voice.sourceSystem') };
+  const sourceIcon = { mic: 'mic', system: 'monitor' };
+
+  const sourceButtonStyle = {
+    display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.3)',
+    color: '#fff', borderRadius: 11, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', flex: '1 1 160px',
+    justifyContent: 'center', transition: 'background 0.15s, transform 0.1s',
+  };
+
   const recordBanner = (
-    <div style={{ background: `linear-gradient(135deg, ${theme.accentDark}, ${theme.accent})`, borderRadius: 16, padding: 24, display: 'flex', alignItems: 'center', gap: 20, color: '#fff' }}>
-      <button
-        onClick={recording ? stopRecording : startRecording}
-        style={{
-          width: 64, height: 64, borderRadius: '50%', background: recording ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.2)',
-          border: recording ? '2px solid #fff' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
-        }}
-      >
-        <Icon name={recording ? 'check' : 'mic'} size={26} color="#fff" />
-      </button>
-      <div>
-        <div style={{ fontWeight: 800, fontSize: 16 }}>{recording ? t('voice.recording') : t('voice.tapToRecord')}</div>
-        <div style={{ fontSize: 13, opacity: 0.85 }}>{recording ? formatDuration(elapsed) : t('voice.captureMemo')}</div>
-        {error && <div style={{ fontSize: 12, marginTop: 4, color: '#fff' }}>{error}</div>}
-      </div>
+    <div
+      style={{
+        position: 'relative', overflow: 'hidden', background: `linear-gradient(135deg, ${theme.accentDark}, ${theme.accent} 65%, ${theme.accent})`,
+        borderRadius: 18, padding: 22, color: '#fff', display: 'flex', flexDirection: 'column', gap: recording ? 4 : 16,
+      }}
+    >
+      <div style={{ position: 'absolute', top: -50, right: -30, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.10)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: -60, left: -20, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+
+      {!recording ? (
+        <>
+          <div style={{ position: 'relative' }}>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>{t('voice.newRecording')}</div>
+            <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 2 }}>{t('voice.captureMemo')}</div>
+          </div>
+          <div style={{ position: 'relative', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button onClick={() => startRecording('mic')} style={sourceButtonStyle}>
+              <Icon name="mic" size={16} color="#fff" /> {t('voice.recordMic')}
+            </button>
+            <button onClick={() => startRecording('system')} style={sourceButtonStyle}>
+              <Icon name="monitor" size={16} color="#fff" /> {t('voice.recordSystem')}
+            </button>
+          </div>
+        </>
+      ) : (
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button
+            onClick={stopRecording}
+            title={t('voice.stopRecording')}
+            style={{
+              width: 58, height: 58, borderRadius: '50%', background: 'rgba(255,255,255,0.22)', border: '2px solid #fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <Icon name="check" size={22} color="#fff" />
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#ff5c5c', animation: 'kh-rec-pulse 1.2s ease-in-out infinite', flexShrink: 0 }} />
+              <span style={{ fontWeight: 800, fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatDuration(elapsed)}</span>
+              <span style={{ fontSize: 12, opacity: 0.85, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Icon name={sourceIcon[recordSource]} size={12} color="#fff" /> {sourceLabel[recordSource]}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 26, marginTop: 10 }}>
+              {Array.from({ length: 28 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 3, height: 24, borderRadius: 2, background: 'rgba(255,255,255,0.85)', transformOrigin: 'bottom',
+                    animation: `kh-wave-bounce ${0.6 + (i % 5) * 0.15}s ease-in-out infinite`, animationDelay: `${(i % 7) * 0.07}s`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {error && <div style={{ position: 'relative', fontSize: 12, background: 'rgba(0,0,0,0.22)', borderRadius: 8, padding: '7px 11px' }}>{error}</div>}
     </div>
   );
 
@@ -225,25 +301,40 @@ export default function Voice() {
         </div>
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('voice.noRecordingsYet')}</div>}
-          {filtered.map((v) => (
-            <div
-              key={v.id}
-              onClick={() => setSelectedId(v.id)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', background: selected?.id === v.id ? theme.accentSoftBg : 'transparent' }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.title}</div>
-                <div style={{ fontSize: 11.5, color: theme.textMuted }}>
-                  {new Date(v.createdAt).toLocaleDateString()} · {formatDuration(v.duration)}
+          {filtered.map((v) => {
+            const isSelected = selected?.id === v.id;
+            return (
+              <div
+                key={v.id}
+                onClick={() => setSelectedId(v.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px 10px 9px', borderRadius: 10, cursor: 'pointer',
+                  background: isSelected ? theme.accentSoftBg : 'transparent', borderLeft: `3px solid ${isSelected ? theme.accent : 'transparent'}`,
+                  transition: 'background 0.15s, border-color 0.15s',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%',
+                    background: theme.subtleBg, flexShrink: 0,
+                  }}
+                >
+                  <Icon name={v.source === 'system' ? 'monitor' : 'mic'} size={12} color={isSelected ? theme.accentText : theme.textMuted} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.title}</div>
+                  <div style={{ fontSize: 11.5, color: theme.textMuted }}>
+                    {new Date(v.createdAt).toLocaleDateString()} · {formatDuration(v.duration)}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 24, flexShrink: 0 }}>
+                  {seededBars(v.id, 10).map((h, i) => (
+                    <div key={i} style={{ width: 2, height: h, borderRadius: 1, background: `linear-gradient(180deg, ${theme.accent}, ${theme.accentDark})` }} />
+                  ))}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 24, flexShrink: 0 }}>
-                {seededBars(v.id, 10).map((h, i) => (
-                  <div key={i} style={{ width: 2, height: h, borderRadius: 1, background: `linear-gradient(180deg, ${theme.accent}, ${theme.accentDark})` }} />
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       )}
@@ -282,7 +373,11 @@ export default function Voice() {
                 {t('common.delete')}
               </button>
             </div>
-            <div style={{ fontSize: 12.5, color: theme.textMuted }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: theme.textMuted, flexWrap: 'wrap' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: theme.subtleBg, borderRadius: 6, padding: '3px 9px', fontWeight: 700, color: theme.textPrimary }}>
+                <Icon name={selected.source === 'system' ? 'monitor' : 'mic'} size={11} color={theme.accentText} />
+                {selected.source === 'system' ? t('voice.sourceSystem') : t('voice.sourceMic')}
+              </span>
               {new Date(selected.createdAt).toLocaleString()} · {formatDuration(selected.duration)}
             </div>
             {transcribeError && <div style={{ fontSize: 12, color: 'oklch(0.55 0.18 25)' }}>{transcribeError}</div>}

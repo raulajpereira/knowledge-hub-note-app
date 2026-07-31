@@ -37,13 +37,14 @@ router.get('/', async (req, res) => {
 
 router.post('/', upload.single('audio'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No audio file uploaded' });
-  const { title, duration } = req.body || {};
+  const { title, duration, source } = req.body || {};
   const voiceNote = await prisma.voiceNote.create({
     data: {
       userId: req.effectiveUserId,
       title: title?.trim() || `Recording ${new Date().toLocaleString()}`,
       audioUrl: `/uploads/voice/${req.file.filename}`,
       duration: Number(duration) || 0,
+      source: source === 'system' ? 'system' : 'mic',
     },
   });
   res.status(201).json({ voiceNote });
