@@ -180,6 +180,12 @@ const PATHS = {
     ['rect', { x: 3, y: 4, width: 18, height: 12.5, rx: 1.5 }],
     ['path', { d: 'M8.5 20h7M12 16.5V20' }],
   ],
+  focus: [
+    ['path', { d: 'M4 9V5a1 1 0 0 1 1-1h4' }],
+    ['path', { d: 'M20 9V5a1 1 0 0 0-1-1h-4' }],
+    ['path', { d: 'M4 15v4a1 1 0 0 0 1 1h4' }],
+    ['path', { d: 'M20 15v4a1 1 0 0 1-1 1h-4' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

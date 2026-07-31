@@ -41,6 +41,25 @@ export default function AppLayout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
+  const [focusMode, setFocusMode] = useState(false);
+
+  useEffect(() => {
+    if (!focusMode) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setFocusMode(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [focusMode]);
+
+  // Focus mode is a manual, per-session toggle (not persisted) meant to hide
+  // the sidebar/header/news-ticker chrome while working inside a detail
+  // panel (a note, a project, a document, ...) — it applies the same way
+  // regardless of which page's detail view is open, so it lives here at the
+  // layout level instead of being wired into every individual page.
+  useEffect(() => {
+    setFocusMode(false);
+  }, [location.pathname]);
   const { counts, issueAlerts } = useCounts();
   const notifRef = useRef(null);
   useClickOutside(notifRef, () => setNotifOpen(false), notifOpen);
@@ -107,7 +126,7 @@ export default function AppLayout() {
           extra space it needs is absorbed by this row's own internal scroll
           regions (sidebar, main content), not the page itself. */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', position: 'relative', zIndex: 1, zoom: 'var(--app-zoom, 1)' }}>
-        {!isMobile && (
+        {!isMobile && !focusMode && (
         <div
           style={{
             width: sidebarCollapsed ? 76 : 260, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`,
@@ -289,6 +308,7 @@ export default function AppLayout() {
             paddingBottom: isMobile ? 'calc(var(--mobile-nav-height) + var(--safe-bottom))' : 0,
           }}
         >
+          {!focusMode && (
           <div
             style={{
               display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16,
@@ -377,6 +397,19 @@ export default function AppLayout() {
               )}
             </div>
 
+            {!isMobile && (
+              <span
+                onClick={() => setFocusMode(true)}
+                title={t('common.focusMode')}
+                style={{
+                  width: 38, height: 38, borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
+                  color: theme.textPrimary, background: theme.subtleBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <Icon name="focus" size={16} />
+              </span>
+            )}
+
             <span
               onClick={logout}
               title={t('common.lockPlatform')}
@@ -388,14 +421,30 @@ export default function AppLayout() {
               <Icon name="lock" size={16} color="#fff" />
             </span>
           </div>
+          )}
+
+          {focusMode && (
+            <span
+              onClick={() => setFocusMode(false)}
+              title={t('common.exitFocusMode')}
+              style={{
+                position: 'fixed', top: 16, right: 16, zIndex: 90,
+                width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: theme.textPrimary, background: theme.subtleBg, border: `1px solid ${theme.border}`,
+                boxShadow: '0 6px 18px rgba(0,0,0,0.2)',
+              }}
+            >
+              <Icon name="focus" size={16} />
+            </span>
+          )}
 
           <Outlet />
         </div>
       </div>
 
-      {!isMobile && <NewsTicker />}
+      {!isMobile && !focusMode && <NewsTicker />}
 
-      {isMobile && (
+      {isMobile && !focusMode && (
         <div
           style={{
             position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 80,
