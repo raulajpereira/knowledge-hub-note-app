@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useCounts } from '../context/CountsContext.jsx';
+import { useClickOutside } from '../lib/useClickOutside.js';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
-import { resolveHomeLayout } from '../lib/homeBlocks.js';
+import { resolveHomeLayout, HOME_BLOCK_LABEL_KEYS } from '../lib/homeBlocks.js';
 
 const DEFAULT_ISSUE_STATUSES = [
   { name: 'Open', hue: 250 },
@@ -103,6 +104,9 @@ export default function Home() {
   const [vpsDisk, setVpsDisk] = useState(null);
   const [columns, setColumns] = useState(() => resolveHomeLayout(null));
   const [draggedBlock, setDraggedBlock] = useState(null);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef(null);
+  useClickOutside(addMenuRef, () => setAddMenuOpen(false), addMenuOpen);
 
   useEffect(() => {
     setColumns(resolveHomeLayout(user?.settings?.homeLayout));
@@ -153,6 +157,22 @@ export default function Home() {
     if (!draggedBlock) return;
     setDraggedBlock(null);
     const { settings } = await api.updateSettings({ homeLayout: columns });
+    updateUserSettings(settings);
+  };
+
+  const removeBlock = async (key) => {
+    const fromColumn = columns.left.includes(key) ? 'left' : 'right';
+    const next = { ...columns, [fromColumn]: columns[fromColumn].filter((k) => k !== key), hidden: [...columns.hidden, key] };
+    setColumns(next);
+    const { settings } = await api.updateSettings({ homeLayout: next });
+    updateUserSettings(settings);
+  };
+
+  const addBlock = async (key) => {
+    const next = { ...columns, left: [...columns.left, key], hidden: columns.hidden.filter((k) => k !== key) };
+    setColumns(next);
+    setAddMenuOpen(false);
+    const { settings } = await api.updateSettings({ homeLayout: next });
     updateUserSettings(settings);
   };
 
@@ -610,28 +630,80 @@ export default function Home() {
       onDragOver={(e) => onBlockDragOver(e, colKey, index)}
       onDrop={onBlockDrop}
       onDragEnd={onBlockDrop}
-      style={{ opacity: draggedBlock === key ? 0.5 : 1, cursor: 'grab' }}
+      style={{ position: 'relative', opacity: draggedBlock === key ? 0.5 : 1, cursor: 'grab' }}
     >
+      <span
+        onClick={(e) => { e.stopPropagation(); removeBlock(key); }}
+        title={t('home.removeBlock')}
+        style={{
+          position: 'absolute', top: -6, right: -6, zIndex: 2, width: 22, height: 22, borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+          background: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.textMuted, opacity: 0.55, fontSize: 15, lineHeight: 1,
+        }}
+      >
+        &times;
+      </span>
       {blockContent[key]}
     </div>
   );
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, padding: '24px 28px', flex: 1 }}>
-      <div
-        onDragOver={(e) => onColumnDragOver(e, 'left')}
-        onDrop={onBlockDrop}
-        style={{ flex: '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28, minHeight: 80 }}
-      >
-        {columns.left.map((key, i) => renderBlock(key, 'left', i))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '24px 28px', flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div ref={addMenuRef} style={{ position: 'relative' }}>
+          <div
+            onClick={() => setAddMenuOpen((v) => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, background: theme.subtleBg, color: theme.textPrimary,
+              border: `1px solid ${theme.border}`, borderRadius: 9, padding: '8px 13px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            <Icon name="plus" size={13} /> {t('home.addBlock')}
+          </div>
+          {addMenuOpen && (
+            <div
+              style={{
+                position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 20, width: 220,
+                background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', border: `1px solid ${theme.border}`,
+                borderRadius: 12, boxShadow: '0 16px 40px rgba(0,0,0,0.25)', padding: 6, display: 'flex', flexDirection: 'column', gap: 2,
+              }}
+            >
+              {columns.hidden.length === 0 && (
+                <div style={{ fontSize: 12, color: theme.textMuted, padding: '10px 8px' }}>{t('home.addBlockEmpty')}</div>
+              )}
+              {columns.hidden.map((key) => (
+                <div
+                  key={key}
+                  onClick={() => addBlock(key)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = theme.subtleBg)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <Icon name="plus" size={12} color={theme.accentText} />
+                  {t(HOME_BLOCK_LABEL_KEYS[key])}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div
-        onDragOver={(e) => onColumnDragOver(e, 'right')}
-        onDrop={onBlockDrop}
-        style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28, minHeight: 80 }}
-      >
-        {columns.right.map((key, i) => renderBlock(key, 'right', i))}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+        <div
+          onDragOver={(e) => onColumnDragOver(e, 'left')}
+          onDrop={onBlockDrop}
+          style={{ flex: '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28, minHeight: 80 }}
+        >
+          {columns.left.map((key, i) => renderBlock(key, 'left', i))}
+        </div>
+
+        <div
+          onDragOver={(e) => onColumnDragOver(e, 'right')}
+          onDrop={onBlockDrop}
+          style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28, minHeight: 80 }}
+        >
+          {columns.right.map((key, i) => renderBlock(key, 'right', i))}
+        </div>
       </div>
     </div>
   );

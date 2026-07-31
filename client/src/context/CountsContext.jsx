@@ -9,7 +9,7 @@ export function CountsProvider({ children }) {
   const [issueAlerts, setIssueAlerts] = useState([]);
 
   const refresh = useCallback(async () => {
-    const [notesR, voiceR, tasksR, tagsR, artifactsR, issuesR, codeFoldersR, projectsR, trashedNotesR, trashedTasksR, trashedVoiceR] = await Promise.all([
+    const [notesR, voiceR, tasksR, tagsR, artifactsR, issuesR, codeFoldersR, projectsR, contactsR, sapSystemsR, transportRequestsR, trashedNotesR, trashedTasksR, trashedVoiceR] = await Promise.all([
       api.listNotes(),
       api.listVoiceNotes(),
       api.listTasks(),
@@ -18,6 +18,9 @@ export function CountsProvider({ children }) {
       api.listIssues(),
       api.listCodeFolders(),
       api.listProjects(),
+      api.listContacts(),
+      api.listSapSystems(),
+      api.listTransportRequests(),
       api.listNotes(true),
       api.listTasks(true),
       api.listVoiceNotes(true),
@@ -31,6 +34,9 @@ export function CountsProvider({ children }) {
       issues: issuesR.issues.length,
       codeLibrary: codeFoldersR.folders.length,
       projects: projectsR.projects.filter((p) => p.status === 'Ativo').length,
+      contacts: contactsR.contacts.length,
+      sapSystems: sapSystemsR.systems.length,
+      transportRequests: transportRequestsR.transportRequests.length,
       trash: trashedNotesR.notes.length + trashedTasksR.tasks.length + trashedVoiceR.voiceNotes.length,
     });
     // Computed from the same issues list already fetched above, so every

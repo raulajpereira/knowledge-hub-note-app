@@ -152,15 +152,18 @@ router.patch('/', async (req, res) => {
   }
   if (homeLayout !== undefined) {
     const isArr = (v) => Array.isArray(v);
+    const hiddenArr = Array.isArray(homeLayout?.hidden) ? homeLayout.hidden : [];
+    const allKeys = homeLayout ? [...(homeLayout.left || []), ...(homeLayout.right || []), ...hiddenArr] : [];
     const valid =
       homeLayout === null ||
       (homeLayout &&
         isArr(homeLayout.left) &&
         isArr(homeLayout.right) &&
-        [...homeLayout.left, ...homeLayout.right].every((k) => HOME_BLOCK_KEYS.has(k)) &&
-        new Set([...homeLayout.left, ...homeLayout.right]).size === homeLayout.left.length + homeLayout.right.length);
-    if (!valid) return res.status(400).json({ error: 'homeLayout must be { left: [...], right: [...] } with known, non-duplicate block keys' });
-    data.homeLayout = homeLayout;
+        (homeLayout.hidden === undefined || isArr(homeLayout.hidden)) &&
+        allKeys.every((k) => HOME_BLOCK_KEYS.has(k)) &&
+        new Set(allKeys).size === allKeys.length);
+    if (!valid) return res.status(400).json({ error: 'homeLayout must be { left: [...], right: [...], hidden?: [...] } with known, non-duplicate block keys' });
+    data.homeLayout = homeLayout === null ? null : { left: homeLayout.left, right: homeLayout.right, hidden: hiddenArr };
   }
   if (sidebarCollapsed !== undefined) data.sidebarCollapsed = !!sidebarCollapsed;
   const settings = await prisma.settings.upsert({

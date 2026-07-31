@@ -11,7 +11,7 @@ function ResultRow({ tx, theme, copied, onClick }) {
   return (
     <div
       onClick={onClick}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 9, cursor: 'pointer' }}
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 10px', borderRadius: 9, cursor: 'pointer' }}
       onMouseEnter={(e) => (e.currentTarget.style.background = theme.subtleBg)}
       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
     >
@@ -23,7 +23,7 @@ function ResultRow({ tx, theme, copied, onClick }) {
       >
         {tx.tcode}
       </span>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: theme.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: theme.textPrimary, lineHeight: 1.4 }}>
         {tx.description}
       </span>
       {copied ? (
@@ -114,7 +114,7 @@ export default function TransactionsQuickSearch() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: 420, maxWidth: '100%', maxHeight: '80vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff',
+              width: 620, maxWidth: '100%', maxHeight: '80vh', overflowY: 'auto', background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff',
               border: `1px solid ${theme.border}`, borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 14,
               boxShadow: '0 24px 70px rgba(0,0,0,0.45)',
             }}

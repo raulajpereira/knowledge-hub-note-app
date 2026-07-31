@@ -17,9 +17,9 @@ export const SIDEBAR_ITEMS = [
   { key: 'documentacao', to: '/documentacao', icon: 'doc' },
   { key: 'transactions', to: '/transactions', icon: 'terminal' },
   { key: 'clients', to: '/clients', icon: 'building' },
-  { key: 'sapSystems', to: '/sap-systems', icon: 'server' },
-  { key: 'transportRequests', to: '/transport-requests', icon: 'truck' },
-  { key: 'contacts', to: '/contacts', icon: 'idCard' },
+  { key: 'sapSystems', to: '/sap-systems', icon: 'server', countKey: 'sapSystems' },
+  { key: 'transportRequests', to: '/transport-requests', icon: 'truck', countKey: 'transportRequests' },
+  { key: 'contacts', to: '/contacts', icon: 'idCard', countKey: 'contacts' },
   { key: 'calendar', to: '/calendar', icon: 'calendar' },
   { key: 'graph', to: '/graph', icon: 'graph' },
 ];
