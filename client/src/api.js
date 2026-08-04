@@ -303,4 +303,13 @@ export const api = {
   createCodeItemSnapshot: (id, label) => request(`/code-library/items/${id}/snapshots`, { method: 'POST', body: { label } }),
   restoreCodeItemSnapshot: (id, snapshotId) => request(`/code-library/items/${id}/snapshots/${snapshotId}/restore`, { method: 'POST' }),
   deleteCodeItem: (id) => request(`/code-library/items/${id}`, { method: 'DELETE' }),
+
+  listApiFolders: () => request('/api-playground/folders'),
+  createApiFolder: (payload) => request('/api-playground/folders', { method: 'POST', body: payload }),
+  updateApiFolder: (id, payload) => request(`/api-playground/folders/${id}`, { method: 'PATCH', body: payload }),
+  deleteApiFolder: (id) => request(`/api-playground/folders/${id}`, { method: 'DELETE' }),
+  listApiRequests: () => request('/api-playground/requests'),
+  createApiRequest: (payload) => request('/api-playground/requests', { method: 'POST', body: payload }),
+  updateApiRequest: (id, payload) => request(`/api-playground/requests/${id}`, { method: 'PATCH', body: payload }),
+  deleteApiRequest: (id) => request(`/api-playground/requests/${id}`, { method: 'DELETE' }),
 };

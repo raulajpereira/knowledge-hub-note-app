@@ -22,6 +22,10 @@ export const SIDEBAR_ITEMS = [
   { key: 'contacts', to: '/contacts', icon: 'idCard', countKey: 'contacts' },
   { key: 'calendar', to: '/calendar', icon: 'calendar' },
   { key: 'graph', to: '/graph', icon: 'graph' },
+  // Route intentionally isn't "/api-playground" — the dev-server proxy
+  // forwards any path starting with "/api" to the backend (see
+  // vite.config.js), so that path would 404 on a hard navigation in dev.
+  { key: 'apiPlayground', to: '/playground', icon: 'plug' },
 ];
 
 // Merges the user's saved order/visibility/custom-labels with the master

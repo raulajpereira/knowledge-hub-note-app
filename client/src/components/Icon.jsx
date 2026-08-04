@@ -186,6 +186,11 @@ const PATHS = {
     ['path', { d: 'M4 15v4a1 1 0 0 0 1 1h4' }],
     ['path', { d: 'M20 15v4a1 1 0 0 1-1 1h-4' }],
   ],
+  plug: [
+    ['path', { d: 'M9 2v5M15 2v5' }],
+    ['path', { d: 'M6.5 7h11v4.5a5.5 5.5 0 0 1-11 0Z' }],
+    ['path', { d: 'M12 16v6' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

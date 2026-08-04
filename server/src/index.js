@@ -31,6 +31,7 @@ import sapSystemsRoutes from './routes/sapsystems.routes.js';
 import contactsRoutes from './routes/contacts.routes.js';
 import transportRequestsRoutes from './routes/transportrequests.routes.js';
 import auditLogRoutes from './routes/auditlog.routes.js';
+import apiPlaygroundRoutes from './routes/apiplayground.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
 import { auditMiddleware } from './lib/auditLog.js';
 
@@ -72,6 +73,7 @@ app.use('/api/sap-systems', sapSystemsRoutes);
 app.use('/api/contacts', contactsRoutes);
 app.use('/api/transport-requests', transportRequestsRoutes);
 app.use('/api/audit-log', auditLogRoutes);
+app.use('/api/api-playground', apiPlaygroundRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

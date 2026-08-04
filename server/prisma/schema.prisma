@@ -53,6 +53,8 @@ model User {
   codeFolders     CodeFolder[]
   codeItems       CodeItem[]
   snapshots       Snapshot[]
+  apiFolders      ApiFolder[]
+  apiRequests     ApiRequest[]
   links           Link[]
   templates       Template[]
   projects        Project[]
@@ -460,6 +462,49 @@ model CodeItem {
   @@index([folderId])
   @@index([userId])
   @@map("code_items")
+}
+
+// API Playground: a generic (non-SAP-specific) saved-request tool, modeled
+// loosely on Postman. Requests are executed client-side via fetch() —
+// deliberately no server-side proxy, since that would let a user make the
+// server issue arbitrary outbound requests on its behalf (SSRF).
+model ApiFolder {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requests ApiRequest[]
+
+  @@index([userId])
+  @@map("api_folders")
+}
+
+model ApiRequest {
+  id           String   @id @default(uuid())
+  userId       String
+  folderId     String?
+  name         String
+  method       String   @default("GET")
+  url          String   @db.Text
+  headers      Json? // [{ key, value, enabled }]
+  queryParams  Json? // [{ key, value, enabled }]
+  bodyType     String   @default("none") // "none" | "json" | "text" | "form"
+  body         String?  @db.Text
+  formBody     Json? // [{ key, value, enabled }], used when bodyType = "form"
+  authType     String   @default("none") // "none" | "bearer" | "basic" | "apiKey"
+  authConfig   Json? // shape depends on authType
+  lastResponse Json? // { status, statusText, headers, body, timeMs, savedAt } — doubles as the saved "example"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder ApiFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([folderId])
+  @@map("api_requests")
 }
 
 // Generic cross-entity link — lets a Note/Issue/Task/CodeItem point at any

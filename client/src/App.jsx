@@ -30,6 +30,7 @@ import SapSystems from './pages/SapSystems.jsx';
 import TransportRequests from './pages/TransportRequests.jsx';
 import Contacts from './pages/Contacts.jsx';
 import Graph from './pages/Graph.jsx';
+import ApiPlayground from './pages/ApiPlayground.jsx';
 import SharedNote from './pages/SharedNote.jsx';
 
 function FullScreenLoader() {
@@ -97,6 +98,7 @@ export default function App() {
                   <Route path="/contacts" element={<Contacts />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/graph" element={<Graph />} />
+                  <Route path="/playground" element={<ApiPlayground />} />
                   <Route path="/sap-news" element={<SapNews />} />
                   <Route path="/trash" element={<Trash />} />
                   <Route path="/settings" element={<Settings />} />
