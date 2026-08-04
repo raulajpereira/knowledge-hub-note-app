@@ -17,7 +17,7 @@ import NewsTicker from './NewsTicker.jsx';
 import MobileMoreSheet from './MobileMoreSheet.jsx';
 import logoDefault from '../assets/logo-default.png';
 import logoIcon from '../assets/logo-icon.png';
-import { resolveSidebarLayout, sidebarItemLabel } from '../lib/sidebarItems.js';
+import { resolveSidebarLayout, sidebarItemLabel, sidebarGroupLabel } from '../lib/sidebarItems.js';
 
 const MOBILE_TABS = [
   { key: 'home', to: '/', end: true, icon: 'home', labelKey: 'nav.home' },
@@ -94,10 +94,28 @@ export default function AppLayout() {
     if (draggedKey === null) return;
     setDraggedKey(null);
     const hiddenItems = resolveSidebarLayout(user?.settings?.sidebarLayout).filter((i) => i.hidden);
-    const sidebarLayout = [
-      ...sidebarItems.map((i) => (i.type === 'spacer' ? { key: i.key, type: 'spacer' } : { key: i.key, hidden: false, labelPt: i.labelPt, labelEn: i.labelEn })),
-      ...hiddenItems.map((i) => ({ key: i.key, hidden: true, labelPt: i.labelPt, labelEn: i.labelEn })),
-    ];
+    const serialize = (i) => {
+      if (i.type === 'spacer') return { key: i.key, type: 'spacer' };
+      if (i.type === 'group-start') return { key: i.key, type: 'group-start', groupId: i.groupId, labelPt: i.labelPt, labelEn: i.labelEn, collapsed: !!i.collapsed };
+      if (i.type === 'group-end') return { key: i.key, type: 'group-end', groupId: i.groupId };
+      return { key: i.key, hidden: false, labelPt: i.labelPt, labelEn: i.labelEn };
+    };
+    const sidebarLayout = [...sidebarItems.map(serialize), ...hiddenItems.map(serialize)];
+    const { settings } = await api.updateSettings({ sidebarLayout });
+    updateUserSettings(settings);
+  };
+
+  const toggleGroupCollapsed = async (groupId) => {
+    const fullLayout = resolveSidebarLayout(user?.settings?.sidebarLayout);
+    const sidebarLayout = fullLayout.map((i) =>
+      i.type === 'group-start' && i.groupId === groupId
+        ? { key: i.key, type: 'group-start', groupId: i.groupId, labelPt: i.labelPt, labelEn: i.labelEn, collapsed: !i.collapsed }
+        : i.type === 'spacer'
+          ? { key: i.key, type: 'spacer' }
+          : i.type === 'group-end'
+            ? { key: i.key, type: 'group-end', groupId: i.groupId }
+            : { key: i.key, hidden: !!i.hidden, labelPt: i.labelPt, labelEn: i.labelEn },
+    );
     const { settings } = await api.updateSettings({ sidebarLayout });
     updateUserSettings(settings);
   };
@@ -172,8 +190,70 @@ export default function AppLayout() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {sidebarItems.map((item, index) =>
-              item.type === 'spacer' ? (
+            {(() => {
+              // Groups are two markers (group-start/group-end) in the same
+              // flat array as everything else — walking it top-to-bottom
+              // with a small stack tells us, for each row, how deep it is
+              // nested and whether any ancestor group is currently
+              // collapsed (in which case the row renders nothing). In
+              // icon-only mode groups don't collapse/indent at all (there's
+              // no room for a label anyway) — they just get a thin divider
+              // above the group's first item, per the "small separator"
+              // design used elsewhere in the collapsed sidebar.
+              const collapsedAncestors = [];
+              let depth = 0;
+              return sidebarItems.map((item, index) => {
+                if (item.type === 'group-end') {
+                  collapsedAncestors.pop();
+                  depth = Math.max(0, depth - 1);
+                  return null;
+                }
+                const hiddenByAncestor = !sidebarCollapsed && collapsedAncestors.some(Boolean);
+                if (item.type === 'group-start') {
+                  const currentDepth = depth;
+                  const isHidden = hiddenByAncestor;
+                  collapsedAncestors.push(item.collapsed);
+                  depth += 1;
+                  if (sidebarCollapsed) {
+                    return <div key={item.key} style={{ borderTop: `1px solid ${theme.border}`, margin: '4px 4px 2px' }} />;
+                  }
+                  if (isHidden) return null;
+                  return (
+                    <div
+                      key={item.key}
+                      draggable
+                      onDragStart={() => setDraggedKey(item.key)}
+                      onDragOver={(e) => onSidebarDragOver(e, index)}
+                      onDrop={onSidebarDrop}
+                      onDragEnd={onSidebarDrop}
+                      onClick={() => toggleGroupCollapsed(item.groupId)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginLeft: currentDepth * 12,
+                        cursor: 'pointer', color: theme.textMuted, opacity: draggedKey === item.key ? 0.5 : 1,
+                      }}
+                    >
+                      <span style={{ display: 'flex', transform: item.collapsed ? 'none' : 'rotate(90deg)', transition: 'transform 0.15s' }}>
+                        <Icon name="chevron" size={12} strokeWidth={2.4} />
+                      </span>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {sidebarGroupLabel(item, lang, t)}
+                      </span>
+                    </div>
+                  );
+                }
+                if (hiddenByAncestor) return null;
+                const currentDepth = sidebarCollapsed ? 0 : depth;
+                return item.type === 'spacer' ? (
+                  <div
+                    key={item.key}
+                    draggable
+                    onDragStart={() => setDraggedKey(item.key)}
+                    onDragOver={(e) => onSidebarDragOver(e, index)}
+                    onDrop={onSidebarDrop}
+                    onDragEnd={onSidebarDrop}
+                    style={{ height: 14, opacity: draggedKey === item.key ? 0.5 : 1 }}
+                  />
+                ) : (
                 <div
                   key={item.key}
                   draggable
@@ -181,52 +261,43 @@ export default function AppLayout() {
                   onDragOver={(e) => onSidebarDragOver(e, index)}
                   onDrop={onSidebarDrop}
                   onDragEnd={onSidebarDrop}
-                  style={{ height: 14, opacity: draggedKey === item.key ? 0.5 : 1 }}
-                />
-              ) : (
-              <div
-                key={item.key}
-                draggable
-                onDragStart={() => setDraggedKey(item.key)}
-                onDragOver={(e) => onSidebarDragOver(e, index)}
-                onDrop={onSidebarDrop}
-                onDragEnd={onSidebarDrop}
-                style={{ opacity: draggedKey === item.key ? 0.5 : 1 }}
-              >
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  draggable={false}
-                  title={sidebarCollapsed ? sidebarItemLabel(item, lang, t) : undefined}
-                  style={({ isActive }) => navItemStyle(isActive)}
+                  style={{ opacity: draggedKey === item.key ? 0.5 : 1, marginLeft: currentDepth * 12 }}
                 >
-                  <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
-                    <Icon name={item.icon} size={18} />
-                    {sidebarCollapsed && item.countKey && counts[item.countKey] > 0 && (
-                      <span style={{ position: 'absolute', top: -4, right: -6, width: 8, height: 8, borderRadius: '50%', background: theme.accent }} />
-                    )}
-                  </span>
-                  {!sidebarCollapsed && (
-                    <>
-                      <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {sidebarItemLabel(item, lang, t)}
-                      </span>
-                      {item.countKey && counts[item.countKey] > 0 && (
-                        <span
-                          style={{
-                            fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
-                            background: theme.subtleBg, color: theme.textMuted,
-                          }}
-                        >
-                          {counts[item.countKey]}
-                        </span>
+                  <NavLink
+                    to={item.to}
+                    end={item.end}
+                    draggable={false}
+                    title={sidebarCollapsed ? sidebarItemLabel(item, lang, t) : undefined}
+                    style={({ isActive }) => navItemStyle(isActive)}
+                  >
+                    <span style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
+                      <Icon name={item.icon} size={18} />
+                      {sidebarCollapsed && item.countKey && counts[item.countKey] > 0 && (
+                        <span style={{ position: 'absolute', top: -4, right: -6, width: 8, height: 8, borderRadius: '50%', background: theme.accent }} />
                       )}
-                    </>
-                  )}
-                </NavLink>
-              </div>
-              ),
-            )}
+                    </span>
+                    {!sidebarCollapsed && (
+                      <>
+                        <span style={{ fontSize: 14, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {sidebarItemLabel(item, lang, t)}
+                        </span>
+                        {item.countKey && counts[item.countKey] > 0 && (
+                          <span
+                            style={{
+                              fontSize: 10.5, fontWeight: 700, flexShrink: 0, padding: '1px 7px', borderRadius: 20,
+                              background: theme.subtleBg, color: theme.textMuted,
+                            }}
+                          >
+                            {counts[item.countKey]}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                </div>
+                );
+              });
+            })()}
           </div>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>

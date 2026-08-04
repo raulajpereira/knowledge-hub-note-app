@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../api.js';
 import Icon from './Icon.jsx';
-import { resolveSidebarLayout, sidebarItemLabel } from '../lib/sidebarItems.js';
+import { resolveSidebarLayout, sidebarItemLabel, sidebarGroupLabel } from '../lib/sidebarItems.js';
 import { translate } from '../i18n/translations.js';
 import { backdropClose } from '../lib/backdropClose.js';
 
@@ -29,6 +29,35 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
     setItems((prev) => prev.filter((i) => i.key !== key));
   };
 
+  // A group is two markers in the flat list (group-start / group-end) —
+  // everything physically between them (by array position) counts as its
+  // contents, including further nested group pairs. Reusing the same
+  // flat-array drag-reorder already used for spacers means dragging an item
+  // between a group's start/end markers "puts it in the group" for free,
+  // with no separate tree-editing UI needed.
+  const addGroup = () => {
+    const id = `group-${crypto.randomUUID()}`;
+    setItems((prev) => [...prev, { key: id, type: 'group-start', groupId: id, labelPt: '', labelEn: '', collapsed: false }, { key: `${id}-end`, type: 'group-end', groupId: id }]);
+  };
+
+  // Dissolving a group removes only its two boundary markers — the items
+  // that were inside stay exactly where they are, just no longer grouped.
+  const dissolveGroup = (groupId) => {
+    setItems((prev) => prev.filter((i) => !((i.type === 'group-start' || i.type === 'group-end') && i.groupId === groupId)));
+  };
+
+  // Running nesting depth per row, computed once per render from the flat
+  // array — used only to indent the settings list visually.
+  const depths = (() => {
+    let depth = 0;
+    return items.map((i) => {
+      if (i.type === 'group-end') { depth = Math.max(0, depth - 1); return depth; }
+      const d = depth;
+      if (i.type === 'group-start') depth += 1;
+      return d;
+    });
+  })();
+
   const onDragOver = (e, index) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
@@ -44,9 +73,12 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
   const save = async () => {
     setSaving(true);
     try {
-      const sidebarLayout = items.map((i) =>
-        i.type === 'spacer' ? { key: i.key, type: 'spacer' } : { key: i.key, hidden: !!i.hidden, labelPt: i.labelPt, labelEn: i.labelEn },
-      );
+      const sidebarLayout = items.map((i) => {
+        if (i.type === 'spacer') return { key: i.key, type: 'spacer' };
+        if (i.type === 'group-start') return { key: i.key, type: 'group-start', groupId: i.groupId, labelPt: i.labelPt, labelEn: i.labelEn, collapsed: !!i.collapsed };
+        if (i.type === 'group-end') return { key: i.key, type: 'group-end', groupId: i.groupId };
+        return { key: i.key, hidden: !!i.hidden, labelPt: i.labelPt, labelEn: i.labelEn };
+      });
       const { settings } = await api.updateSettings({ sidebarLayout });
       updateUserSettings(settings);
       onClose();
@@ -73,8 +105,65 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {items.map((item, index) =>
-            item.type === 'spacer' ? (
+          {items.map((item, index) => {
+            const indent = depths[index] * 18;
+            if (item.type === 'group-end') return null;
+            if (item.type === 'group-start') {
+              return (
+                <div
+                  key={item.key}
+                  draggable={editingKey !== item.key}
+                  onDragStart={() => setDraggedIndex(index)}
+                  onDragOver={(e) => onDragOver(e, index)}
+                  onDragEnd={() => setDraggedIndex(null)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 8px', borderRadius: 9, marginLeft: indent,
+                    background: draggedIndex === index ? theme.accentSoftBg : 'transparent', border: `1px dashed ${theme.border}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ cursor: 'grab', color: theme.textMuted, fontSize: 14, letterSpacing: '-2px', flexShrink: 0, userSelect: 'none' }}>⠿⠿</span>
+                    <span style={{ display: 'flex', flexShrink: 0, opacity: 0.75 }}>
+                      <Icon name="folder" size={15} color={theme.textPrimary} />
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {sidebarGroupLabel(item, lang, t)}
+                    </span>
+                    <span
+                      onClick={() => setEditingKey((v) => (v === item.key ? null : item.key))}
+                      title={t('sidebarSettings.rename')}
+                      style={{ cursor: 'pointer', color: editingKey === item.key ? theme.accentText : theme.textMuted, display: 'flex', flexShrink: 0, opacity: 0.85 }}
+                    >
+                      <Icon name="edit" size={14} />
+                    </span>
+                    <span
+                      onClick={() => dissolveGroup(item.groupId)}
+                      title={t('sidebarSettings.dissolveGroup')}
+                      style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex', flexShrink: 0, opacity: 0.85 }}
+                    >
+                      <Icon name="trash" size={14} />
+                    </span>
+                  </div>
+                  {editingKey === item.key && (
+                    <div style={{ display: 'flex', gap: 8, paddingLeft: 24 }}>
+                      <input
+                        value={item.labelPt || ''}
+                        onChange={(e) => setLabel(item.key, 'labelPt', e.target.value)}
+                        placeholder={t('sidebarSettings.groupNamePt')}
+                        style={{ flex: 1, minWidth: 0, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '6px 9px', fontSize: 12, background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
+                      />
+                      <input
+                        value={item.labelEn || ''}
+                        onChange={(e) => setLabel(item.key, 'labelEn', e.target.value)}
+                        placeholder={t('sidebarSettings.groupNameEn')}
+                        style={{ flex: 1, minWidth: 0, border: `1px solid ${theme.border}`, borderRadius: 7, padding: '6px 9px', fontSize: 12, background: theme.cardBg, color: theme.textPrimary, outline: 'none' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return item.type === 'spacer' ? (
               <div
                 key={item.key}
                 draggable
@@ -82,7 +171,7 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
                 onDragOver={(e) => onDragOver(e, index)}
                 onDragEnd={() => setDraggedIndex(null)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 9,
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 9, marginLeft: indent,
                   background: draggedIndex === index ? theme.accentSoftBg : 'transparent',
                   border: `1px dashed ${theme.border}`,
                 }}
@@ -105,7 +194,7 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
               onDragOver={(e) => onDragOver(e, index)}
               onDragEnd={() => setDraggedIndex(null)}
               style={{
-                display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 8px', borderRadius: 9,
+                display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 8px', borderRadius: 9, marginLeft: indent,
                 background: draggedIndex === index ? theme.accentSoftBg : theme.subtleBg,
               }}
             >
@@ -154,16 +243,24 @@ export default function SidebarSettingsModal({ theme, t, lang, onClose }) {
                 </div>
               )}
             </div>
-            ),
-          )}
+            );
+          })}
         </div>
 
+        <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={addGroup}
+          style={{ alignSelf: 'flex-start', background: 'transparent', border: `1px dashed ${theme.border}`, color: theme.textMuted, borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+        >
+          + {t('sidebarSettings.addGroup')}
+        </button>
         <button
           onClick={addSpacer}
           style={{ alignSelf: 'flex-start', background: 'transparent', border: `1px dashed ${theme.border}`, color: theme.textMuted, borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
         >
           + {t('sidebarSettings.addSpacer')}
         </button>
+        </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
           <button

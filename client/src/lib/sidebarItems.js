@@ -39,6 +39,14 @@ export function resolveSidebarLayout(saved) {
         ordered.push({ key: entry.key, type: 'spacer' });
         continue;
       }
+      if (entry?.type === 'group-start') {
+        ordered.push({ key: entry.key, type: 'group-start', groupId: entry.groupId || entry.key, labelPt: entry.labelPt || '', labelEn: entry.labelEn || '', collapsed: !!entry.collapsed });
+        continue;
+      }
+      if (entry?.type === 'group-end') {
+        ordered.push({ key: entry.key, type: 'group-end', groupId: entry.groupId });
+        continue;
+      }
       const item = byKey.get(entry?.key);
       if (item && !seen.has(item.key)) {
         ordered.push({ ...item, hidden: !!entry.hidden, labelPt: entry.labelPt || '', labelEn: entry.labelEn || '' });
@@ -57,4 +65,11 @@ export function resolveSidebarLayout(saved) {
 export function sidebarItemLabel(item, lang, t) {
   const custom = lang === 'pt' ? item.labelPt : item.labelEn;
   return custom?.trim() || t(`nav.${item.key}`);
+}
+
+// Groups have no built-in translation (they're entirely user-created), so
+// they fall back to a generic "Group" label instead of a nav.* key.
+export function sidebarGroupLabel(group, lang, t) {
+  const custom = lang === 'pt' ? group.labelPt : group.labelEn;
+  return custom?.trim() || t('sidebarSettings.groupDefaultLabel');
 }

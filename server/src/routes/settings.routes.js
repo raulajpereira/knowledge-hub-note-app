@@ -131,24 +131,38 @@ router.patch('/', async (req, res) => {
     // already drops any key it doesn't recognize.
     const validLabel = (v) => v === undefined || typeof v === 'string';
     const isSpacer = (s) => s?.type === 'spacer' && typeof s.key === 'string' && s.key.startsWith('spacer-');
+    // Collapsible sidebar groups are two boundary markers (group-start /
+    // group-end) sharing a groupId — everything between them (by array
+    // position) counts as the group's contents. Same flat-array trick as
+    // spacers, just paired, which is what lets nesting (a group inside a
+    // group) fall out for free without a separate tree shape here.
+    const isGroupStart = (s) => s?.type === 'group-start' && typeof s.key === 'string' && typeof s.groupId === 'string' && s.groupId.length > 0;
+    const isGroupEnd = (s) => s?.type === 'group-end' && typeof s.key === 'string' && typeof s.groupId === 'string' && s.groupId.length > 0;
     const valid =
       sidebarLayout === null ||
       (Array.isArray(sidebarLayout) &&
-        sidebarLayout.every((s) => s && (isSpacer(s) || (typeof s.key === 'string' && s.key.length > 0 && validLabel(s.labelPt) && validLabel(s.labelEn)))));
-    if (!valid) return res.status(400).json({ error: 'sidebarLayout must be an array of { key, hidden?, labelPt?, labelEn? } or spacer entries { key, type: "spacer" }' });
+        sidebarLayout.every((s) => s && (isSpacer(s) || isGroupStart(s) || isGroupEnd(s) || (typeof s.key === 'string' && s.key.length > 0 && validLabel(s.labelPt) && validLabel(s.labelEn)))));
+    if (!valid) return res.status(400).json({ error: 'sidebarLayout must be an array of { key, hidden?, labelPt?, labelEn? }, spacer entries { key, type: "spacer" }, or group boundary entries { key, type: "group-start"|"group-end", groupId }' });
     data.sidebarLayout =
       sidebarLayout === null
         ? null
-        : sidebarLayout.map((s) =>
-            isSpacer(s)
-              ? { key: s.key, type: 'spacer' }
-              : {
-                  key: s.key,
-                  hidden: !!s.hidden,
-                  labelPt: s.labelPt?.trim().slice(0, 40) || undefined,
-                  labelEn: s.labelEn?.trim().slice(0, 40) || undefined,
-                },
-          );
+        : sidebarLayout.map((s) => {
+            if (isSpacer(s)) return { key: s.key, type: 'spacer' };
+            if (isGroupStart(s)) {
+              return {
+                key: s.key, type: 'group-start', groupId: s.groupId, collapsed: !!s.collapsed,
+                labelPt: s.labelPt?.trim().slice(0, 40) || undefined,
+                labelEn: s.labelEn?.trim().slice(0, 40) || undefined,
+              };
+            }
+            if (isGroupEnd(s)) return { key: s.key, type: 'group-end', groupId: s.groupId };
+            return {
+              key: s.key,
+              hidden: !!s.hidden,
+              labelPt: s.labelPt?.trim().slice(0, 40) || undefined,
+              labelEn: s.labelEn?.trim().slice(0, 40) || undefined,
+            };
+          });
   }
   if (homeLayout !== undefined) {
     const isArr = (v) => Array.isArray(v);
