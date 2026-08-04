@@ -10,7 +10,7 @@ const COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#111111'
 const WIDTHS = [2, 4, 8, 14];
 const FONT_SIZE = 22;
 const LINE_HEIGHT_FACTOR = 1.3;
-const optionStyle = { color: '#1a1a1a', background: '#fff' };
+const MIN_SELECTION = 6;
 
 function newId() {
   return `el_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -36,39 +36,38 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-function getBBox(el) {
-  if (el.type === 'stroke') {
-    const xs = el.points.map((p) => p.x);
-    const ys = el.points.map((p) => p.y);
-    const minX = Math.min(...xs);
-    const minY = Math.min(...ys);
-    return { x: minX, y: minY, width: Math.max(...xs) - minX, height: Math.max(...ys) - minY };
-  }
-  if (el.type === 'arrow') {
-    const minX = Math.min(el.x1, el.x2);
-    const minY = Math.min(el.y1, el.y2);
-    return { x: minX, y: minY, width: Math.abs(el.x2 - el.x1), height: Math.abs(el.y2 - el.y1) };
-  }
-  return { x: el.x, y: el.y, width: el.width, height: el.height };
-}
-
 export default function ScreenshotModal({ onClose }) {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { refresh: refreshCounts } = useCounts();
 
-  const [stage, setStage] = useState('idle'); // idle | capturing | annotate | saving
+  // idle | capturing | select | annotate | saving
+  const [stage, setStage] = useState('idle');
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState(COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState(WIDTHS[1]);
   const [filled, setFilled] = useState(false);
   const [editingTextId, setEditingTextId] = useState(null);
+  const [, forceTick] = useState(0); // re-render on each crop-drag move so the live W×H label updates
 
-  const canvasRef = useRef(null);
   const wrapRef = useRef(null);
   const textareaElRef = useRef(null);
+
+  // Raw capture, before any crop.
+  const rawImageRef = useRef(null);
+  const rawSizeRef = useRef({ width: 0, height: 0 });
+
+  // Region-select stage.
+  const selectCanvasRef = useRef(null);
+  const selectScaleRef = useRef(1);
+  const selectionRef = useRef(null); // { x, y, width, height } in raw-image pixels
+  const selectDragRef = useRef(null);
+
+  // Annotate stage.
+  const canvasRef = useRef(null);
   const baseImageRef = useRef(null);
   const imgSizeRef = useRef({ width: 0, height: 0 });
   const displayScaleRef = useRef(1);
@@ -77,6 +76,7 @@ export default function ScreenshotModal({ onClose }) {
   const draftRef = useRef(null);
 
   const supported = typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia;
+  const clipboardSupported = typeof navigator !== 'undefined' && navigator.clipboard && typeof window !== 'undefined' && window.ClipboardItem;
 
   const capture = async () => {
     setError('');
@@ -100,18 +100,137 @@ export default function ScreenshotModal({ onClose }) {
       const img = new Image();
       img.src = off.toDataURL('image/png');
       await new Promise((resolve) => { img.onload = resolve; });
-      baseImageRef.current = img;
-      imgSizeRef.current = { width: w, height: h };
-      elementsRef.current = [];
-      historyRef.current = [];
-      setEditingTextId(null);
-      setStage('annotate');
+      rawImageRef.current = img;
+      rawSizeRef.current = { width: w, height: h };
+      selectionRef.current = null;
+      setStage('select');
     } catch (err) {
       stream?.getTracks().forEach((tr) => tr.stop());
       if (err?.name !== 'NotAllowedError') setError(t('screenshot.captureError'));
       setStage('idle');
     }
   };
+
+  // --- Region select stage ---
+
+  const resizeSelectCanvas = () => {
+    const canvas = selectCanvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap || stage !== 'select') return;
+    const { width, height } = rawSizeRef.current;
+    const maxW = wrap.clientWidth - 32;
+    const maxH = wrap.clientHeight - 32;
+    const scale = Math.min(1, maxW / width, maxH / height);
+    selectScaleRef.current = scale;
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = `${width * scale}px`;
+    canvas.style.height = `${height * scale}px`;
+    drawSelect();
+  };
+
+  function drawSelect() {
+    const canvas = selectCanvasRef.current;
+    if (!canvas || !rawImageRef.current) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(rawImageRef.current, 0, 0, canvas.width, canvas.height);
+    const sel = selectionRef.current;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    if (sel && sel.width > 0 && sel.height > 0) {
+      ctx.fillRect(0, 0, canvas.width, sel.y);
+      ctx.fillRect(0, sel.y + sel.height, canvas.width, canvas.height - (sel.y + sel.height));
+      ctx.fillRect(0, sel.y, sel.x, sel.height);
+      ctx.fillRect(sel.x + sel.width, sel.y, canvas.width - (sel.x + sel.width), sel.height);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 5]);
+      ctx.strokeRect(sel.x, sel.y, sel.width, sel.height);
+      ctx.setLineDash([]);
+    } else {
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  useEffect(() => {
+    resizeSelectCanvas();
+    window.addEventListener('resize', resizeSelectCanvas);
+    return () => window.removeEventListener('resize', resizeSelectCanvas);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
+
+  const toSelectCoords = (clientX, clientY) => {
+    const canvas = selectCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scale = selectScaleRef.current || 1;
+    const { width, height } = rawSizeRef.current;
+    return {
+      x: Math.min(Math.max((clientX - rect.left) / scale, 0), width),
+      y: Math.min(Math.max((clientY - rect.top) / scale, 0), height),
+    };
+  };
+
+  const cropToImage = (x, y, width, height) => new Promise((resolve) => {
+    const off = document.createElement('canvas');
+    off.width = width;
+    off.height = height;
+    off.getContext('2d').drawImage(rawImageRef.current, x, y, width, height, 0, 0, width, height);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.src = off.toDataURL('image/png');
+  });
+
+  const startAnnotate = (img, width, height) => {
+    baseImageRef.current = img;
+    imgSizeRef.current = { width, height };
+    elementsRef.current = [];
+    historyRef.current = [];
+    setEditingTextId(null);
+    setStage('annotate');
+  };
+
+  const useFullScreen = async () => {
+    startAnnotate(rawImageRef.current, rawSizeRef.current.width, rawSizeRef.current.height);
+  };
+
+  const onSelectPointerDown = (e) => {
+    selectCanvasRef.current.setPointerCapture(e.pointerId);
+    const { x, y } = toSelectCoords(e.clientX, e.clientY);
+    selectDragRef.current = { startX: x, startY: y };
+    selectionRef.current = { x, y, width: 0, height: 0 };
+    forceTick((v) => v + 1);
+    drawSelect();
+  };
+
+  const onSelectPointerMove = (e) => {
+    if (!selectDragRef.current) return;
+    const { x, y } = toSelectCoords(e.clientX, e.clientY);
+    const { startX, startY } = selectDragRef.current;
+    selectionRef.current = {
+      x: Math.min(startX, x),
+      y: Math.min(startY, y),
+      width: Math.abs(x - startX),
+      height: Math.abs(y - startY),
+    };
+    forceTick((v) => v + 1);
+    drawSelect();
+  };
+
+  const onSelectPointerUp = async () => {
+    if (!selectDragRef.current) return;
+    selectDragRef.current = null;
+    const sel = selectionRef.current;
+    if (!sel || sel.width < MIN_SELECTION || sel.height < MIN_SELECTION) {
+      selectionRef.current = null;
+      forceTick((v) => v + 1);
+      drawSelect();
+      return;
+    }
+    const img = await cropToImage(sel.x, sel.y, sel.width, sel.height);
+    startAnnotate(img, sel.width, sel.height);
+  };
+
+  // --- Annotate stage ---
 
   const resizeCanvas = () => {
     const canvas = canvasRef.current;
@@ -333,18 +452,22 @@ export default function ScreenshotModal({ onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const flattenToBlob = async () => {
+    const { width, height } = imgSizeRef.current;
+    const flat = document.createElement('canvas');
+    flat.width = width;
+    flat.height = height;
+    const ctx = flat.getContext('2d');
+    ctx.drawImage(baseImageRef.current, 0, 0, width, height);
+    for (const el of elementsRef.current) renderElement(ctx, el);
+    return new Promise((resolve) => flat.toBlob(resolve, 'image/png'));
+  };
+
   const saveAsNote = async () => {
     if (editingTextId) commitTextEdit();
     setStage('saving');
     try {
-      const { width, height } = imgSizeRef.current;
-      const flat = document.createElement('canvas');
-      flat.width = width;
-      flat.height = height;
-      const ctx = flat.getContext('2d');
-      ctx.drawImage(baseImageRef.current, 0, 0, width, height);
-      for (const el of elementsRef.current) renderElement(ctx, el);
-      const blob = await new Promise((resolve) => flat.toBlob(resolve, 'image/png'));
+      const blob = await flattenToBlob();
       const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
       const { url } = await api.uploadNoteImage(file);
       const title = t('screenshot.noteTitle', { date: new Date().toLocaleString() });
@@ -358,6 +481,19 @@ export default function ScreenshotModal({ onClose }) {
     }
   };
 
+  const copyToClipboard = async () => {
+    if (editingTextId) commitTextEdit();
+    setError('');
+    try {
+      const blob = await flattenToBlob();
+      await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      setError(t('screenshot.copyError'));
+    }
+  };
+
   const toolBtnStyle = (active) => ({
     display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 9, cursor: 'pointer',
     background: active ? theme.accent : theme.subtleBg, color: active ? '#fff' : theme.textPrimary, flexShrink: 0,
@@ -365,6 +501,8 @@ export default function ScreenshotModal({ onClose }) {
 
   const editingEl = editingTextId ? elementsRef.current.find((e) => e.id === editingTextId) : null;
   const scale = displayScaleRef.current || 1;
+  const sel = selectionRef.current;
+  const selScale = selectScaleRef.current || 1;
 
   return (
     <div
@@ -381,6 +519,23 @@ export default function ScreenshotModal({ onClose }) {
           <Icon name="camera" size={18} color={theme.accentText} />
           <div style={{ fontSize: 15, fontWeight: 800, color: theme.textPrimary }}>{t('screenshot.title')}</div>
           <div style={{ flex: 1 }} />
+          {stage === 'select' && (
+            <>
+              <span style={{ fontSize: 12, color: theme.textMuted }}>{t('screenshot.selectHint')}</span>
+              <button
+                onClick={useFullScreen}
+                style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {t('screenshot.fullScreen')}
+              </button>
+              <button
+                onClick={capture}
+                style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {t('screenshot.recapture')}
+              </button>
+            </>
+          )}
           {stage === 'annotate' && (
             <>
               <button
@@ -389,6 +544,14 @@ export default function ScreenshotModal({ onClose }) {
               >
                 {t('screenshot.recapture')}
               </button>
+              {clipboardSupported && (
+                <button
+                  onClick={copyToClipboard}
+                  style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: copied ? theme.accentText : theme.textPrimary, borderRadius: 8, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {copied ? t('screenshot.copied') : t('screenshot.copy')}
+                </button>
+              )}
               <button
                 onClick={saveAsNote}
                 style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
@@ -485,6 +648,29 @@ export default function ScreenshotModal({ onClose }) {
             {stage === 'capturing' && <div style={{ color: theme.textMuted, fontSize: 13.5 }}>{t('screenshot.waitingPermission')}</div>}
             {stage === 'saving' && <div style={{ color: theme.textMuted, fontSize: 13.5 }}>{t('screenshot.savingNote')}</div>}
 
+            {stage === 'select' && (
+              <div style={{ position: 'relative' }}>
+                <canvas
+                  ref={selectCanvasRef}
+                  onPointerDown={onSelectPointerDown}
+                  onPointerMove={onSelectPointerMove}
+                  onPointerUp={onSelectPointerUp}
+                  onPointerCancel={onSelectPointerUp}
+                  style={{ display: 'block', touchAction: 'none', cursor: 'crosshair', boxShadow: '0 8px 30px rgba(0,0,0,0.35)' }}
+                />
+                {sel && sel.width > 0 && sel.height > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute', left: sel.x * selScale, top: Math.max(0, sel.y * selScale - 22), pointerEvents: 'none',
+                      background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                    }}
+                  >
+                    {Math.round(sel.width)} × {Math.round(sel.height)}
+                  </div>
+                )}
+              </div>
+            )}
+
             {stage === 'annotate' && (
               <>
                 <canvas
@@ -519,7 +705,7 @@ export default function ScreenshotModal({ onClose }) {
               </>
             )}
 
-            {error && stage === 'annotate' && (
+            {error && (stage === 'annotate' || stage === 'select') && (
               <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: 'oklch(0.55 0.18 25)', color: '#fff', padding: '8px 14px', borderRadius: 8, fontSize: 12.5 }}>
                 {error}
               </div>
