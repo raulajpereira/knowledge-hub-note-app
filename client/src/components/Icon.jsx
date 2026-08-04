@@ -195,6 +195,27 @@ const PATHS = {
     ['rect', { x: 3, y: 5, width: 18, height: 13, rx: 1.5 }],
     ['path', { d: 'M7 15c1.5-3 2.5-4 4-4s2 2 3.5 2 2-2 3.5-3' }],
   ],
+  cursor: [
+    ['path', { d: 'M5 3.5 19 10l-6 1.5L11 19Z' }],
+  ],
+  textTool: [
+    ['path', { d: 'M5 5.5h14M12 5.5V19' }],
+  ],
+  square: [
+    ['rect', { x: 4, y: 4, width: 16, height: 16, rx: 1.5 }],
+  ],
+  circleShape: [
+    ['circle', { cx: 12, cy: 12, r: 8.5 }],
+  ],
+  arrowShape: [
+    ['path', { d: 'M5 19 19 5' }],
+    ['path', { d: 'M9 5h10v10' }],
+  ],
+  layers: [
+    ['path', { d: 'M12 3.5 21 8l-9 4.5L3 8Z' }],
+    ['path', { d: 'M3 13l9 4.5 9-4.5' }],
+    ['path', { d: 'M3 17.5 12 22l9-4.5' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {
