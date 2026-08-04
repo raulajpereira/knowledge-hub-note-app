@@ -15,6 +15,7 @@ import HeaderSearch from './HeaderSearch.jsx';
 import TransactionsQuickSearch from './TransactionsQuickSearch.jsx';
 import NewsTicker from './NewsTicker.jsx';
 import MobileMoreSheet from './MobileMoreSheet.jsx';
+import WhiteboardModal from './WhiteboardModal.jsx';
 import logoDefault from '../assets/logo-default.png';
 import logoIcon from '../assets/logo-icon.png';
 import { resolveSidebarLayout, sidebarItemLabel, sidebarGroupLabel } from '../lib/sidebarItems.js';
@@ -41,6 +42,7 @@ export default function AppLayout() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
@@ -421,6 +423,17 @@ export default function AppLayout() {
 
             <div style={{ flex: 1 }} />
 
+            <span
+              onClick={() => setWhiteboardOpen(true)}
+              title={t('nav.whiteboard')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                cursor: 'pointer', flexShrink: 0, color: theme.textPrimary, background: theme.subtleBg,
+              }}
+            >
+              <Icon name="whiteboard" size={17} />
+            </span>
+
             <div ref={notifRef} style={{ position: 'relative', flexShrink: 0 }}>
               <span
                 onClick={() => setNotifOpen((v) => !v)}
@@ -588,6 +601,7 @@ export default function AppLayout() {
 
       {accountOpen && <AccountModal onClose={() => setAccountOpen(false)} />}
       {aboutOpen && <AboutModal theme={theme} t={t} lang={lang} onClose={() => setAboutOpen(false)} />}
+      {whiteboardOpen && <WhiteboardModal onClose={() => setWhiteboardOpen(false)} />}
 
       <AgentChatWidget />
     </div>

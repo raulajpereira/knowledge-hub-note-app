@@ -191,6 +191,10 @@ const PATHS = {
     ['path', { d: 'M6.5 7h11v4.5a5.5 5.5 0 0 1-11 0Z' }],
     ['path', { d: 'M12 16v6' }],
   ],
+  whiteboard: [
+    ['rect', { x: 3, y: 5, width: 18, height: 13, rx: 1.5 }],
+    ['path', { d: 'M7 15c1.5-3 2.5-4 4-4s2 2 3.5 2 2-2 3.5-3' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

@@ -312,4 +312,10 @@ export const api = {
   createApiRequest: (payload) => request('/api-playground/requests', { method: 'POST', body: payload }),
   updateApiRequest: (id, payload) => request(`/api-playground/requests/${id}`, { method: 'PATCH', body: payload }),
   deleteApiRequest: (id) => request(`/api-playground/requests/${id}`, { method: 'DELETE' }),
+
+  listWhiteboards: (archived) => request(`/whiteboards${archived ? '?archived=true' : ''}`),
+  getWhiteboard: (id) => request(`/whiteboards/${id}`),
+  createWhiteboard: (payload) => request('/whiteboards', { method: 'POST', body: payload }),
+  updateWhiteboard: (id, payload) => request(`/whiteboards/${id}`, { method: 'PATCH', body: payload }),
+  deleteWhiteboard: (id) => request(`/whiteboards/${id}`, { method: 'DELETE' }),
 };

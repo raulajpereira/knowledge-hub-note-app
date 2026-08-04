@@ -55,6 +55,7 @@ model User {
   snapshots       Snapshot[]
   apiFolders      ApiFolder[]
   apiRequests     ApiRequest[]
+  whiteboards     Whiteboard[]
   links           Link[]
   templates       Template[]
   projects        Project[]
@@ -505,6 +506,25 @@ model ApiRequest {
   @@index([userId])
   @@index([folderId])
   @@map("api_requests")
+}
+
+// Infinite whiteboard / canvas (Obsidian-Canvas-style). `data` holds the
+// entire vector scene (strokes + viewport transform) as one JSON blob —
+// simplest possible persistence model for a freehand drawing surface, and
+// avoids needing per-stroke rows for something that's edited as a whole.
+model Whiteboard {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  data      Json?
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("whiteboards")
 }
 
 // Generic cross-entity link — lets a Note/Issue/Task/CodeItem point at any
