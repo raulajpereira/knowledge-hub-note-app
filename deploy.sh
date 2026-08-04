@@ -74,6 +74,9 @@ node scripts/seed-transactions.js
 echo "==> Syncing document templates"
 node scripts/seed-doc-templates.js
 
+echo "==> Cleaning up duplicate document templates"
+node scripts/cleanup-duplicate-doc-templates.js
+
 echo "==> Building client"
 cd "$APP_DIR/client"
 npm install

@@ -102,7 +102,11 @@ export default function ScreenshotModal({ onClose }) {
       await new Promise((resolve) => { img.onload = resolve; });
       rawImageRef.current = img;
       rawSizeRef.current = { width: w, height: h };
-      selectionRef.current = null;
+      // Pre-select the whole capture: the user already granted the browser's
+      // screen/window/tab share prompt, so our own UI should show the entire
+      // shot immediately (not a dimmed blank canvas) and treat cropping as
+      // optional, dragging a smaller region only if they want to trim it down.
+      selectionRef.current = { x: 0, y: 0, width: w, height: h };
       setStage('select');
     } catch (err) {
       stream?.getTracks().forEach((tr) => tr.stop());
@@ -147,8 +151,6 @@ export default function ScreenshotModal({ onClose }) {
       ctx.setLineDash([8, 5]);
       ctx.strokeRect(sel.x, sel.y, sel.width, sel.height);
       ctx.setLineDash([]);
-    } else {
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   }
 
@@ -221,7 +223,8 @@ export default function ScreenshotModal({ onClose }) {
     selectDragRef.current = null;
     const sel = selectionRef.current;
     if (!sel || sel.width < MIN_SELECTION || sel.height < MIN_SELECTION) {
-      selectionRef.current = null;
+      // Too small to count as an intentional crop — fall back to the whole capture.
+      selectionRef.current = { x: 0, y: 0, width: rawSizeRef.current.width, height: rawSizeRef.current.height };
       forceTick((v) => v + 1);
       drawSelect();
       return;
