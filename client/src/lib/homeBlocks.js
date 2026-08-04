@@ -4,7 +4,7 @@
 // block here can be dragged into either column and to any position within
 // it, so the user controls both the order and how many blocks sit in each
 // column (e.g. 3 left / 4 right instead of a fixed split).
-export const HOME_BLOCKS = ['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'resurfacing', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage'];
+export const HOME_BLOCKS = ['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'resurfacing', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage', 'tagsHeatmap'];
 
 // Reused both to render each block's own header and to label it in the
 // "add block" picker, so the two names never drift apart.
@@ -18,6 +18,7 @@ export const HOME_BLOCK_LABEL_KEYS = {
   weeklySummary: 'home.weeklySummary',
   sapNewsTeaser: 'home.sapNewsTeaser',
   vpsDiskUsage: 'home.vpsDiskUsage',
+  tagsHeatmap: 'home.tagsHeatmap',
 };
 
 // Only used to place a block the first time it's ever seen (brand new
@@ -32,6 +33,7 @@ const DEFAULT_COLUMN = {
   weeklySummary: 'right',
   sapNewsTeaser: 'right',
   vpsDiskUsage: 'right',
+  tagsHeatmap: 'right',
 };
 
 export function resolveHomeLayout(saved) {

@@ -620,6 +620,72 @@ export default function Home() {
         </div>
       </div>
     ),
+
+    tagsHeatmap: (() => {
+      const WEEKS = 10;
+      const startOfWeek = (d) => {
+        const x = new Date(d);
+        const day = (x.getDay() + 6) % 7; // Monday = 0
+        x.setHours(0, 0, 0, 0);
+        x.setDate(x.getDate() - day);
+        return x.getTime();
+      };
+      const thisWeekStart = startOfWeek(new Date());
+      const weekStarts = Array.from({ length: WEEKS }, (_, i) => thisWeekStart - (WEEKS - 1 - i) * 7 * 86400000);
+
+      const counts = {}; // tag -> weekIndex -> count
+      const totals = {}; // tag -> total
+      for (const note of notes) {
+        if (!note.tags?.length || !note.createdAt) continue;
+        const ws = startOfWeek(new Date(note.createdAt));
+        const idx = weekStarts.indexOf(ws);
+        if (idx === -1) continue;
+        for (const tag of note.tags) {
+          counts[tag] = counts[tag] || Array(WEEKS).fill(0);
+          counts[tag][idx] += 1;
+          totals[tag] = (totals[tag] || 0) + 1;
+        }
+      }
+      const topTags = Object.keys(totals).sort((a, b) => totals[b] - totals[a]).slice(0, 6);
+      const maxCell = Math.max(1, ...topTags.flatMap((tg) => counts[tg]));
+
+      return (
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('home.tagsHeatmap')}</div>
+          <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, padding: 16 }}>
+            {topTags.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: theme.textMuted, textAlign: 'center', padding: '10px 4px' }}>{t('home.tagsHeatmapEmpty')}</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {topTags.map((tag) => (
+                  <div key={tag} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 74, flexShrink: 0, fontSize: 11.5, fontWeight: 600, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={tag}>
+                      {tag}
+                    </span>
+                    <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+                      {counts[tag].map((c, i) => {
+                        const alpha = c === 0 ? 0 : 0.22 + 0.78 * (c / maxCell);
+                        return (
+                          <div
+                            key={i}
+                            title={`${c} ${c === 1 ? t('home.tagsHeatmapNote') : t('home.tagsHeatmapNotes')}`}
+                            style={{
+                              flex: 1, aspectRatio: '1', borderRadius: 3, minWidth: 10,
+                              background: c === 0 ? theme.subtleBg : theme.accent,
+                              opacity: c === 0 ? 1 : alpha,
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    })(),
   };
 
   const renderBlock = (key, colKey, index) => (
