@@ -33,6 +33,7 @@ export default function Artifacts() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [mode, setMode] = useState('preview');
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [titleDraft, setTitleDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
@@ -453,6 +454,13 @@ export default function Artifacts() {
                 </div>
               ))}
             </div>
+            <span
+              onClick={() => { navigator.clipboard.writeText(selected.html || ''); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+              title="Copy"
+              style={{ display: 'flex', cursor: 'pointer', flexShrink: 0, color: copied ? theme.accentText : theme.textMuted }}
+            >
+              <Icon name={copied ? 'check' : 'copy'} size={17} />
+            </span>
             <span onClick={() => patch({ favorite: !selected.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
               <Icon name="pin" size={17} color={selected.favorite ? theme.accentText : theme.textMuted} />
             </span>

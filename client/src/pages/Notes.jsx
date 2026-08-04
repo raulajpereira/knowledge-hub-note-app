@@ -11,6 +11,7 @@ import { htmlToMarkdown, markdownToHtml } from '../lib/markdown.js';
 import TemplateMenu from '../components/TemplateMenu.jsx';
 import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
+import TerminalBlock from '../components/TerminalBlock.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
@@ -193,6 +194,7 @@ const SLASH_COMMAND_LABEL_KEYS = {
   toggle: 'notes.slashToggle',
   checklist: 'notes.slashChecklist',
   code: 'notes.slashCode',
+  terminal: 'notes.slashTerminal',
   toc: 'notes.slashToc',
   page: 'notes.slashPage',
 };
@@ -493,7 +495,7 @@ export default function Notes() {
           const items = (b.items || []).map((it) => `<li>${it.checked ? '☑' : '☐'} ${it.text || ''}</li>`).join('');
           return `<ul>${items}</ul>`;
         }
-        if (b.type === 'code') return `<pre><code>${(b.value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</code></pre>`;
+        if (b.type === 'code' || b.type === 'terminal') return `<pre><code>${(b.value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</code></pre>`;
         if (b.type === 'image' || b.type === 'file') return '';
         if (b.format === 'html') return `<div>${b.value || ''}</div>`;
         return `<p>${(b.value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`;
@@ -797,6 +799,11 @@ export default function Notes() {
     updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'code', language: 'abap', value: '' }]);
   };
 
+  const addTerminalBlock = () => {
+    if (!selected) return;
+    updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'terminal', value: '' }]);
+  };
+
   const addImageBlock = (url) => {
     if (!selected) return;
     updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'image', url }]);
@@ -1076,6 +1083,7 @@ export default function Notes() {
     { key: 'toggle', icon: 'chevron', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'toggle', summary: '', value: '', open: true })) },
     { key: 'checklist', icon: 'check', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'checklist', items: [{ id: newBlockId(), text: '', done: false }] })) },
     { key: 'code', icon: 'code', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'code', language: 'abap', value: '' })) },
+    { key: 'terminal', icon: 'terminal', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'terminal', value: '' })) },
     { key: 'toc', icon: 'archive', run: (blockId) => replaceBlockAt(blockId, (b) => ({ id: b.id, type: 'toc' })) },
     { key: 'page', icon: 'doc', run: (blockId) => createChildPage(blockId) },
   ];
@@ -1819,6 +1827,13 @@ export default function Notes() {
                   onLanguageChange={(language) => updateBlock(block.id, { language })}
                   onDelete={() => deleteBlock(block.id)}
                 />
+              ) : block.type === 'terminal' ? (
+                <TerminalBlock
+                  key={block.id}
+                  value={block.value}
+                  onChange={(value) => updateBlock(block.id, { value })}
+                  onDelete={() => deleteBlock(block.id)}
+                />
               ) : block.type === 'image' ? (
                 <div key={block.id} style={{ position: 'relative' }}>
                   <img src={block.url} alt="" style={{ maxWidth: '100%', borderRadius: 10, display: 'block' }} />
@@ -1886,6 +1901,20 @@ export default function Notes() {
                 </a>
               ) : block.type === 'checklist' ? (
                 <div key={block.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {block.items.length > 0 && (() => {
+                    const done = block.items.filter((it) => it.done).length;
+                    const pct = Math.round((done / block.items.length) * 100);
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 25px 4px 0' }}>
+                        <div style={{ flex: 1, height: 5, borderRadius: 3, background: theme.subtleBg, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? 'oklch(0.6 0.15 145)' : theme.accent, borderRadius: 3, transition: 'width 0.2s' }} />
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, flexShrink: 0 }}>
+                          {pct}% ({done}/{block.items.length})
+                        </span>
+                      </div>
+                    );
+                  })()}
                   {block.items.map((item) => (
                     <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span
@@ -2085,6 +2114,9 @@ export default function Notes() {
             </button>
             <button onClick={addCodeBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addCode')}
+            </button>
+            <button onClick={addTerminalBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+              {t('notes.addTerminal')}
             </button>
             <button onClick={() => fileInputRef.current?.click()} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addFile')}

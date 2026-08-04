@@ -2,11 +2,19 @@ import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { highlightCode, tokenColor, LANGUAGES } from '../lib/highlight.js';
 import AutoResizeTextarea from './AutoResizeTextarea.jsx';
+import Icon from './Icon.jsx';
 
 export default function CodeBlock({ value, language, onChange, onLanguageChange, onDelete }) {
   const { theme } = useTheme();
   const [editing, setEditing] = useState(!value);
+  const [copied, setCopied] = useState(false);
   const lines = highlightCode(value, language);
+
+  const copy = () => {
+    navigator.clipboard.writeText(value || '');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div style={{ background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'visible' }}>
@@ -25,6 +33,13 @@ export default function CodeBlock({ value, language, onChange, onLanguageChange,
           </div>
         ))}
         <div style={{ flex: 1 }} />
+        <span
+          onClick={copy}
+          title="Copy"
+          style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: copied ? theme.accentText : theme.textMuted, padding: '2px 4px' }}
+        >
+          <Icon name={copied ? 'check' : 'copy'} size={14} />
+        </span>
         <button
           onClick={() => setEditing((v) => !v)}
           style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 6, padding: '4px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}
