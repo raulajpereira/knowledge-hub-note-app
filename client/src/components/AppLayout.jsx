@@ -16,6 +16,7 @@ import TransactionsQuickSearch from './TransactionsQuickSearch.jsx';
 import NewsTicker from './NewsTicker.jsx';
 import MobileMoreSheet from './MobileMoreSheet.jsx';
 import WhiteboardModal from './WhiteboardModal.jsx';
+import ActivityModal from './ActivityModal.jsx';
 import logoDefault from '../assets/logo-default.png';
 import logoIcon from '../assets/logo-icon.png';
 import { resolveSidebarLayout, sidebarItemLabel, sidebarGroupLabel } from '../lib/sidebarItems.js';
@@ -43,6 +44,7 @@ export default function AppLayout() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
@@ -424,6 +426,17 @@ export default function AppLayout() {
             <div style={{ flex: 1 }} />
 
             <span
+              onClick={() => setActivityOpen(true)}
+              title={t('activity.title')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                cursor: 'pointer', flexShrink: 0, color: theme.textPrimary, background: theme.subtleBg,
+              }}
+            >
+              <Icon name="calendar" size={17} />
+            </span>
+
+            <span
               onClick={() => setWhiteboardOpen(true)}
               title={t('nav.whiteboard')}
               style={{
@@ -602,6 +615,7 @@ export default function AppLayout() {
       {accountOpen && <AccountModal onClose={() => setAccountOpen(false)} />}
       {aboutOpen && <AboutModal theme={theme} t={t} lang={lang} onClose={() => setAboutOpen(false)} />}
       {whiteboardOpen && <WhiteboardModal onClose={() => setWhiteboardOpen(false)} />}
+      {activityOpen && <ActivityModal onClose={() => setActivityOpen(false)} />}
 
       <AgentChatWidget />
     </div>

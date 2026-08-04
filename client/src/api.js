@@ -69,6 +69,7 @@ export const api = {
   listSessions: () => request('/auth/sessions'),
   revokeSession: (id) => request(`/auth/sessions/${id}`, { method: 'DELETE' }),
   listAuditLog: (params) => request(`/audit-log${params ? `?${new URLSearchParams(params)}` : ''}`),
+  purgeAuditLog: (olderThanDays) => request(`/audit-log?${new URLSearchParams({ olderThanDays })}`, { method: 'DELETE' }),
   me: () => request('/auth/me'),
   updateProfile: (payload) => request('/auth/me', { method: 'PATCH', body: payload }),
   changePassword: (payload) => request('/auth/change-password', { method: 'POST', body: payload }),
@@ -298,6 +299,7 @@ export const api = {
   listCodeItems: (folderId) => request(`/code-library/folders/${folderId}/items`),
   createCodeItem: (folderId, payload) => request(`/code-library/folders/${folderId}/items`, { method: 'POST', body: payload }),
   updateCodeItem: (id, payload) => request(`/code-library/items/${id}`, { method: 'PATCH', body: payload }),
+  reorderCodeItems: (folderId, itemIds) => request(`/code-library/folders/${folderId}/items/reorder`, { method: 'PATCH', body: { itemIds } }),
   documentCodeItem: (id) => request(`/code-library/items/${id}/document`, { method: 'POST' }),
   listCodeItemSnapshots: (id) => request(`/code-library/items/${id}/snapshots`),
   createCodeItemSnapshot: (id, label) => request(`/code-library/items/${id}/snapshots`, { method: 'POST', body: { label } }),
@@ -314,6 +316,7 @@ export const api = {
   deleteApiRequest: (id) => request(`/api-playground/requests/${id}`, { method: 'DELETE' }),
 
   listWhiteboards: (archived) => request(`/whiteboards${archived ? '?archived=true' : ''}`),
+  getActivity: (from, to) => request(`/activity?${new URLSearchParams({ from, to })}`),
   getWhiteboard: (id) => request(`/whiteboards/${id}`),
   createWhiteboard: (payload) => request('/whiteboards', { method: 'POST', body: payload }),
   updateWhiteboard: (id, payload) => request(`/whiteboards/${id}`, { method: 'PATCH', body: payload }),

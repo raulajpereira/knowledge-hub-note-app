@@ -33,6 +33,7 @@ import transportRequestsRoutes from './routes/transportrequests.routes.js';
 import auditLogRoutes from './routes/auditlog.routes.js';
 import apiPlaygroundRoutes from './routes/apiplayground.routes.js';
 import whiteboardsRoutes from './routes/whiteboards.routes.js';
+import activityRoutes from './routes/activity.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
 import { auditMiddleware } from './lib/auditLog.js';
 
@@ -76,6 +77,7 @@ app.use('/api/transport-requests', transportRequestsRoutes);
 app.use('/api/audit-log', auditLogRoutes);
 app.use('/api/api-playground', apiPlaygroundRoutes);
 app.use('/api/whiteboards', whiteboardsRoutes);
+app.use('/api/activity', activityRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

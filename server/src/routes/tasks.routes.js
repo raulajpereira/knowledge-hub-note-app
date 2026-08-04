@@ -54,10 +54,12 @@ router.patch('/:id', async (req, res) => {
   if (done !== undefined) {
     data.done = !!done;
     data.status = data.done ? 'done' : 'todo';
+    data.doneAt = data.done ? new Date() : null;
   }
   if (status !== undefined && STATUSES.includes(status)) {
     data.status = status;
     data.done = status === 'done';
+    data.doneAt = data.done ? new Date() : null;
   }
   if (priority !== undefined) {
     if (!PRIORITIES.includes(priority)) return res.status(400).json({ error: 'Invalid priority' });

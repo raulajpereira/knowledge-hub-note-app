@@ -30,4 +30,14 @@ router.get('/', async (req, res) => {
   });
 });
 
+router.delete('/', async (req, res) => {
+  const olderThanDays = Number(req.query.olderThanDays);
+  if (!Number.isFinite(olderThanDays) || olderThanDays < 0) {
+    return res.status(400).json({ error: 'olderThanDays must be a non-negative number' });
+  }
+  const threshold = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+  const { count } = await prisma.auditLog.deleteMany({ where: { createdAt: { lt: threshold } } });
+  res.json({ deleted: count });
+});
+
 export default router;

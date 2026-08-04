@@ -74,7 +74,7 @@ function SubTable({ title, columns, rows, onChange, t }) {
         </span>
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 'max-content' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {rows.map((row, idx) => (
             <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               {columns.map((c) =>
@@ -93,7 +93,7 @@ function SubTable({ title, columns, rows, onChange, t }) {
                     value={row[c.key] || ''}
                     onChange={(e) => onChange(rows.map((r, i) => (i === idx ? { ...r, [c.key]: e.target.value } : r)))}
                     placeholder={c.label}
-                    style={{ ...inputStyle(theme), width: c.width || 120, flexShrink: 0 }}
+                    style={c.grow ? { ...inputStyle(theme), flex: '1 1 auto', minWidth: c.width || 120 } : { ...inputStyle(theme), width: c.width || 120, flexShrink: 0 }}
                   />
                 )
               )}
@@ -207,7 +207,7 @@ function ProgramConfig({ a, set, t }) {
             title={t('codeLibrary.tSimbolos')}
             columns={[
               { key: 'nome', label: t('codeLibrary.colNome'), width: 90 },
-              { key: 'texto', label: t('codeLibrary.colTexto'), width: 220 },
+              { key: 'texto', label: t('codeLibrary.colTexto'), width: 220, grow: true },
               { key: 'compr', label: t('codeLibrary.colCompr'), width: 70 },
               { key: 'max', label: t('codeLibrary.colMax'), width: 70 },
             ]}
@@ -219,7 +219,7 @@ function ProgramConfig({ a, set, t }) {
             title={t('codeLibrary.tSelecao')}
             columns={[
               { key: 'nome', label: t('codeLibrary.colNome'), width: 90 },
-              { key: 'texto', label: t('codeLibrary.colTexto'), width: 240 },
+              { key: 'texto', label: t('codeLibrary.colTexto'), width: 240, grow: true },
               { key: 'referDict', label: t('codeLibrary.colReferDict'), type: 'checkbox', width: 130 },
             ]}
             rows={textos.selecao || []}
@@ -230,7 +230,7 @@ function ProgramConfig({ a, set, t }) {
             title={t('codeLibrary.tTitulos')}
             columns={[
               { key: 'nome', label: t('codeLibrary.colNome'), width: 90 },
-              { key: 'texto', label: t('codeLibrary.colTexto'), width: 240 },
+              { key: 'texto', label: t('codeLibrary.colTexto'), width: 240, grow: true },
             ]}
             rows={textos.titulos || []}
             onChange={(rows) => setTextos({ titulos: rows })}
@@ -283,7 +283,7 @@ function ClassConfig({ a, set, t }) {
             { key: 'readOnly', label: t('codeLibrary.colReadOnly'), type: 'checkbox', width: 90 },
             { key: 'atribuicaoTipo', label: t('codeLibrary.colAtribuicaoTipo'), width: 90 },
             { key: 'tipoReferencia', label: t('codeLibrary.colTipoReferencia'), width: 130 },
-            { key: 'descricao', label: t('codeLibrary.colDescricao'), width: 200 },
+            { key: 'descricao', label: t('codeLibrary.colDescricao'), width: 200, grow: true },
           ]}
           rows={atributos}
           onChange={(rows) => set({ atributos: rows })}
@@ -293,7 +293,7 @@ function ClassConfig({ a, set, t }) {
       <Block title={t('codeLibrary.blockDeclaracoesProgressivas')} last>
         <SubTable
           title={t('codeLibrary.blockDeclaracoesProgressivas')}
-          columns={[{ key: 'grpTipoCtgObjeto', label: t('codeLibrary.colGrpTipoCtgObjeto'), width: 220 }]}
+          columns={[{ key: 'grpTipoCtgObjeto', label: t('codeLibrary.colGrpTipoCtgObjeto'), width: 220, grow: true }]}
           rows={declaracoesProgressivas}
           onChange={(rows) => set({ declaracoesProgressivas: rows })}
           t={t}
@@ -312,7 +312,7 @@ function ParamTable({ title, rows, onChange, t, hasValorProposto, hasOpcional, h
   if (hasValorProposto) columns.push({ key: 'valorProposto', label: t('codeLibrary.colValorProposto'), width: 110 });
   if (hasOpcional) columns.push({ key: 'opcional', label: t('codeLibrary.colOpcional'), type: 'checkbox', width: 80 });
   if (hasTransfer) columns.push({ key: 'transfer', label: t('codeLibrary.colTransfer'), type: 'checkbox', width: 100 });
-  columns.push({ key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 200 });
+  columns.push({ key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 200, grow: true });
   columns.push({ key: 'txtDescr', label: t('codeLibrary.colTxtDescr'), width: 130 });
   return <SubTable title={title} columns={columns} rows={rows} onChange={onChange} t={t} />;
 }
@@ -385,7 +385,7 @@ function FunctionModuleConfig({ a, set, t }) {
       <Block title={t('codeLibrary.blockExcecoes')} last>
         <SubTable
           title={t('codeLibrary.blockExcecoes')}
-          columns={[{ key: 'excecao', label: t('codeLibrary.colExcecao'), width: 150 }, { key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 250 }, { key: 'txtDescr', label: t('codeLibrary.colTxtDescr'), width: 130 }]}
+          columns={[{ key: 'excecao', label: t('codeLibrary.colExcecao'), width: 150 }, { key: 'textoBreve', label: t('codeLibrary.colTextoBreve'), width: 250, grow: true }, { key: 'txtDescr', label: t('codeLibrary.colTxtDescr'), width: 130 }]}
           rows={a.excecoes || []}
           onChange={(rows) => set({ excecoes: rows })}
           t={t}
@@ -428,7 +428,7 @@ function TableConfig({ a, set, t }) {
             { key: 'ctgDados', label: t('codeLibrary.colCtgDados'), width: 90 },
             { key: 'compr', label: t('codeLibrary.colCompr'), width: 70 },
             { key: 'casasDecimais', label: t('codeLibrary.colCasasDecimais'), width: 90 },
-            { key: 'descricaoBreve', label: t('codeLibrary.colDescricaoBreve'), width: 200 },
+            { key: 'descricaoBreve', label: t('codeLibrary.colDescricaoBreve'), width: 200, grow: true },
           ]}
           rows={a.campos || []}
           onChange={(rows) => set({ campos: rows })}
@@ -572,7 +572,7 @@ function DomainConfig({ a, set, t }) {
           columns={[
             { key: 'inferior', label: t('codeLibrary.colInferior'), width: 110 },
             { key: 'superior', label: t('codeLibrary.colSuperior'), width: 110 },
-            { key: 'texto', label: t('codeLibrary.colTextoBreve'), width: 240 },
+            { key: 'texto', label: t('codeLibrary.colTextoBreve'), width: 240, grow: true },
           ]}
           rows={a.valoresFixos || []}
           onChange={(rows) => set({ valoresFixos: rows })}
@@ -607,6 +607,10 @@ export default function CodeLibrary() {
   const [linkSearch, setLinkSearch] = useState('');
   const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
   const [dragOverFolderId, setDragOverFolderId] = useState(null);
+  const [draggedItemId, setDraggedItemId] = useState(null);
+  const [dragOverItemId, setDragOverItemId] = useState(null);
+  const [editingFolderId, setEditingFolderId] = useState(null);
+  const [editFolderName, setEditFolderName] = useState('');
   const [documenting, setDocumenting] = useState(false);
   const [docSuggestion, setDocSuggestion] = useState('');
   const [docError, setDocError] = useState('');
@@ -785,6 +789,20 @@ export default function CodeLibrary() {
     refreshCounts();
   };
 
+  const startEditFolder = (f) => {
+    setEditingFolderId(f.id);
+    setEditFolderName(f.name);
+  };
+
+  const commitFolderRename = async () => {
+    const id = editingFolderId;
+    const name = editFolderName.trim();
+    setEditingFolderId(null);
+    const target = folders.find((f) => f.id === id);
+    if (!target || !name || name === target.name) return;
+    await updateFolderMeta(id, { name });
+  };
+
   const reparentFolder = async (folderId, parentId) => {
     if (folderId === parentId) return;
     const target = folders.find((f) => f.id === folderId);
@@ -858,6 +876,18 @@ export default function CodeLibrary() {
     if (selectedFolder) setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, itemCount: Math.max(0, (f.itemCount || 1) - 1) } : f)));
   };
 
+  const reorderItem = (draggedId, targetId) => {
+    if (!selectedFolder || draggedId === targetId) return;
+    const current = [...items];
+    const fromIdx = current.findIndex((i) => i.id === draggedId);
+    const toIdx = current.findIndex((i) => i.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const [moved] = current.splice(fromIdx, 1);
+    current.splice(toIdx, 0, moved);
+    setItems(current);
+    api.reorderCodeItems(selectedFolder.id, current.map((i) => i.id));
+  };
+
   const kindLabel = (kind) => t(`codeLibrary.kind${kind === 'program' ? 'Program' : kind === 'class' ? 'Class' : kind === 'function_module' ? 'FunctionModule' : 'Other'}`);
   const configLabel = (kind) => t(`codeLibrary.newConfig${kind === 'class' ? 'Class' : kind === 'function_module' ? 'FunctionModule' : 'Program'}`);
   const itemTypesFor = (kind) => (kind === 'other' ? ITEM_TYPES.filter((t) => t !== 'characteristics') : ITEM_TYPES);
@@ -904,9 +934,28 @@ export default function CodeLibrary() {
           )}
           <Icon name="folder" size={15} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+            {editingFolderId === f.id ? (
+              <input
+                value={editFolderName}
+                onChange={(e) => setEditFolderName(e.target.value)}
+                onBlur={commitFolderRename}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+                style={{ width: '100%', fontSize: 13.5, fontWeight: 600, border: `1px solid ${theme.accent}`, borderRadius: 6, padding: '2px 6px', background: theme.cardBg, color: theme.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+              />
+            ) : (
+              <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+            )}
             <div style={{ fontSize: 10.5, opacity: 0.7 }}>{kindLabel(f.kind)}</div>
           </div>
+          <span
+            onClick={(e) => { e.stopPropagation(); startEditFolder(f); }}
+            title={t('codeLibrary.renameFolder')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="edit" size={12} />
+          </span>
           <span
             onClick={(e) => { e.stopPropagation(); setNewFolderParentId(f.id); setNewFolderOpen(true); }}
             title={t('codeLibrary.newSubfolder')}
@@ -1111,7 +1160,28 @@ export default function CodeLibrary() {
             <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
               {items.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('codeLibrary.noItems')}</div>}
               {items.map((it) => (
-                <div key={it.id} onClick={() => setSelectedItemId(it.id)} style={rowStyle(selectedItemId === it.id)}>
+                <div
+                  key={it.id}
+                  draggable
+                  onClick={() => setSelectedItemId(it.id)}
+                  onDragStart={() => setDraggedItemId(it.id)}
+                  onDragOver={(e) => { e.preventDefault(); if (draggedItemId && draggedItemId !== it.id) setDragOverItemId(it.id); }}
+                  onDragLeave={() => setDragOverItemId((v) => (v === it.id ? null : v))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggedItemId) reorderItem(draggedItemId, it.id);
+                    setDraggedItemId(null);
+                    setDragOverItemId(null);
+                  }}
+                  onDragEnd={() => { setDraggedItemId(null); setDragOverItemId(null); }}
+                  style={{
+                    ...rowStyle(selectedItemId === it.id),
+                    opacity: draggedItemId === it.id ? 0.5 : 1,
+                    outline: dragOverItemId === it.id ? `2px dashed ${theme.accent}` : 'none',
+                    outlineOffset: -2,
+                    cursor: 'grab',
+                  }}
+                >
                   <Icon name={ITEM_ICON[it.type] || 'doc'} size={15} />
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</span>
                 </div>

@@ -8,6 +8,7 @@ import { useIsMobile } from '../lib/useIsMobile.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const METHOD_COLORS = { GET: 145, POST: 260, PUT: 60, PATCH: 40, DELETE: 25, HEAD: 280, OPTIONS: 280 };
+const optionStyle = { color: '#1a1a1a', background: '#fff' };
 
 function KeyValueRows({ rows, onChange, keyPlaceholder, valuePlaceholder, addLabel, theme }) {
   const list = rows || [];
@@ -315,7 +316,7 @@ export default function ApiPlayground() {
               onChange={(e) => patchImmediate({ method: e.target.value })}
               style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 12.5, fontWeight: 700, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
             >
-              {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+              {METHODS.map((m) => <option key={m} value={m} style={optionStyle}>{m}</option>)}
             </select>
             <input
               value={selected.url}
@@ -377,10 +378,10 @@ export default function ApiPlayground() {
                 onChange={(e) => patchImmediate({ bodyType: e.target.value })}
                 style={{ alignSelf: 'flex-start', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12.5, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               >
-                <option value="none">{t('apiPlayground.bodyTypeNone')}</option>
-                <option value="json">{t('apiPlayground.bodyTypeJson')}</option>
-                <option value="text">{t('apiPlayground.bodyTypeText')}</option>
-                <option value="form">{t('apiPlayground.bodyTypeForm')}</option>
+                <option value="none" style={optionStyle}>{t('apiPlayground.bodyTypeNone')}</option>
+                <option value="json" style={optionStyle}>{t('apiPlayground.bodyTypeJson')}</option>
+                <option value="text" style={optionStyle}>{t('apiPlayground.bodyTypeText')}</option>
+                <option value="form" style={optionStyle}>{t('apiPlayground.bodyTypeForm')}</option>
               </select>
               {selected.bodyType === 'form' ? (
                 <KeyValueRows
@@ -410,10 +411,10 @@ export default function ApiPlayground() {
                 onChange={(e) => patchImmediate({ authType: e.target.value, authConfig: {} })}
                 style={{ alignSelf: 'flex-start', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12.5, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
               >
-                <option value="none">{t('apiPlayground.authTypeNone')}</option>
-                <option value="bearer">{t('apiPlayground.authTypeBearer')}</option>
-                <option value="basic">{t('apiPlayground.authTypeBasic')}</option>
-                <option value="apiKey">{t('apiPlayground.authTypeApiKey')}</option>
+                <option value="none" style={optionStyle}>{t('apiPlayground.authTypeNone')}</option>
+                <option value="bearer" style={optionStyle}>{t('apiPlayground.authTypeBearer')}</option>
+                <option value="basic" style={optionStyle}>{t('apiPlayground.authTypeBasic')}</option>
+                <option value="apiKey" style={optionStyle}>{t('apiPlayground.authTypeApiKey')}</option>
               </select>
               {selected.authType === 'bearer' && (
                 <input
@@ -461,8 +462,8 @@ export default function ApiPlayground() {
                     onChange={(e) => patchImmediate({ authConfig: { ...selected.authConfig, location: e.target.value } })}
                     style={{ alignSelf: 'flex-start', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12.5, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
                   >
-                    <option value="header">{t('apiPlayground.apiKeyLocationHeader')}</option>
-                    <option value="query">{t('apiPlayground.apiKeyLocationQuery')}</option>
+                    <option value="header" style={optionStyle}>{t('apiPlayground.apiKeyLocationHeader')}</option>
+                    <option value="query" style={optionStyle}>{t('apiPlayground.apiKeyLocationQuery')}</option>
                   </select>
                 </div>
               )}

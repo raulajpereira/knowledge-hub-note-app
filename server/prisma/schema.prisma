@@ -244,6 +244,7 @@ model Task {
   userId    String
   title     String
   done      Boolean  @default(false)
+  doneAt    DateTime?
   status    String   @default("todo") // "todo" | "in_progress" | "done"
   priority  String   @default("Medium") // "Low" | "Medium" | "High"
   due       String?

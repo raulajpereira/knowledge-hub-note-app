@@ -109,6 +109,24 @@ router.get('/folders/:id/items', async (req, res) => {
   res.json({ items });
 });
 
+router.patch('/folders/:id/items/reorder', async (req, res) => {
+  const folder = await prisma.codeFolder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!folder) return res.status(404).json({ error: 'Folder not found' });
+
+  const { itemIds } = req.body || {};
+  if (!Array.isArray(itemIds) || itemIds.length === 0) return res.status(400).json({ error: 'itemIds must be a non-empty array' });
+
+  const existing = await prisma.codeItem.findMany({ where: { folderId: folder.id }, select: { id: true } });
+  const existingIds = new Set(existing.map((i) => i.id));
+  if (itemIds.length !== existingIds.size || !itemIds.every((id) => existingIds.has(id))) {
+    return res.status(400).json({ error: 'itemIds must match exactly the items currently in this folder' });
+  }
+
+  await prisma.$transaction(itemIds.map((id, position) => prisma.codeItem.update({ where: { id }, data: { position } })));
+  const items = await prisma.codeItem.findMany({ where: { folderId: folder.id }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] });
+  res.json({ items });
+});
+
 router.post('/folders/:id/items', async (req, res) => {
   const folder = await prisma.codeFolder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!folder) return res.status(404).json({ error: 'Folder not found' });

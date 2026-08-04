@@ -481,11 +481,14 @@ function AuditActionBadge({ action, theme }) {
 // Super-admin-only global activity trail — deliberately not shown to plain
 // admins, unlike the rest of this settings group.
 function AuditLogCard({ theme, t, card }) {
+  const confirm = useConfirm();
   const [entries, setEntries] = useState(null);
   const [entityTypes, setEntityTypes] = useState([]);
   const [entityType, setEntityType] = useState('');
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [purgeDays, setPurgeDays] = useState(90);
+  const [purging, setPurging] = useState(false);
 
   const load = (params, append) => {
     api.listAuditLog(params).then((r) => {
@@ -511,6 +514,20 @@ function AuditLogCard({ theme, t, card }) {
     }
   };
 
+  const purge = async () => {
+    const days = Number(purgeDays);
+    if (!Number.isFinite(days) || days < 0) return;
+    const ok = await confirm({ message: t('settings.auditLogPurgeConfirm', { days }), confirmLabel: t('settings.auditLogPurge') });
+    if (!ok) return;
+    setPurging(true);
+    try {
+      await api.purgeAuditLog(days);
+      load(entityType ? { entityType } : undefined, false);
+    } finally {
+      setPurging(false);
+    }
+  };
+
   if (!entries) return null;
 
   return (
@@ -520,17 +537,37 @@ function AuditLogCard({ theme, t, card }) {
           <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.auditLog')}</div>
           <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.auditLogDesc')}</div>
         </div>
-        <select
-          value={entityType}
-          onChange={(e) => setEntityType(e.target.value)}
-          style={{
-            border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12, background: theme.subtleBg,
-            color: theme.textPrimary, outline: 'none', colorScheme: theme.dark ? 'dark' : 'light',
-          }}
-        >
-          <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('settings.auditLogAllTypes')}</option>
-          {entityTypes.map((e) => <option key={e} value={e} style={{ color: '#1a1a1a', background: '#fff' }}>{e}</option>)}
-        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <select
+            value={entityType}
+            onChange={(e) => setEntityType(e.target.value)}
+            style={{
+              border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12, background: theme.subtleBg,
+              color: theme.textPrimary, outline: 'none', colorScheme: theme.dark ? 'dark' : 'light',
+            }}
+          >
+            <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('settings.auditLogAllTypes')}</option>
+            {entityTypes.map((e) => <option key={e} value={e} style={{ color: '#1a1a1a', background: '#fff' }}>{e}</option>)}
+          </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 11.5, color: theme.textMuted }}>{t('settings.auditLogPurgeOlderThan')}</span>
+            <input
+              type="number"
+              min={0}
+              value={purgeDays}
+              onChange={(e) => setPurgeDays(e.target.value)}
+              style={{ width: 56, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 7px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary, outline: 'none' }}
+            />
+            <span style={{ fontSize: 11.5, color: theme.textMuted }}>{t('settings.auditLogPurgeDays')}</span>
+          </div>
+          <button
+            onClick={purge}
+            disabled={purging}
+            style={{ background: 'transparent', border: `1px solid oklch(0.55 0.18 25)`, color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: purging ? 0.6 : 1 }}
+          >
+            {purging ? t('common.saving') : t('settings.auditLogPurge')}
+          </button>
+        </div>
       </div>
 
       {entries.length === 0 && <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.auditLogEmpty')}</div>}
