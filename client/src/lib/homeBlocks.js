@@ -4,12 +4,13 @@
 // block here can be dragged into either column and to any position within
 // it, so the user controls both the order and how many blocks sit in each
 // column (e.g. 3 left / 4 right instead of a fixed split).
-export const HOME_BLOCKS = ['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'resurfacing', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage', 'tagsHeatmap'];
+export const HOME_BLOCKS = ['quickCapture', 'continueWorking', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'resurfacing', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage', 'tagsHeatmap'];
 
 // Reused both to render each block's own header and to label it in the
 // "add block" picker, so the two names never drift apart.
 export const HOME_BLOCK_LABEL_KEYS = {
   quickCapture: 'home.quickCapture',
+  continueWorking: 'home.continueWorking',
   myTasks: 'home.myTasks',
   issuesByStatus: 'home.issuesByStatus',
   recentNotes: 'home.recentNotes',
@@ -25,6 +26,7 @@ export const HOME_BLOCK_LABEL_KEYS = {
 // account, or a block added to the app after the user last saved a layout).
 const DEFAULT_COLUMN = {
   quickCapture: 'left',
+  continueWorking: 'left',
   myTasks: 'left',
   issuesByStatus: 'left',
   recentNotes: 'right',

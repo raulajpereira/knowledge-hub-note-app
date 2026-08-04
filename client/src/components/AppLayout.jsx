@@ -17,6 +17,7 @@ import NewsTicker from './NewsTicker.jsx';
 import MobileMoreSheet from './MobileMoreSheet.jsx';
 import WhiteboardModal from './WhiteboardModal.jsx';
 import ActivityModal from './ActivityModal.jsx';
+import ScreenshotModal from './ScreenshotModal.jsx';
 import logoDefault from '../assets/logo-default.png';
 import logoIcon from '../assets/logo-icon.png';
 import { resolveSidebarLayout, sidebarItemLabel, sidebarGroupLabel } from '../lib/sidebarItems.js';
@@ -45,6 +46,7 @@ export default function AppLayout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [screenshotOpen, setScreenshotOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
@@ -81,6 +83,43 @@ export default function AppLayout() {
     const { settings } = await api.updateSettings({ sidebarCollapsed: !user?.settings?.sidebarCollapsed });
     updateUserSettings(settings);
   };
+
+  const SIDEBAR_MIN = 200;
+  const SIDEBAR_MAX = 480;
+  const [sidebarWidth, setSidebarWidth] = useState(user?.settings?.sidebarWidth || 260);
+  const [resizingSidebar, setResizingSidebar] = useState(false);
+  const sidebarResizeRef = useRef(null);
+  const sidebarWidthRef = useRef(sidebarWidth);
+  useEffect(() => {
+    setSidebarWidth(user?.settings?.sidebarWidth || 260);
+  }, [user?.settings?.sidebarWidth]);
+
+  const onSidebarResizeDown = (e) => {
+    e.preventDefault();
+    sidebarResizeRef.current = { startX: e.clientX, startWidth: sidebarWidth };
+    setResizingSidebar(true);
+  };
+
+  useEffect(() => {
+    if (!resizingSidebar) return undefined;
+    const onMove = (e) => {
+      if (!sidebarResizeRef.current) return;
+      const { startX, startWidth } = sidebarResizeRef.current;
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + (e.clientX - startX)));
+      sidebarWidthRef.current = next;
+      setSidebarWidth(next);
+    };
+    const onUp = async () => {
+      setResizingSidebar(false);
+      sidebarResizeRef.current = null;
+      const { settings } = await api.updateSettings({ sidebarWidth: sidebarWidthRef.current });
+      updateUserSettings(settings);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+    return () => window.removeEventListener('pointermove', onMove);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resizingSidebar]);
 
   const onSidebarDragOver = (e, index) => {
     e.preventDefault();
@@ -153,9 +192,9 @@ export default function AppLayout() {
         {!isMobile && !focusMode && (
         <div
           style={{
-            width: sidebarCollapsed ? 76 : 260, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`,
+            width: sidebarCollapsed ? 76 : sidebarWidth, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`,
             display: 'flex', flexDirection: 'column', padding: sidebarCollapsed ? '20px 10px 16px' : '20px 16px 16px', gap: 24, overflowY: 'auto', minHeight: 0,
-            transition: 'width 0.15s',
+            transition: resizingSidebar ? 'none' : 'width 0.15s',
           }}
         >
           <div
@@ -390,6 +429,20 @@ export default function AppLayout() {
         </div>
         )}
 
+        {!isMobile && !focusMode && !sidebarCollapsed && (
+          <div
+            onPointerDown={onSidebarResizeDown}
+            style={{
+              width: 5, flexShrink: 0, cursor: 'col-resize', background: resizingSidebar ? theme.accent : 'transparent',
+              position: 'relative', zIndex: 5, marginLeft: -3, marginRight: -2,
+            }}
+          />
+        )}
+
+        {resizingSidebar && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 999, cursor: 'col-resize' }} />
+        )}
+
         <div
           style={{
             flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto', background: theme.pageBg,
@@ -424,6 +477,17 @@ export default function AppLayout() {
             {!isMobile && <TransactionsQuickSearch />}
 
             <div style={{ flex: 1 }} />
+
+            <span
+              onClick={() => setScreenshotOpen(true)}
+              title={t('screenshot.title')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                cursor: 'pointer', flexShrink: 0, color: theme.textPrimary, background: theme.subtleBg,
+              }}
+            >
+              <Icon name="camera" size={17} />
+            </span>
 
             <span
               onClick={() => setActivityOpen(true)}
@@ -616,6 +680,7 @@ export default function AppLayout() {
       {aboutOpen && <AboutModal theme={theme} t={t} lang={lang} onClose={() => setAboutOpen(false)} />}
       {whiteboardOpen && <WhiteboardModal onClose={() => setWhiteboardOpen(false)} />}
       {activityOpen && <ActivityModal onClose={() => setActivityOpen(false)} />}
+      {screenshotOpen && <ScreenshotModal onClose={() => setScreenshotOpen(false)} />}
 
       <AgentChatWidget />
     </div>

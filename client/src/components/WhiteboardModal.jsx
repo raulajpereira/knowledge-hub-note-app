@@ -9,6 +9,7 @@ import { useClickOutside } from '../lib/useClickOutside.js';
 
 const COLORS = ['#f5f5f5', '#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7'];
 const WIDTHS = [2, 4, 8, 14];
+const optionStyle = { color: '#1a1a1a', background: '#fff' };
 const FONT_FAMILIES = { sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif", serif: 'Georgia, serif', mono: "ui-monospace, 'JetBrains Mono', monospace" };
 const FONT_SIZES = [14, 18, 24, 32];
 const HANDLE_HIT_PX = 9;
@@ -90,6 +91,7 @@ export default function WhiteboardModal({ onClose }) {
   const [tool, setTool] = useState('select');
   const [color, setColor] = useState(COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState(WIDTHS[1]);
+  const [filled, setFilled] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [editingTextId, setEditingTextId] = useState(null);
   const [cardPickerOpen, setCardPickerOpen] = useState(false);
@@ -219,6 +221,7 @@ export default function WhiteboardModal({ onClose }) {
 
     if (el.type === 'rect') {
       ctx.lineWidth = el.strokeWidth;
+      if (el.filled) ctx.fillRect(el.x, el.y, el.width, el.height);
       ctx.strokeRect(el.x, el.y, el.width, el.height);
       return;
     }
@@ -227,6 +230,7 @@ export default function WhiteboardModal({ onClose }) {
       ctx.lineWidth = el.strokeWidth;
       ctx.beginPath();
       ctx.ellipse(el.x + el.width / 2, el.y + el.height / 2, Math.abs(el.width) / 2, Math.abs(el.height) / 2, 0, 0, Math.PI * 2);
+      if (el.filled) ctx.fill();
       ctx.stroke();
       return;
     }
@@ -369,6 +373,28 @@ export default function WhiteboardModal({ onClose }) {
     if (historyRef.current.length > 50) historyRef.current.shift();
   };
 
+  // Rects/ellipses with no fill are only "solid" along their outline — a click
+  // in the empty middle should fall through to whatever card/element is underneath.
+  const pointNearRectBorder = (el, x, y, threshold) => {
+    const inner = { x: el.x + threshold, y: el.y + threshold, width: el.width - 2 * threshold, height: el.height - 2 * threshold };
+    const inOuter = x >= el.x - threshold && x <= el.x + el.width + threshold && y >= el.y - threshold && y <= el.y + el.height + threshold;
+    const inInner = x >= inner.x && x <= inner.x + inner.width && y >= inner.y && y <= inner.y + inner.height;
+    return inOuter && !inInner;
+  };
+
+  const pointNearEllipseBorder = (el, x, y, threshold) => {
+    const cx = el.x + el.width / 2;
+    const cy = el.y + el.height / 2;
+    const rx = Math.abs(el.width) / 2;
+    const ry = Math.abs(el.height) / 2;
+    if (rx < 1 || ry < 1) return false;
+    const rxOuter = rx + threshold, ryOuter = ry + threshold;
+    const rxInner = Math.max(0, rx - threshold), ryInner = Math.max(0, ry - threshold);
+    const normOuter = ((x - cx) / rxOuter) ** 2 + ((y - cy) / ryOuter) ** 2;
+    const normInner = rxInner > 0 && ryInner > 0 ? ((x - cx) / rxInner) ** 2 + ((y - cy) / ryInner) ** 2 : Infinity;
+    return normOuter <= 1 && normInner >= 1;
+  };
+
   const hitTestElement = (x, y) => {
     const { elements } = sceneRef.current;
     const threshold = 8 / sceneRef.current.viewport.scale;
@@ -386,6 +412,20 @@ export default function WhiteboardModal({ onClose }) {
         const px = x1 + tt * (x2 - x1);
         const py = y1 + tt * (y2 - y1);
         if (Math.hypot(px - x, py - y) < threshold) return el.id;
+        continue;
+      }
+      if (el.type === 'rect') {
+        if (el.filled) {
+          if (x >= el.x && x <= el.x + el.width && y >= el.y && y <= el.y + el.height) return el.id;
+        } else if (pointNearRectBorder(el, x, y, threshold)) return el.id;
+        continue;
+      }
+      if (el.type === 'ellipse') {
+        if (el.filled) {
+          const cx = el.x + el.width / 2, cy = el.y + el.height / 2;
+          const rx = Math.abs(el.width) / 2, ry = Math.abs(el.height) / 2;
+          if (rx > 0 && ry > 0 && ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) return el.id;
+        } else if (pointNearEllipseBorder(el, x, y, threshold)) return el.id;
         continue;
       }
       const box = getBBox(el);
@@ -417,7 +457,7 @@ export default function WhiteboardModal({ onClose }) {
   const onPointerDown = (e) => {
     if (editingTextId) commitTextEdit();
     canvasRef.current.setPointerCapture(e.pointerId);
-    if (tool === 'pan' || e.button === 1) {
+    if (e.button === 1) {
       panningRef.current = { startX: e.clientX, startY: e.clientY, originX: sceneRef.current.viewport.x, originY: sceneRef.current.viewport.y };
       return;
     }
@@ -442,7 +482,9 @@ export default function WhiteboardModal({ onClose }) {
         pushHistory();
         dragRef.current = { mode: 'move', startX: x, startY: y, orig: JSON.parse(JSON.stringify(el)) };
       } else {
+        // Empty space with the Select tool: drag to pan the board instead of a dedicated Pan tool.
         setSelectedId(null);
+        panningRef.current = { startX: e.clientX, startY: e.clientY, originX: sceneRef.current.viewport.x, originY: sceneRef.current.viewport.y };
       }
       return;
     }
@@ -460,7 +502,7 @@ export default function WhiteboardModal({ onClose }) {
 
     if (tool === 'rect' || tool === 'ellipse' || tool === 'arrow') {
       pushHistory();
-      draftRef.current = { id: newId(), type: tool, x1: x, y1: y, x2: x, y2: y, x, y, width: 0, height: 0, color, strokeWidth };
+      draftRef.current = { id: newId(), type: tool, x1: x, y1: y, x2: x, y2: y, x, y, width: 0, height: 0, color, strokeWidth, filled };
       draw();
       return;
     }
@@ -557,8 +599,8 @@ export default function WhiteboardModal({ onClose }) {
         sceneRef.current.elements.push(d);
       } else {
         if (d.width > 3 || d.height > 3 || d.type === 'arrow') {
-          const { x1, y1, x2, y2, id, type, color: c, strokeWidth: sw, x, y, width, height } = d;
-          sceneRef.current.elements.push(type === 'arrow' ? { id, type, x1, y1, x2, y2, color: c, strokeWidth: sw } : { id, type, x, y, width, height, color: c, strokeWidth: sw });
+          const { x1, y1, x2, y2, id, type, color: c, strokeWidth: sw, x, y, width, height, filled: f } = d;
+          sceneRef.current.elements.push(type === 'arrow' ? { id, type, x1, y1, x2, y2, color: c, strokeWidth: sw } : { id, type, x, y, width, height, color: c, strokeWidth: sw, filled: f });
           setSelectedId(id);
           setTool('select');
         }
@@ -665,6 +707,16 @@ export default function WhiteboardModal({ onClose }) {
     setColor(c);
     if (selectedEl && ['stroke', 'rect', 'ellipse', 'arrow', 'text'].includes(selectedEl.type)) {
       selectedEl.color = c;
+      draw();
+      scheduleSave();
+    }
+  };
+
+  const applyFillToSelection = () => {
+    const next = !filled;
+    setFilled(next);
+    if (selectedEl && ['rect', 'ellipse'].includes(selectedEl.type)) {
+      selectedEl.filled = next;
       draw();
       scheduleSave();
     }
@@ -888,12 +940,24 @@ export default function WhiteboardModal({ onClose }) {
             <span onClick={() => setTool('eraser')} title={t('whiteboard.eraser')} style={toolBtnStyle(tool === 'eraser')}>
               <Icon name="trash" size={16} />
             </span>
-            <span onClick={() => setTool('pan')} title={t('whiteboard.pan')} style={toolBtnStyle(tool === 'pan')}>
-              <Icon name="focus" size={16} />
-            </span>
             <div style={{ height: 1, background: theme.border, margin: '4px 0' }} />
             <span onClick={openCardPicker} title={t('whiteboard.insertCard')} style={toolBtnStyle(false)}>
               <Icon name="doc" size={16} />
+            </span>
+            <div style={{ height: 1, background: theme.border, margin: '4px 0' }} />
+            <span
+              onClick={applyFillToSelection}
+              title={t('whiteboard.fill')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 24, borderRadius: 6, cursor: 'pointer', flexShrink: 0,
+                background: filled ? theme.accentSoftBg : 'transparent',
+              }}
+            >
+              <span style={{
+                width: 15, height: 15, borderRadius: 3, border: `1.5px solid ${theme.textPrimary}`,
+                background: filled ? theme.textPrimary : 'transparent',
+              }}
+              />
             </span>
             <div style={{ height: 1, background: theme.border, margin: '4px 0' }} />
             {COLORS.map((c) => (
@@ -953,7 +1017,7 @@ export default function WhiteboardModal({ onClose }) {
                   onWheel={onWheel}
                   style={{
                     display: 'block', touchAction: 'none',
-                    cursor: tool === 'pan' ? 'grab' : tool === 'eraser' ? 'cell' : tool === 'select' ? 'default' : 'crosshair',
+                    cursor: tool === 'eraser' ? 'cell' : tool === 'select' ? 'default' : 'crosshair',
                   }}
                 />
 
@@ -985,16 +1049,16 @@ export default function WhiteboardModal({ onClose }) {
                       onChange={(e) => applyTextFormat({ fontFamily: e.target.value })}
                       style={{ fontSize: 11.5, border: `1px solid ${theme.border}`, borderRadius: 6, background: theme.subtleBg, color: theme.textPrimary, padding: '3px 4px' }}
                     >
-                      <option value="sans">{t('whiteboard.fontSans')}</option>
-                      <option value="serif">{t('whiteboard.fontSerif')}</option>
-                      <option value="mono">{t('whiteboard.fontMono')}</option>
+                      <option value="sans" style={optionStyle}>{t('whiteboard.fontSans')}</option>
+                      <option value="serif" style={optionStyle}>{t('whiteboard.fontSerif')}</option>
+                      <option value="mono" style={optionStyle}>{t('whiteboard.fontMono')}</option>
                     </select>
                     <select
                       value={selectedEl.fontSize}
                       onChange={(e) => applyTextFormat({ fontSize: Number(e.target.value) })}
                       style={{ fontSize: 11.5, border: `1px solid ${theme.border}`, borderRadius: 6, background: theme.subtleBg, color: theme.textPrimary, padding: '3px 4px' }}
                     >
-                      {FONT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {FONT_SIZES.map((s) => <option key={s} value={s} style={optionStyle}>{s}</option>)}
                     </select>
                     <span
                       onClick={() => applyTextFormat({ bold: !selectedEl.bold })}

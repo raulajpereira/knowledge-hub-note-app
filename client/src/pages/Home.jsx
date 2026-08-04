@@ -255,6 +255,12 @@ export default function Home() {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   };
 
+  const finishIssue = async (e, issue) => {
+    e.stopPropagation();
+    const { issue: updated } = await api.updateIssue(issue.id, { status: statusConfig[statusConfig.length - 1]?.name });
+    setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+  };
+
   const createAndGo = async () => {
     await api.createNote({ title: 'Untitled note', content: '' });
     refreshCounts();
@@ -305,6 +311,22 @@ export default function Home() {
     return 0;
   });
 
+  // The 3 most recently touched still-open items across Notes/Tasks/Issues —
+  // "pick up where I left off" instead of re-finding it via search or a list.
+  const continueItems = [
+    ...notes.map((n) => ({ id: n.id, kind: 'note', title: n.title, updatedAt: n.updatedAt })),
+    ...tasks.filter((tk) => !tk.done).map((tk) => ({ id: tk.id, kind: 'task', title: tk.title, updatedAt: tk.updatedAt, raw: tk })),
+    ...issues.filter((is) => is.status !== terminalIssueStatus).map((is) => ({ id: is.id, kind: 'issue', title: is.title, updatedAt: is.updatedAt, raw: is })),
+  ]
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .slice(0, 3);
+
+  const openContinueItem = (item) => {
+    if (item.kind === 'note') navigate('/notes', { state: { noteId: item.id } });
+    else if (item.kind === 'task') navigate('/tasks', { state: { taskId: item.id } });
+    else navigate('/issues', { state: { issueId: item.id } });
+  };
+
   const blockContent = {
     quickCapture: (
       <div>
@@ -346,6 +368,49 @@ export default function Home() {
               <div style={{ fontSize: 12.5, color: qc.gradient ? 'rgba(255,255,255,0.85)' : theme.textMuted, lineHeight: 1.4 }}>
                 {qc.desc}
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+
+    continueWorking: (
+      <div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('home.continueWorking')}</div>
+        <div style={{ background: theme.cardBg, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
+          {loading && <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('common.loading')}</div>}
+          {!loading && continueItems.length === 0 && (
+            <div style={{ padding: 18, fontSize: 13, color: theme.textMuted }}>{t('home.continueWorkingEmpty')}</div>
+          )}
+          {continueItems.map((item, i) => (
+            <div
+              key={`${item.kind}-${item.id}`}
+              onClick={() => openContinueItem(item)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', cursor: 'pointer',
+                borderBottom: i === continueItems.length - 1 ? 'none' : `1px solid ${theme.border}`,
+              }}
+            >
+              <div style={{ width: 26, height: 26, borderRadius: 8, background: theme.accentSoftBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name={item.kind === 'note' ? 'doc' : item.kind === 'task' ? 'check' : 'archive'} size={13} color={theme.accentText} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+                <div style={{ fontSize: 11, color: theme.textMuted, textTransform: 'capitalize' }}>{t(`home.continueKind${item.kind[0].toUpperCase()}${item.kind.slice(1)}`)}</div>
+              </div>
+              {item.kind !== 'note' && (
+                <span
+                  onClick={(e) => (item.kind === 'task' ? toggleTaskDone(e, item.raw) : finishIssue(e, item.raw))}
+                  title={t('home.continueFinish')}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%',
+                    flexShrink: 0, color: theme.textMuted, border: `1.5px solid ${theme.border}`,
+                  }}
+                >
+                  <Icon name="check" size={12} />
+                </span>
+              )}
+              <span style={{ fontSize: 12, fontWeight: 700, color: theme.accentText, flexShrink: 0 }}>{t('home.continueGo')}</span>
             </div>
           ))}
         </div>

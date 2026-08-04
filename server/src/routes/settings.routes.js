@@ -60,7 +60,7 @@ const LANGUAGES = ['pt', 'en'];
 router.patch('/', async (req, res) => {
   const {
     theme, accentColor, accentHue, fontFamily, fontScale, radiusStyle, density, language,
-    vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout, sidebarCollapsed,
+    vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout, sidebarCollapsed, sidebarWidth,
   } = req.body || {};
   const data = {};
   if (theme !== undefined) {
@@ -180,6 +180,15 @@ router.patch('/', async (req, res) => {
     data.homeLayout = homeLayout === null ? null : { left: homeLayout.left, right: homeLayout.right, hidden: hiddenArr };
   }
   if (sidebarCollapsed !== undefined) data.sidebarCollapsed = !!sidebarCollapsed;
+  if (sidebarWidth !== undefined) {
+    if (sidebarWidth !== null) {
+      const n = Number(sidebarWidth);
+      if (!Number.isFinite(n) || n < 200 || n > 480) return res.status(400).json({ error: 'sidebarWidth must be between 200 and 480' });
+      data.sidebarWidth = Math.round(n);
+    } else {
+      data.sidebarWidth = null;
+    }
+  }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },
     update: data,
