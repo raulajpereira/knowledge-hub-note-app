@@ -244,7 +244,7 @@ function getBlocks(note) {
 
 function contentFromBlocks(blocks) {
   return blocks
-    .filter((b) => b.type !== 'image' && b.type !== 'file' && b.type !== 'toc')
+    .filter((b) => b.type !== 'image' && b.type !== 'file' && b.type !== 'pdf' && b.type !== 'toc')
     .map((b) => {
       if (b.type === 'checklist') return (b.items || []).map((it) => it.text).join(' ');
       if (b.type === 'text' && b.format === 'html') return htmlToPlainText(b.value);
@@ -318,6 +318,7 @@ export default function Notes() {
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const fileInputRef = useRef(null);
+  const pdfInputRef = useRef(null);
 
   const load = async () => {
     const [{ notes }, { folders }, { tags }] = await Promise.all([api.listNotes(), api.listFolders(), api.listTags()]);
@@ -505,7 +506,7 @@ export default function Notes() {
           return `<ul>${items}</ul>`;
         }
         if (b.type === 'code' || b.type === 'terminal') return `<pre><code>${(b.value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</code></pre>`;
-        if (b.type === 'image' || b.type === 'file') return '';
+        if (b.type === 'image' || b.type === 'file' || b.type === 'pdf') return '';
         if (b.format === 'html') return `<div>${b.value || ''}</div>`;
         return `<p>${(b.value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`;
       })
@@ -829,6 +830,21 @@ export default function Notes() {
     if (!file) return;
     const { url, name, size } = await api.uploadNoteFile(file);
     addFileBlock(url, name, size);
+  };
+
+  // Kept deliberately separate from addFileBlock/'file' — that one stays a
+  // plain download-only attachment, this one renders an inline PDF viewer.
+  const addPdfBlock = (url, name, size) => {
+    if (!selected) return;
+    updateBlocks([...getBlocks(selected), { id: newBlockId(), type: 'pdf', url, name, size }]);
+  };
+
+  const onPdfInputChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const { url, name, size } = await api.uploadNoteFile(file);
+    addPdfBlock(url, name, size);
   };
 
   const addLinkBlock = async (url) => {
@@ -1923,6 +1939,26 @@ export default function Notes() {
                     &times;
                   </span>
                 </a>
+              ) : block.type === 'pdf' ? (
+                <div key={block.id} style={{ border: `1px solid ${theme.border}`, borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: theme.subtleBg }}>
+                    <Icon name="doc" size={16} color={theme.textMuted} />
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {block.name}
+                    </div>
+                    <span style={{ fontSize: 11, color: theme.textMuted, flexShrink: 0 }}>{formatFileSize(block.size)}</span>
+                    <a href={block.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', color: theme.textMuted, flexShrink: 0 }} title={t('notes.openInNewTab')}>
+                      <Icon name="external" size={14} />
+                    </a>
+                    <span
+                      onClick={() => deleteBlock(block.id)}
+                      style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 2px', flexShrink: 0 }}
+                    >
+                      &times;
+                    </span>
+                  </div>
+                  <iframe src={block.url} title={block.name} style={{ width: '100%', height: 480, border: 'none', display: 'block' }} />
+                </div>
               ) : block.type === 'checklist' ? (
                 <div key={block.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {block.items.length > 0 && (() => {
@@ -2145,6 +2181,9 @@ export default function Notes() {
             <button onClick={() => fileInputRef.current?.click()} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addFile')}
             </button>
+            <button onClick={() => pdfInputRef.current?.click()} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+              {t('notes.addPdf')}
+            </button>
             <button onClick={addChecklistBlock} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 8, padding: '7px 12px', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
               {t('notes.addChecklist')}
             </button>
@@ -2235,6 +2274,7 @@ export default function Notes() {
           <LinkedItemsPanel entityType="note" entityId={selected.id} theme={theme} t={t} />
 
           <input ref={fileInputRef} type="file" onChange={onFileInputChange} style={{ display: 'none' }} />
+          <input ref={pdfInputRef} type="file" accept="application/pdf" onChange={onPdfInputChange} style={{ display: 'none' }} />
         </div>
       ) : (
         <div style={{ flex: '1 1 480px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>
