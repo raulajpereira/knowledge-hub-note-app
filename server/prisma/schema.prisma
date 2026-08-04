@@ -52,6 +52,7 @@ model User {
   savedNews       SavedNews[]
   codeFolders     CodeFolder[]
   codeItems       CodeItem[]
+  snapshots       Snapshot[]
   links           Link[]
   templates       Template[]
   projects        Project[]
@@ -200,12 +201,39 @@ model NoteVersion {
   title     String
   content   String   @db.LongText
   blocks    Json?
+  // Auto snapshots (manual: false) are throttled background saves with no
+  // user-given name. Manual ones (manual: true) are user-triggered "snapshot
+  // this exact point" saves and always carry a label.
+  label     String?
+  manual    Boolean  @default(false)
   createdAt DateTime @default(now())
 
   note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
   @@index([noteId, createdAt])
   @@map("note_versions")
+}
+
+// Generic snapshot store for entity types that don't have their own
+// dedicated version table (Artifact, CodeItem) — unlike NoteVersion this
+// can't use a real FK since entityId points at different tables depending
+// on entityType, so cleanup on entity delete is done manually in each
+// entity's DELETE route instead of via onDelete: Cascade.
+model Snapshot {
+  id         String   @id @default(uuid())
+  userId     String
+  entityType String // "artifact" | "codeItem"
+  entityId   String
+  label      String?
+  manual     Boolean  @default(false)
+  data       Json
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entityType, entityId, createdAt])
+  @@map("snapshots")
 }
 
 model Task {

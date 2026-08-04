@@ -46,6 +46,10 @@ export default function Artifacts() {
   const [dragOverFolder, setDragOverFolder] = useState(null);
   const [editingFolderId, setEditingFolderId] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
+  const [restoringSnapshotId, setRestoringSnapshotId] = useState(null);
 
   const load = async () => {
     const [{ artifacts }, { folders }, { tags }] = await Promise.all([api.listArtifacts(), api.listArtifactFolders(), api.listTags()]);
@@ -89,7 +93,44 @@ export default function Artifacts() {
     setDescriptionDraft(selected?.description ?? '');
     setMode('preview');
     setTagPickerOpen(false);
+    setHistoryOpen(false);
   }, [selected?.id]);
+
+  const openHistory = async () => {
+    if (!selected) return;
+    setHistoryOpen(true);
+    setSnapshotsLoading(true);
+    try {
+      const { snapshots } = await api.listArtifactSnapshots(selected.id);
+      setSnapshots(snapshots);
+    } finally {
+      setSnapshotsLoading(false);
+    }
+  };
+
+  const createSnapshot = async () => {
+    if (!selected) return;
+    const label = window.prompt(t('notes.snapshotLabelPrompt')) ?? null;
+    if (label === null) return;
+    await api.createArtifactSnapshot(selected.id, label);
+    const { snapshots } = await api.listArtifactSnapshots(selected.id);
+    setSnapshots(snapshots);
+  };
+
+  const restoreSnapshot = async (snapshotId) => {
+    if (!selected) return;
+    setRestoringSnapshotId(snapshotId);
+    try {
+      const { artifact } = await api.restoreArtifactSnapshot(selected.id, snapshotId);
+      setArtifacts((prev) => prev.map((a) => (a.id === artifact.id ? artifact : a)));
+      setTitleDraft(artifact.title);
+      setDescriptionDraft(artifact.description || '');
+      const { snapshots } = await api.listArtifactSnapshots(selected.id);
+      setSnapshots(snapshots);
+    } finally {
+      setRestoringSnapshotId(null);
+    }
+  };
 
   const addArtifact = async () => {
     const { artifact } = await api.createArtifact({ folderId: activeFolder !== 'all' && activeFolder !== 'none' ? activeFolder : null });
@@ -464,10 +505,59 @@ export default function Artifacts() {
             <span onClick={() => patch({ favorite: !selected.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
               <Icon name="pin" size={17} color={selected.favorite ? theme.accentText : theme.textMuted} />
             </span>
+            <span onClick={openHistory} title={t('notes.history')} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
+              <Icon name="history" size={17} color={theme.textMuted} />
+            </span>
             <button onClick={remove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
               {t('common.delete')}
             </button>
           </div>
+
+          {historyOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700 }}>{t('notes.history')}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span onClick={createSnapshot} style={{ cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: theme.accentText }}>
+                    {t('notes.createSnapshot')}
+                  </span>
+                  <span onClick={() => setHistoryOpen(false)} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 16, padding: '0 4px' }}>
+                    &times;
+                  </span>
+                </div>
+              </div>
+              {snapshotsLoading && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('common.loading')}</div>}
+              {!snapshotsLoading && snapshots.length === 0 && (
+                <div style={{ fontSize: 12, color: theme.textMuted }}>{t('notes.noHistoryYet')}</div>
+              )}
+              {!snapshotsLoading && snapshots.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto' }}>
+                  {snapshots.map((s) => (
+                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {s.manual && (
+                            <span style={{ fontSize: 9.5, fontWeight: 800, color: theme.accentText, background: theme.accentSoftBg, borderRadius: 5, padding: '1px 5px', flexShrink: 0 }}>
+                              {t('notes.manualSnapshotBadge')}
+                            </span>
+                          )}
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.manual ? (s.label || t('notes.untitledSnapshot')) : (s.data?.title || selected.title)}</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: theme.textMuted }}>{new Date(s.createdAt).toLocaleString()}</div>
+                      </div>
+                      <button
+                        onClick={() => restoreSnapshot(s.id)}
+                        disabled={restoringSnapshotId === s.id}
+                        style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0, opacity: restoringSnapshotId === s.id ? 0.6 : 1 }}
+                      >
+                        {restoringSnapshotId === s.id ? t('notes.restoring') : t('notes.restore')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <input
             value={descriptionDraft}

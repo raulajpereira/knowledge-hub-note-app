@@ -420,6 +420,15 @@ export default function Notes() {
     }
   };
 
+  const createSnapshot = async () => {
+    if (!selected) return;
+    const label = window.prompt(t('notes.snapshotLabelPrompt')) ?? null;
+    if (label === null) return;
+    await api.createNoteSnapshot(selected.id, label);
+    const { versions } = await api.listNoteVersions(selected.id);
+    setVersions(versions);
+  };
+
   const restoreVersion = async (versionId) => {
     if (!selected) return;
     setRestoringId(versionId);
@@ -1579,9 +1588,17 @@ export default function Notes() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700 }}>{t('notes.history')}</div>
-                <span onClick={() => setHistoryOpen(false)} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 16, padding: '0 4px' }}>
-                  &times;
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span
+                    onClick={createSnapshot}
+                    style={{ cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: theme.accentText }}
+                  >
+                    {t('notes.createSnapshot')}
+                  </span>
+                  <span onClick={() => setHistoryOpen(false)} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 16, padding: '0 4px' }}>
+                    &times;
+                  </span>
+                </div>
               </div>
               {versionsLoading && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('common.loading')}</div>}
               {!versionsLoading && versions.length === 0 && (
@@ -1592,7 +1609,14 @@ export default function Notes() {
                   {versions.map((v) => (
                     <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.title}</div>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {v.manual && (
+                            <span style={{ fontSize: 9.5, fontWeight: 800, color: theme.accentText, background: theme.accentSoftBg, borderRadius: 5, padding: '1px 5px', flexShrink: 0 }}>
+                              {t('notes.manualSnapshotBadge')}
+                            </span>
+                          )}
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.manual ? (v.label || t('notes.untitledSnapshot')) : v.title}</span>
+                        </div>
                         <div style={{ fontSize: 11, color: theme.textMuted }}>{new Date(v.createdAt).toLocaleString()}</div>
                       </div>
                       <button

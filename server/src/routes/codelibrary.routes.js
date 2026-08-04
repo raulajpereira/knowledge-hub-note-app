@@ -134,6 +134,13 @@ router.post('/folders/:id/items', async (req, res) => {
   res.status(201).json({ item });
 });
 
+// Same throttle window/rationale as Notes' auto version snapshots.
+const SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
+
+function codeItemSnapshotData(item) {
+  return { name: item.name, language: item.language, content: item.content, attributes: item.attributes };
+}
+
 router.patch('/items/:id', async (req, res) => {
   const item = await prisma.codeItem.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!item) return res.status(404).json({ error: 'Item not found' });
@@ -145,7 +152,59 @@ router.patch('/items/:id', async (req, res) => {
   if (content !== undefined) data.content = content;
   if (attributes !== undefined) data.attributes = attributes;
 
+  const contentChanged = data.name !== undefined || data.content !== undefined || data.attributes !== undefined;
+  if (contentChanged) {
+    const lastSnapshot = await prisma.snapshot.findFirst({
+      where: { entityType: 'codeItem', entityId: item.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!lastSnapshot || Date.now() - new Date(lastSnapshot.createdAt).getTime() > SNAPSHOT_INTERVAL_MS) {
+      await prisma.snapshot.create({
+        data: { userId: req.effectiveUserId, entityType: 'codeItem', entityId: item.id, data: codeItemSnapshotData(item) },
+      });
+    }
+  }
+
   const updated = await prisma.codeItem.update({ where: { id: item.id }, data });
+  res.json({ item: updated });
+});
+
+router.get('/items/:id/snapshots', async (req, res) => {
+  const item = await prisma.codeItem.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!item) return res.status(404).json({ error: 'Item not found' });
+  const snapshots = await prisma.snapshot.findMany({
+    where: { entityType: 'codeItem', entityId: item.id },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
+  res.json({ snapshots });
+});
+
+router.post('/items/:id/snapshots', async (req, res) => {
+  const item = await prisma.codeItem.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!item) return res.status(404).json({ error: 'Item not found' });
+  const label = typeof req.body?.label === 'string' ? req.body.label.trim().slice(0, 80) : '';
+  const snapshot = await prisma.snapshot.create({
+    data: { userId: req.effectiveUserId, entityType: 'codeItem', entityId: item.id, manual: true, label: label || null, data: codeItemSnapshotData(item) },
+  });
+  res.status(201).json({ snapshot });
+});
+
+router.post('/items/:id/snapshots/:snapshotId/restore', async (req, res) => {
+  const item = await prisma.codeItem.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!item) return res.status(404).json({ error: 'Item not found' });
+  const snapshot = await prisma.snapshot.findFirst({ where: { id: req.params.snapshotId, entityType: 'codeItem', entityId: item.id } });
+  if (!snapshot) return res.status(404).json({ error: 'Snapshot not found' });
+
+  await prisma.snapshot.create({
+    data: { userId: req.effectiveUserId, entityType: 'codeItem', entityId: item.id, data: codeItemSnapshotData(item) },
+  });
+
+  const snap = snapshot.data;
+  const updated = await prisma.codeItem.update({
+    where: { id: item.id },
+    data: { name: snap.name, language: snap.language, content: snap.content ?? null, attributes: snap.attributes ?? undefined },
+  });
   res.json({ item: updated });
 });
 
@@ -175,6 +234,7 @@ router.post('/items/:id/document', async (req, res) => {
 router.delete('/items/:id', async (req, res) => {
   const item = await prisma.codeItem.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!item) return res.status(404).json({ error: 'Item not found' });
+  await prisma.snapshot.deleteMany({ where: { entityType: 'codeItem', entityId: item.id } });
   await prisma.codeItem.delete({ where: { id: item.id } });
   res.status(204).end();
 });

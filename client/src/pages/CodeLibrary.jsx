@@ -610,6 +610,10 @@ export default function CodeLibrary() {
   const [documenting, setDocumenting] = useState(false);
   const [docSuggestion, setDocSuggestion] = useState('');
   const [docError, setDocError] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
+  const [restoringSnapshotId, setRestoringSnapshotId] = useState(null);
   const newItemMenuRef = useRef(null);
   const linkMenuRef = useRef(null);
   useClickOutside(newItemMenuRef, () => setNewItemMenuOpen(false), newItemMenuOpen);
@@ -627,7 +631,42 @@ export default function CodeLibrary() {
   useEffect(() => {
     setDocSuggestion('');
     setDocError('');
+    setHistoryOpen(false);
   }, [selectedItemId]);
+
+  const openHistory = async () => {
+    if (!selectedItem) return;
+    setHistoryOpen(true);
+    setSnapshotsLoading(true);
+    try {
+      const { snapshots } = await api.listCodeItemSnapshots(selectedItem.id);
+      setSnapshots(snapshots);
+    } finally {
+      setSnapshotsLoading(false);
+    }
+  };
+
+  const createSnapshot = async () => {
+    if (!selectedItem) return;
+    const label = window.prompt(t('notes.snapshotLabelPrompt')) ?? null;
+    if (label === null) return;
+    await api.createCodeItemSnapshot(selectedItem.id, label);
+    const { snapshots } = await api.listCodeItemSnapshots(selectedItem.id);
+    setSnapshots(snapshots);
+  };
+
+  const restoreSnapshot = async (snapshotId) => {
+    if (!selectedItem) return;
+    setRestoringSnapshotId(snapshotId);
+    try {
+      const { item } = await api.restoreCodeItemSnapshot(selectedItem.id, snapshotId);
+      setItems((prev) => prev.map((i) => (i.id === item.id ? item : i)));
+      const { snapshots } = await api.listCodeItemSnapshots(selectedItem.id);
+      setSnapshots(snapshots);
+    } finally {
+      setRestoringSnapshotId(null);
+    }
+  };
 
   useEffect(() => {
     api.listCodeFolders().then(({ folders }) => {
@@ -1131,10 +1170,59 @@ export default function CodeLibrary() {
                 placeholder={t('codeLibrary.itemNamePlaceholder')}
                 style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 20, fontWeight: 700, color: theme.textPrimary }}
               />
+              <span onClick={openHistory} title={t('notes.history')} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
+                <Icon name="history" size={16} />
+              </span>
               <span onClick={() => deleteItem(selectedItem.id)} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
                 <Icon name="trash" size={16} />
               </span>
             </div>
+
+            {historyOpen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700 }}>{t('notes.history')}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span onClick={createSnapshot} style={{ cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: theme.accentText }}>
+                      {t('notes.createSnapshot')}
+                    </span>
+                    <span onClick={() => setHistoryOpen(false)} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 16, padding: '0 4px' }}>
+                      &times;
+                    </span>
+                  </div>
+                </div>
+                {snapshotsLoading && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('common.loading')}</div>}
+                {!snapshotsLoading && snapshots.length === 0 && (
+                  <div style={{ fontSize: 12, color: theme.textMuted }}>{t('notes.noHistoryYet')}</div>
+                )}
+                {!snapshotsLoading && snapshots.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto' }}>
+                    {snapshots.map((s) => (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {s.manual && (
+                              <span style={{ fontSize: 9.5, fontWeight: 800, color: theme.accentText, background: theme.accentSoftBg, borderRadius: 5, padding: '1px 5px', flexShrink: 0 }}>
+                                {t('notes.manualSnapshotBadge')}
+                              </span>
+                            )}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.manual ? (s.label || t('notes.untitledSnapshot')) : (s.data?.name || selectedItem.name)}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: theme.textMuted }}>{new Date(s.createdAt).toLocaleString()}</div>
+                        </div>
+                        <button
+                          onClick={() => restoreSnapshot(s.id)}
+                          disabled={restoringSnapshotId === s.id}
+                          style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0, opacity: restoringSnapshotId === s.id ? 0.6 : 1 }}
+                        >
+                          {restoringSnapshotId === s.id ? t('notes.restoring') : t('notes.restore')}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {selectedItem.type === 'snippet' && (
               <>

@@ -228,6 +228,18 @@ router.get('/:id/versions', async (req, res) => {
   res.json({ versions });
 });
 
+// User-triggered "snapshot this exact point" save — always named, never
+// throttled (unlike the automatic ones created inside PATCH above).
+router.post('/:id/versions', async (req, res) => {
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  const label = typeof req.body?.label === 'string' ? req.body.label.trim().slice(0, 80) : '';
+  const version = await prisma.noteVersion.create({
+    data: { noteId: note.id, title: note.title, content: note.content, blocks: note.blocks ?? undefined, manual: true, label: label || null },
+  });
+  res.status(201).json({ version });
+});
+
 router.post('/:id/versions/:versionId/restore', async (req, res) => {
   const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
   if (!note) return res.status(404).json({ error: 'Note not found' });

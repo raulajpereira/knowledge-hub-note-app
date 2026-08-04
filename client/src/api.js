@@ -96,6 +96,7 @@ export const api = {
   restoreNote: (id) => request(`/notes/${id}/restore`, { method: 'POST' }),
   deleteNoteForever: (id) => request(`/notes/${id}`, { method: 'DELETE' }),
   listNoteVersions: (id) => request(`/notes/${id}/versions`),
+  createNoteSnapshot: (id, label) => request(`/notes/${id}/versions`, { method: 'POST', body: { label } }),
   restoreNoteVersion: (id, versionId) => request(`/notes/${id}/versions/${versionId}/restore`, { method: 'POST' }),
   linkPreview: (url) => request(`/notes/link-preview?url=${encodeURIComponent(url)}`),
   uploadNoteImage: (file) => {
@@ -245,6 +246,9 @@ export const api = {
   createArtifact: (payload) => request('/artifacts', { method: 'POST', body: payload }),
   updateArtifact: (id, payload) => request(`/artifacts/${id}`, { method: 'PATCH', body: payload }),
   deleteArtifact: (id) => request(`/artifacts/${id}`, { method: 'DELETE' }),
+  listArtifactSnapshots: (id) => request(`/artifacts/${id}/snapshots`),
+  createArtifactSnapshot: (id, label) => request(`/artifacts/${id}/snapshots`, { method: 'POST', body: { label } }),
+  restoreArtifactSnapshot: (id, snapshotId) => request(`/artifacts/${id}/snapshots/${snapshotId}/restore`, { method: 'POST' }),
 
   listArtifactFolders: () => request('/artifact-folders'),
   createArtifactFolder: (payload) => request('/artifact-folders', { method: 'POST', body: payload }),
@@ -295,5 +299,8 @@ export const api = {
   createCodeItem: (folderId, payload) => request(`/code-library/folders/${folderId}/items`, { method: 'POST', body: payload }),
   updateCodeItem: (id, payload) => request(`/code-library/items/${id}`, { method: 'PATCH', body: payload }),
   documentCodeItem: (id) => request(`/code-library/items/${id}/document`, { method: 'POST' }),
+  listCodeItemSnapshots: (id) => request(`/code-library/items/${id}/snapshots`),
+  createCodeItemSnapshot: (id, label) => request(`/code-library/items/${id}/snapshots`, { method: 'POST', body: { label } }),
+  restoreCodeItemSnapshot: (id, snapshotId) => request(`/code-library/items/${id}/snapshots/${snapshotId}/restore`, { method: 'POST' }),
   deleteCodeItem: (id) => request(`/code-library/items/${id}`, { method: 'DELETE' }),
 };

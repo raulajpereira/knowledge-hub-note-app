@@ -33,6 +33,13 @@ router.post('/', async (req, res) => {
   res.status(201).json({ artifact });
 });
 
+// Same throttle window/rationale as Notes' auto version snapshots.
+const SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
+
+function artifactSnapshotData(artifact) {
+  return { title: artifact.title, description: artifact.description, html: artifact.html, tags: artifact.tags };
+}
+
 router.patch('/:id', async (req, res) => {
   const artifact = await prisma.artifact.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!artifact) return res.status(404).json({ error: 'Artifact not found' });
@@ -54,13 +61,66 @@ router.patch('/:id', async (req, res) => {
     }
   }
 
+  const contentChanged = data.title !== undefined || data.description !== undefined || data.html !== undefined;
+  if (contentChanged) {
+    const lastSnapshot = await prisma.snapshot.findFirst({
+      where: { entityType: 'artifact', entityId: artifact.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!lastSnapshot || Date.now() - new Date(lastSnapshot.createdAt).getTime() > SNAPSHOT_INTERVAL_MS) {
+      await prisma.snapshot.create({
+        data: { userId: req.effectiveUserId, entityType: 'artifact', entityId: artifact.id, data: artifactSnapshotData(artifact) },
+      });
+    }
+  }
+
   const updated = await prisma.artifact.update({ where: { id: artifact.id }, data });
+  res.json({ artifact: updated });
+});
+
+router.get('/:id/snapshots', async (req, res) => {
+  const artifact = await prisma.artifact.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!artifact) return res.status(404).json({ error: 'Artifact not found' });
+  const snapshots = await prisma.snapshot.findMany({
+    where: { entityType: 'artifact', entityId: artifact.id },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
+  res.json({ snapshots });
+});
+
+router.post('/:id/snapshots', async (req, res) => {
+  const artifact = await prisma.artifact.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!artifact) return res.status(404).json({ error: 'Artifact not found' });
+  const label = typeof req.body?.label === 'string' ? req.body.label.trim().slice(0, 80) : '';
+  const snapshot = await prisma.snapshot.create({
+    data: { userId: req.effectiveUserId, entityType: 'artifact', entityId: artifact.id, manual: true, label: label || null, data: artifactSnapshotData(artifact) },
+  });
+  res.status(201).json({ snapshot });
+});
+
+router.post('/:id/snapshots/:snapshotId/restore', async (req, res) => {
+  const artifact = await prisma.artifact.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!artifact) return res.status(404).json({ error: 'Artifact not found' });
+  const snapshot = await prisma.snapshot.findFirst({ where: { id: req.params.snapshotId, entityType: 'artifact', entityId: artifact.id } });
+  if (!snapshot) return res.status(404).json({ error: 'Snapshot not found' });
+
+  await prisma.snapshot.create({
+    data: { userId: req.effectiveUserId, entityType: 'artifact', entityId: artifact.id, data: artifactSnapshotData(artifact) },
+  });
+
+  const snap = snapshot.data;
+  const updated = await prisma.artifact.update({
+    where: { id: artifact.id },
+    data: { title: snap.title, description: snap.description ?? null, html: snap.html, tags: snap.tags ?? null },
+  });
   res.json({ artifact: updated });
 });
 
 router.delete('/:id', async (req, res) => {
   const artifact = await prisma.artifact.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!artifact) return res.status(404).json({ error: 'Artifact not found' });
+  await prisma.snapshot.deleteMany({ where: { entityType: 'artifact', entityId: artifact.id } });
   await prisma.artifact.delete({ where: { id: artifact.id } });
   res.status(204).end();
 });
