@@ -18,7 +18,8 @@ import MobileMoreSheet from './MobileMoreSheet.jsx';
 import WhiteboardModal from './WhiteboardModal.jsx';
 import ActivityModal from './ActivityModal.jsx';
 import ScreenshotModal from './ScreenshotModal.jsx';
-import logoDefault from '../assets/logo-default.png';
+import logoDefaultLight from '../assets/logo-default-light.png';
+import logoDefaultDark from '../assets/logo-default-dark.png';
 import logoIcon from '../assets/logo-icon.png';
 import { resolveSidebarLayout, sidebarItemLabel, sidebarGroupLabel } from '../lib/sidebarItems.js';
 
@@ -208,7 +209,7 @@ export default function AppLayout() {
               <img src={logoIcon} alt="Knowledge Hub" style={{ height: 38, width: 38, objectFit: 'contain', display: 'block' }} />
             ) : (
               <img
-                src={user?.settings?.logoUrl || logoDefault}
+                src={user?.settings?.logoUrl || (theme.dark ? logoDefaultDark : logoDefaultLight)}
                 alt="Knowledge Hub"
                 style={{
                   height: '100%', width: '100%', display: 'block',

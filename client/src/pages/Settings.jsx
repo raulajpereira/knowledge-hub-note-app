@@ -9,7 +9,8 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import ColorWheel from '../components/ColorWheel.jsx';
 import SidebarSettingsModal from '../components/SidebarSettingsModal.jsx';
-import logoDefault from '../assets/logo-default.png';
+import logoDefaultLight from '../assets/logo-default-light.png';
+import logoDefaultDark from '../assets/logo-default-dark.png';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 
@@ -1150,7 +1151,7 @@ export default function Settings() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ width: 220, height: 76, borderRadius: 10, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', border: `1px solid ${theme.border}`, padding: '10px 12px' }}>
             <img
-              src={user?.settings?.logoUrl || logoDefault}
+              src={user?.settings?.logoUrl || (theme.dark ? logoDefaultDark : logoDefaultLight)}
               alt="Logo"
               style={{
                 height: '100%', width: '100%', display: 'block',
