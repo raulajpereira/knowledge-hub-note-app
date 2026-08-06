@@ -164,6 +164,25 @@ router.patch('/:id', async (req, res) => {
   res.json({ note: updated });
 });
 
+router.post('/:id/duplicate', async (req, res) => {
+  const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId, deletedAt: null } });
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  const duplicate = await prisma.note.create({
+    data: {
+      userId: req.effectiveUserId,
+      folderId: note.folderId,
+      icon: note.icon,
+      coverUrl: note.coverUrl,
+      title: `${note.title} (cópia)`,
+      content: note.content,
+      blocks: note.blocks ?? undefined,
+      tags: note.tags ?? [],
+      links: [],
+    },
+  });
+  res.status(201).json({ note: duplicate });
+});
+
 function stripHtml(html) {
   return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }

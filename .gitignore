@@ -30,6 +30,12 @@ server/uploads/favicons/*
 !server/uploads/project-covers/
 server/uploads/project-covers/*
 !server/uploads/project-covers/.gitkeep
+!server/uploads/emails/
+server/uploads/emails/*
+!server/uploads/emails/.gitkeep
+!server/uploads/email-attachments/
+server/uploads/email-attachments/*
+!server/uploads/email-attachments/.gitkeep
 *.log
 .DS_Store
 .scratch-test/

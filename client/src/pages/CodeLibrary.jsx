@@ -789,6 +789,13 @@ export default function CodeLibrary() {
     refreshCounts();
   };
 
+  const duplicateFolder = async (id) => {
+    const { folder } = await api.duplicateCodeFolder(id);
+    setFolders((prev) => [folder, ...prev]);
+    setSelectedFolderId(folder.id);
+    refreshCounts();
+  };
+
   const startEditFolder = (f) => {
     setEditingFolderId(f.id);
     setEditFolderName(f.name);
@@ -874,6 +881,13 @@ export default function CodeLibrary() {
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (selectedItemId === id) setSelectedItemId(items.find((i) => i.id !== id)?.id || null);
     if (selectedFolder) setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, itemCount: Math.max(0, (f.itemCount || 1) - 1) } : f)));
+  };
+
+  const duplicateItem = async (id) => {
+    const { item } = await api.duplicateCodeItem(id);
+    setItems((prev) => [...prev, item]);
+    setSelectedItemId(item.id);
+    if (selectedFolder) setFolders((prev) => prev.map((f) => (f.id === selectedFolder.id ? { ...f, itemCount: (f.itemCount || 0) + 1 } : f)));
   };
 
   const reorderItem = (draggedId, targetId) => {
@@ -1059,6 +1073,9 @@ export default function CodeLibrary() {
               <span onClick={() => updateFolderMeta(selectedFolder.id, { favorite: !selectedFolder.favorite })} style={{ cursor: 'pointer', display: 'flex' }}>
                 <Icon name="pin" size={15} color={selectedFolder.favorite ? theme.accentText : theme.textMuted} />
               </span>
+              <span onClick={() => duplicateFolder(selectedFolder.id)} title={t('common.duplicate')} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
+                <Icon name="copy" size={15} />
+              </span>
               <span onClick={() => deleteFolder(selectedFolder.id)} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
                 <Icon name="trash" size={15} />
               </span>
@@ -1242,6 +1259,9 @@ export default function CodeLibrary() {
               />
               <span onClick={openHistory} title={t('notes.history')} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
                 <Icon name="history" size={16} />
+              </span>
+              <span onClick={() => duplicateItem(selectedItem.id)} title={t('common.duplicate')} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
+                <Icon name="copy" size={16} />
               </span>
               <span onClick={() => deleteItem(selectedItem.id)} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
                 <Icon name="trash" size={16} />

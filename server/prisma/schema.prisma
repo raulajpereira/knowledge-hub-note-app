@@ -73,6 +73,7 @@ model User {
   transportRequests   TransportRequest[]
   auditLogs           AuditLog[] @relation("AuditActor")
   sessions            Session[]
+  emails              Email[]
 
   @@map("users")
 }
@@ -782,6 +783,7 @@ model TransportRequest {
   systemId     String?
   code         String // e.g. "20260730-RP-FI"
   icon         String? // emoji shown next to the transport request's code (Notion-style), null = default icon
+  type         String   @default("customizing") // "workbench" | "customizing"
   description  String   @db.Text
   environment  String? // "Ambiente Mandante e Origem" free text, matches the docx column
   liberada     Boolean  @default(false)
@@ -847,4 +849,32 @@ model Session {
 
   @@index([userId])
   @@map("sessions")
+}
+
+// An imported Outlook .msg file, parsed on upload so it can be searched and
+// read without re-opening the original — the original file is kept on disk
+// too (fileUrl) so the user can always download the exact source .msg.
+model Email {
+  id           String    @id @default(uuid())
+  userId       String
+  subject      String
+  fromName     String?
+  fromAddress  String?
+  toRecipients Json? // [{ name, email }]
+  ccRecipients Json? // [{ name, email }]
+  sentAt       DateTime?
+  bodyHtml     String?   @db.LongText
+  bodyText     String?   @db.LongText
+  fileUrl      String // original .msg, stored under /uploads/emails
+  fileName     String // original filename, for download
+  fileSize     Int       @default(0)
+  attachments  Json? // [{ name, size, url }], extracted onto /uploads/email-attachments
+  favorite     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("emails")
 }

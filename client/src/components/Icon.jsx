@@ -87,6 +87,10 @@ const PATHS = {
     ['path', { d: 'M10 19a2 2 0 0 0 4 0' }],
   ],
   chat: [['path', { d: 'M4 5h16v10.5H9.5L5 19v-3.5H4Z' }]],
+  mail: [
+    ['rect', { x: 3.5, y: 5.5, width: 17, height: 13, rx: 2 }],
+    ['path', { d: 'M4 7l8 6.5L20 7' }],
+  ],
   send: [['path', { d: 'M4 12l16-8-6 8 6 8-16-8Z' }]],
   calendar: [
     ['rect', { x: 3.5, y: 5, width: 17, height: 15.5, rx: 2 }],

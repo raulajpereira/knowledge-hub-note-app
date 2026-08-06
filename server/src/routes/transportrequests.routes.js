@@ -10,6 +10,8 @@ const includeRefs = {
   system: { select: { id: true, name: true, sid: true, environment: true } },
 };
 
+const TR_TYPES = ['workbench', 'customizing'];
+
 router.get('/', async (req, res) => {
   const { projectId } = req.query;
   const transportRequests = await prisma.transportRequest.findMany({
@@ -21,7 +23,7 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { code, description, projectId, systemId, environment, liberada, transportQas, transportPrd, plannedDate, notes } = req.body || {};
+  const { code, description, projectId, systemId, environment, liberada, transportQas, transportPrd, plannedDate, notes, type } = req.body || {};
   if (!code?.trim()) return res.status(400).json({ error: 'code is required' });
   if (projectId) {
     const project = await prisma.project.findFirst({ where: { id: projectId, userId: req.effectiveUserId } });
@@ -39,6 +41,7 @@ router.post('/', async (req, res) => {
       code: code.trim(),
       description: description || '',
       environment: environment || null,
+      type: TR_TYPES.includes(type) ? type : 'customizing',
       liberada: !!liberada,
       transportQas: !!transportQas,
       transportPrd: !!transportPrd,
@@ -54,7 +57,7 @@ router.patch('/:id', async (req, res) => {
   const tr = await prisma.transportRequest.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!tr) return res.status(404).json({ error: 'Transport request not found' });
 
-  const { code, description, projectId, systemId, environment, liberada, transportQas, transportPrd, plannedDate, notes, icon } = req.body || {};
+  const { code, description, projectId, systemId, environment, liberada, transportQas, transportPrd, plannedDate, notes, icon, type } = req.body || {};
   if (projectId !== undefined && projectId) {
     const project = await prisma.project.findFirst({ where: { id: projectId, userId: req.effectiveUserId } });
     if (!project) return res.status(400).json({ error: 'Invalid projectId' });
@@ -70,6 +73,7 @@ router.patch('/:id', async (req, res) => {
   if (projectId !== undefined) data.projectId = projectId || null;
   if (systemId !== undefined) data.systemId = systemId || null;
   if (environment !== undefined) data.environment = environment || null;
+  if (type !== undefined && TR_TYPES.includes(type)) data.type = type;
   if (liberada !== undefined) data.liberada = !!liberada;
   if (transportQas !== undefined) data.transportQas = !!transportQas;
   if (transportPrd !== undefined) data.transportPrd = !!transportPrd;

@@ -62,6 +62,35 @@ router.patch('/:id', async (req, res) => {
   res.json({ folder: updated });
 });
 
+// Shallow duplicate: copies the folder plus its direct notes (not
+// subfolders), matching what a user visually sees as "this folder's
+// contents" without recursing into an arbitrarily deep tree.
+router.post('/:id/duplicate', async (req, res) => {
+  const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!folder) return res.status(404).json({ error: 'Folder not found' });
+
+  const notes = await prisma.note.findMany({ where: { folderId: folder.id, userId: req.effectiveUserId, deletedAt: null } });
+  const duplicate = await prisma.folder.create({
+    data: { userId: req.effectiveUserId, name: `${folder.name} (cópia)`, icon: folder.icon, parentId: folder.parentId },
+  });
+  if (notes.length > 0) {
+    await prisma.note.createMany({
+      data: notes.map((n) => ({
+        userId: req.effectiveUserId,
+        folderId: duplicate.id,
+        icon: n.icon,
+        coverUrl: n.coverUrl,
+        title: n.title,
+        content: n.content,
+        blocks: n.blocks ?? undefined,
+        tags: n.tags ?? [],
+        links: [],
+      })),
+    });
+  }
+  res.status(201).json({ folder: { ...duplicate, noteCount: notes.length } });
+});
+
 router.delete('/:id', async (req, res) => {
   const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!folder) return res.status(404).json({ error: 'Folder not found' });

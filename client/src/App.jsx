@@ -29,6 +29,7 @@ import Clients from './pages/Clients.jsx';
 import SapSystems from './pages/SapSystems.jsx';
 import TransportRequests from './pages/TransportRequests.jsx';
 import Contacts from './pages/Contacts.jsx';
+import Emails from './pages/Emails.jsx';
 import Graph from './pages/Graph.jsx';
 import ApiPlayground from './pages/ApiPlayground.jsx';
 import SharedNote from './pages/SharedNote.jsx';
@@ -96,6 +97,7 @@ export default function App() {
                   <Route path="/sap-systems" element={<SapSystems />} />
                   <Route path="/transport-requests" element={<TransportRequests />} />
                   <Route path="/contacts" element={<Contacts />} />
+                  <Route path="/emails" element={<Emails />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/graph" element={<Graph />} />
                   <Route path="/playground" element={<ApiPlayground />} />

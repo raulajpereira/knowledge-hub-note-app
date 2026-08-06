@@ -48,7 +48,21 @@ function FlagPill({ label, on, theme }) {
   );
 }
 
-const emptyForm = { code: '', description: '', projectId: '', systemId: '', environment: '', liberada: false, transportQas: false, transportPrd: false, plannedDate: '', notes: '' };
+function TypePill({ type, t }) {
+  const isWorkbench = type === 'workbench';
+  return (
+    <span style={{
+      fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, whiteSpace: 'nowrap',
+      background: isWorkbench ? 'oklch(0.88 0.1 255)' : 'oklch(0.9 0.11 75)',
+      color: isWorkbench ? 'oklch(0.4 0.15 255)' : 'oklch(0.42 0.15 75)',
+      border: `1px solid ${isWorkbench ? 'oklch(0.75 0.13 255)' : 'oklch(0.78 0.14 75)'}`,
+    }}>
+      {isWorkbench ? t('transportRequests.typeWorkbench') : t('transportRequests.typeCustomizing')}
+    </span>
+  );
+}
+
+const emptyForm = { code: '', description: '', projectId: '', systemId: '', environment: '', type: 'customizing', liberada: false, transportQas: false, transportPrd: false, plannedDate: '', notes: '' };
 
 export default function TransportRequests() {
   const { theme } = useTheme();
@@ -92,7 +106,7 @@ export default function TransportRequests() {
   const openEdit = (tr) => {
     setForm({
       code: tr.code, description: tr.description || '', projectId: tr.projectId || '', systemId: tr.systemId || '',
-      environment: tr.environment || '', liberada: tr.liberada, transportQas: tr.transportQas, transportPrd: tr.transportPrd,
+      environment: tr.environment || '', type: tr.type || 'customizing', liberada: tr.liberada, transportQas: tr.transportQas, transportPrd: tr.transportPrd,
       plannedDate: tr.plannedDate || '', notes: tr.notes || '',
     });
     setEditing(tr);
@@ -178,8 +192,8 @@ export default function TransportRequests() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflow: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 1.6fr 1fr 1fr 1.4fr', minWidth: '100%' }}>
-          {!isMobile && ['transportRequests.colCode', 'transportRequests.colDescription', 'transportRequests.colProject', 'transportRequests.colSystem', 'transportRequests.colStatus'].map((k, i) => (
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 1.6fr 1fr 1fr 0.9fr 1.4fr', minWidth: '100%' }}>
+          {!isMobile && ['transportRequests.colCode', 'transportRequests.colDescription', 'transportRequests.colProject', 'transportRequests.colSystem', 'transportRequests.colType', 'transportRequests.colStatus'].map((k, i) => (
             <div key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg }}>
               {t(k)}
             </div>
@@ -205,6 +219,9 @@ export default function TransportRequests() {
                     {tr.project && <span style={{ fontSize: 11, color: theme.textMuted }}>{tr.project.name}</span>}
                   </div>
                   <div style={{ fontSize: 12, color: theme.textPrimary }}>{tr.description}</div>
+                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    <TypePill type={tr.type} t={t} />
+                  </div>
                   {statusPills}
                 </div>
               );
@@ -220,6 +237,7 @@ export default function TransportRequests() {
                 <div style={{ ...cell, whiteSpace: 'normal' }}><span style={{ color: theme.textPrimary }}>{tr.description}</span></div>
                 <div style={cell}>{tr.project?.name || '—'}</div>
                 <div style={cell}>{tr.system?.name || '—'}</div>
+                <div style={{ ...cell, whiteSpace: 'normal' }}><TypePill type={tr.type} t={t} /></div>
                 <div style={{ ...cell, whiteSpace: 'normal' }}>{statusPills}</div>
               </div>
             );
@@ -258,6 +276,13 @@ export default function TransportRequests() {
                 <DateInput value={form.plannedDate} onChange={(v) => setForm((f) => ({ ...f, plannedDate: v }))} style={inputStyle(theme)} />
               </Field>
             </div>
+
+            <Field label={t('transportRequests.fieldType')} theme={theme}>
+              <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} style={inputStyle(theme)}>
+                <option value="customizing" style={optionStyle}>{t('transportRequests.typeCustomizing')}</option>
+                <option value="workbench" style={optionStyle}>{t('transportRequests.typeWorkbench')}</option>
+              </select>
+            </Field>
 
             <Field label={t('transportRequests.fieldDescription')} theme={theme}>
               <input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} style={inputStyle(theme)} />

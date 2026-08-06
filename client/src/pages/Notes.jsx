@@ -660,6 +660,15 @@ export default function Notes() {
     refreshFolders();
   };
 
+  const duplicateSelected = async () => {
+    if (!selected) return;
+    const { note } = await api.duplicateNote(selected.id);
+    setNotes((prev) => [note, ...prev]);
+    setSelectedId(note.id);
+    refreshCounts();
+    refreshFolders();
+  };
+
   const restoreNote = async (id) => {
     await api.restoreNote(id);
     await load();
@@ -1151,6 +1160,13 @@ export default function Notes() {
     await load();
   };
 
+  const duplicateFolderRow = async (f, e) => {
+    e.stopPropagation();
+    await api.duplicateFolder(f.id);
+    await refreshFolders();
+    await load();
+  };
+
   const rowStyle = (isActive) => ({
     display: 'flex',
     flexDirection: 'column',
@@ -1228,6 +1244,13 @@ export default function Notes() {
             style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
           >
             <Icon name="plus" size={12} />
+          </span>
+          <span
+            onClick={(e) => duplicateFolderRow(f, e)}
+            title={t('common.duplicate')}
+            style={{ display: 'flex', opacity: 0.5, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="copy" size={12} />
           </span>
           <span
             onClick={(e) => removeFolder(f, e)}
@@ -1594,6 +1617,9 @@ export default function Notes() {
                   </div>
                 )}
               </div>
+              <span onClick={duplicateSelected} title={t('common.duplicate')} style={{ display: 'flex', cursor: 'pointer' }}>
+                <Icon name="copy" size={17} color={theme.textMuted} />
+              </span>
               <button onClick={trashSelected} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
                 {t('common.delete')}
               </button>

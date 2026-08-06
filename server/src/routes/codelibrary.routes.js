@@ -91,6 +91,41 @@ router.patch('/folders/:id', async (req, res) => {
   res.json({ folder: updated });
 });
 
+// Shallow duplicate: copies the folder plus its direct items (not
+// subfolders), matching what a user visually sees as "this folder's
+// contents" without recursing into an arbitrarily deep tree.
+router.post('/folders/:id/duplicate', async (req, res) => {
+  const folder = await prisma.codeFolder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!folder) return res.status(404).json({ error: 'Folder not found' });
+
+  const items = await prisma.codeItem.findMany({ where: { folderId: folder.id }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] });
+  const duplicate = await prisma.codeFolder.create({
+    data: {
+      userId: req.effectiveUserId,
+      parentId: folder.parentId,
+      name: `${folder.name} (cópia)`,
+      kind: folder.kind,
+      description: folder.description,
+      tags: folder.tags ?? undefined,
+    },
+  });
+  if (items.length > 0) {
+    await prisma.codeItem.createMany({
+      data: items.map((it, position) => ({
+        folderId: duplicate.id,
+        userId: req.effectiveUserId,
+        type: it.type,
+        name: it.name,
+        language: it.language,
+        content: it.content,
+        attributes: it.attributes ?? undefined,
+        position,
+      })),
+    });
+  }
+  res.status(201).json({ folder: { ...duplicate, itemCount: items.length } });
+});
+
 router.delete('/folders/:id', async (req, res) => {
   const folder = await prisma.codeFolder.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!folder) return res.status(404).json({ error: 'Folder not found' });
@@ -185,6 +220,25 @@ router.patch('/items/:id', async (req, res) => {
 
   const updated = await prisma.codeItem.update({ where: { id: item.id }, data });
   res.json({ item: updated });
+});
+
+router.post('/items/:id/duplicate', async (req, res) => {
+  const item = await prisma.codeItem.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
+  if (!item) return res.status(404).json({ error: 'Item not found' });
+  const position = await prisma.codeItem.count({ where: { folderId: item.folderId } });
+  const duplicate = await prisma.codeItem.create({
+    data: {
+      folderId: item.folderId,
+      userId: req.effectiveUserId,
+      type: item.type,
+      name: `${item.name} (cópia)`,
+      language: item.language,
+      content: item.content,
+      attributes: item.attributes ?? undefined,
+      position,
+    },
+  });
+  res.status(201).json({ item: duplicate });
 });
 
 router.get('/items/:id/snapshots', async (req, res) => {

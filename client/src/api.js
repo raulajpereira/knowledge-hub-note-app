@@ -96,6 +96,7 @@ export const api = {
   trashNote: (id) => request(`/notes/${id}/trash`, { method: 'POST' }),
   restoreNote: (id) => request(`/notes/${id}/restore`, { method: 'POST' }),
   deleteNoteForever: (id) => request(`/notes/${id}`, { method: 'DELETE' }),
+  duplicateNote: (id) => request(`/notes/${id}/duplicate`, { method: 'POST' }),
   listNoteVersions: (id) => request(`/notes/${id}/versions`),
   createNoteSnapshot: (id, label) => request(`/notes/${id}/versions`, { method: 'POST', body: { label } }),
   restoreNoteVersion: (id, versionId) => request(`/notes/${id}/versions/${versionId}/restore`, { method: 'POST' }),
@@ -115,6 +116,7 @@ export const api = {
   createFolder: (payload) => request('/folders', { method: 'POST', body: payload }),
   renameFolder: (id, payload) => request(`/folders/${id}`, { method: 'PATCH', body: payload }),
   deleteFolder: (id) => request(`/folders/${id}`, { method: 'DELETE' }),
+  duplicateFolder: (id) => request(`/folders/${id}/duplicate`, { method: 'POST' }),
 
   listTasks: (trashed = false) => request(`/tasks${trashed ? '?trashed=true' : ''}`),
   createTask: (payload) => request('/tasks', { method: 'POST', body: payload }),
@@ -296,6 +298,7 @@ export const api = {
   createCodeFolder: (payload) => request('/code-library/folders', { method: 'POST', body: payload }),
   updateCodeFolder: (id, payload) => request(`/code-library/folders/${id}`, { method: 'PATCH', body: payload }),
   deleteCodeFolder: (id) => request(`/code-library/folders/${id}`, { method: 'DELETE' }),
+  duplicateCodeFolder: (id) => request(`/code-library/folders/${id}/duplicate`, { method: 'POST' }),
   listCodeItems: (folderId) => request(`/code-library/folders/${folderId}/items`),
   createCodeItem: (folderId, payload) => request(`/code-library/folders/${folderId}/items`, { method: 'POST', body: payload }),
   updateCodeItem: (id, payload) => request(`/code-library/items/${id}`, { method: 'PATCH', body: payload }),
@@ -304,6 +307,7 @@ export const api = {
   listCodeItemSnapshots: (id) => request(`/code-library/items/${id}/snapshots`),
   createCodeItemSnapshot: (id, label) => request(`/code-library/items/${id}/snapshots`, { method: 'POST', body: { label } }),
   restoreCodeItemSnapshot: (id, snapshotId) => request(`/code-library/items/${id}/snapshots/${snapshotId}/restore`, { method: 'POST' }),
+  duplicateCodeItem: (id) => request(`/code-library/items/${id}/duplicate`, { method: 'POST' }),
   deleteCodeItem: (id) => request(`/code-library/items/${id}`, { method: 'DELETE' }),
 
   listApiFolders: () => request('/api-playground/folders'),
@@ -321,4 +325,14 @@ export const api = {
   createWhiteboard: (payload) => request('/whiteboards', { method: 'POST', body: payload }),
   updateWhiteboard: (id, payload) => request(`/whiteboards/${id}`, { method: 'PATCH', body: payload }),
   deleteWhiteboard: (id) => request(`/whiteboards/${id}`, { method: 'DELETE' }),
+
+  listEmails: () => request('/emails'),
+  getEmail: (id) => request(`/emails/${id}`),
+  uploadEmail: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request('/emails', { method: 'POST', body: form, isForm: true });
+  },
+  updateEmail: (id, payload) => request(`/emails/${id}`, { method: 'PATCH', body: payload }),
+  deleteEmail: (id) => request(`/emails/${id}`, { method: 'DELETE' }),
 };
