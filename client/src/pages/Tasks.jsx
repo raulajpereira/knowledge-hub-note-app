@@ -66,6 +66,7 @@ export default function Tasks() {
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [titleDraft, setTitleDraft] = useState('');
+  const [notesDraft, setNotesDraft] = useState('');
   const [view, setView] = useState('list');
   const [dragOverStatus, setDragOverStatus] = useState(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -121,6 +122,7 @@ export default function Tasks() {
 
   useEffect(() => {
     setTitleDraft(selected?.title ?? '');
+    setNotesDraft(selected?.notes ?? '');
   }, [selected?.id]);
 
   const commitTitle = async () => {
@@ -128,6 +130,15 @@ export default function Tasks() {
     const { task } = await api.updateTask(selected.id, { title: titleDraft });
     setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
     setTitleDraft(task.title);
+  };
+
+  // Notes is edited via local draft state and only sent to the server on
+  // blur — patching on every keystroke fired an async round-trip per
+  // character, which reset the textarea's value (and cursor position) from
+  // the server response mid-typing and scrambled fast input.
+  const commitNotes = () => {
+    if (!selected || notesDraft === (selected.notes || '')) return;
+    patch(selected.id, { notes: notesDraft });
   };
 
   const addTask = async () => {
@@ -507,9 +518,10 @@ export default function Tasks() {
           <div>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>{t('tasks.notes')}</div>
             <textarea
-              value={selected.notes || ''}
-              onChange={(e) => patch(selected.id, { notes: e.target.value })}
-              rows={5}
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              onBlur={commitNotes}
+              rows={7}
               placeholder={t('tasks.notesPlaceholder')}
               style={{ width: '100%', border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, fontSize: 13.5, lineHeight: 1.5, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
             />
