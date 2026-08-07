@@ -397,7 +397,7 @@ function NewInviteCodeModal({ theme, t, creating, onClose, onCreate }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: theme.cardBg, borderRadius: 14, padding: 22, width: 480, maxWidth: '92vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', gap: 14, border: `1px solid ${theme.border}` }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', borderRadius: 14, padding: 22, width: 480, maxWidth: '92vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', gap: 14, border: `1px solid ${theme.border}` }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 800 }}>{t('settings.generateCode')}</div>
           <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.newCodeFeaturesDesc')}</div>
@@ -443,7 +443,7 @@ function FeatureAccessModal({ theme, t, user, onClose, onSaved }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: theme.cardBg, borderRadius: 14, padding: 22, width: 480, maxWidth: '92vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', gap: 14, border: `1px solid ${theme.border}` }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', borderRadius: 14, padding: 22, width: 480, maxWidth: '92vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', gap: 14, border: `1px solid ${theme.border}` }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 800 }}>{t('settings.manageFeatures')}</div>
           <div style={{ fontSize: 12.5, color: theme.textMuted }}>{user.name}</div>
