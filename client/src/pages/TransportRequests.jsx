@@ -6,8 +6,19 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import IconPicker from '../components/IconPicker.jsx';
 import DateInput from '../components/DateInput.jsx';
+import ResizeHandle from '../components/ResizeHandle.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useColumnWidths } from '../lib/useColumnWidths.js';
+
+const DEFAULT_COLUMNS = [
+  { key: 'code', labelKey: 'transportRequests.colCode', width: 160 },
+  { key: 'description', labelKey: 'transportRequests.colDescription', width: 260 },
+  { key: 'project', labelKey: 'transportRequests.colProject', width: 140 },
+  { key: 'system', labelKey: 'transportRequests.colSystem', width: 140 },
+  { key: 'type', labelKey: 'transportRequests.colType', width: 130 },
+  { key: 'status', labelKey: 'transportRequests.colStatus', width: 220, flex: true },
+];
 
 function Field({ label, children, theme }) {
   return (
@@ -79,6 +90,7 @@ export default function TransportRequests() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
+  const { columns, resizeColumn, persistColumnWidths } = useColumnWidths('transportRequests', DEFAULT_COLUMNS);
 
   useEffect(() => {
     Promise.all([api.listTransportRequests(), api.listProjects(), api.listSapSystems()]).then(([trRes, projRes, sysRes]) => {
@@ -192,10 +204,23 @@ export default function TransportRequests() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflow: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 1.6fr 1fr 1fr 0.9fr 1.4fr', minWidth: '100%' }}>
-          {!isMobile && ['transportRequests.colCode', 'transportRequests.colDescription', 'transportRequests.colProject', 'transportRequests.colSystem', 'transportRequests.colType', 'transportRequests.colStatus'].map((k, i) => (
-            <div key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg }}>
-              {t(k)}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : columns.map((c) => (c.flex ? `minmax(${c.width}px, 1fr)` : `${c.width}px`)).join(' '),
+            minWidth: '100%',
+          }}
+        >
+          {!isMobile && columns.map((col, i) => (
+            <div
+              key={col.key}
+              style={{
+                position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase',
+                letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg,
+              }}
+            >
+              {t(col.labelKey)}
+              <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} onResizeEnd={persistColumnWidths} />
             </div>
           ))}
           {!loading && filtered.map((tr) => {
@@ -226,19 +251,27 @@ export default function TransportRequests() {
                 </div>
               );
             }
-            return (
-              <div key={tr.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(tr.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(tr)}>
-                <div style={cell}>
+            const cellFor = (key) => {
+              if (key === 'code') {
+                return (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     {tr.icon && <span>{tr.icon}</span>}
                     <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 12.5, color: theme.accentText, background: theme.accentSoftBg, padding: '3px 8px', borderRadius: 6 }}>{tr.code}</span>
                   </span>
-                </div>
-                <div style={{ ...cell, whiteSpace: 'normal' }}><span style={{ color: theme.textPrimary }}>{tr.description}</span></div>
-                <div style={cell}>{tr.project?.name || '—'}</div>
-                <div style={cell}>{tr.system?.name || '—'}</div>
-                <div style={{ ...cell, whiteSpace: 'normal' }}><TypePill type={tr.type} t={t} /></div>
-                <div style={{ ...cell, whiteSpace: 'normal' }}>{statusPills}</div>
+                );
+              }
+              if (key === 'description') return <span style={{ color: theme.textPrimary }}>{tr.description}</span>;
+              if (key === 'project') return tr.project?.name || '—';
+              if (key === 'system') return tr.system?.name || '—';
+              if (key === 'type') return <TypePill type={tr.type} t={t} />;
+              if (key === 'status') return statusPills;
+              return null;
+            };
+            return (
+              <div key={tr.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(tr.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(tr)}>
+                {columns.map((col) => (
+                  <div key={col.key} style={{ ...cell, whiteSpace: col.key === 'code' ? 'nowrap' : 'normal' }}>{cellFor(col.key)}</div>
+                ))}
               </div>
             );
           })}

@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import ResizeHandle from '../components/ResizeHandle.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { MODULE_GROUPS, TYPE_OPTIONS, hueForModule } from '../lib/transactionsMeta.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useColumnWidths } from '../lib/useColumnWidths.js';
 
 const DEFAULT_COLUMNS = [
   { key: 'tcode', labelKey: 'transactions.colTcode', width: 150 },
@@ -14,36 +16,8 @@ const DEFAULT_COLUMNS = [
   { key: 'module', labelKey: 'transactions.colModule', width: 190 },
   { key: 'program', labelKey: 'transactions.colProgram', width: 160 },
   { key: 'type', labelKey: 'transactions.colType', width: 170 },
-  { key: 'favorite', labelKey: '', width: 46 },
+  { key: 'favorite', labelKey: '', width: 46, minWidth: 30 },
 ];
-const MIN_COLUMN_WIDTH = 40;
-
-function ResizeHandle({ onResize }) {
-  const dragRef = useRef(null);
-  const onMouseDown = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragRef.current = { startX: e.clientX };
-    const onMove = (moveEvent) => {
-      if (!dragRef.current) return;
-      onResize(moveEvent.clientX - dragRef.current.startX);
-      dragRef.current.startX = moveEvent.clientX;
-    };
-    const onUp = () => {
-      dragRef.current = null;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  };
-  return (
-    <div
-      onMouseDown={onMouseDown}
-      style={{ position: 'absolute', right: -3, top: 0, bottom: 0, width: 6, cursor: 'col-resize', zIndex: 1 }}
-    />
-  );
-}
 
 function ModuleBadge({ module, theme }) {
   const hue = hueForModule(module);
@@ -92,13 +66,7 @@ export default function Transactions() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
-  const [columns, setColumns] = useState(DEFAULT_COLUMNS);
-
-  const resizeColumn = (index, deltaX) => {
-    setColumns((prev) =>
-      prev.map((c, i) => (i === index ? { ...c, width: Math.max(MIN_COLUMN_WIDTH, c.width + deltaX) } : c))
-    );
-  };
+  const { columns, resizeColumn, persistColumnWidths } = useColumnWidths('transactions', DEFAULT_COLUMNS);
 
   useEffect(() => {
     api.listTransactions().then(({ transactions }) => {
@@ -236,7 +204,7 @@ export default function Transactions() {
               }}
             >
               {col.labelKey ? t(col.labelKey) : ''}
-              <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} />
+              <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} onResizeEnd={persistColumnWidths} />
             </div>
           ))}
           {!loading && filtered.map((tx) => {

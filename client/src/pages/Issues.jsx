@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -13,8 +13,10 @@ import TemplateMenu from '../components/TemplateMenu.jsx';
 import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
+import ResizeHandle from '../components/ResizeHandle.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useColumnWidths } from '../lib/useColumnWidths.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35, Critical: 20 };
@@ -36,34 +38,6 @@ const DEFAULT_COLUMNS = [
   { key: 'description', labelKey: 'issues.colDescription', width: 220 },
   { key: 'notes', labelKey: 'issues.colNotes', width: 220 },
 ];
-const MIN_COLUMN_WIDTH = 70;
-
-function ResizeHandle({ onResize }) {
-  const dragRef = useRef(null);
-  const onMouseDown = (e) => {
-    e.preventDefault();
-    dragRef.current = { startX: e.clientX };
-    const onMove = (moveEvent) => {
-      if (!dragRef.current) return;
-      onResize(moveEvent.clientX - dragRef.current.startX);
-      dragRef.current.startX = moveEvent.clientX;
-    };
-    const onUp = () => {
-      dragRef.current = null;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  };
-  return (
-    <div
-      onMouseDown={onMouseDown}
-      style={{ position: 'absolute', right: -3, top: 0, bottom: 0, width: 6, cursor: 'col-resize', zIndex: 1 }}
-    />
-  );
-}
-
 function Badge({ label, hue, theme, size = 'md' }) {
   return (
     <span
@@ -103,7 +77,7 @@ export default function Issues() {
   const [selectedId, setSelectedId] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [columns, setColumns] = useState(DEFAULT_COLUMNS);
+  const { columns, resizeColumn, persistColumnWidths } = useColumnWidths('issues', DEFAULT_COLUMNS);
   const [titleDraft, setTitleDraft] = useState('');
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -192,12 +166,6 @@ export default function Issues() {
     } finally {
       setStatusSaving(false);
     }
-  };
-
-  const resizeColumn = (index, deltaX) => {
-    setColumns((prev) =>
-      prev.map((c, i) => (i === index ? { ...c, width: Math.max(MIN_COLUMN_WIDTH, c.width + deltaX) } : c))
-    );
   };
 
   useEffect(() => {
@@ -435,7 +403,7 @@ export default function Issues() {
                       <Icon name="chevron" size={9} strokeWidth={2.5} />
                     </span>
                   )}
-                  <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} />
+                  <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} onResizeEnd={persistColumnWidths} />
                 </div>
               ))}
               {sorted.map((issue) => {

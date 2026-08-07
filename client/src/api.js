@@ -318,6 +318,7 @@ export const api = {
   createApiRequest: (payload) => request('/api-playground/requests', { method: 'POST', body: payload }),
   updateApiRequest: (id, payload) => request(`/api-playground/requests/${id}`, { method: 'PATCH', body: payload }),
   deleteApiRequest: (id) => request(`/api-playground/requests/${id}`, { method: 'DELETE' }),
+  proxyApiRequest: (payload) => request('/api-playground/proxy', { method: 'POST', body: payload }),
 
   listWhiteboards: (archived) => request(`/whiteboards${archived ? '?archived=true' : ''}`),
   getActivity: (from, to) => request(`/activity?${new URLSearchParams({ from, to })}`),

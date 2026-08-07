@@ -62,7 +62,9 @@ function publicUser(user) {
           trashRetentionDays: user.settings.trashRetentionDays,
           sidebarLayout: user.settings.sidebarLayout,
           sidebarCollapsed: user.settings.sidebarCollapsed,
+          sidebarWidth: user.settings.sidebarWidth,
           homeLayout: user.settings.homeLayout,
+          columnWidths: user.settings.columnWidths,
         }
       : null,
   };

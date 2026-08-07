@@ -5,8 +5,19 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import IconPicker from '../components/IconPicker.jsx';
+import ResizeHandle from '../components/ResizeHandle.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useColumnWidths } from '../lib/useColumnWidths.js';
+
+const DEFAULT_COLUMNS = [
+  { key: 'name', labelKey: 'contacts.colName', width: 190 },
+  { key: 'role', labelKey: 'contacts.colRole', width: 150 },
+  { key: 'client', labelKey: 'contacts.colClient', width: 150 },
+  { key: 'system', labelKey: 'contacts.colSystem', width: 150 },
+  { key: 'email', labelKey: 'contacts.colEmail', width: 210 },
+  { key: 'phone', labelKey: 'contacts.colPhone', width: 150, flex: true },
+];
 
 function Field({ label, children, theme }) {
   return (
@@ -50,6 +61,7 @@ export default function Contacts() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
+  const { columns, resizeColumn, persistColumnWidths } = useColumnWidths('contacts', DEFAULT_COLUMNS);
 
   useEffect(() => {
     Promise.all([api.listContacts(), api.listClients(), api.listSapSystems()]).then(([contactRes, clientRes, sysRes]) => {
@@ -142,10 +154,23 @@ export default function Contacts() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflow: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 0.9fr 1fr 1fr 1.2fr 0.9fr', minWidth: '100%' }}>
-          {!isMobile && ['contacts.colName', 'contacts.colRole', 'contacts.colClient', 'contacts.colSystem', 'contacts.colEmail', 'contacts.colPhone'].map((k, i) => (
-            <div key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg }}>
-              {t(k)}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : columns.map((c) => (c.flex ? `minmax(${c.width}px, 1fr)` : `${c.width}px`)).join(' '),
+            minWidth: '100%',
+          }}
+        >
+          {!isMobile && columns.map((col, i) => (
+            <div
+              key={col.key}
+              style={{
+                position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase',
+                letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg,
+              }}
+            >
+              {t(col.labelKey)}
+              <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} onResizeEnd={persistColumnWidths} />
             </div>
           ))}
           {!loading && filtered.map((c) => {
@@ -159,14 +184,20 @@ export default function Contacts() {
                 </div>
               );
             }
+            const cellFor = (key) => {
+              if (key === 'name') return <span style={{ color: theme.textPrimary, fontWeight: 600 }}>{c.icon ? `${c.icon} ` : ''}{c.name}</span>;
+              if (key === 'role') return c.role || '—';
+              if (key === 'client') return c.client?.name || '—';
+              if (key === 'system') return c.system?.name || '—';
+              if (key === 'email') return c.email || '—';
+              if (key === 'phone') return c.phone || '—';
+              return null;
+            };
             return (
               <div key={c.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(c.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(c)}>
-                <div style={cell}><span style={{ color: theme.textPrimary, fontWeight: 600 }}>{c.icon ? `${c.icon} ` : ''}{c.name}</span></div>
-                <div style={cell}>{c.role || '—'}</div>
-                <div style={cell}>{c.client?.name || '—'}</div>
-                <div style={cell}>{c.system?.name || '—'}</div>
-                <div style={cell}>{c.email || '—'}</div>
-                <div style={cell}>{c.phone || '—'}</div>
+                {columns.map((col) => (
+                  <div key={col.key} style={cell}>{cellFor(col.key)}</div>
+                ))}
               </div>
             );
           })}

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import dns from 'node:dns/promises';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -8,6 +9,81 @@ const AUTH_TYPES = ['none', 'bearer', 'basic', 'apiKey'];
 
 const router = Router();
 router.use(requireAuth);
+
+// Best-effort SSRF guard for the proxy below: blocks loopback, private,
+// link-local (incl. the 169.254.169.254 cloud metadata address) and unique
+// local ranges. This checks the resolved IP at request time, so it doesn't
+// fully close DNS-rebinding races against a malicious, fast-TTL domain —
+// acceptable here since this is an authenticated, single-team dev tool, not
+// a public multi-tenant service.
+function isPrivateAddress(ip) {
+  if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
+    const [a, b] = ip.split('.').map(Number);
+    return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  }
+  const lower = ip.toLowerCase();
+  return lower === '::1' || lower.startsWith('fe80:') || lower.startsWith('fc') || lower.startsWith('fd');
+}
+
+// Server-side fetch relay so the client can fall back to it when a direct
+// browser fetch() is blocked by the target API's CORS policy — the browser
+// enforces CORS, a plain server-to-server request doesn't need to satisfy it.
+router.post('/proxy', async (req, res) => {
+  const { url, method, headers, body } = req.body || {};
+  if (typeof url !== 'string' || !url) return res.status(400).json({ error: 'url is required' });
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs are allowed' });
+  if (parsed.hostname === 'localhost' || parsed.hostname === '0.0.0.0') {
+    return res.status(400).json({ error: 'Requests to local/internal addresses are blocked' });
+  }
+
+  let addresses;
+  try {
+    addresses = await dns.lookup(parsed.hostname, { all: true });
+  } catch {
+    return res.status(400).json({ error: 'Could not resolve host' });
+  }
+  if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) {
+    return res.status(400).json({ error: 'Requests to local/internal addresses are blocked' });
+  }
+
+  const httpMethod = METHODS.includes(method) ? method : 'GET';
+  const outHeaders = {};
+  if (headers && typeof headers === 'object') {
+    for (const [k, v] of Object.entries(headers)) {
+      if (typeof k === 'string' && typeof v === 'string') outHeaders[k] = v;
+    }
+  }
+
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const upstream = await fetch(parsed.toString(), {
+      method: httpMethod,
+      headers: outHeaders,
+      body: ['GET', 'HEAD'].includes(httpMethod) ? undefined : body || undefined,
+      redirect: 'manual', // never auto-follow — a redirect could point at an internal address
+      signal: controller.signal,
+    });
+    const timeMs = Date.now() - startedAt;
+    const resHeaders = {};
+    upstream.headers.forEach((v, k) => { resHeaders[k] = v; });
+    const text = await upstream.text();
+    res.json({ status: upstream.status, statusText: upstream.statusText, headers: resHeaders, body: text, timeMs });
+  } catch (err) {
+    res.status(502).json({ error: err.name === 'AbortError' ? 'Request timed out' : err.message || 'Request failed' });
+  } finally {
+    clearTimeout(timer);
+  }
+});
 
 router.get('/folders', async (req, res) => {
   const folders = await prisma.apiFolder.findMany({

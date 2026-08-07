@@ -211,8 +211,23 @@ export default function ApiPlayground() {
         // not JSON — keep as-is
       }
       lastResponse = { status: res.status, statusText: res.statusText, headers: resHeaders, body: text, timeMs, savedAt: new Date().toISOString() };
-    } catch (err) {
-      lastResponse = { error: err.message, savedAt: new Date().toISOString() };
+    } catch (directErr) {
+      // The browser fetch failed — almost always the target API's CORS
+      // policy blocking it (browsers surface that as an opaque network
+      // error indistinguishable from a real connectivity failure), so fall
+      // back once to the server-side proxy, which isn't subject to CORS.
+      try {
+        const proxied = await api.proxyApiRequest({ url, method: req.method, headers, body });
+        let text = proxied.body ?? '';
+        try {
+          text = JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+          // not JSON — keep as-is
+        }
+        lastResponse = { ...proxied, body: text, savedAt: new Date().toISOString(), viaProxy: true };
+      } catch (proxyErr) {
+        lastResponse = { error: proxyErr.message || directErr.message, savedAt: new Date().toISOString() };
+      }
     }
     await patchImmediate({ lastResponse });
     setSending(false);
@@ -488,6 +503,11 @@ export default function ApiPlayground() {
                       {selected.lastResponse.status} {selected.lastResponse.statusText}
                     </span>
                     <span style={{ color: theme.textMuted }}>{selected.lastResponse.timeMs} ms</span>
+                    {selected.lastResponse.viaProxy && (
+                      <span title={t('apiPlayground.viaProxyHint')} style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: theme.accentSoftBg, color: theme.accentText }}>
+                        {t('apiPlayground.viaProxy')}
+                      </span>
+                    )}
                     <span style={{ color: theme.textMuted, fontSize: 11 }}>
                       {t('apiPlayground.savedAt')} {new Date(selected.lastResponse.savedAt).toLocaleString()}
                     </span>

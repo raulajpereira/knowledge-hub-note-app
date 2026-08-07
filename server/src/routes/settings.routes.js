@@ -61,6 +61,7 @@ router.patch('/', async (req, res) => {
   const {
     theme, accentColor, accentHue, fontFamily, fontScale, radiusStyle, density, language,
     vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout, sidebarCollapsed, sidebarWidth,
+    columnWidths,
   } = req.body || {};
   const data = {};
   if (theme !== undefined) {
@@ -188,6 +189,30 @@ router.patch('/', async (req, res) => {
     } else {
       data.sidebarWidth = null;
     }
+  }
+  if (columnWidths !== undefined) {
+    const valid =
+      columnWidths === null ||
+      (columnWidths &&
+        typeof columnWidths === 'object' &&
+        !Array.isArray(columnWidths) &&
+        Object.values(columnWidths).every(
+          (page) =>
+            page &&
+            typeof page === 'object' &&
+            !Array.isArray(page) &&
+            Object.values(page).every((w) => Number.isFinite(w))
+        ));
+    if (!valid) return res.status(400).json({ error: 'columnWidths must be { [pageKey]: { [columnKey]: number } }' });
+    data.columnWidths =
+      columnWidths === null
+        ? null
+        : Object.fromEntries(
+            Object.entries(columnWidths).map(([page, cols]) => [
+              page,
+              Object.fromEntries(Object.entries(cols).map(([key, w]) => [key, Math.round(w)])),
+            ])
+          );
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },

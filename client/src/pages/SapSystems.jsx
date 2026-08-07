@@ -5,11 +5,23 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import IconPicker from '../components/IconPicker.jsx';
+import ResizeHandle from '../components/ResizeHandle.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useColumnWidths } from '../lib/useColumnWidths.js';
 
 const ENV_OPTIONS = ['DEV', 'QAS', 'PRD', 'Sandbox'];
 const ENV_HUE = { DEV: 210, QAS: 60, PRD: 25, Sandbox: 290 };
+
+const DEFAULT_COLUMNS = [
+  { key: 'name', labelKey: 'sapSystems.colName', width: 220 },
+  { key: 'client', labelKey: 'sapSystems.colClient', width: 150 },
+  { key: 'sid', labelKey: 'sapSystems.colSid', width: 90 },
+  { key: 'env', labelKey: 'sapSystems.colEnv', width: 100 },
+  { key: 'appServer', labelKey: 'sapSystems.colAppServer', width: 160 },
+  { key: 'instance', labelKey: 'sapSystems.colInstance', width: 130, flex: true },
+  { key: 'favorite', labelKey: '', width: 40, minWidth: 30 },
+];
 
 function Field({ label, children, theme }) {
   return (
@@ -64,6 +76,7 @@ export default function SapSystems() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
+  const { columns, resizeColumn, persistColumnWidths } = useColumnWidths('sapSystems', DEFAULT_COLUMNS);
 
   useEffect(() => {
     Promise.all([api.listSapSystems(), api.listClients()]).then(([sysRes, clientRes]) => {
@@ -163,10 +176,23 @@ export default function SapSystems() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, overflow: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr 0.7fr 0.7fr 1fr 1fr 40px', minWidth: '100%' }}>
-          {!isMobile && ['sapSystems.colName', 'sapSystems.colClient', 'sapSystems.colSid', 'sapSystems.colEnv', 'sapSystems.colAppServer', 'sapSystems.colInstance', ''].map((k, i) => (
-            <div key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg }}>
-              {k ? t(k) : ''}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : columns.map((c) => (c.flex ? `minmax(${c.width}px, 1fr)` : `${c.width}px`)).join(' '),
+            minWidth: '100%',
+          }}
+        >
+          {!isMobile && columns.map((col, i) => (
+            <div
+              key={col.key}
+              style={{
+                position: 'relative', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase',
+                letterSpacing: '0.03em', borderBottom: `2px solid ${theme.border}`, background: theme.subtleBg,
+              }}
+            >
+              {col.labelKey ? t(col.labelKey) : ''}
+              <ResizeHandle onResize={(dx) => resizeColumn(i, dx)} onResizeEnd={persistColumnWidths} />
             </div>
           ))}
           {!loading && filtered.map((s) => {
@@ -183,17 +209,27 @@ export default function SapSystems() {
                 </div>
               );
             }
+            const cellFor = (key) => {
+              if (key === 'name') return <span style={{ color: theme.textPrimary, fontWeight: 600 }}>{s.icon ? `${s.icon} ` : ''}{s.name}</span>;
+              if (key === 'client') return s.client?.name || '—';
+              if (key === 'sid') return <span style={{ fontFamily: 'var(--font-mono)' }}>{s.sid || '—'}</span>;
+              if (key === 'env') return <EnvBadge env={s.environment} />;
+              if (key === 'appServer') return <span style={{ fontFamily: 'var(--font-mono)' }}>{s.applicationServer || '—'}</span>;
+              if (key === 'instance') return <span style={{ fontFamily: 'var(--font-mono)' }}>{s.instanceNumber || '—'}</span>;
+              if (key === 'favorite') {
+                return (
+                  <span onClick={(e) => toggleFavorite(s, e)} style={{ display: 'flex' }}>
+                    <Icon name={s.favorite ? 'bookmarkFilled' : 'bookmark'} size={14} color={s.favorite ? theme.accentText : theme.textMuted} />
+                  </span>
+                );
+              }
+              return null;
+            };
             return (
               <div key={s.id} style={{ display: 'contents' }} onMouseEnter={() => setHoveredId(s.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => openEdit(s)}>
-                <div style={cell}><span style={{ color: theme.textPrimary, fontWeight: 600 }}>{s.icon ? `${s.icon} ` : ''}{s.name}</span></div>
-                <div style={cell}>{s.client?.name || '—'}</div>
-                <div style={{ ...cell, fontFamily: 'var(--font-mono)' }}>{s.sid || '—'}</div>
-                <div style={cell}><EnvBadge env={s.environment} /></div>
-                <div style={{ ...cell, fontFamily: 'var(--font-mono)' }}>{s.applicationServer || '—'}</div>
-                <div style={{ ...cell, fontFamily: 'var(--font-mono)' }}>{s.instanceNumber || '—'}</div>
-                <div style={{ ...cell, textAlign: 'center' }} onClick={(e) => toggleFavorite(s, e)}>
-                  <Icon name={s.favorite ? 'bookmarkFilled' : 'bookmark'} size={14} color={s.favorite ? theme.accentText : theme.textMuted} />
-                </div>
+                {columns.map((col) => (
+                  <div key={col.key} style={{ ...cell, textAlign: col.key === 'favorite' ? 'center' : 'left' }}>{cellFor(col.key)}</div>
+                ))}
               </div>
             );
           })}
