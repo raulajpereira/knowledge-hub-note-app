@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import dns from 'node:dns/promises';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const BODY_TYPES = ['none', 'json', 'text', 'form'];
@@ -9,6 +9,7 @@ const AUTH_TYPES = ['none', 'bearer', 'basic', 'apiKey'];
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('apiPlayground'));
 
 // Best-effort SSRF guard for the proxy below: blocks loopback, private,
 // link-local (incl. the 169.254.169.254 cloud metadata address) and unique

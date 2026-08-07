@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireAdmin, requireFeature } from '../middleware/auth.js';
 import { fillDocx } from '../lib/docxFill/engine.js';
 import { convertDocxToPdf } from '../lib/docxFill/pdfConvert.js';
 
@@ -41,6 +41,7 @@ const uploadImage = multer({
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('documentacao'));
 
 router.post('/images', uploadImage.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

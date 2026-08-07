@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 import { encryptSecret, decryptSecret } from '../lib/secretCrypto.js';
 import { listVirtualMachines, getVirtualMachine, getVmMetrics, normalizeToMb, latestUsagePoint } from '../lib/hostinger.js';
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('serverInfo'));
 
 // Short in-memory cache so Home + Settings loading together doesn't double-hit Hostinger.
 const statusCache = new Map(); // userId -> { at, data }

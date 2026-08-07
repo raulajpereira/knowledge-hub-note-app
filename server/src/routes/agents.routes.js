@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 import { encryptSecret } from '../lib/crypto.js';
 import { searchWorkspace, buildWorkspaceContext } from '../lib/workspaceSearch.js';
 import { modelOptionsFor, defaultModelFor, callProvider } from '../lib/aiProvider.js';
@@ -24,6 +24,7 @@ function detectFromToken(token) {
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('agents'));
 
 function toPublic(agent) {
   const { tokenCipher, ...rest } = agent;

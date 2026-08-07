@@ -79,7 +79,7 @@ export const api = {
   removeTeamMember: (id) => request(`/auth/team/${id}`, { method: 'DELETE' }),
 
   listInviteCodes: () => request('/auth/invite-codes'),
-  createInviteCode: () => request('/auth/invite-codes', { method: 'POST' }),
+  createInviteCode: (payload) => request('/auth/invite-codes', { method: 'POST', body: payload }),
   revokeInviteCode: (id) => request(`/auth/invite-codes/${id}`, { method: 'DELETE' }),
   listAdminUsers: () => request('/auth/admin/users'),
   updateAdminUser: (id, payload) => request(`/auth/admin/users/${id}`, { method: 'PATCH', body: payload }),

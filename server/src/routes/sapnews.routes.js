@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import Parser from 'rss-parser';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 
 // SAP's official newsroom feed plus community writing tagged ABAP on
 // Medium. Best-effort fetch, same pattern as news.routes.js — a feed
@@ -71,6 +71,7 @@ async function fetchAllFeeds() {
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('sapNews'));
 
 router.get('/', async (req, res) => {
   const now = Date.now();

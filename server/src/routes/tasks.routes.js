@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
 const STATUSES = ['todo', 'in_progress', 'done'];
@@ -17,6 +17,7 @@ function nextDueDate(dueStr, recurrence) {
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('tasks'));
 
 router.get('/', async (req, res) => {
   const trashed = req.query.trashed === 'true';

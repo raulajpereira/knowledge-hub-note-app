@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('transportRequests'));
 
 const includeRefs = {
   project: { select: { id: true, name: true, color: true } },

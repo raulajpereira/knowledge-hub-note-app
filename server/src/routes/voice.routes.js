@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 import { decryptSecret } from '../lib/crypto.js';
 import { callProvider } from '../lib/aiProvider.js';
 
@@ -25,6 +25,7 @@ const upload = multer({
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('voice'));
 
 router.get('/', async (req, res) => {
   const trashed = req.query.trashed === 'true';

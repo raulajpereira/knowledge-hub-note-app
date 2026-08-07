@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 import { callProvider } from '../lib/aiProvider.js';
 
 const FOLDER_KINDS = ['program', 'class', 'function_module', 'other'];
@@ -8,6 +8,7 @@ const ITEM_TYPES = ['snippet', 'characteristics', 'table', 'data_element', 'doma
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('codeLibrary'));
 
 async function isCodeFolderDescendant(userId, folderId, candidateAncestorId) {
   let current = candidateAncestorId;

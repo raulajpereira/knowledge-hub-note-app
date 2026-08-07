@@ -22,6 +22,7 @@ import logoDefaultLight from '../assets/logo-default-light.png';
 import logoDefaultDark from '../assets/logo-default-dark.png';
 import logoIcon from '../assets/logo-icon.png';
 import { resolveSidebarLayout, sidebarItemLabel, sidebarGroupLabel } from '../lib/sidebarItems.js';
+import { FEATURE_KEYS, hasFeature } from '../lib/features.js';
 
 const MOBILE_TABS = [
   { key: 'home', to: '/', end: true, icon: 'home', labelKey: 'nav.home' },
@@ -76,8 +77,13 @@ export default function AppLayout() {
   const [sidebarItems, setSidebarItems] = useState([]);
   const [draggedKey, setDraggedKey] = useState(null);
   useEffect(() => {
-    setSidebarItems(resolveSidebarLayout(user?.settings?.sidebarLayout).filter((item) => !item.hidden));
-  }, [user?.settings?.sidebarLayout]);
+    setSidebarItems(
+      resolveSidebarLayout(user?.settings?.sidebarLayout)
+        .filter((item) => !item.hidden)
+        .filter((item) => item.type || !FEATURE_KEYS.includes(item.key) || hasFeature(user, item.key)),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.settings?.sidebarLayout, user?.enabledFeatures, user?.role]);
 
   const sidebarCollapsed = !isMobile && !!user?.settings?.sidebarCollapsed;
   const toggleSidebarCollapsed = async () => {
@@ -461,7 +467,7 @@ export default function AppLayout() {
           >
             <HeaderSearch compact={isMobile} focusSignal={searchFocusTick} />
 
-            {!isMobile && (
+            {!isMobile && hasFeature(user, 'sapNews') && (
               <span
                 onClick={() => navigate('/sap-news')}
                 title={t('nav.sapNews')}
@@ -479,16 +485,18 @@ export default function AppLayout() {
 
             <div style={{ flex: 1 }} />
 
-            <span
-              onClick={() => setScreenshotOpen(true)}
-              title={t('screenshot.title')}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
-                cursor: 'pointer', flexShrink: 0, color: theme.textPrimary, background: theme.subtleBg,
-              }}
-            >
-              <Icon name="camera" size={17} />
-            </span>
+            {hasFeature(user, 'screenCapture') && (
+              <span
+                onClick={() => setScreenshotOpen(true)}
+                title={t('screenshot.title')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                  cursor: 'pointer', flexShrink: 0, color: theme.textPrimary, background: theme.subtleBg,
+                }}
+              >
+                <Icon name="camera" size={17} />
+              </span>
+            )}
 
             <span
               onClick={() => setActivityOpen(true)}
@@ -501,16 +509,18 @@ export default function AppLayout() {
               <Icon name="calendar" size={17} />
             </span>
 
-            <span
-              onClick={() => setWhiteboardOpen(true)}
-              title={t('nav.whiteboard')}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
-                cursor: 'pointer', flexShrink: 0, color: theme.textPrimary, background: theme.subtleBg,
-              }}
-            >
-              <Icon name="whiteboard" size={17} />
-            </span>
+            {hasFeature(user, 'whiteboard') && (
+              <span
+                onClick={() => setWhiteboardOpen(true)}
+                title={t('nav.whiteboard')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%',
+                  cursor: 'pointer', flexShrink: 0, color: theme.textPrimary, background: theme.subtleBg,
+                }}
+              >
+                <Icon name="whiteboard" size={17} />
+              </span>
+            )}
 
             <div ref={notifRef} style={{ position: 'relative', flexShrink: 0 }}>
               <span
@@ -683,7 +693,7 @@ export default function AppLayout() {
       {activityOpen && <ActivityModal onClose={() => setActivityOpen(false)} />}
       {screenshotOpen && <ScreenshotModal onClose={() => setScreenshotOpen(false)} />}
 
-      <AgentChatWidget />
+      {hasFeature(user, 'agents') && <AgentChatWidget />}
     </div>
   );
 }

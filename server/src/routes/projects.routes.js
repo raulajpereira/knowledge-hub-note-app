@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 
 const STATUSES = ['Ativo', 'Pausado', 'Concluído'];
 
@@ -30,6 +30,7 @@ const uploadCover = multer({
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('projects'));
 
 router.post('/covers', uploadCover.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

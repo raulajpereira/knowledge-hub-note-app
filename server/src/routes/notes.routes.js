@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 import { callProvider } from '../lib/aiProvider.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -41,6 +41,7 @@ const uploadFile = multer({
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('notes'));
 
 router.post('/images', uploadImage.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

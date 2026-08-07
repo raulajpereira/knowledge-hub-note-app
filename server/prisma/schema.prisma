@@ -35,6 +35,7 @@ model User {
   twoFactorSecret      String?  @db.Text // base32 TOTP secret, only present while 2FA is enabled
   twoFactorEnabled     Boolean  @default(false)
   twoFactorBackupCodes Json? // array of bcrypt-hashed one-time recovery codes, consumed on use
+  enabledFeatures Json? // array of FEATURE_KEYS strings this account can use; null = every feature (super_admin, and any account predating this system). Admin-writable only, never through the self-service /settings routes.
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -114,6 +115,7 @@ model InviteCode {
   usedBy        User?     @relation("InviteCodeUser", fields: [usedById], references: [id], onDelete: SetNull)
   usedAt        DateTime?
   revokedAt     DateTime?
+  allowedFeatures Json? // array of FEATURE_KEYS strings granted to the account created with this code; null = every feature
   createdAt     DateTime  @default(now())
 
   @@map("invite_codes")

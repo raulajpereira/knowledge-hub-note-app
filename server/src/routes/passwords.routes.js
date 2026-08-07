@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const iconsDir = path.join(__dirname, '..', '..', 'uploads', 'password-icons');
@@ -28,6 +28,7 @@ const uploadIcon = multer({
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('passwords'));
 
 // The server never sees a vault password, recovery key, or master key.
 // It only stores opaque ciphertext blobs produced by the browser (Web Crypto).

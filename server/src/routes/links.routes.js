@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 import { searchWorkspace, getResurfacedItems } from '../lib/workspaceSearch.js';
 
 const ENTITY_TYPES = new Set(['note', 'issue', 'task', 'code']);
@@ -201,7 +201,10 @@ router.delete('/:id', async (req, res) => {
   res.status(204).end();
 });
 
-router.get('/graph', async (req, res) => {
+// Only this sub-route is gated by the "graph" feature — the rest of this
+// router (mentions/suggestions/link CRUD) backs the linking picker shared
+// by Notes/Issues/Tasks/Code Library, which are gated by their own features.
+router.get('/graph', requireFeature('graph'), async (req, res) => {
   const [links, notesWithLegacyLinks] = await Promise.all([
     prisma.link.findMany({ where: { userId: req.effectiveUserId } }),
     prisma.note.findMany({ where: { userId: req.effectiveUserId, deletedAt: null }, select: { id: true, links: true } }),

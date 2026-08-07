@@ -6,7 +6,7 @@ import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import MsgReaderPkg from '@kenjiuno/msgreader';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 
 // Node's CJS/ESM interop double-wraps this package's TS-compiled default
 // export (module.exports.default is itself an object with its own
@@ -36,6 +36,7 @@ function diskPathFromUrl(url) {
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('emails'));
 
 router.get('/', async (req, res) => {
   const emails = await prisma.email.findMany({

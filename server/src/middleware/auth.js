@@ -33,7 +33,7 @@ async function authenticate(req, res) {
       }
       prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
     }
-    const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { teamOwnerId: true, role: true, status: true, name: true, email: true } });
+    const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { teamOwnerId: true, role: true, status: true, name: true, email: true, enabledFeatures: true } });
     if (!user) {
       res.status(401).json({ error: 'Invalid or expired token' });
       return null;
@@ -43,6 +43,9 @@ async function authenticate(req, res) {
     req.userStatus = user.status;
     req.userName = user.name;
     req.userEmail = user.email;
+    // null means "every feature" — grandfathers accounts that predate this
+    // system, and super_admin is always exempt regardless of this value.
+    req.userEnabledFeatures = Array.isArray(user.enabledFeatures) ? user.enabledFeatures : null;
     req.sessionJti = payload.jti || null;
     req.effectiveUserId = user.teamOwnerId || req.userId;
     return user;
@@ -82,4 +85,18 @@ export async function requireSuperAdmin(req, res, next) {
     return res.status(403).json({ error: 'Super admin access required' });
   }
   next();
+}
+
+// Blocks a whole route file's worth of endpoints for accounts that don't
+// have this feature enabled (see lib/features.js for the key catalog).
+// super_admin is always exempt; every other account defaults to full access
+// (req.userEnabledFeatures === null) unless an admin explicitly narrowed it.
+export function requireFeature(key) {
+  return (req, res, next) => {
+    if (req.userRole === 'super_admin') return next();
+    if (req.userEnabledFeatures && !req.userEnabledFeatures.includes(key)) {
+      return res.status(403).json({ error: 'This feature is not enabled for your account', code: 'FEATURE_DISABLED', feature: key });
+    }
+    next();
+  };
 }

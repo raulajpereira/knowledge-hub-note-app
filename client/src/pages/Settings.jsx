@@ -13,6 +13,7 @@ import logoDefaultLight from '../assets/logo-default-light.png';
 import logoDefaultDark from '../assets/logo-default-dark.png';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { FEATURE_KEYS, hasFeature } from '../lib/features.js';
 
 function TeamCard({ theme, t, card, outlineButton }) {
   const confirm = useConfirm();
@@ -112,6 +113,8 @@ function AdminCard({ theme, t, card, outlineButton }) {
   const [copiedId, setCopiedId] = useState(null);
   const [busyUserId, setBusyUserId] = useState(null);
   const [templateAccessUser, setTemplateAccessUser] = useState(null);
+  const [featureAccessUser, setFeatureAccessUser] = useState(null);
+  const [newCodeOpen, setNewCodeOpen] = useState(false);
 
   const load = () => {
     api.listInviteCodes().then((r) => setCodes(r.codes));
@@ -122,12 +125,13 @@ function AdminCard({ theme, t, card, outlineButton }) {
     load();
   }, []);
 
-  const generateCode = async () => {
+  const createCode = async (allowedFeatures) => {
     setGenerating(true);
     try {
-      await api.createInviteCode();
+      await api.createInviteCode({ allowedFeatures });
       const { codes: fresh } = await api.listInviteCodes();
       setCodes(fresh);
+      setNewCodeOpen(false);
     } finally {
       setGenerating(false);
     }
@@ -250,7 +254,7 @@ function AdminCard({ theme, t, card, outlineButton }) {
           <div style={{ fontSize: 13.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="lock" size={13} color={theme.textMuted} /> {t('settings.inviteCodes')}
           </div>
-          <button onClick={generateCode} disabled={generating} style={{ ...goldButton, opacity: generating ? 0.6 : 1 }}>
+          <button onClick={() => setNewCodeOpen(true)} disabled={generating} style={{ ...goldButton, opacity: generating ? 0.6 : 1 }}>
             {generating ? t('settings.generating') : t('settings.generateCode')}
           </button>
         </div>
@@ -328,6 +332,13 @@ function AdminCard({ theme, t, card, outlineButton }) {
                   >
                     <Icon name="doc" size={12} /> {t('settings.manageDocTemplates')}
                   </button>
+                  <button
+                    onClick={() => setFeatureAccessUser(u)}
+                    disabled={busy}
+                    style={{ ...outlineButton, padding: '5px 10px', fontSize: 11.5, opacity: busy ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 5 }}
+                  >
+                    <Icon name="shield" size={12} /> {t('settings.manageFeatures')}
+                  </button>
                   <span
                     onClick={() => (busy ? null : deleteAccount(u))}
                     title={t('common.delete')}
@@ -345,7 +356,115 @@ function AdminCard({ theme, t, card, outlineButton }) {
     {templateAccessUser && (
       <TemplateAccessModal theme={theme} t={t} user={templateAccessUser} onClose={() => setTemplateAccessUser(null)} />
     )}
+    {featureAccessUser && (
+      <FeatureAccessModal
+        theme={theme}
+        t={t}
+        user={featureAccessUser}
+        onClose={() => setFeatureAccessUser(null)}
+        onSaved={() => { setFeatureAccessUser(null); load(); }}
+      />
+    )}
+    {newCodeOpen && (
+      <NewInviteCodeModal theme={theme} t={t} creating={generating} onClose={() => setNewCodeOpen(false)} onCreate={createCode} />
+    )}
     </>
+  );
+}
+
+// Shared by NewInviteCodeModal (features an invite code will grant) and
+// FeatureAccessModal (features an existing account currently has).
+function FeatureCheckboxGrid({ theme, t, selected, onToggle }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+      {FEATURE_KEYS.map((key) => (
+        <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 8, background: theme.subtleBg, cursor: 'pointer' }}>
+          <input type="checkbox" checked={selected.has(key)} onChange={() => onToggle(key)} />
+          <span style={{ fontSize: 12.5, fontWeight: 600 }}>{t(`nav.${key}`)}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function NewInviteCodeModal({ theme, t, creating, onClose, onCreate }) {
+  const [selected, setSelected] = useState(new Set(FEATURE_KEYS));
+  const toggle = (key) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: theme.cardBg, borderRadius: 14, padding: 22, width: 480, maxWidth: '92vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', gap: 14, border: `1px solid ${theme.border}` }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800 }}>{t('settings.generateCode')}</div>
+          <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.newCodeFeaturesDesc')}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 14, fontSize: 11.5, fontWeight: 700 }}>
+          <span onClick={() => setSelected(new Set(FEATURE_KEYS))} style={{ cursor: 'pointer', color: theme.accentText }}>{t('settings.selectAll')}</span>
+          <span onClick={() => setSelected(new Set())} style={{ cursor: 'pointer', color: theme.textMuted }}>{t('settings.selectNone')}</span>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, minHeight: 40 }}>
+          <FeatureCheckboxGrid theme={theme} t={t} selected={selected} onToggle={toggle} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', color: theme.textPrimary }}>
+            {t('common.cancel')}
+          </button>
+          <button onClick={() => onCreate([...selected])} disabled={creating} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: creating ? 0.6 : 1 }}>
+            {creating ? t('settings.generating') : t('settings.generateCode')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeatureAccessModal({ theme, t, user, onClose, onSaved }) {
+  const [selected, setSelected] = useState(new Set(Array.isArray(user.enabledFeatures) ? user.enabledFeatures : FEATURE_KEYS));
+  const [saving, setSaving] = useState(false);
+  const toggle = (key) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.updateAdminUser(user.id, { enabledFeatures: [...selected] });
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: theme.cardBg, borderRadius: 14, padding: 22, width: 480, maxWidth: '92vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', gap: 14, border: `1px solid ${theme.border}` }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800 }}>{t('settings.manageFeatures')}</div>
+          <div style={{ fontSize: 12.5, color: theme.textMuted }}>{user.name}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 14, fontSize: 11.5, fontWeight: 700 }}>
+          <span onClick={() => setSelected(new Set(FEATURE_KEYS))} style={{ cursor: 'pointer', color: theme.accentText }}>{t('settings.selectAll')}</span>
+          <span onClick={() => setSelected(new Set())} style={{ cursor: 'pointer', color: theme.textMuted }}>{t('settings.selectNone')}</span>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, minHeight: 40 }}>
+          <FeatureCheckboxGrid theme={theme} t={t} selected={selected} onToggle={toggle} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', color: theme.textPrimary }}>
+            {t('common.cancel')}
+          </button>
+          <button onClick={save} disabled={saving} style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+            {saving ? t('common.saving') : t('common.save')}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1259,8 +1378,9 @@ export default function Settings() {
 
       {activeTab === 'integrations' && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <VpsCard theme={theme} t={t} card={nestedCard} user={user} refreshMe={refreshMe} />
+      {hasFeature(user, 'serverInfo') && <VpsCard theme={theme} t={t} card={nestedCard} user={user} refreshMe={refreshMe} />}
 
+      {hasFeature(user, 'agents') && (
       <div style={nestedCard}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
@@ -1279,6 +1399,7 @@ export default function Settings() {
           <AgentRow key={agent.id} agent={agent} theme={theme} t={t} />
         ))}
       </div>
+      )}
       </div>
       )}
 

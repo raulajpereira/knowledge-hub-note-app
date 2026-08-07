@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireFeature } from '../middleware/auth.js';
 import { callProvider } from '../lib/aiProvider.js';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
@@ -17,6 +17,7 @@ function nextDueDate(dueStr, recurrence) {
 
 const router = Router();
 router.use(requireAuth);
+router.use(requireFeature('issues'));
 
 router.get('/', async (req, res) => {
   const issues = await prisma.issue.findMany({

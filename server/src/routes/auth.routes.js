@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireAuthAllowSuspended, requireAdmin } from '../middleware/auth.js';
+import { FEATURE_KEYS, normalizeFeatureList } from '../lib/features.js';
 import { DEFAULT_TRANSACTIONS } from '../lib/defaultTransactions.js';
 import { logAuditEvent } from '../lib/auditLog.js';
 import { generateSecret, generateEnrollmentQr, verifyToken, generateBackupCodes } from '../lib/twoFactor.js';
@@ -42,6 +43,8 @@ function publicUser(user) {
     isTeamMember: !!user.teamOwnerId,
     role: user.role,
     status: user.status,
+    // null = every feature (super_admin, and any account predating this system)
+    enabledFeatures: Array.isArray(user.enabledFeatures) ? user.enabledFeatures : null,
     twoFactorEnabled: !!user.twoFactorEnabled,
     hostingerConnected: !!user.settings?.hostingerApiTokenEnc,
     settings: user.settings
@@ -103,6 +106,7 @@ router.post('/register', async (req, res) => {
         email: email.toLowerCase(),
         passwordHash,
         name,
+        enabledFeatures: invite.allowedFeatures ?? null,
         settings: { create: {} },
       },
       include: { settings: true },
@@ -385,6 +389,7 @@ router.get('/invite-codes', requireAuth, requireAdmin, async (req, res) => {
       usedAt: c.usedAt,
       usedBy: c.usedBy,
       revokedAt: c.revokedAt,
+      allowedFeatures: Array.isArray(c.allowedFeatures) ? c.allowedFeatures : FEATURE_KEYS,
     })),
   });
 });
@@ -400,7 +405,8 @@ router.post('/invite-codes', requireAuth, requireAdmin, async (req, res) => {
   }
   if (!code) return res.status(500).json({ error: 'Could not generate a unique code, try again' });
 
-  const invite = await prisma.inviteCode.create({ data: { code, createdById: req.userId } });
+  const allowedFeatures = normalizeFeatureList(req.body?.allowedFeatures) ?? FEATURE_KEYS;
+  const invite = await prisma.inviteCode.create({ data: { code, createdById: req.userId, allowedFeatures } });
   res.status(201).json({ code: invite });
 });
 
@@ -422,9 +428,11 @@ router.get('/admin/users', requireAuth, requireAdmin, async (req, res) => {
   const users = await prisma.user.findMany({
     where: { role: { not: 'super_admin' } },
     orderBy: { createdAt: 'desc' },
-    select: { id: true, name: true, email: true, role: true, status: true, createdAt: true, teamOwnerId: true },
+    select: { id: true, name: true, email: true, role: true, status: true, createdAt: true, teamOwnerId: true, enabledFeatures: true },
   });
-  res.json({ users });
+  res.json({
+    users: users.map((u) => ({ ...u, enabledFeatures: Array.isArray(u.enabledFeatures) ? u.enabledFeatures : FEATURE_KEYS })),
+  });
 });
 
 router.patch('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
@@ -434,7 +442,7 @@ router.patch('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => 
   if (!target) return res.status(404).json({ error: 'User not found' });
   if (target.role === 'super_admin') return res.status(403).json({ error: 'The super admin account cannot be managed by other admins' });
 
-  const { status, role } = req.body || {};
+  const { status, role, enabledFeatures } = req.body || {};
   const data = {};
   if (status !== undefined) {
     if (!['active', 'suspended'].includes(status)) return res.status(400).json({ error: 'status must be active or suspended' });
@@ -444,9 +452,18 @@ router.patch('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => 
     if (!['member', 'admin'].includes(role)) return res.status(400).json({ error: 'role must be member or admin' });
     data.role = role;
   }
+  if (enabledFeatures !== undefined) {
+    if (enabledFeatures === null) {
+      data.enabledFeatures = null;
+    } else {
+      const normalized = normalizeFeatureList(enabledFeatures);
+      if (!normalized) return res.status(400).json({ error: 'enabledFeatures must be an array' });
+      data.enabledFeatures = normalized;
+    }
+  }
 
   const updated = await prisma.user.update({ where: { id: target.id }, data });
-  res.json({ user: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, status: updated.status } });
+  res.json({ user: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, status: updated.status, enabledFeatures: Array.isArray(updated.enabledFeatures) ? updated.enabledFeatures : FEATURE_KEYS } });
 });
 
 router.delete('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {

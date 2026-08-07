@@ -33,6 +33,7 @@ import Emails from './pages/Emails.jsx';
 import Graph from './pages/Graph.jsx';
 import ApiPlayground from './pages/ApiPlayground.jsx';
 import SharedNote from './pages/SharedNote.jsx';
+import FeatureRoute from './components/FeatureRoute.jsx';
 
 function FullScreenLoader() {
   return (
@@ -82,26 +83,26 @@ export default function App() {
                 <Route path="/s/:token" element={<SharedNote />} />
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<Home />} />
-                  <Route path="/notes" element={<Notes />} />
-                  <Route path="/tasks" element={<Tasks />} />
+                  <Route path="/notes" element={<FeatureRoute feature="notes"><Notes /></FeatureRoute>} />
+                  <Route path="/tasks" element={<FeatureRoute feature="tasks"><Tasks /></FeatureRoute>} />
                   <Route path="/tags" element={<Tags />} />
-                  <Route path="/voice" element={<Voice />} />
-                  <Route path="/passwords" element={<Passwords />} />
-                  <Route path="/issues" element={<Issues />} />
-                  <Route path="/projects" element={<Projects />} />
-                  <Route path="/artifacts" element={<Artifacts />} />
-                  <Route path="/code-library" element={<CodeLibrary />} />
-                  <Route path="/transactions" element={<Transactions />} />
-                  <Route path="/documentacao" element={<Documentacao />} />
-                  <Route path="/clients" element={<Clients />} />
-                  <Route path="/sap-systems" element={<SapSystems />} />
-                  <Route path="/transport-requests" element={<TransportRequests />} />
-                  <Route path="/contacts" element={<Contacts />} />
-                  <Route path="/emails" element={<Emails />} />
-                  <Route path="/calendar" element={<Calendar />} />
-                  <Route path="/graph" element={<Graph />} />
-                  <Route path="/playground" element={<ApiPlayground />} />
-                  <Route path="/sap-news" element={<SapNews />} />
+                  <Route path="/voice" element={<FeatureRoute feature="voice"><Voice /></FeatureRoute>} />
+                  <Route path="/passwords" element={<FeatureRoute feature="passwords"><Passwords /></FeatureRoute>} />
+                  <Route path="/issues" element={<FeatureRoute feature="issues"><Issues /></FeatureRoute>} />
+                  <Route path="/projects" element={<FeatureRoute feature="projects"><Projects /></FeatureRoute>} />
+                  <Route path="/artifacts" element={<FeatureRoute feature="artifacts"><Artifacts /></FeatureRoute>} />
+                  <Route path="/code-library" element={<FeatureRoute feature="codeLibrary"><CodeLibrary /></FeatureRoute>} />
+                  <Route path="/transactions" element={<FeatureRoute feature="transactions"><Transactions /></FeatureRoute>} />
+                  <Route path="/documentacao" element={<FeatureRoute feature="documentacao"><Documentacao /></FeatureRoute>} />
+                  <Route path="/clients" element={<FeatureRoute feature="clients"><Clients /></FeatureRoute>} />
+                  <Route path="/sap-systems" element={<FeatureRoute feature="sapSystems"><SapSystems /></FeatureRoute>} />
+                  <Route path="/transport-requests" element={<FeatureRoute feature="transportRequests"><TransportRequests /></FeatureRoute>} />
+                  <Route path="/contacts" element={<FeatureRoute feature="contacts"><Contacts /></FeatureRoute>} />
+                  <Route path="/emails" element={<FeatureRoute feature="emails"><Emails /></FeatureRoute>} />
+                  <Route path="/calendar" element={<FeatureRoute feature="calendar"><Calendar /></FeatureRoute>} />
+                  <Route path="/graph" element={<FeatureRoute feature="graph"><Graph /></FeatureRoute>} />
+                  <Route path="/playground" element={<FeatureRoute feature="apiPlayground"><ApiPlayground /></FeatureRoute>} />
+                  <Route path="/sap-news" element={<FeatureRoute feature="sapNews"><SapNews /></FeatureRoute>} />
                   <Route path="/trash" element={<Trash />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
