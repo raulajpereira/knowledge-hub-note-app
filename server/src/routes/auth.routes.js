@@ -69,6 +69,7 @@ function publicUser(user) {
           homeLayout: user.settings.homeLayout,
           columnWidths: user.settings.columnWidths,
           panelWidths: user.settings.panelWidths,
+          continueDismissed: user.settings.continueDismissed,
         }
       : null,
   };

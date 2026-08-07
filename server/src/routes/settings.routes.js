@@ -61,7 +61,7 @@ router.patch('/', async (req, res) => {
   const {
     theme, accentColor, accentHue, fontFamily, fontScale, radiusStyle, density, language,
     vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout, sidebarCollapsed, sidebarWidth,
-    columnWidths, panelWidths,
+    columnWidths, panelWidths, continueDismissed,
   } = req.body || {};
   const data = {};
   if (theme !== undefined) {
@@ -224,6 +224,16 @@ router.patch('/', async (req, res) => {
     if (!valid) return res.status(400).json({ error: 'panelWidths must be { [key]: number }' });
     data.panelWidths =
       panelWidths === null ? null : Object.fromEntries(Object.entries(panelWidths).map(([key, w]) => [key, Math.round(w)]));
+  }
+  if (continueDismissed !== undefined) {
+    const valid =
+      continueDismissed === null ||
+      (continueDismissed &&
+        typeof continueDismissed === 'object' &&
+        !Array.isArray(continueDismissed) &&
+        Object.values(continueDismissed).every((v) => typeof v === 'string'));
+    if (!valid) return res.status(400).json({ error: 'continueDismissed must be { [key]: isoDateString }' });
+    data.continueDismissed = continueDismissed;
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },

@@ -72,6 +72,7 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
         const [
           { notes }, { tasks }, { voiceNotes }, { artifacts }, { transactions },
           { issues }, { clients }, { systems: sapSystems }, { contacts }, { transportRequests },
+          { documents }, { projects }, { emails }, { folders: codeFolders },
         ] = await Promise.all([
           api.listNotes(),
           api.listTasks(),
@@ -83,6 +84,10 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
           api.listSapSystems(),
           api.listContacts(),
           api.listTransportRequests(),
+          api.listDocuments(),
+          api.listProjects(),
+          api.listEmails(),
+          api.listCodeFolders(),
         ]);
         const noteHits = notes
           .filter((n) => n.title.toLowerCase().includes(q) || (n.content || '').toLowerCase().includes(q))
@@ -124,10 +129,27 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
           .filter((tr) => tr.code.toLowerCase().includes(q) || tr.description.toLowerCase().includes(q))
           .slice(0, 5)
           .map((tr) => ({ type: 'transportRequest', id: tr.id, label: `${tr.code} — ${tr.description}` }));
+        const documentHits = documents
+          .filter((d) => d.title.toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((d) => ({ type: 'document', id: d.id, label: d.title }));
+        const projectHits = projects
+          .filter((p) => p.name.toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((p) => ({ type: 'project', id: p.id, label: p.name }));
+        const emailHits = emails
+          .filter((e) => (e.subject || '').toLowerCase().includes(q) || (e.fromName || '').toLowerCase().includes(q) || (e.fromAddress || '').toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((e) => ({ type: 'email', id: e.id, label: e.subject || e.fromAddress }));
+        const codeFolderHits = codeFolders
+          .filter((f) => f.name.toLowerCase().includes(q))
+          .slice(0, 5)
+          .map((f) => ({ type: 'codeFolder', id: f.id, label: f.name }));
         setResults(
           [
             ...noteHits, ...taskHits, ...voiceHits, ...artifactHits, ...txHits,
             ...issueHits, ...clientHits, ...sapSystemHits, ...contactHits, ...transportRequestHits,
+            ...documentHits, ...projectHits, ...emailHits, ...codeFolderHits,
           ].slice(0, 8)
         );
       } finally {
@@ -215,10 +237,12 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
     note: t('search.typeNote'), task: t('search.typeTask'), voice: t('search.typeVoice'), artifact: t('search.typeArtifact'), tx: t('search.typeTx'),
     issue: t('search.typeIssue'), client: t('search.typeClient'), sapSystem: t('search.typeSapSystem'),
     contact: t('search.typeContact'), transportRequest: t('search.typeTransportRequest'),
+    document: t('search.typeDocument'), project: t('search.typeProject'), email: t('search.typeEmail'), codeFolder: t('search.typeCodeFolder'),
   };
   const typeIcon = {
     note: 'doc', task: 'check', voice: 'mic', artifact: 'code', tx: 'terminal',
     issue: 'archive', client: 'building', sapSystem: 'server', contact: 'idCard', transportRequest: 'truck',
+    document: 'doc', project: 'users', email: 'mail', codeFolder: 'folder',
   };
 
   const resultItems = results.map((r) => ({
@@ -237,6 +261,10 @@ export default function HeaderSearch({ compact = false, focusSignal }) {
       else if (r.type === 'sapSystem') navigate('/sap-systems');
       else if (r.type === 'contact') navigate('/contacts');
       else if (r.type === 'transportRequest') navigate('/transport-requests');
+      else if (r.type === 'document') navigate('/documentacao');
+      else if (r.type === 'project') navigate('/projects');
+      else if (r.type === 'email') navigate('/emails');
+      else if (r.type === 'codeFolder') navigate('/code-library', { state: { folderId: r.id } });
       else navigate('/voice', { state: { voiceId: r.id } });
     },
   }));

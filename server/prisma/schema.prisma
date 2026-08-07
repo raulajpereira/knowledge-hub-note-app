@@ -148,6 +148,7 @@ model Settings {
   homeLayout              Json? // { left: [...blockKeys], right: [...blockKeys] } — order of Home dashboard blocks per column
   columnWidths            Json? // { [pageKey]: { [columnKey]: widthPx } } — per-page resizable table column widths
   panelWidths             Json? // { [key]: widthPx } — resizable list/detail pane widths within a page (key = "<page>.<pane>")
+  continueDismissed       Json? // { "<kind>:<id>": updatedAtISOString } — items dismissed from Home's "Continue Where I Left Off" list; reappears if touched again after that timestamp
   hostingerApiTokenEnc    String?  @db.Text // AES-256-GCM encrypted at rest, server never exposes plaintext to the client
   hostingerVpsId          String?
   updatedAt               DateTime @updatedAt

@@ -255,12 +255,6 @@ export default function Home() {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   };
 
-  const finishIssue = async (e, issue) => {
-    e.stopPropagation();
-    const { issue: updated } = await api.updateIssue(issue.id, { status: statusConfig[statusConfig.length - 1]?.name });
-    setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
-  };
-
   const createAndGo = async () => {
     await api.createNote({ title: 'Untitled note', content: '' });
     refreshCounts();
@@ -313,11 +307,19 @@ export default function Home() {
 
   // The 3 most recently touched still-open items across Notes/Tasks/Issues —
   // "pick up where I left off" instead of re-finding it via search or a list.
+  // Dismissing an item only hides it from this block (Settings.continueDismissed
+  // records the item's updatedAt at dismiss time); it reappears here if the
+  // item gets touched again afterwards, and never affects the item elsewhere.
+  const continueDismissed = user?.settings?.continueDismissed || {};
   const continueItems = [
     ...notes.map((n) => ({ id: n.id, kind: 'note', title: n.title, updatedAt: n.updatedAt })),
     ...tasks.filter((tk) => !tk.done).map((tk) => ({ id: tk.id, kind: 'task', title: tk.title, updatedAt: tk.updatedAt, raw: tk })),
     ...issues.filter((is) => is.status !== terminalIssueStatus).map((is) => ({ id: is.id, kind: 'issue', title: is.title, updatedAt: is.updatedAt, raw: is })),
   ]
+    .filter((item) => {
+      const dismissedAt = continueDismissed[`${item.kind}:${item.id}`];
+      return !dismissedAt || new Date(item.updatedAt) > new Date(dismissedAt);
+    })
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
     .slice(0, 3);
 
@@ -325,6 +327,13 @@ export default function Home() {
     if (item.kind === 'note') navigate('/notes', { state: { noteId: item.id } });
     else if (item.kind === 'task') navigate('/tasks', { state: { taskId: item.id } });
     else navigate('/issues', { state: { issueId: item.id } });
+  };
+
+  const dismissContinueItem = async (e, item) => {
+    e.stopPropagation();
+    const next = { ...continueDismissed, [`${item.kind}:${item.id}`]: item.updatedAt };
+    const { settings } = await api.updateSettings({ continueDismissed: next });
+    updateUserSettings(settings);
   };
 
   const blockContent = {
@@ -398,18 +407,16 @@ export default function Home() {
                 <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
                 <div style={{ fontSize: 11, color: theme.textMuted, textTransform: 'capitalize' }}>{t(`home.continueKind${item.kind[0].toUpperCase()}${item.kind.slice(1)}`)}</div>
               </div>
-              {item.kind !== 'note' && (
-                <span
-                  onClick={(e) => (item.kind === 'task' ? toggleTaskDone(e, item.raw) : finishIssue(e, item.raw))}
-                  title={t('home.continueFinish')}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%',
-                    flexShrink: 0, color: theme.textMuted, border: `1.5px solid ${theme.border}`,
-                  }}
-                >
-                  <Icon name="check" size={12} />
-                </span>
-              )}
+              <span
+                onClick={(e) => dismissContinueItem(e, item)}
+                title={t('home.continueFinish')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%',
+                  flexShrink: 0, color: theme.textMuted, border: `1.5px solid ${theme.border}`,
+                }}
+              >
+                <Icon name="check" size={12} />
+              </span>
               <span style={{ fontSize: 12, fontWeight: 700, color: theme.accentText, flexShrink: 0 }}>{t('home.continueGo')}</span>
             </div>
           ))}
