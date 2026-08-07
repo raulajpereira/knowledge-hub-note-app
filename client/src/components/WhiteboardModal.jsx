@@ -83,6 +83,36 @@ export default function WhiteboardModal({ onClose }) {
   const confirm = useConfirm();
   const navigate = useNavigate();
 
+  // Position offset from the modal's default centered spot — reset to
+  // (0, 0) on every mount, so the popup always opens centered, and only
+  // moves away from center while the header is actively being dragged.
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStateRef = useRef(null);
+
+  const startHeaderDrag = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    dragStateRef.current = { startX: e.clientX, startY: e.clientY, origin: dragOffset };
+    setDragging(true);
+  };
+
+  useEffect(() => {
+    if (!dragging) return undefined;
+    const onMove = (e) => {
+      const st = dragStateRef.current;
+      if (!st) return;
+      setDragOffset({ x: st.origin.x + (e.clientX - st.startX), y: st.origin.y + (e.clientY - st.startY) });
+    };
+    const onUp = () => {
+      dragStateRef.current = null;
+      setDragging(false);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+    return () => window.removeEventListener('pointermove', onMove);
+  }, [dragging]);
+
   const [boards, setBoards] = useState([]);
   const [boardId, setBoardId] = useState(null);
   const [boardName, setBoardName] = useState('');
@@ -838,11 +868,15 @@ export default function WhiteboardModal({ onClose }) {
     >
       <div
         style={{
-          width: '94vw', height: '92vh', maxWidth: 1600, background: theme.cardBg, borderRadius: 16, border: `1px solid ${theme.border}`,
+          width: '94vw', height: '92vh', maxWidth: 1600, background: theme.dark ? 'oklch(0.17 0.02 255)' : '#ffffff', borderRadius: 16, border: `1px solid ${theme.border}`,
           display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+          transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${theme.border}` }}>
+        <div
+          onPointerDown={(e) => { if (e.target === e.currentTarget) startHeaderDrag(e); }}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${theme.border}`, cursor: dragging ? 'grabbing' : 'grab' }}
+        >
           <Icon name="whiteboard" size={18} color={theme.accentText} />
           <input
             value={boardName}
@@ -904,7 +938,7 @@ export default function WhiteboardModal({ onClose }) {
             <Icon name="plus" size={15} color="#fff" />
           </span>
 
-          <div style={{ flex: 1 }} />
+          <div onPointerDown={startHeaderDrag} style={{ flex: 1, alignSelf: 'stretch' }} />
 
           <span onClick={archiveBoard} title={t('whiteboard.archive')} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted }}>
             <Icon name="archive" size={17} />
