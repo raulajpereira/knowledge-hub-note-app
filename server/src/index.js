@@ -35,6 +35,7 @@ import apiPlaygroundRoutes from './routes/apiplayground.routes.js';
 import whiteboardsRoutes from './routes/whiteboards.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import emailsRoutes from './routes/emails.routes.js';
+import emailFoldersRoutes from './routes/emailfolders.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
 import { auditMiddleware } from './lib/auditLog.js';
 
@@ -80,6 +81,7 @@ app.use('/api/api-playground', apiPlaygroundRoutes);
 app.use('/api/whiteboards', whiteboardsRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/emails', emailsRoutes);
+app.use('/api/email-folders', emailFoldersRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

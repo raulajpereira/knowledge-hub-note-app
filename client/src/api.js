@@ -329,11 +329,17 @@ export const api = {
 
   listEmails: () => request('/emails'),
   getEmail: (id) => request(`/emails/${id}`),
-  uploadEmail: (file) => {
+  uploadEmail: (file, folderId) => {
     const form = new FormData();
     form.append('file', file);
+    if (folderId) form.append('folderId', folderId);
     return request('/emails', { method: 'POST', body: form, isForm: true });
   },
   updateEmail: (id, payload) => request(`/emails/${id}`, { method: 'PATCH', body: payload }),
   deleteEmail: (id) => request(`/emails/${id}`, { method: 'DELETE' }),
+
+  listEmailFolders: () => request('/email-folders'),
+  createEmailFolder: (payload) => request('/email-folders', { method: 'POST', body: payload }),
+  renameEmailFolder: (id, payload) => request(`/email-folders/${id}`, { method: 'PATCH', body: payload }),
+  deleteEmailFolder: (id) => request(`/email-folders/${id}`, { method: 'DELETE' }),
 };

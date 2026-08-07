@@ -44,7 +44,7 @@ router.get('/', async (req, res) => {
     orderBy: [{ sentAt: 'desc' }, { createdAt: 'desc' }],
     select: {
       id: true, subject: true, fromName: true, fromAddress: true, sentAt: true,
-      fileName: true, fileSize: true, favorite: true, attachments: true, createdAt: true,
+      fileName: true, fileSize: true, favorite: true, attachments: true, createdAt: true, folderId: true,
     },
   });
   res.json({ emails });
@@ -52,6 +52,12 @@ router.get('/', async (req, res) => {
 
 router.post('/', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum ficheiro enviado' });
+
+  let folderId = null;
+  if (req.body?.folderId) {
+    const folder = await prisma.emailFolder.findFirst({ where: { id: req.body.folderId, userId: req.effectiveUserId } });
+    if (folder) folderId = folder.id;
+  }
 
   try {
     const buffer = await readFile(req.file.path);
@@ -80,6 +86,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     const email = await prisma.email.create({
       data: {
         userId: req.effectiveUserId,
+        folderId,
         subject: data.subject?.trim() || '(sem assunto)',
         fromName: data.senderName || null,
         fromAddress: data.senderEmail || null,
@@ -110,9 +117,18 @@ router.get('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const email = await prisma.email.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!email) return res.status(404).json({ error: 'Email not found' });
-  const { favorite } = req.body || {};
+  const { favorite, folderId } = req.body || {};
   const data = {};
   if (favorite !== undefined) data.favorite = !!favorite;
+  if (folderId !== undefined) {
+    if (folderId === null) {
+      data.folderId = null;
+    } else {
+      const folder = await prisma.emailFolder.findFirst({ where: { id: folderId, userId: req.effectiveUserId } });
+      if (!folder) return res.status(404).json({ error: 'Folder not found' });
+      data.folderId = folder.id;
+    }
+  }
   const updated = await prisma.email.update({ where: { id: email.id }, data });
   res.json({ email: updated });
 });
