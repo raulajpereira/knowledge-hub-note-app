@@ -7,6 +7,8 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import PanelDivider from '../components/PanelDivider.jsx';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
 
 const HUE_ROTATION = [290, 250, 190, 150, 70, 20, 340, 25];
 
@@ -17,6 +19,7 @@ export default function Tags() {
   const { refresh: refreshCounts } = useCounts();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const listPanel = useResizablePanel('tags.list', 300, { min: 260, max: 520 });
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState([]);
   const [search, setSearch] = useState('');
@@ -94,9 +97,9 @@ export default function Tags() {
   if (loading) return <div style={{ padding: 28, color: theme.textMuted }}>{t('common.loading')}</div>;
 
   return (
-    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 12, minHeight: 0 }}>
       {!mobileShowDetail && (
-      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 300px', minWidth: isMobile ? 0 : 260, maxWidth: isMobile ? 'none' : 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${listPanel.width}px`, minWidth: isMobile ? 0 : 260, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
           <span style={{ opacity: 0.5, display: 'flex' }}>
             <Icon name="search" size={15} />
@@ -175,6 +178,8 @@ export default function Tags() {
         </div>
       </div>
       )}
+
+      {!isMobile && <PanelDivider theme={theme} onResize={listPanel.onResize} onResizeEnd={listPanel.onResizeEnd} />}
 
       {(!isMobile || mobileShowDetail) && (selected ? (
         <div style={{ flex: isMobile ? '1 1 auto' : '1 1 420px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>

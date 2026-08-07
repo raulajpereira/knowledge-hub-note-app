@@ -6,6 +6,8 @@ import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import PanelDivider from '../components/PanelDivider.jsx';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
 import {
   setupVault as cryptoSetupVault,
   unlockWithPassword,
@@ -50,6 +52,7 @@ export default function Passwords() {
   const { user } = useAuth();
   const confirm = useConfirm();
   const isMobile = useIsMobile();
+  const listPanel = useResizablePanel('passwords.list', 340, { min: 280, max: 560 });
   const autoLockMs = (user?.settings?.vaultAutoLockSeconds ?? 60) * 1000;
   const [phase, setPhase] = useState('checking'); // checking | setup | gate | recovery | unlocked
   const [vaultInfo, setVaultInfo] = useState(null);
@@ -539,9 +542,9 @@ export default function Passwords() {
       </>
       )}
 
-      <div style={{ display: 'flex', gap: isMobile ? 0 : 24, flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'flex', gap: isMobile ? 0 : 12, flex: 1, minHeight: 0 }}>
         {(!isMobile || !mobileShowDetail) && (
-        <div style={{ flex: isMobile ? '1 1 auto' : '1 1 340px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 420, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${listPanel.width}px`, minWidth: isMobile ? 0 : 280, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
             <span style={{ opacity: 0.5, display: 'flex' }}>
               <Icon name="search" size={15} />
@@ -580,6 +583,8 @@ export default function Passwords() {
           </div>
         </div>
         )}
+
+        {!isMobile && <PanelDivider theme={theme} onResize={listPanel.onResize} onResizeEnd={listPanel.onResizeEnd} />}
 
         {(!isMobile || mobileShowDetail) && (selected ? (
           <div style={{ flex: isMobile ? '1 1 auto' : '1 1 380px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 16 : 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>

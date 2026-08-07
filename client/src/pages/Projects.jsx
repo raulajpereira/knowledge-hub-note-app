@@ -6,6 +6,8 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import IconPicker from '../components/IconPicker.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import PanelDivider from '../components/PanelDivider.jsx';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
 
 const STATUSES = ['Ativo', 'Pausado', 'Concluído'];
 const STATUS_HUES = { Ativo: 145, Pausado: 60, Concluído: 250 };
@@ -43,6 +45,7 @@ export default function Projects() {
   const { t } = useLanguage();
   const confirm = useConfirm();
   const isMobile = useIsMobile();
+  const listPanel = useResizablePanel('projects.list', 300, { min: 260, max: 520 });
   const [projects, setProjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
@@ -120,9 +123,9 @@ export default function Projects() {
   const areaStyle = { ...fieldStyle, background: theme.subtleBg, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit' };
 
   return (
-    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 12, minHeight: 0 }}>
       {(!isMobile || !mobileShowDetail) && (
-      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 300px', minWidth: isMobile ? 0 : 260, maxWidth: isMobile ? 'none' : 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${listPanel.width}px`, minWidth: isMobile ? 0 : 260, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 22, fontWeight: 800 }}>{t('projects.title')}</div>
           <button onClick={addProject} title={t('projects.newProject')} style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer' }}>
@@ -158,6 +161,8 @@ export default function Projects() {
         </div>
       </div>
       )}
+
+      {!isMobile && <PanelDivider theme={theme} onResize={listPanel.onResize} onResizeEnd={listPanel.onResizeEnd} />}
 
       {(!isMobile || mobileShowDetail) && (
       <div style={{ flex: isMobile ? '1 1 auto' : '1 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>

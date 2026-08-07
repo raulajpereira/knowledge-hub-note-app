@@ -10,6 +10,8 @@ import AutoResizeTextarea from '../components/AutoResizeTextarea.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
+import PanelDivider from '../components/PanelDivider.jsx';
 
 function fieldStyle(theme) {
   return {
@@ -259,6 +261,8 @@ export default function Documentacao() {
   const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const isMobile = useIsMobile();
+  const foldersPanel = useResizablePanel('documentacao.folders', 260, { min: 200, max: 440 });
+  const listPanel = useResizablePanel('documentacao.list', 280, { min: 220, max: 480 });
 
   const [folders, setFolders] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -538,10 +542,10 @@ export default function Documentacao() {
   const mobileShowDetail = isMobile && !!selectedId;
 
   return (
-    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 20, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 8, minHeight: 0 }}>
       {/* Folder tree */}
       {(!isMobile || !mobileShowDetail) && (
-      <div style={{ width: isMobile ? '100%' : 260, flexShrink: 0, maxHeight: isMobile ? 140 : 'none', background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ width: isMobile ? '100%' : foldersPanel.width, flexShrink: 0, maxHeight: isMobile ? 140 : 'none', background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 12, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div
           onClick={() => setActiveFolder(null)}
           onDragOver={(e) => { e.preventDefault(); setDragOverFolder('__root__'); }}
@@ -568,9 +572,11 @@ export default function Documentacao() {
       </div>
       )}
 
+      {!isMobile && <PanelDivider theme={theme} onResize={foldersPanel.onResize} onResizeEnd={foldersPanel.onResizeEnd} />}
+
       {/* Document list */}
       {(!isMobile || !mobileShowDetail) && (
-      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 280px', maxWidth: isMobile ? 'none' : 320, minWidth: isMobile ? 0 : 240, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
+      <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${listPanel.width}px`, minWidth: isMobile ? 0 : 220, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: 1, minWidth: 0 }}>
             <span style={{ opacity: 0.5, display: 'flex' }}>
@@ -627,6 +633,8 @@ export default function Documentacao() {
         </div>
       </div>
       )}
+
+      {!isMobile && <PanelDivider theme={theme} onResize={listPanel.onResize} onResizeEnd={listPanel.onResizeEnd} />}
 
       {/* Detail */}
       {(!isMobile || mobileShowDetail) && (

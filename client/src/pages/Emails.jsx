@@ -6,6 +6,8 @@ import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import PanelDivider from '../components/PanelDivider.jsx';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
 
 function formatBytes(bytes) {
   if (!bytes) return '0 KB';
@@ -25,6 +27,7 @@ export default function Emails() {
   const confirm = useConfirm();
   const { refresh: refreshCounts } = useCounts();
   const isMobile = useIsMobile();
+  const listPanel = useResizablePanel('emails.list', 320, { min: 280, max: 560 });
   const [emails, setEmails] = useState([]);
   const [detail, setDetail] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -132,9 +135,9 @@ export default function Emails() {
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', gap: isMobile ? 0 : 16, minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', gap: isMobile ? 0 : 8, minHeight: 0 }}>
         {(!isMobile || !mobileShowDetail) && (
-          <div style={{ flex: isMobile ? '1 1 auto' : '1 1 320px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 360, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${listPanel.width}px`, minWidth: isMobile ? 0 : 280, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
               <Icon name="search" size={14} />
               <input
@@ -183,6 +186,8 @@ export default function Emails() {
             </div>
           </div>
         )}
+
+        {!isMobile && <PanelDivider theme={theme} onResize={listPanel.onResize} onResizeEnd={listPanel.onResizeEnd} />}
 
         {(!isMobile || mobileShowDetail) && (
           <div style={{ flex: 1, minWidth: 0, minHeight: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

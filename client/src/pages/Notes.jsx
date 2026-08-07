@@ -13,6 +13,8 @@ import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import CodeBlock from '../components/CodeBlock.jsx';
 import TerminalBlock from '../components/TerminalBlock.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
+import PanelDivider from '../components/PanelDivider.jsx';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
 import { highlightCode, tokenColor } from '../lib/highlight.js';
 import { useClickOutside } from '../lib/useClickOutside.js';
 import { backdropClose } from '../lib/backdropClose.js';
@@ -263,6 +265,7 @@ export default function Notes() {
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const listPanel = useResizablePanel('notes.list', 320, { min: 260, max: 560 });
   const [notes, setNotes] = useState([]);
   const [folders, setFolders] = useState([]);
   const [tags, setTags] = useState([]);
@@ -1271,9 +1274,9 @@ export default function Notes() {
   }
 
   return (
-    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', gap: isMobile ? 0 : 12, minHeight: 0 }}>
       {(!isMobile || !mobileShowDetail) && (
-      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 320px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${listPanel.width}px`, minWidth: isMobile ? 0 : 260, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: 1, minWidth: 0 }}>
             <span style={{ opacity: 0.5, display: 'flex' }}>
@@ -1468,6 +1471,8 @@ export default function Notes() {
         </div>
       </div>
       )}
+
+      {!isMobile && <PanelDivider theme={theme} onResize={listPanel.onResize} onResizeEnd={listPanel.onResizeEnd} />}
 
       {(!isMobile || mobileShowDetail) && (showTrash ? (
         <div style={{ flex: isMobile ? '1 1 auto' : '1 1 480px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>

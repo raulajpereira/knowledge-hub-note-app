@@ -12,6 +12,8 @@ import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
 import DateInput from '../components/DateInput.jsx';
 import LinkedItemsPanel from '../components/LinkedItemsPanel.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
+import PanelDivider from '../components/PanelDivider.jsx';
 
 const PRIORITIES = ['Low', 'Medium', 'High'];
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 35 };
@@ -59,6 +61,7 @@ export default function Tasks() {
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const listPanel = useResizablePanel('tasks.list', 340, { min: 260, max: 560 });
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('active');
   const [sortBy, setSortBy] = useState('recent');
@@ -368,9 +371,9 @@ export default function Tasks() {
           })}
         </div>
       ) : (
-      <div style={{ flex: 1, display: 'flex', gap: isMobile ? 0 : 24, minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', gap: isMobile ? 0 : 12, minHeight: 0 }}>
       {!mobileShowDetail && (
-      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 340px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 400, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${listPanel.width}px`, minWidth: isMobile ? 0 : 260, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {filtered.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('tasks.noTasksHere')}</div>}
           {filtered.map((task) => {
@@ -420,6 +423,8 @@ export default function Tasks() {
         </div>
       </div>
       )}
+
+      {!isMobile && <PanelDivider theme={theme} onResize={listPanel.onResize} onResizeEnd={listPanel.onResizeEnd} />}
 
       {(!isMobile || mobileShowDetail) && (selected ? (
         <div style={{ flex: isMobile ? '1 1 auto' : '1 1 420px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>

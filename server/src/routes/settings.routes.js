@@ -61,7 +61,7 @@ router.patch('/', async (req, res) => {
   const {
     theme, accentColor, accentHue, fontFamily, fontScale, radiusStyle, density, language,
     vaultAutoLockSeconds, issueStatuses, trashRetentionDays, sidebarLayout, homeLayout, sidebarCollapsed, sidebarWidth,
-    columnWidths,
+    columnWidths, panelWidths,
   } = req.body || {};
   const data = {};
   if (theme !== undefined) {
@@ -213,6 +213,17 @@ router.patch('/', async (req, res) => {
               Object.fromEntries(Object.entries(cols).map(([key, w]) => [key, Math.round(w)])),
             ])
           );
+  }
+  if (panelWidths !== undefined) {
+    const valid =
+      panelWidths === null ||
+      (panelWidths &&
+        typeof panelWidths === 'object' &&
+        !Array.isArray(panelWidths) &&
+        Object.values(panelWidths).every((w) => Number.isFinite(w)));
+    if (!valid) return res.status(400).json({ error: 'panelWidths must be { [key]: number }' });
+    data.panelWidths =
+      panelWidths === null ? null : Object.fromEntries(Object.entries(panelWidths).map(([key, w]) => [key, Math.round(w)]));
   }
   const settings = await prisma.settings.upsert({
     where: { userId: req.userId },

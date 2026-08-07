@@ -65,6 +65,7 @@ function publicUser(user) {
           sidebarWidth: user.settings.sidebarWidth,
           homeLayout: user.settings.homeLayout,
           columnWidths: user.settings.columnWidths,
+          panelWidths: user.settings.panelWidths,
         }
       : null,
   };

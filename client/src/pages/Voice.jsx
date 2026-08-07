@@ -8,6 +8,8 @@ import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
+import PanelDivider from '../components/PanelDivider.jsx';
 
 function formatDuration(sec) {
   const m = Math.floor(sec / 60);
@@ -33,6 +35,7 @@ export default function Voice() {
   const { refresh: refreshCounts } = useCounts();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const listPanel = useResizablePanel('voice.list', 320, { min: 260, max: 560 });
   const [voiceNotes, setVoiceNotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
@@ -284,10 +287,10 @@ export default function Voice() {
   );
 
   return (
-    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 24, minHeight: 0 }}>
+    <div style={{ padding: isMobile ? 14 : '24px 28px', flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 12, minHeight: 0 }}>
       {isMobile && !mobileShowDetail && recordBanner}
       {(!isMobile || !mobileShowDetail) && (
-      <div style={{ flex: isMobile ? '1 1 auto' : '1 1 320px', minWidth: isMobile ? 0 : 280, maxWidth: isMobile ? 'none' : 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${listPanel.width}px`, minWidth: isMobile ? 0 : 260, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px' }}>
           <span style={{ opacity: 0.5, display: 'flex' }}>
             <Icon name="search" size={15} />
@@ -338,6 +341,8 @@ export default function Voice() {
         </div>
       </div>
       )}
+
+      {!isMobile && <PanelDivider theme={theme} onResize={listPanel.onResize} onResizeEnd={listPanel.onResizeEnd} />}
 
       {(!isMobile || mobileShowDetail) && (
       <div style={{ flex: isMobile ? '1 1 auto' : '1 1 480px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>

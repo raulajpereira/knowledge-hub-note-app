@@ -145,6 +145,7 @@ model Settings {
   sidebarWidth            Int? // px, drag-resized; null = default (260)
   homeLayout              Json? // { left: [...blockKeys], right: [...blockKeys] } — order of Home dashboard blocks per column
   columnWidths            Json? // { [pageKey]: { [columnKey]: widthPx } } — per-page resizable table column widths
+  panelWidths             Json? // { [key]: widthPx } — resizable list/detail pane widths within a page (key = "<page>.<pane>")
   hostingerApiTokenEnc    String?  @db.Text // AES-256-GCM encrypted at rest, server never exposes plaintext to the client
   hostingerVpsId          String?
   updatedAt               DateTime @updatedAt

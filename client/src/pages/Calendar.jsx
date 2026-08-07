@@ -5,6 +5,8 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import PanelDivider from '../components/PanelDivider.jsx';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
 
 const WEEKDAY_KEYS = ['calendar.mon', 'calendar.tue', 'calendar.wed', 'calendar.thu', 'calendar.fri', 'calendar.sat', 'calendar.sun'];
 
@@ -34,6 +36,7 @@ export default function Calendar() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const dayPanel = useResizablePanel('calendar.day', 300, { min: 240, max: 460 });
   const [tasks, setTasks] = useState([]);
   const [issues, setIssues] = useState([]);
   const [transportRequests, setTransportRequests] = useState([]);
@@ -122,7 +125,7 @@ export default function Calendar() {
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 20 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 8 }}>
         <div style={{ flex: isMobile ? '1 1 auto' : '1 1 640px', minWidth: 0, minHeight: isMobile ? 280 : 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 8 : 12, display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
             {WEEKDAY_KEYS.map((k) => (
@@ -177,7 +180,9 @@ export default function Calendar() {
           </div>
         </div>
 
-        <div style={{ flex: isMobile ? '0 0 auto' : '0 0 300px', width: isMobile ? '100%' : 300, maxHeight: isMobile ? 260 : 'none', background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 14 : 18, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
+        {!isMobile && <PanelDivider theme={theme} onResize={dayPanel.onResize} onResizeEnd={dayPanel.onResizeEnd} />}
+
+        <div style={{ flex: '0 0 auto', width: isMobile ? '100%' : dayPanel.width, maxHeight: isMobile ? 260 : 'none', background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: isMobile ? 14 : 18, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>
             {selectedDay ? new Date(selectedDay).toLocaleDateString(t('calendar.locale'), { weekday: 'long', day: 'numeric', month: 'long' }) : t('calendar.selectDay')}
           </div>
