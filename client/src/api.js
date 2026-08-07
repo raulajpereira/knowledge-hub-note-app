@@ -262,7 +262,7 @@ export const api = {
   clearHostingerToken: () => request('/vps/token', { method: 'DELETE' }),
   getVpsStatus: () => request('/vps/status'),
 
-  getSapNews: () => request('/sap-news'),
+  getSapNews: (force) => request(`/sap-news${force ? '?force=true' : ''}`),
   listSavedNews: () => request('/sap-news/saved'),
   saveNews: (payload) => request('/sap-news/saved', { method: 'POST', body: payload }),
   updateSavedNews: (id, payload) => request(`/sap-news/saved/${id}`, { method: 'PATCH', body: payload }),

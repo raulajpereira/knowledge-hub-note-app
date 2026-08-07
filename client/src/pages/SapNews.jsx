@@ -25,6 +25,8 @@ export default function SapNews() {
   const [items, setItems] = useState([]);
   const [saved, setSaved] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState(null);
   const [tab, setTab] = useState('all');
   const [selected, setSelected] = useState(null);
 
@@ -32,10 +34,22 @@ export default function SapNews() {
     Promise.all([api.getSapNews(), api.listSavedNews()])
       .then(([news, savedRes]) => {
         setItems(news.items);
+        setFetchedAt(news.fetchedAt);
         setSaved(savedRes.saved);
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const refreshNews = async () => {
+    setRefreshing(true);
+    try {
+      const news = await api.getSapNews(true);
+      setItems(news.items);
+      setFetchedAt(news.fetchedAt);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const savedByNewsId = useMemo(() => Object.fromEntries(saved.map((s) => [s.newsId, s])), [saved]);
   const unreadCount = saved.filter((s) => !s.read).length;
@@ -95,7 +109,26 @@ export default function SapNews() {
   return (
     <div style={{ padding: '24px 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0, overflowY: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>{t('sapNews.title')}</div>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800 }}>{t('sapNews.title')}</div>
+          {fetchedAt && (
+            <div style={{ fontSize: 11.5, color: theme.textMuted, marginTop: 2 }}>
+              {t('sapNews.lastUpdated', { time: timeAgo(fetchedAt, t) || t('common.justNow') })}
+            </div>
+          )}
+        </div>
+        <div style={{ flex: 1 }} />
+        <span
+          onClick={refreshing ? undefined : refreshNews}
+          title={t('sapNews.refresh')}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 9,
+            background: theme.subtleBg, color: theme.textPrimary, cursor: refreshing ? 'default' : 'pointer', flexShrink: 0,
+            animation: refreshing ? 'kh-spin 0.8s linear infinite' : 'none',
+          }}
+        >
+          <Icon name="refresh" size={15} />
+        </span>
         <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
           <div
             onClick={() => setTab('all')}

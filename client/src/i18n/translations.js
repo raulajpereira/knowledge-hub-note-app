@@ -233,6 +233,8 @@ export const translations = {
       noSaved: "You haven't saved any articles yet.",
       markRead: 'Mark as read',
       markUnread: 'Mark as unread',
+      refresh: 'Refresh news',
+      lastUpdated: 'Updated {time}',
     },
     calendar: {
       locale: 'en-US',
@@ -1569,6 +1571,8 @@ export const translations = {
       noSaved: 'Ainda não guardaste nenhum artigo.',
       markRead: 'Marcar como lida',
       markUnread: 'Marcar como não lida',
+      refresh: 'Atualizar notícias',
+      lastUpdated: 'Atualizado {time}',
     },
     calendar: {
       locale: 'pt-PT',

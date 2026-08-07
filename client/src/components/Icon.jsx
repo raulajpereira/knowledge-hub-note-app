@@ -224,6 +224,10 @@ const PATHS = {
     ['path', { d: 'M3 13l9 4.5 9-4.5' }],
     ['path', { d: 'M3 17.5 12 22l9-4.5' }],
   ],
+  refresh: [
+    ['path', { d: 'M20 11a8 8 0 0 0-14.5-4.5M4 5v5h5' }],
+    ['path', { d: 'M4 13a8 8 0 0 0 14.5 4.5M20 19v-5h-5' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

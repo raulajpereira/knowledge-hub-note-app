@@ -75,7 +75,8 @@ router.use(requireFeature('sapNews'));
 
 router.get('/', async (req, res) => {
   const now = Date.now();
-  if (now - cache.fetchedAt > CACHE_MS) {
+  const force = req.query.force === 'true';
+  if (force || now - cache.fetchedAt > CACHE_MS) {
     try {
       const items = await fetchAllFeeds();
       if (items.length > 0) cache = { items, fetchedAt: now };
