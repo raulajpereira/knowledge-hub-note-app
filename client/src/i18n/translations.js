@@ -236,6 +236,8 @@ export const translations = {
       refresh: 'Refresh news',
       lastUpdated: 'Updated {time}',
       refreshFailed: 'Could not reach the news sources right now. Showing the last successful fetch.',
+      refreshedWithNew: 'Updated — {n} new article(s).',
+      refreshedNoNew: 'Updated — no new articles since last check.',
     },
     calendar: {
       locale: 'en-US',
@@ -1575,6 +1577,8 @@ export const translations = {
       refresh: 'Atualizar notícias',
       lastUpdated: 'Atualizado {time}',
       refreshFailed: 'Não foi possível contactar as fontes de notícias agora. A mostrar a última atualização com sucesso.',
+      refreshedWithNew: 'Atualizado — {n} notícia(s) nova(s).',
+      refreshedNoNew: 'Atualizado — sem notícias novas desde a última verificação.',
     },
     calendar: {
       locale: 'pt-PT',

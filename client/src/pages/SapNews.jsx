@@ -28,6 +28,7 @@ export default function SapNews() {
   const [refreshing, setRefreshing] = useState(false);
   const [fetchedAt, setFetchedAt] = useState(null);
   const [refreshError, setRefreshError] = useState('');
+  const [refreshMessage, setRefreshMessage] = useState('');
   const [tab, setTab] = useState('all');
   const [selected, setSelected] = useState(null);
 
@@ -45,11 +46,22 @@ export default function SapNews() {
   const refreshNews = async () => {
     setRefreshing(true);
     setRefreshError('');
+    setRefreshMessage('');
     try {
+      const previousIds = new Set(items.map((i) => i.id));
       const news = await api.getSapNews(true);
       setItems(news.items);
       setFetchedAt(news.fetchedAt);
-      if (news.error) setRefreshError(t('sapNews.refreshFailed'));
+      if (news.error) {
+        setRefreshError(t('sapNews.refreshFailed'));
+      } else {
+        // The feed itself might just not have published anything since the
+        // last check — that's not a failure, but silently doing nothing
+        // visible reads exactly like a broken button, so say so either way.
+        const newCount = news.items.filter((i) => !previousIds.has(i.id)).length;
+        setRefreshMessage(newCount > 0 ? t('sapNews.refreshedWithNew', { n: newCount }) : t('sapNews.refreshedNoNew'));
+        setTimeout(() => setRefreshMessage(''), 4000);
+      }
     } catch {
       setRefreshError(t('sapNews.refreshFailed'));
     } finally {
@@ -171,6 +183,12 @@ export default function SapNews() {
       {refreshError && (
         <div style={{ background: 'oklch(0.95 0.05 25)', color: 'oklch(0.4 0.18 25)', border: '1px solid oklch(0.8 0.12 25)', borderRadius: 10, padding: '10px 14px', fontSize: 12.5 }}>
           {refreshError}
+        </div>
+      )}
+
+      {refreshMessage && (
+        <div style={{ background: theme.accentSoftBg, color: theme.accentText, border: `1px solid ${theme.accent}`, borderRadius: 10, padding: '10px 14px', fontSize: 12.5, fontWeight: 600 }}>
+          {refreshMessage}
         </div>
       )}
 
