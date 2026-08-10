@@ -13,7 +13,9 @@ const FEEDS = [
 
 const parser = new Parser({
   timeout: 8000,
-  headers: { 'User-Agent': 'Mozilla/5.0 (compatible; KnowledgeHubSapNews/1.0)' },
+  // Some feeds reject unrecognized bot UAs — a normal browser UA is far
+  // less likely to get blocked for what's just a public RSS fetch.
+  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
   customFields: { item: [['content:encoded', 'contentEncoded'], 'enclosure'] },
 });
 
@@ -62,11 +64,22 @@ async function fetchAllFeeds() {
     })
   );
   const items = [];
-  for (const r of results) {
-    if (r.status === 'fulfilled') items.push(...r.value);
-  }
+  const errors = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      items.push(...r.value);
+    } else {
+      const source = FEEDS[i].source;
+      errors.push({ source, message: r.reason?.message || String(r.reason) });
+      // Silently-swallowed feed failures previously left no trace anywhere,
+      // so a genuinely broken feed (blocked, moved, TLS issue, ...) looked
+      // identical to "nothing new published yet" — log it so it shows up
+      // in `pm2 logs`.
+      console.error(`[sap-news] ${source} feed failed:`, r.reason);
+    }
+  });
   items.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-  return items.slice(0, 60);
+  return { items: items.slice(0, 60), errors };
 }
 
 const router = Router();
@@ -76,15 +89,23 @@ router.use(requireFeature('sapNews'));
 router.get('/', async (req, res) => {
   const now = Date.now();
   const force = req.query.force === 'true';
+  let error = null;
   if (force || now - cache.fetchedAt > CACHE_MS) {
     try {
-      const items = await fetchAllFeeds();
-      if (items.length > 0) cache = { items, fetchedAt: now };
-    } catch {
-      // keep serving the stale cache (or empty list) if the feed failed
+      const { items, errors } = await fetchAllFeeds();
+      if (items.length > 0) {
+        cache = { items, fetchedAt: now };
+      } else if (errors.length > 0) {
+        // Every feed failed this round — keep serving the stale cache, but
+        // tell the client so a manual refresh doesn't look like a no-op.
+        error = errors.map((e) => `${e.source}: ${e.message}`).join('; ');
+      }
+    } catch (err) {
+      console.error('[sap-news] fetch failed:', err);
+      error = err.message || 'Unknown error';
     }
   }
-  res.json({ items: cache.items, fetchedAt: cache.fetchedAt });
+  res.json({ items: cache.items, fetchedAt: cache.fetchedAt, error });
 });
 
 router.get('/saved', async (req, res) => {

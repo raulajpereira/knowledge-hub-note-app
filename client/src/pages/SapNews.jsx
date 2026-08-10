@@ -27,6 +27,7 @@ export default function SapNews() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchedAt, setFetchedAt] = useState(null);
+  const [refreshError, setRefreshError] = useState('');
   const [tab, setTab] = useState('all');
   const [selected, setSelected] = useState(null);
 
@@ -35,6 +36,7 @@ export default function SapNews() {
       .then(([news, savedRes]) => {
         setItems(news.items);
         setFetchedAt(news.fetchedAt);
+        if (news.error) setRefreshError(news.error);
         setSaved(savedRes.saved);
       })
       .finally(() => setLoading(false));
@@ -42,10 +44,14 @@ export default function SapNews() {
 
   const refreshNews = async () => {
     setRefreshing(true);
+    setRefreshError('');
     try {
       const news = await api.getSapNews(true);
       setItems(news.items);
       setFetchedAt(news.fetchedAt);
+      if (news.error) setRefreshError(t('sapNews.refreshFailed'));
+    } catch {
+      setRefreshError(t('sapNews.refreshFailed'));
     } finally {
       setRefreshing(false);
     }
@@ -161,6 +167,12 @@ export default function SapNews() {
           </div>
         </div>
       </div>
+
+      {refreshError && (
+        <div style={{ background: 'oklch(0.95 0.05 25)', color: 'oklch(0.4 0.18 25)', border: '1px solid oklch(0.8 0.12 25)', borderRadius: 10, padding: '10px 14px', fontSize: 12.5 }}>
+          {refreshError}
+        </div>
+      )}
 
       {visibleItems.length === 0 && (
         <div style={{ fontSize: 13, color: theme.textMuted }}>{tab === 'saved' ? t('sapNews.noSaved') : t('sapNews.empty')}</div>

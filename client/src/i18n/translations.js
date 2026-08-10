@@ -235,6 +235,7 @@ export const translations = {
       markUnread: 'Mark as unread',
       refresh: 'Refresh news',
       lastUpdated: 'Updated {time}',
+      refreshFailed: 'Could not reach the news sources right now. Showing the last successful fetch.',
     },
     calendar: {
       locale: 'en-US',
@@ -1573,6 +1574,7 @@ export const translations = {
       markUnread: 'Marcar como não lida',
       refresh: 'Atualizar notícias',
       lastUpdated: 'Atualizado {time}',
+      refreshFailed: 'Não foi possível contactar as fontes de notícias agora. A mostrar a última atualização com sucesso.',
     },
     calendar: {
       locale: 'pt-PT',
