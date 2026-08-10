@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { translate } from '../i18n/translations.js';
 import { getPreAuthLanguage, setPreAuthLanguage } from '../lib/preAuthLanguage.js';
 import PreAuthLanguageToggle from '../components/PreAuthLanguageToggle.jsx';
+import RequestCodeModal from '../components/RequestCodeModal.jsx';
 import logoIcon from '../assets/logo-icon.png';
 
 export default function Login() {
@@ -23,6 +24,7 @@ export default function Login() {
   const [pendingToken, setPendingToken] = useState(null);
   const [twoFaCode, setTwoFaCode] = useState('');
   const [useBackupCode, setUseBackupCode] = useState(false);
+  const [requestCodeOpen, setRequestCodeOpen] = useState(false);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -255,10 +257,17 @@ export default function Login() {
               {t('login.createOne')}
             </Link>
           </div>
+          <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)' }}>
+            {t('login.noCode')}{' '}
+            <span onClick={() => setRequestCodeOpen(true)} style={{ color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+              {t('login.requestCode')}
+            </span>
+          </div>
             </>
           )}
         </form>
       </div>
+      {requestCodeOpen && <RequestCodeModal t={t} onClose={() => setRequestCodeOpen(false)} />}
     </div>
   );
 }

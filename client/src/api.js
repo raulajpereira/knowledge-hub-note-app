@@ -85,6 +85,12 @@ export const api = {
   updateAdminUser: (id, payload) => request(`/auth/admin/users/${id}`, { method: 'PATCH', body: payload }),
   deleteAdminUser: (id) => request(`/auth/admin/users/${id}`, { method: 'DELETE' }),
 
+  requestInviteCode: (payload) => request('/code-requests', { method: 'POST', body: payload }),
+  listCodeRequests: () => request('/code-requests'),
+  approveCodeRequest: (id, payload) => request(`/code-requests/${id}/approve`, { method: 'POST', body: payload }),
+  rejectCodeRequest: (id) => request(`/code-requests/${id}/reject`, { method: 'POST' }),
+  deleteCodeRequest: (id) => request(`/code-requests/${id}`, { method: 'DELETE' }),
+
   listNotes: (trashed = false) => request(`/notes${trashed ? '?trashed=true' : ''}`),
   getNote: (id) => request(`/notes/${id}`),
   createNote: (payload) => request('/notes', { method: 'POST', body: payload }),

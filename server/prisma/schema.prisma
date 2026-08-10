@@ -118,8 +118,36 @@ model InviteCode {
   revokedAt     DateTime?
   allowedFeatures Json? // array of FEATURE_KEYS strings granted to the account created with this code; null = every feature
   createdAt     DateTime  @default(now())
+  codeRequest   CodeRequest?
 
   @@map("invite_codes")
+}
+
+// public.routes.js-style: a public "request an invite code" form on the
+// Login page writes here with no auth. Approving one (super_admin only)
+// creates a normal InviteCode and links it here so the admin can see which
+// request it came from; rejecting just changes status, nothing is deleted.
+enum CodeRequestStatus {
+  pending
+  approved
+  rejected
+}
+
+model CodeRequest {
+  id               String            @id @default(uuid())
+  name             String
+  email            String
+  professionalArea String?
+  reason           String            @db.Text
+  status           CodeRequestStatus @default(pending)
+  inviteCodeId     String?           @unique
+  inviteCode       InviteCode?       @relation(fields: [inviteCodeId], references: [id], onDelete: SetNull)
+  createdAt        DateTime          @default(now())
+  handledAt        DateTime?
+
+  @@index([email])
+  @@index([status])
+  @@map("code_requests")
 }
 
 model Settings {

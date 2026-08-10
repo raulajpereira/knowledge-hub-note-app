@@ -52,6 +52,26 @@ export default function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
+  const [pendingCodeRequests, setPendingCodeRequests] = useState([]);
+
+  // Only super_admin manages code requests, and the requests come from an
+  // unauthenticated public form — nothing in-app triggers a refresh like
+  // issue alerts get from CountsContext, so poll instead. Settings also fires
+  // 'kh:code-requests-changed' right after an approve/reject so the badge
+  // doesn't wait out the full poll interval.
+  useEffect(() => {
+    if (user?.role !== 'super_admin') return undefined;
+    const loadRequests = () => {
+      api.listCodeRequests().then(({ requests }) => setPendingCodeRequests(requests.filter((r) => r.status === 'pending'))).catch(() => {});
+    };
+    loadRequests();
+    const interval = setInterval(loadRequests, 60000);
+    window.addEventListener('kh:code-requests-changed', loadRequests);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('kh:code-requests-changed', loadRequests);
+    };
+  }, [user?.role]);
 
   useEffect(() => {
     if (!focusMode) return undefined;
@@ -532,14 +552,14 @@ export default function AppLayout() {
                 }}
               >
                 <Icon name="bell" size={17} />
-                {issueAlerts.length > 0 && (
+                {issueAlerts.length + pendingCodeRequests.length > 0 && (
                   <div
                     style={{
                       position: 'absolute', top: -2, right: -2, background: 'oklch(0.6 0.2 25)', color: '#fff', fontSize: 10, fontWeight: 700,
                       width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
-                    {issueAlerts.length}
+                    {issueAlerts.length + pendingCodeRequests.length}
                   </div>
                 )}
               </span>
@@ -553,7 +573,24 @@ export default function AppLayout() {
                   }}
                 >
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{t('notifications.title')}</div>
-                  {issueAlerts.length === 0 && <div style={{ fontSize: 12, color: theme.textMuted }}>{t('notifications.empty')}</div>}
+                  {issueAlerts.length === 0 && pendingCodeRequests.length === 0 && (
+                    <div style={{ fontSize: 12, color: theme.textMuted }}>{t('notifications.empty')}</div>
+                  )}
+                  {pendingCodeRequests.map((r) => (
+                    <div
+                      key={r.id}
+                      onClick={() => { setNotifOpen(false); navigate('/settings', { state: { tab: 'team' } }); }}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 4px', cursor: 'pointer', borderRadius: 8 }}
+                    >
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', marginTop: 5, flexShrink: 0, background: theme.accent }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {t('notifications.codeRequest', { name: r.name })}
+                        </div>
+                        <div style={{ fontSize: 11, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.email}</div>
+                      </div>
+                    </div>
+                  ))}
                   {issueAlerts.map(({ issue, kind, days }) => (
                     <div
                       key={issue.id}
