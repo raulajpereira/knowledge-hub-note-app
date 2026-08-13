@@ -433,13 +433,6 @@ export default function ApiPlayground() {
               placeholder={t('apiPlayground.namePlaceholder')}
               style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}
             />
-            <span
-              onClick={saveAsNote}
-              title={t('apiPlayground.saveAsNote')}
-              style={{ cursor: savingNote ? 'default' : 'pointer', color: theme.textMuted, display: 'flex', opacity: savingNote ? 0.5 : 1 }}
-            >
-              <Icon name="bookmark" size={16} />
-            </span>
             <span onClick={() => removeRequest(selected.id)} title={t('apiPlayground.deleteRequest')} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
               <Icon name="trash" size={16} />
             </span>
@@ -465,6 +458,18 @@ export default function ApiPlayground() {
               style={{ background: theme.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: sending || !selected.url ? 0.6 : 1, flexShrink: 0 }}
             >
               {sending ? t('apiPlayground.sending') : t('apiPlayground.send')}
+            </button>
+            <button
+              onClick={saveAsNote}
+              disabled={savingNote}
+              title={t('apiPlayground.saveAsNote')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, background: theme.accent, color: '#fff', border: 'none',
+                borderRadius: 8, padding: '8px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: savingNote ? 0.6 : 1, flexShrink: 0,
+              }}
+            >
+              <Icon name="bookmark" size={14} color="#fff" />
+              {t('apiPlayground.saveAsNote')}
             </button>
           </div>
 
