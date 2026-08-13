@@ -13,7 +13,7 @@ const ACCENT_COLORS = ['purple', 'blue', 'green', 'yellow', 'pink', 'orange', 'r
 // Blocks can live in either column (the user drags freely between them), so
 // validation only checks each key is a known block and appears at most once
 // across both columns combined — not which column it's in.
-const HOME_BLOCK_KEYS = new Set(['quickCapture', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'resurfacing', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage', 'tagsHeatmap']);
+const HOME_BLOCK_KEYS = new Set(['quickCapture', 'continueWorking', 'myTasks', 'issuesByStatus', 'recentNotes', 'favorites', 'resurfacing', 'weeklySummary', 'sapNewsTeaser', 'vpsDiskUsage', 'tagsHeatmap']);
 
 function makeUpload(subdir) {
   const storage = multer.diskStorage({
