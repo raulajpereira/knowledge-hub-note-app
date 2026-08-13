@@ -87,6 +87,18 @@ app.use('/api/code-requests', codeRequestsRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
+// A separate, isolated frontend bundle for the /backoffice admin tools
+// (Pedidos de Código, Criar Códigos, Contas, Templates, Activity Log) — its
+// own build, its own login/session, so none of that ships inside the bundle
+// the paying-customer app downloads. Same Express process, same API, same
+// DB — just a second static root, mounted (and thus matched) before the
+// product app's catch-all below.
+const backofficeDist = path.join(__dirname, '..', '..', 'backoffice', 'dist');
+app.use('/backoffice', express.static(backofficeDist));
+app.get('/backoffice*', (req, res) => {
+  res.sendFile(path.join(backofficeDist, 'index.html'));
+});
+
 const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
 app.use(express.static(clientDist));
 app.get('*', (req, res) => {

@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth, requireAdmin, requireFeature } from '../middleware/auth.js';
+import { requireAuth, requireSuperAdmin, requireFeature } from '../middleware/auth.js';
 import { fillDocx } from '../lib/docxFill/engine.js';
 import { convertDocxToPdf } from '../lib/docxFill/pdfConvert.js';
 
@@ -127,7 +127,7 @@ router.get('/templates', async (req, res) => {
 });
 
 // Admin-only: full list (ignores restrictions) for management screens.
-router.get('/templates/admin', requireAdmin, async (req, res) => {
+router.get('/templates/admin', requireSuperAdmin, async (req, res) => {
   const templates = await prisma.docTemplate.findMany({
     orderBy: { name: 'asc' },
     select: { id: true, name: true, description: true, createdAt: true, updatedAt: true },
@@ -137,7 +137,7 @@ router.get('/templates/admin', requireAdmin, async (req, res) => {
 
 // Admin-only: rename/redescribe a template. The field schema and source
 // docx are only ever changed via a deploy (scripts/seed-doc-templates.js).
-router.patch('/templates/:id', requireAdmin, async (req, res) => {
+router.patch('/templates/:id', requireSuperAdmin, async (req, res) => {
   const template = await prisma.docTemplate.findUnique({ where: { id: req.params.id } });
   if (!template) return res.status(404).json({ error: 'Template not found' });
   const { name, description } = req.body || {};
@@ -152,7 +152,7 @@ router.patch('/templates/:id', requireAdmin, async (req, res) => {
 });
 
 // Admin-only: per-user template access (default-allow blacklist model).
-router.get('/template-access/:userId', requireAdmin, async (req, res) => {
+router.get('/template-access/:userId', requireSuperAdmin, async (req, res) => {
   const [templates, restrictions] = await Promise.all([
     prisma.docTemplate.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.docTemplateRestriction.findMany({ where: { userId: req.params.userId }, select: { templateId: true } }),
@@ -163,7 +163,7 @@ router.get('/template-access/:userId', requireAdmin, async (req, res) => {
   });
 });
 
-router.put('/template-access/:userId', requireAdmin, async (req, res) => {
+router.put('/template-access/:userId', requireSuperAdmin, async (req, res) => {
   const { allowedTemplateIds } = req.body || {};
   if (!Array.isArray(allowedTemplateIds)) return res.status(400).json({ error: 'allowedTemplateIds must be an array' });
   const templates = await prisma.docTemplate.findMany({ select: { id: true } });

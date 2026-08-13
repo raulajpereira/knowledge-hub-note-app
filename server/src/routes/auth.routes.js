@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth, requireAuthAllowSuspended, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireAuthAllowSuspended, requireSuperAdmin } from '../middleware/auth.js';
 import { FEATURE_KEYS, normalizeFeatureList } from '../lib/features.js';
 import { DEFAULT_TRANSACTIONS } from '../lib/defaultTransactions.js';
 import { logAuditEvent } from '../lib/auditLog.js';
@@ -373,7 +373,7 @@ router.delete('/team/:memberId', requireAuth, async (req, res) => {
 
 // --- Invite codes (admin only) ---------------------------------------
 
-router.get('/invite-codes', requireAuth, requireAdmin, async (req, res) => {
+router.get('/invite-codes', requireAuth, requireSuperAdmin, async (req, res) => {
   const codes = await prisma.inviteCode.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
@@ -395,7 +395,7 @@ router.get('/invite-codes', requireAuth, requireAdmin, async (req, res) => {
   });
 });
 
-router.post('/invite-codes', requireAuth, requireAdmin, async (req, res) => {
+router.post('/invite-codes', requireAuth, requireSuperAdmin, async (req, res) => {
   let code;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     code = generateInviteCode();
@@ -411,7 +411,7 @@ router.post('/invite-codes', requireAuth, requireAdmin, async (req, res) => {
   res.status(201).json({ code: invite });
 });
 
-router.delete('/invite-codes/:id', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/invite-codes/:id', requireAuth, requireSuperAdmin, async (req, res) => {
   const invite = await prisma.inviteCode.findUnique({ where: { id: req.params.id } });
   if (!invite) return res.status(404).json({ error: 'Invite code not found' });
   if (invite.usedAt) return res.status(400).json({ error: 'This code has already been used and cannot be revoked' });
@@ -425,7 +425,7 @@ router.delete('/invite-codes/:id', requireAuth, requireAdmin, async (req, res) =
 // and admins can't act on their own account here either (avoids an admin
 // accidentally locking themselves out).
 
-router.get('/admin/users', requireAuth, requireAdmin, async (req, res) => {
+router.get('/admin/users', requireAuth, requireSuperAdmin, async (req, res) => {
   const users = await prisma.user.findMany({
     where: { role: { not: 'super_admin' } },
     orderBy: { createdAt: 'desc' },
@@ -436,7 +436,7 @@ router.get('/admin/users', requireAuth, requireAdmin, async (req, res) => {
   });
 });
 
-router.patch('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/admin/users/:id', requireAuth, requireSuperAdmin, async (req, res) => {
   if (req.params.id === req.userId) return res.status(403).json({ error: 'Use your own account settings to manage yourself' });
 
   const target = await prisma.user.findUnique({ where: { id: req.params.id } });
@@ -467,7 +467,7 @@ router.patch('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => 
   res.json({ user: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, status: updated.status, enabledFeatures: Array.isArray(updated.enabledFeatures) ? updated.enabledFeatures : FEATURE_KEYS } });
 });
 
-router.delete('/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/admin/users/:id', requireAuth, requireSuperAdmin, async (req, res) => {
   if (req.params.id === req.userId) return res.status(403).json({ error: 'Use your own account settings to manage yourself' });
 
   const target = await prisma.user.findUnique({ where: { id: req.params.id } });

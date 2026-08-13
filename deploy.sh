@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Runs on the VPS. Pulls the latest code, applies migrations, rebuilds the
-# client, and restarts the API. Called manually or by the GitHub Actions
-# workflow in .github/workflows/deploy.yml on every push to main.
+# client and backoffice bundles, and restarts the API. Called manually or by
+# the GitHub Actions workflow in .github/workflows/deploy.yml on every push
+# to main.
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -79,6 +80,11 @@ node scripts/cleanup-duplicate-doc-templates.js
 
 echo "==> Building client"
 cd "$APP_DIR/client"
+npm install
+npm run build
+
+echo "==> Building backoffice"
+cd "$APP_DIR/backoffice"
 npm install
 npm run build
 
