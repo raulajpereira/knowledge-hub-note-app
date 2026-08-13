@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import MsgReaderPkg from '@kenjiuno/msgreader';
+import { decompressRTF } from '@kenjiuno/decompressrtf';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireFeature } from '../middleware/auth.js';
 
@@ -243,6 +244,95 @@ function insertImageAtPosition(blocks, imageBlock, position, plainText) {
   blocks.push(imageBlock);
 }
 
+// Windows-1252 bytes 0x80-0x9F (curly quotes, dashes, ellipsis, euro sign)
+// diverge from Latin-1/ISO-8859-1 — needed to correctly decode \'XX RTF hex
+// escapes for those specific bytes; every other byte is identical in both.
+const CP1252_HIGH = {
+  0x80: '€', 0x82: '‚', 0x83: 'ƒ', 0x84: '„', 0x85: '…',
+  0x86: '†', 0x87: '‡', 0x88: 'ˆ', 0x89: '‰', 0x8A: 'Š',
+  0x8B: '‹', 0x8C: 'Œ', 0x8E: 'Ž', 0x91: '‘', 0x92: '’',
+  0x93: '“', 0x94: '”', 0x95: '•', 0x96: '–', 0x97: '—',
+  0x98: '˜', 0x99: '™', 0x9A: 'š', 0x9B: '›', 0x9C: 'œ',
+  0x9E: 'ž', 0x9F: 'Ÿ',
+};
+function cp1252Char(byte) {
+  if (byte >= 0x80 && byte <= 0x9f) return CP1252_HIGH[byte] || '';
+  return String.fromCharCode(byte);
+}
+
+// Outlook/Word can store a message's original HTML as `\fromhtml1` RTF
+// instead of exposing a PidTagHtml property at all — msgreader only reads
+// the latter, so data.bodyHtml comes back empty for these even though the
+// real, fully-formed HTML (images at their exact position included) is
+// sitting right there in the RTF. In that encoding, the literal original
+// HTML source is reconstructed by concatenating, in document order: (a) the
+// every `{\*\htmltagN <fragment>}` destination's content verbatim (each one
+// holds a literal slice of the source HTML — tags, attributes, all of it),
+// and (b) any plain RTF text run that occurs outside a `\htmlrtf`..`\htmlrtf0`
+// span (those bracket Word's own RTF-only formatting filler that was never
+// part of the real HTML, e.g. extra paragraph marks). `\'XX` hex escapes
+// decode via the message's ANSI codepage either way. This is a reconstruction
+// of the real markup, not a guess — the resulting HTML runs through the
+// exact same cid/splitHtmlIntoBlocks pipeline as a native PidTagHtml body,
+// so inline images land at their real, exact position.
+function htmlFromFromHtmlRtf(rtfString) {
+  const startIdx = rtfString.indexOf('\\htmltag');
+  if (startIdx === -1) return null;
+  const s = rtfString;
+  const n = s.length;
+  let i = startIdx;
+  let out = '';
+  const stack = [{ isHtmlTagDest: false, htmlRtfMode: false }];
+  const top = () => stack[stack.length - 1];
+  const ctrlWordRe = /^\\([a-zA-Z]+)(-?\d+)?( )?/;
+
+  while (i < n) {
+    const ch = s[i];
+    if (ch === '{') {
+      stack.push({ isHtmlTagDest: false, htmlRtfMode: top().htmlRtfMode });
+      i++;
+      continue;
+    }
+    if (ch === '}') {
+      if (stack.length > 1) stack.pop();
+      i++;
+      continue;
+    }
+    if (ch === '\\') {
+      const next = s[i + 1];
+      if (next === "'") {
+        const byte = parseInt(s.slice(i + 2, i + 4), 16);
+        if (!Number.isNaN(byte) && (top().isHtmlTagDest || !top().htmlRtfMode)) out += cp1252Char(byte);
+        i += 4;
+        continue;
+      }
+      if (next === '\\' || next === '{' || next === '}') {
+        if (top().isHtmlTagDest || !top().htmlRtfMode) out += next;
+        i += 2;
+        continue;
+      }
+      if (next === '*' || next === '\n' || next === '\r') {
+        i += 2;
+        continue;
+      }
+      const m = ctrlWordRe.exec(s.slice(i, i + 40));
+      if (m) {
+        const word = m[1];
+        const hasParam = m[2] !== undefined;
+        if (word === 'htmltag') top().isHtmlTagDest = true;
+        else if (word === 'htmlrtf') top().htmlRtfMode = !hasParam || m[2] !== '0';
+        i += m[0].length;
+        continue;
+      }
+      i += 2; // unrecognized control symbol (e.g. \~, \-, \_) — not visible text
+      continue;
+    }
+    if (top().isHtmlTagDest || !top().htmlRtfMode) out += ch;
+    i++;
+  }
+  return out;
+}
+
 // Outlook references an inline image from the HTML body as `cid:<contentId>`
 // (angle brackets on the id itself are optional depending on how the message
 // was authored). Rewriting these to the saved attachment's URL is what makes
@@ -298,6 +388,15 @@ router.post('/', upload.single('file'), async (req, res) => {
     // anything else (including a pidContentId that isn't actually used in
     // the body) stays a normal attachment.
     let bodyHtml = data.bodyHtml || null;
+    if (!bodyHtml && data.compressedRtf) {
+      try {
+        const rtf = Buffer.from(decompressRTF(data.compressedRtf)).toString('latin1');
+        bodyHtml = htmlFromFromHtmlRtf(rtf);
+      } catch {
+        // Not \fromhtml1 RTF (or malformed) — fall back to the plain-text
+        // body further down, same as before this existed.
+      }
+    }
     const attachments = [];
     // Images that couldn't be cid-matched into an HTML body but are still
     // meant to render inline rather than as a download — e.g. a Rich Text
