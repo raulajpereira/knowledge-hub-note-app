@@ -159,35 +159,83 @@ function splitHtmlIntoBlocks(html) {
   return blocks;
 }
 
+function normalizeForMatch(s) {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+// Maps an offset into normalizeForMatch(original) back to the equivalent
+// offset in the original (un-normalized) string, by walking both in step.
+function mapNormalizedOffsetToOriginal(original, normalizedOffset) {
+  let normalizedLen = 0;
+  let inWhitespace = true; // matches normalizeForMatch's leading-whitespace trim
+  for (let i = 0; i < original.length; i++) {
+    if (/\s/.test(original[i])) {
+      if (!inWhitespace) normalizedLen++;
+      inWhitespace = true;
+    } else {
+      normalizedLen++;
+      inWhitespace = false;
+    }
+    if (normalizedLen >= normalizedOffset) return i + 1;
+  }
+  return original.length;
+}
+
+// Splits blocks[i] (a text block) at the given original-string offset,
+// splicing imageBlock in between.
+function spliceBlockAt(blocks, i, cut, imageBlock) {
+  const value = blocks[i].value;
+  const before = value.slice(0, cut);
+  const after = value.slice(cut);
+  const replacement = [];
+  if (before) replacement.push({ type: 'text', value: before });
+  replacement.push(imageBlock);
+  if (after) replacement.push({ type: 'text', value: after });
+  blocks.splice(i, 1, ...replacement);
+}
+
 // A stray image's renderingPosition is a character offset into the
 // plain-text body (data.body) — a different, unrelated string from the
 // HTML-derived text the block array was built from, so there's no exact
-// offset to reuse. Approximating by *proportion* through the message
-// (this image belongs roughly N% of the way through the text) and cutting
-// the block array's own text at that same proportion is far closer to the
-// image's real position than always appending at the end.
-function insertImageIntoBlocksAtPosition(blocks, imageBlock, position, plainTextLength) {
-  if (typeof position !== 'number' || !plainTextLength) {
+// offset to reuse. Instead, the few dozen characters right before (and
+// after) that offset are used as an anchor: since the plain-text and HTML
+// bodies are normally near-identical prose just formatted differently,
+// that same snippet is very likely to appear verbatim somewhere in the
+// HTML-derived block text, giving an exact splice point. Falls back to
+// proportional placement (this image sits roughly N% of the way through
+// the text) only when no such anchor can be found.
+function insertImageAtPosition(blocks, imageBlock, position, plainText) {
+  const t = plainText || '';
+  if (typeof position === 'number' && position >= 0 && position <= t.length) {
+    const before = normalizeForMatch(t.slice(Math.max(0, position - 60), position));
+    const after = normalizeForMatch(t.slice(position, position + 60));
+    for (const [anchor, placeAfterMatch] of [[before, true], [after, false]]) {
+      if (anchor.length < 12) continue;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (b.type !== 'text') continue;
+        const idx = normalizeForMatch(b.value).indexOf(anchor);
+        if (idx === -1) continue;
+        const normalizedCut = placeAfterMatch ? idx + anchor.length : idx;
+        spliceBlockAt(blocks, i, mapNormalizedOffsetToOriginal(b.value, normalizedCut), imageBlock);
+        return;
+      }
+    }
+  }
+
+  if (typeof position !== 'number' || !t.length) {
     blocks.push(imageBlock);
     return;
   }
-  const fraction = Math.min(Math.max(position / plainTextLength, 0), 1);
+  const fraction = Math.min(Math.max(position / t.length, 0), 1);
   const blocksTextTotal = blocks.reduce((sum, b) => sum + (b.type === 'text' ? b.value.length : 0), 0);
   const targetOffset = Math.round(fraction * blocksTextTotal);
-
   let seen = 0;
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i];
     if (b.type !== 'text') continue;
     if (seen + b.value.length >= targetOffset) {
-      const cut = targetOffset - seen;
-      const before = b.value.slice(0, cut);
-      const after = b.value.slice(cut);
-      const replacement = [];
-      if (before) replacement.push({ type: 'text', value: before });
-      replacement.push(imageBlock);
-      if (after) replacement.push({ type: 'text', value: after });
-      blocks.splice(i, 1, ...replacement);
+      spliceBlockAt(blocks, i, targetOffset - seen, imageBlock);
       return;
     }
     seen += b.value.length;
@@ -294,9 +342,8 @@ router.post('/', upload.single('file'), async (req, res) => {
     const blocks = bodyHtml ? splitHtmlIntoBlocks(bodyHtml) : [];
     if (strayInlineImages.length) {
       if (bodyHtml) {
-        const plainTextLength = (data.body || '').length;
         for (const img of strayInlineImages) {
-          insertImageIntoBlocksAtPosition(blocks, { type: 'image', url: img.url }, img.position, plainTextLength);
+          insertImageAtPosition(blocks, { type: 'image', url: img.url }, img.position, data.body);
         }
       } else {
         bodyHtml = buildInlinedBodyFromText(data.body, strayInlineImages);
