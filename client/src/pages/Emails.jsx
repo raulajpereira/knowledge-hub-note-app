@@ -473,11 +473,28 @@ export default function Emails() {
                     </div>
                   )}
                 </div>
-                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                  {detail.bodyHtml ? (
-                    // Rendered untrusted external HTML in a fully sandboxed iframe
-                    // (no allow-scripts / allow-same-origin) so it can never run
-                    // script or reach the app's origin — same-origin-safe preview.
+                <div style={{ flex: 1, minHeight: 0, overflow: Array.isArray(detail.blocks) && detail.blocks.length > 0 ? 'auto' : 'hidden' }}>
+                  {Array.isArray(detail.blocks) && detail.blocks.length > 0 ? (
+                    // Text and images rendered as their own themed elements
+                    // (same approach as Notes) instead of an iframe — the
+                    // server already extracted plain text/image blocks out
+                    // of the sender's raw HTML, so there's no markup left to
+                    // isolate.
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 20, boxSizing: 'border-box' }}>
+                      {detail.blocks.map((block, i) => block.type === 'image' ? (
+                        <img key={i} src={block.url} alt="" style={{ maxWidth: '100%', borderRadius: 10, display: 'block' }} />
+                      ) : (
+                        <div key={i} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, color: theme.textPrimary }}>
+                          {block.value}
+                        </div>
+                      ))}
+                    </div>
+                  ) : detail.bodyHtml ? (
+                    // Legacy emails imported before block extraction existed
+                    // only have bodyHtml — rendered untrusted external HTML in
+                    // a fully sandboxed iframe (no allow-scripts /
+                    // allow-same-origin) so it can never run script or reach
+                    // the app's origin.
                     <iframe
                       title="email-body"
                       sandbox=""

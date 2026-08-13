@@ -83,6 +83,47 @@ function buildInlinedBodyFromText(text, images) {
   return html;
 }
 
+function decodeHtmlEntities(s) {
+  return s
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+}
+
+function htmlToPlainText(html) {
+  if (!html) return '';
+  let s = html;
+  s = s.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '');
+  s = s.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr|li|h[1-6])>/gi, '\n');
+  s = s.replace(/<[^>]+>/g, '');
+  s = decodeHtmlEntities(s);
+  return s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// The app's own themed block rendering (à la Notes) needs the body broken
+// into an ordered array of typed blocks — plain text and image references —
+// instead of one opaque HTML string, so the client can render text as text
+// and images as images in the app's own styling rather than an isolated
+// iframe carrying the sender's raw HTML/CSS.
+function splitHtmlIntoBlocks(html) {
+  const blocks = [];
+  const imgRegex = /<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
+  let lastIndex = 0;
+  let m;
+  while ((m = imgRegex.exec(html))) {
+    const text = htmlToPlainText(html.slice(lastIndex, m.index));
+    if (text) blocks.push({ type: 'text', value: text });
+    blocks.push({ type: 'image', url: m[1] });
+    lastIndex = imgRegex.lastIndex;
+  }
+  const tail = htmlToPlainText(html.slice(lastIndex));
+  if (tail) blocks.push({ type: 'text', value: tail });
+  return blocks;
+}
+
 // Outlook references an inline image from the HTML body as `cid:<contentId>`
 // (angle brackets on the id itself are optional depending on how the message
 // was authored). Rewriting these to the saved attachment's URL is what makes
@@ -180,6 +221,11 @@ router.post('/', upload.single('file'), async (req, res) => {
       }
     }
 
+    // Derived from the same final bodyHtml (cid-inlined + any stray RTF
+    // images already spliced in above) so the client can render it as
+    // themed text/image blocks instead of an isolated iframe.
+    const blocks = bodyHtml ? splitHtmlIntoBlocks(bodyHtml) : [];
+
     // PidTagXEmailAddress can hold an unreadable Exchange DN (e.g.
     // "/o=ExchangeLabs/ou=.../cn=...") instead of a real address when the
     // message came from an on-prem/Exchange sender — the SMTP-specific
@@ -201,6 +247,7 @@ router.post('/', upload.single('file'), async (req, res) => {
         sentAt: sentAtSource ? new Date(sentAtSource) : null,
         bodyHtml,
         bodyText: data.body || null,
+        blocks,
         fileUrl: `/uploads/emails/${req.file.filename}`,
         fileName: req.file.originalname,
         fileSize: req.file.size,
