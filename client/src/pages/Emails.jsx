@@ -482,7 +482,23 @@ export default function Emails() {
                     // isolate.
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 20, boxSizing: 'border-box' }}>
                       {detail.blocks.map((block, i) => block.type === 'image' ? (
-                        <img key={i} src={block.url} alt="" style={{ maxWidth: '100%', borderRadius: 10, display: 'block' }} />
+                        // The sender's own width/height (most inline/signature
+                        // images specify one) is honored so a logo sized to
+                        // display small doesn't blow up to the panel's full
+                        // width — only images with no declared size fall back
+                        // to that.
+                        <img
+                          key={i}
+                          src={block.url}
+                          alt=""
+                          style={{
+                            maxWidth: '100%',
+                            width: block.width || undefined,
+                            height: block.width && block.height ? 'auto' : undefined,
+                            borderRadius: 10,
+                            display: 'block',
+                          }}
+                        />
                       ) : (
                         <div key={i} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, color: theme.textPrimary }}>
                           {block.value}

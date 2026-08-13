@@ -103,6 +103,19 @@ function htmlToPlainText(html) {
   return s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+// Signature logos and inline photos are near-universally shipped at a much
+// larger native resolution than they're meant to display at, sized down via
+// a width/height attribute or inline style — losing that (keeping only src)
+// makes them render at full native size, e.g. a 150px logo blown up to fill
+// the whole panel width.
+function parseImgSize(attrs) {
+  const attr = (name) => (attrs.match(new RegExp(`\\b${name}\\s*=\\s*["']?(\\d+)`, 'i')) || [])[1];
+  const styleAttr = (name) => (attrs.match(new RegExp(`\\bstyle\\s*=\\s*["'][^"']*\\b${name}\\s*:\\s*(\\d+)px`, 'i')) || [])[1];
+  const width = styleAttr('width') || attr('width');
+  const height = styleAttr('height') || attr('height');
+  return { width: width ? parseInt(width, 10) : undefined, height: height ? parseInt(height, 10) : undefined };
+}
+
 // The app's own themed block rendering (à la Notes) needs the body broken
 // into an ordered array of typed blocks — plain text and image references —
 // instead of one opaque HTML string, so the client can render text as text
@@ -110,13 +123,13 @@ function htmlToPlainText(html) {
 // iframe carrying the sender's raw HTML/CSS.
 function splitHtmlIntoBlocks(html) {
   const blocks = [];
-  const imgRegex = /<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
+  const imgRegex = /<img\b([^>]*)\bsrc=["']([^"']+)["']([^>]*)>/gi;
   let lastIndex = 0;
   let m;
   while ((m = imgRegex.exec(html))) {
     const text = htmlToPlainText(html.slice(lastIndex, m.index));
     if (text) blocks.push({ type: 'text', value: text });
-    blocks.push({ type: 'image', url: m[1] });
+    blocks.push({ type: 'image', url: m[2], ...parseImgSize(`${m[1]} ${m[3]}`) });
     lastIndex = imgRegex.lastIndex;
   }
   const tail = htmlToPlainText(html.slice(lastIndex));
