@@ -109,6 +109,11 @@ function buildBlocksFromText(text, images) {
 function decodeHtmlEntities(s) {
   return s
     .replace(/&nbsp;/gi, ' ')
+    // Numeric entities (&#8211; en dash, &#x2013; hex form, etc.) — Word/Outlook
+    // HTML leans on these heavily for typographic punctuation, so without this
+    // they show up literally as "&#8211;" in the rendered text.
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
     .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
@@ -120,10 +125,19 @@ function htmlToPlainText(html) {
   if (!html) return '';
   let s = html;
   s = s.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '');
-  s = s.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr|li|h[1-6])>/gi, '\n');
+  s = s.replace(/<br\b[^>]*>/gi, '\n').replace(/<\/(p|div|tr|li|h[1-6])>/gi, '\n');
   s = s.replace(/<[^>]+>/g, '');
   s = decodeHtmlEntities(s);
-  return s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  // Word/Outlook commonly pads visual whitespace with a run of empty
+  // paragraphs — <p>&nbsp;</p> etc. — which decode to a line holding only a
+  // handful of spaces, not an actually-empty line. That leaves the
+  // \n{3,} collapse below unable to see them as blank (spaces break up the
+  // run of newlines it looks for), so each one renders as its own full-height
+  // blank line — a handful of spacer paragraphs balloons into a wall of gap.
+  // Trimming every line first turns those into real empty lines, so the
+  // collapse below catches them like any other run of blank lines.
+  s = s.split('\n').map((line) => line.trim()).join('\n');
+  return s.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 // Signature logos and inline photos are near-universally shipped at a much
