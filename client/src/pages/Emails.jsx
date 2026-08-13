@@ -16,9 +16,14 @@ function formatBytes(bytes) {
   return `${(kb / 1024).toFixed(1)} MB`;
 }
 
+function formatAddress(name, email) {
+  if (name && email && name !== email) return `${name} <${email}>`;
+  return email || name || '?';
+}
+
 function recipientList(recipients) {
   if (!Array.isArray(recipients) || recipients.length === 0) return '—';
-  return recipients.map((r) => r.name || r.email || '?').join(', ');
+  return recipients.map((r) => formatAddress(r.name, r.email)).join(', ');
 }
 
 export default function Emails() {
@@ -443,7 +448,7 @@ export default function Emails() {
                     </div>
                   </div>
                   <div style={{ fontSize: 12, color: theme.textMuted, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <div><strong style={{ color: theme.textPrimary }}>{t('emails.from')}:</strong> {detail.fromName || detail.fromAddress || '—'}{detail.fromAddress && detail.fromName ? ` <${detail.fromAddress}>` : ''}</div>
+                    <div><strong style={{ color: theme.textPrimary }}>{t('emails.from')}:</strong> {formatAddress(detail.fromName, detail.fromAddress)}</div>
                     <div><strong style={{ color: theme.textPrimary }}>{t('emails.to')}:</strong> {recipientList(detail.toRecipients)}</div>
                     {Array.isArray(detail.ccRecipients) && detail.ccRecipients.length > 0 && (
                       <div><strong style={{ color: theme.textPrimary }}>{t('emails.cc')}:</strong> {recipientList(detail.ccRecipients)}</div>

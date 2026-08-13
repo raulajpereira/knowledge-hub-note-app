@@ -34,6 +34,22 @@ function diskPathFromUrl(url) {
   return path.join(__dirname, '..', '..', url.replace(/^\//, ''));
 }
 
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Outlook references an inline image from the HTML body as `cid:<contentId>`
+// (angle brackets on the id itself are optional depending on how the message
+// was authored). Rewriting these to the saved attachment's URL is what makes
+// the image render inline instead of only being reachable as a download.
+function inlineCidIntoHtml(html, contentId, url) {
+  const cid = contentId.replace(/^<|>$/g, '');
+  if (!cid) return { html, matched: false };
+  const pattern = new RegExp(`cid:${escapeRegExp(cid)}`, 'gi');
+  if (!pattern.test(html)) return { html, matched: false };
+  return { html: html.replace(pattern, url), matched: true };
+}
+
 const router = Router();
 router.use(requireAuth);
 router.use(requireFeature('emails'));
@@ -65,6 +81,14 @@ router.post('/', upload.single('file'), async (req, res) => {
     const data = reader.getFileData();
     if (data.error) throw new Error(data.error);
 
+    // Outlook stores an inline image (one referenced by the HTML body via
+    // `cid:...`) as a regular attachment with a PidTagAttachContentId, same
+    // as any other attachment — the only way to tell them apart is whether
+    // that content id is actually referenced in the body. Those get spliced
+    // into bodyHtml and dropped from the downloadable attachments list;
+    // anything else (including a pidContentId that isn't actually used in
+    // the body) stays a normal attachment.
+    let bodyHtml = data.bodyHtml || null;
     const attachments = [];
     for (const att of data.attachments || []) {
       try {
@@ -72,15 +96,31 @@ router.post('/', upload.single('file'), async (req, res) => {
         const safeName = (extracted.fileName || att.fileName || 'anexo').replace(/[/\\]/g, '_');
         const savedName = `${req.effectiveUserId}-${crypto.randomUUID()}-${safeName}`;
         await writeFile(path.join(attachmentDir, savedName), Buffer.from(extracted.content));
-        attachments.push({ name: safeName, size: extracted.content.length, url: `/uploads/email-attachments/${savedName}` });
+        const url = `/uploads/email-attachments/${savedName}`;
+
+        let inlined = false;
+        if (bodyHtml && att.pidContentId) {
+          const result = inlineCidIntoHtml(bodyHtml, att.pidContentId, url);
+          if (result.matched) {
+            bodyHtml = result.html;
+            inlined = true;
+          }
+        }
+        if (!inlined) {
+          attachments.push({ name: safeName, size: extracted.content.length, url });
+        }
       } catch {
         // Skip attachments that fail to extract rather than failing the whole import.
       }
     }
 
+    // PidTagXEmailAddress can hold an unreadable Exchange DN (e.g.
+    // "/o=ExchangeLabs/ou=.../cn=...") instead of a real address when the
+    // message came from an on-prem/Exchange sender — the SMTP-specific
+    // property is the one that reliably holds a readable address in that case.
     const recipients = data.recipients || [];
-    const toRecipients = recipients.filter((r) => !r.recipType || r.recipType === 'to').map((r) => ({ name: r.name || null, email: r.email || r.smtpAddress || null }));
-    const ccRecipients = recipients.filter((r) => r.recipType === 'cc').map((r) => ({ name: r.name || null, email: r.email || r.smtpAddress || null }));
+    const toRecipients = recipients.filter((r) => !r.recipType || r.recipType === 'to').map((r) => ({ name: r.name || null, email: r.smtpAddress || r.email || null }));
+    const ccRecipients = recipients.filter((r) => r.recipType === 'cc').map((r) => ({ name: r.name || null, email: r.smtpAddress || r.email || null }));
     const sentAtSource = data.messageDeliveryTime || data.clientSubmitTime || null;
 
     const email = await prisma.email.create({
@@ -89,11 +129,11 @@ router.post('/', upload.single('file'), async (req, res) => {
         folderId,
         subject: data.subject?.trim() || '(sem assunto)',
         fromName: data.senderName || null,
-        fromAddress: data.senderEmail || null,
+        fromAddress: data.senderSmtpAddress || data.senderEmail || null,
         toRecipients,
         ccRecipients,
         sentAt: sentAtSource ? new Date(sentAtSource) : null,
-        bodyHtml: data.bodyHtml || null,
+        bodyHtml,
         bodyText: data.body || null,
         fileUrl: `/uploads/emails/${req.file.filename}`,
         fileName: req.file.originalname,
