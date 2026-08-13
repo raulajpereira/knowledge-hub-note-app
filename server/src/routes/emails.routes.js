@@ -38,6 +38,15 @@ function escapeRegExp(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function isImageAttachment(att) {
+  if (att.attachMimeTag) return /^image\//i.test(att.attachMimeTag);
+  return /\.(png|jpe?g|gif|bmp|webp)$/i.test(att.extension || att.fileName || '');
+}
+
 // Outlook references an inline image from the HTML body as `cid:<contentId>`
 // (angle brackets on the id itself are optional depending on how the message
 // was authored). Rewriting these to the saved attachment's URL is what makes
@@ -90,6 +99,12 @@ router.post('/', upload.single('file'), async (req, res) => {
     // the body) stays a normal attachment.
     let bodyHtml = data.bodyHtml || null;
     const attachments = [];
+    // Hidden images (PidTagAttachmentHidden) that couldn't be cid-matched
+    // into an HTML body — e.g. a Rich Text format message, which has no
+    // HTML/cid to match against at all. Outlook doesn't list these as
+    // attachments either, so instead of dropping them (losing the picture
+    // entirely) they get appended to the body below, after the loop.
+    const strayInlineImages = [];
     for (const att of data.attachments || []) {
       try {
         const extracted = reader.getAttachment(att);
@@ -106,16 +121,23 @@ router.post('/', upload.single('file'), async (req, res) => {
             inlined = true;
           }
         }
-        // Outlook also marks an attachment PidTagAttachmentHidden when it's
-        // an inline image the body doesn't reference by cid (e.g. a Rich
-        // Text format body, which has no HTML/cid to match against at all).
-        // Outlook itself never lists these as attachments, so surfacing them
-        // as a stray download would just be confusing.
-        if (!inlined && !att.attachmentHidden) {
+        if (!inlined && att.attachmentHidden && isImageAttachment(att)) {
+          strayInlineImages.push(url);
+        } else if (!inlined) {
           attachments.push({ name: safeName, size: extracted.content.length, url });
         }
       } catch {
         // Skip attachments that fail to extract rather than failing the whole import.
+      }
+    }
+
+    if (strayInlineImages.length) {
+      const imgTags = strayInlineImages.map((url) => `<img src="${url}" style="max-width:100%;" />`).join('<br/>');
+      if (bodyHtml) {
+        bodyHtml = /<\/body>/i.test(bodyHtml) ? bodyHtml.replace(/<\/body>/i, `${imgTags}</body>`) : `${bodyHtml}${imgTags}`;
+      } else {
+        const textHtml = data.body ? `<pre style="white-space:pre-wrap;font-family:inherit;margin:0;">${escapeHtml(data.body)}</pre>` : '';
+        bodyHtml = `${textHtml}${imgTags}`;
       }
     }
 
