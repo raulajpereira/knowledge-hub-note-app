@@ -10,6 +10,18 @@ html, body {
   overscroll-behavior-y: none;
   touch-action: manipulation;
 }
+#root {
+  height: 100vh;
+  height: 100dvh;
+}
+/* iOS Safari's 100vh is the *largest* possible viewport (toolbar collapsed) —
+   100dvh tracks what's actually visible, so the shell never grows past the
+   fold and forces the whole page to scroll instead of just its own internal
+   regions (sidebar, main content). */
+.app-shell-height {
+  height: 100vh;
+  height: 100dvh;
+}
 body {
   font-family: var(--font-body);
 }

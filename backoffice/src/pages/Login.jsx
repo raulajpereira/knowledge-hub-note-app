@@ -95,9 +95,6 @@ export default function Login() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4.4vw, 54px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-0.02em' }}>
             {t('backoffice.heroTitle')}<br />{t('backoffice.heroTitle2')}
           </div>
-          <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.78)', maxWidth: 420, lineHeight: 1.55 }}>
-            {t('backoffice.heroDesc')}
-          </div>
         </div>
 
         <form

@@ -27,6 +27,7 @@ const DEFAULTS = {
   fontScale: 'medium',
   radiusStyle: 'default',
   density: 'comfortable',
+  sidebarWidth: 232,
 };
 
 export function ThemeProvider({ children }) {
@@ -40,7 +41,7 @@ export function ThemeProvider({ children }) {
     });
   };
 
-  const { theme: mode, accentHue, fontFamily, fontScale, radiusStyle, density } = settings;
+  const { theme: mode, accentHue, fontFamily, fontScale, radiusStyle, density, sidebarWidth } = settings;
   const theme = useMemo(() => getTheme(mode, null, accentHue), [mode, accentHue]);
 
   useEffect(() => {
@@ -64,13 +65,14 @@ export function ThemeProvider({ children }) {
   return (
     <ThemeContext.Provider
       value={{
-        theme, mode, accentHue, fontFamily, fontScale, radiusStyle, density,
+        theme, mode, accentHue, fontFamily, fontScale, radiusStyle, density, sidebarWidth,
         setMode: (v) => persist({ theme: v }),
         setAccentHue: (v) => persist({ accentHue: v }),
         setFontFamily: (v) => persist({ fontFamily: v }),
         setFontScale: (v) => persist({ fontScale: v }),
         setRadiusStyle: (v) => persist({ radiusStyle: v }),
         setDensity: (v) => persist({ density: v }),
+        setSidebarWidth: (v) => persist({ sidebarWidth: v }),
       }}
     >
       {children}

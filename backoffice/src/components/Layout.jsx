@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
@@ -23,13 +23,41 @@ function userInitials(name) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
 }
 
+const SIDEBAR_MIN = 190;
+const SIDEBAR_MAX = 420;
+
 export default function Layout() {
   const { user, logout } = useAuth();
-  const { theme } = useTheme();
+  const { theme, sidebarWidth, setSidebarWidth } = useTheme();
   const { t } = useLanguage();
   const location = useLocation();
   const [pendingRequests, setPendingRequests] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [resizing, setResizing] = useState(false);
+  const resizeRef = useRef(null);
+
+  const onResizeDown = (e) => {
+    e.preventDefault();
+    resizeRef.current = { startX: e.clientX, startWidth: sidebarWidth };
+    setResizing(true);
+  };
+
+  useEffect(() => {
+    if (!resizing) return undefined;
+    const onMove = (e) => {
+      if (!resizeRef.current) return;
+      const { startX, startWidth } = resizeRef.current;
+      setSidebarWidth(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + (e.clientX - startX))));
+    };
+    const onUp = () => {
+      setResizing(false);
+      resizeRef.current = null;
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+    return () => window.removeEventListener('pointermove', onMove);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resizing]);
 
   const loadPending = () => {
     api.listCodeRequests().then((r) => setPendingRequests(r.requests.filter((req) => req.status === 'pending').length)).catch(() => {});
@@ -52,8 +80,14 @@ export default function Layout() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', width: '100%', display: 'flex', background: theme.pageBg, color: theme.textPrimary }}>
-      <div style={{ width: 232, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`, padding: '20px 14px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div className="app-shell-height" style={{ width: '100%', display: 'flex', background: theme.pageBg, color: theme.textPrimary, overflow: 'hidden' }}>
+      <div
+        style={{
+          width: sidebarWidth, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`,
+          padding: '20px 14px 16px', display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', minHeight: 0,
+          transition: resizing ? 'none' : 'width 0.15s',
+        }}
+      >
         <div style={{ height: 46, boxSizing: 'border-box', display: 'flex', alignItems: 'center', padding: '4px 6px', marginBottom: 6 }}>
           <img src={theme.dark ? logoWordmarkDark : logoWordmarkLight} alt="Knowledge Hub" style={{ height: '100%', width: 'auto', maxWidth: '100%', objectFit: 'contain', objectPosition: 'left center' }} />
         </div>
@@ -67,10 +101,7 @@ export default function Layout() {
           {t('backoffice.badge')}
         </span>
 
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.textMuted, padding: '14px 10px 6px' }}>
-            {t('backoffice.navGroupOperation')}
-          </div>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 14 }}>
           {NAV_ITEMS.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} style={({ isActive }) => navItemStyle(isActive)}>
               <span style={{ flex: 1 }}>{t(item.labelKey)}</span>
@@ -103,8 +134,14 @@ export default function Layout() {
         </div>
       </div>
 
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 32px', borderBottom: `1px solid ${theme.border}` }}>
+      <div
+        onPointerDown={onResizeDown}
+        style={{ width: 5, flexShrink: 0, cursor: 'col-resize', background: resizing ? theme.accent : 'transparent', position: 'relative', zIndex: 5, marginLeft: -3, marginRight: -2 }}
+      />
+      {resizing && <div style={{ position: 'fixed', inset: 0, zIndex: 999, cursor: 'col-resize' }} />}
+
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 32px', borderBottom: `1px solid ${theme.border}`, flexShrink: 0 }}>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em' }}>
               {activeItem ? t(activeItem.labelKey) : ''}

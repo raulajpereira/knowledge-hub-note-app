@@ -411,11 +411,19 @@ router.post('/invite-codes', requireAuth, requireSuperAdmin, async (req, res) =>
   res.status(201).json({ code: invite });
 });
 
+// First call revokes (soft — keeps the row so a used-elsewhere check or audit
+// trail still makes sense); calling it again on an already-revoked code
+// deletes it outright, since a revoked code has no further use and no
+// history worth keeping once someone actually wants it gone.
 router.delete('/invite-codes/:id', requireAuth, requireSuperAdmin, async (req, res) => {
   const invite = await prisma.inviteCode.findUnique({ where: { id: req.params.id } });
   if (!invite) return res.status(404).json({ error: 'Invite code not found' });
   if (invite.usedAt) return res.status(400).json({ error: 'This code has already been used and cannot be revoked' });
-  await prisma.inviteCode.update({ where: { id: invite.id }, data: { revokedAt: new Date() } });
+  if (invite.revokedAt) {
+    await prisma.inviteCode.delete({ where: { id: invite.id } });
+  } else {
+    await prisma.inviteCode.update({ where: { id: invite.id }, data: { revokedAt: new Date() } });
+  }
   res.status(204).end();
 });
 

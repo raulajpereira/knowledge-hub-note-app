@@ -86,6 +86,16 @@ export default function CreateCodes() {
     await load();
   };
 
+  // The same endpoint hard-deletes a code that's already revoked (see
+  // server/src/routes/auth.routes.js) — revoke is a soft first step, this is
+  // the actual removal from the list.
+  const deleteCode = async (c) => {
+    const ok = await confirm({ message: t('backoffice.confirmDeleteCode', { code: c.code }), confirmLabel: t('common.delete') });
+    if (!ok) return;
+    await api.revokeInviteCode(c.id);
+    await load();
+  };
+
   if (!codes) return null;
   const activeCodes = codes.filter((c) => !c.usedAt && !c.revokedAt);
 
@@ -125,6 +135,11 @@ export default function CreateCodes() {
                   <span style={{ flex: 1, fontSize: 11.5, color: statusColor, fontWeight: 600, textAlign: 'right' }}>{statusLabel}</span>
                   {status === 'pending' && (
                     <span onClick={() => revokeCode(c)} title={t('settings.revokeCode')} style={{ cursor: 'pointer', color: theme.textMuted, fontSize: 16, padding: '0 2px' }}>
+                      &times;
+                    </span>
+                  )}
+                  {status === 'revoked' && (
+                    <span onClick={() => deleteCode(c)} title={t('common.delete')} style={{ cursor: 'pointer', color: 'oklch(0.55 0.18 25)', fontSize: 16, padding: '0 2px' }}>
                       &times;
                     </span>
                   )}

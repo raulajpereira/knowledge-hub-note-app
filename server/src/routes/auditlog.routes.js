@@ -22,11 +22,15 @@ router.get('/', async (req, res) => {
   });
   const hasMore = entries.length > PAGE_SIZE;
   const page = hasMore ? entries.slice(0, PAGE_SIZE) : entries;
-  const entityTypes = await prisma.auditLog.findMany({ distinct: ['entityType'], select: { entityType: true }, orderBy: { entityType: 'asc' } });
+  const [entityTypes, actorEmails] = await Promise.all([
+    prisma.auditLog.findMany({ distinct: ['entityType'], select: { entityType: true }, orderBy: { entityType: 'asc' } }),
+    prisma.auditLog.findMany({ where: { actorEmail: { not: null } }, distinct: ['actorEmail'], select: { actorEmail: true }, orderBy: { actorEmail: 'asc' } }),
+  ]);
   res.json({
     entries: page,
     nextCursor: hasMore ? page[page.length - 1].id : null,
     entityTypes: entityTypes.map((e) => e.entityType),
+    actorEmails: actorEmails.map((a) => a.actorEmail),
   });
 });
 

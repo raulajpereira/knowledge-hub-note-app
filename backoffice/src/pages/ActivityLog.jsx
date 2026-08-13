@@ -21,32 +21,36 @@ export default function ActivityLog() {
   const confirm = useConfirm();
   const [entries, setEntries] = useState(null);
   const [entityTypes, setEntityTypes] = useState([]);
+  const [actorEmails, setActorEmails] = useState([]);
   const [entityType, setEntityType] = useState('');
+  const [actorEmail, setActorEmail] = useState('');
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [purgeDays, setPurgeDays] = useState(90);
   const [purging, setPurging] = useState(false);
 
   const card = { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 22, display: 'flex', flexDirection: 'column', gap: 18 };
+  const filters = () => ({ ...(entityType ? { entityType } : {}), ...(actorEmail ? { actorEmail } : {}) });
 
   const load = (params, append) => {
     api.listAuditLog(params).then((r) => {
       setEntries((prev) => (append ? [...(prev || []), ...r.entries] : r.entries));
       setEntityTypes(r.entityTypes);
+      setActorEmails(r.actorEmails || []);
       setNextCursor(r.nextCursor);
     });
   };
 
   useEffect(() => {
-    load(entityType ? { entityType } : undefined, false);
+    load(filters(), false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityType]);
+  }, [entityType, actorEmail]);
 
   const loadMore = async () => {
     if (!nextCursor) return;
     setLoadingMore(true);
     try {
-      const r = await api.listAuditLog({ ...(entityType ? { entityType } : {}), cursor: nextCursor });
+      const r = await api.listAuditLog({ ...filters(), cursor: nextCursor });
       setEntries((prev) => [...(prev || []), ...r.entries]);
       setNextCursor(r.nextCursor);
     } finally {
@@ -62,13 +66,16 @@ export default function ActivityLog() {
     setPurging(true);
     try {
       await api.purgeAuditLog(days);
-      load(entityType ? { entityType } : undefined, false);
+      load(filters(), false);
     } finally {
       setPurging(false);
     }
   };
 
   if (!entries) return null;
+
+  const selectStyle = { border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', colorScheme: theme.dark ? 'dark' : 'light' };
+  const optionStyle = { color: '#1a1a1a', background: '#fff' };
 
   return (
     <div style={card}>
@@ -78,13 +85,13 @@ export default function ActivityLog() {
           <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.auditLogDesc')}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <select
-            value={entityType}
-            onChange={(e) => setEntityType(e.target.value)}
-            style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 9px', fontSize: 12, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', colorScheme: theme.dark ? 'dark' : 'light' }}
-          >
-            <option value="" style={{ color: '#1a1a1a', background: '#fff' }}>{t('settings.auditLogAllTypes')}</option>
-            {entityTypes.map((e) => <option key={e} value={e} style={{ color: '#1a1a1a', background: '#fff' }}>{e}</option>)}
+          <select value={actorEmail} onChange={(e) => setActorEmail(e.target.value)} style={selectStyle}>
+            <option value="" style={optionStyle}>{t('backoffice.auditLogAllAccounts')}</option>
+            {actorEmails.map((e) => <option key={e} value={e} style={optionStyle}>{e}</option>)}
+          </select>
+          <select value={entityType} onChange={(e) => setEntityType(e.target.value)} style={selectStyle}>
+            <option value="" style={optionStyle}>{t('settings.auditLogAllTypes')}</option>
+            {entityTypes.map((e) => <option key={e} value={e} style={optionStyle}>{e}</option>)}
           </select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontSize: 11.5, color: theme.textMuted }}>{t('settings.auditLogPurgeOlderThan')}</span>
