@@ -106,7 +106,12 @@ router.post('/', upload.single('file'), async (req, res) => {
             inlined = true;
           }
         }
-        if (!inlined) {
+        // Outlook also marks an attachment PidTagAttachmentHidden when it's
+        // an inline image the body doesn't reference by cid (e.g. a Rich
+        // Text format body, which has no HTML/cid to match against at all).
+        // Outlook itself never lists these as attachments, so surfacing them
+        // as a stray download would just be confusing.
+        if (!inlined && !att.attachmentHidden) {
           attachments.push({ name: safeName, size: extracted.content.length, url });
         }
       } catch {
