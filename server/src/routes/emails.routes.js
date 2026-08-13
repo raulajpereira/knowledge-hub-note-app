@@ -83,6 +83,28 @@ function buildInlinedBodyFromText(text, images) {
   return html;
 }
 
+// Same positioning as buildInlinedBodyFromText above, but producing blocks
+// directly instead of an HTML string to splice back apart later.
+function buildBlocksFromText(text, images) {
+  const t = text || '';
+  const positioned = images
+    .filter((img) => typeof img.position === 'number' && img.position >= 0 && img.position <= t.length)
+    .sort((a, b) => a.position - b.position);
+  const trailing = images.filter((img) => !positioned.includes(img));
+  const blocks = [];
+  let cursor = 0;
+  for (const img of positioned) {
+    const segment = t.slice(cursor, img.position).trim();
+    if (segment) blocks.push({ type: 'text', value: segment });
+    blocks.push({ type: 'image', url: img.url });
+    cursor = img.position;
+  }
+  const tail = t.slice(cursor).trim();
+  if (tail) blocks.push({ type: 'text', value: tail });
+  for (const img of trailing) blocks.push({ type: 'image', url: img.url });
+  return blocks;
+}
+
 function decodeHtmlEntities(s) {
   return s
     .replace(/&nbsp;/gi, ' ')
@@ -135,6 +157,42 @@ function splitHtmlIntoBlocks(html) {
   const tail = htmlToPlainText(html.slice(lastIndex));
   if (tail) blocks.push({ type: 'text', value: tail });
   return blocks;
+}
+
+// A stray image's renderingPosition is a character offset into the
+// plain-text body (data.body) — a different, unrelated string from the
+// HTML-derived text the block array was built from, so there's no exact
+// offset to reuse. Approximating by *proportion* through the message
+// (this image belongs roughly N% of the way through the text) and cutting
+// the block array's own text at that same proportion is far closer to the
+// image's real position than always appending at the end.
+function insertImageIntoBlocksAtPosition(blocks, imageBlock, position, plainTextLength) {
+  if (typeof position !== 'number' || !plainTextLength) {
+    blocks.push(imageBlock);
+    return;
+  }
+  const fraction = Math.min(Math.max(position / plainTextLength, 0), 1);
+  const blocksTextTotal = blocks.reduce((sum, b) => sum + (b.type === 'text' ? b.value.length : 0), 0);
+  const targetOffset = Math.round(fraction * blocksTextTotal);
+
+  let seen = 0;
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    if (b.type !== 'text') continue;
+    if (seen + b.value.length >= targetOffset) {
+      const cut = targetOffset - seen;
+      const before = b.value.slice(0, cut);
+      const after = b.value.slice(cut);
+      const replacement = [];
+      if (before) replacement.push({ type: 'text', value: before });
+      replacement.push(imageBlock);
+      if (after) replacement.push({ type: 'text', value: after });
+      blocks.splice(i, 1, ...replacement);
+      return;
+    }
+    seen += b.value.length;
+  }
+  blocks.push(imageBlock);
 }
 
 // Outlook references an inline image from the HTML body as `cid:<contentId>`
@@ -194,10 +252,13 @@ router.post('/', upload.single('file'), async (req, res) => {
     let bodyHtml = data.bodyHtml || null;
     const attachments = [];
     // Hidden images (PidTagAttachmentHidden) that couldn't be cid-matched
-    // into an HTML body — e.g. a Rich Text format message, which has no
-    // HTML/cid to match against at all. Outlook doesn't list these as
-    // attachments either, so instead of dropping them (losing the picture
-    // entirely) they get appended to the body below, after the loop.
+    // into an HTML body — e.g. a Rich Text format message with no HTML/cid
+    // to match against at all, or an HTML message where this particular
+    // picture just isn't cid-referenced in the markup (common for images
+    // pasted straight into the body rather than "inserted"). Outlook
+    // doesn't list these as attachments either, so instead of dropping them
+    // (losing the picture) they're positioned into `blocks` below using
+    // their own recorded renderingPosition.
     const strayInlineImages = [];
     for (const att of data.attachments || []) {
       try {
@@ -225,19 +286,23 @@ router.post('/', upload.single('file'), async (req, res) => {
       }
     }
 
+    // blocks is the real rendering source (themed text/image blocks instead
+    // of an isolated iframe); bodyHtml below is kept only as a legacy
+    // fallback for clients with no blocks support, so stray images are
+    // spliced into blocks using their real position, not string-appended
+    // to bodyHtml.
+    const blocks = bodyHtml ? splitHtmlIntoBlocks(bodyHtml) : [];
     if (strayInlineImages.length) {
       if (bodyHtml) {
-        const imgTags = strayInlineImages.map((img) => `<img src="${img.url}" style="max-width:100%;" />`).join('<br/>');
-        bodyHtml = /<\/body>/i.test(bodyHtml) ? bodyHtml.replace(/<\/body>/i, `${imgTags}</body>`) : `${bodyHtml}${imgTags}`;
+        const plainTextLength = (data.body || '').length;
+        for (const img of strayInlineImages) {
+          insertImageIntoBlocksAtPosition(blocks, { type: 'image', url: img.url }, img.position, plainTextLength);
+        }
       } else {
         bodyHtml = buildInlinedBodyFromText(data.body, strayInlineImages);
+        blocks.push(...buildBlocksFromText(data.body, strayInlineImages));
       }
     }
-
-    // Derived from the same final bodyHtml (cid-inlined + any stray RTF
-    // images already spliced in above) so the client can render it as
-    // themed text/image blocks instead of an isolated iframe.
-    const blocks = bodyHtml ? splitHtmlIntoBlocks(bodyHtml) : [];
 
     // PidTagXEmailAddress can hold an unreadable Exchange DN (e.g.
     // "/o=ExchangeLabs/ou=.../cn=...") instead of a real address when the
