@@ -47,6 +47,42 @@ function isImageAttachment(att) {
   return /\.(png|jpe?g|gif|bmp|webp)$/i.test(att.extension || att.fileName || '');
 }
 
+// PidTagRenderingPosition (property tag 370b0003, only present when
+// includeRawProps is turned on): the character offset into the plain-text
+// body where an inline (RTF-embedded) image belongs. 0xFFFFFFFF means "not
+// rendered inline" — Outlook uses this to remember where in an RTF-format
+// body a picture goes, since RTF isn't parsed into bodyHtml at all here.
+function renderingPositionOf(att) {
+  const raw = (att.rawProps || []).find((p) => p.propertyTag === '370b0003');
+  if (!raw || typeof raw.value !== 'number' || raw.value >= 0xffffffff) return undefined;
+  return raw.value;
+}
+
+function textSegmentToHtml(segment) {
+  return `<pre style="white-space:pre-wrap;font-family:inherit;margin:0;display:inline;">${escapeHtml(segment)}</pre>`;
+}
+
+// Splices images into the plain-text body at their recorded character
+// offsets (falling back to the end for images with no usable offset),
+// since there's no HTML body to splice a cid: reference into.
+function buildInlinedBodyFromText(text, images) {
+  const t = text || '';
+  const positioned = images
+    .filter((img) => typeof img.position === 'number' && img.position >= 0 && img.position <= t.length)
+    .sort((a, b) => a.position - b.position);
+  const trailing = images.filter((img) => !positioned.includes(img));
+  let html = '';
+  let cursor = 0;
+  for (const img of positioned) {
+    html += textSegmentToHtml(t.slice(cursor, img.position));
+    html += `<img src="${img.url}" style="max-width:100%;" />`;
+    cursor = img.position;
+  }
+  html += textSegmentToHtml(t.slice(cursor));
+  html += trailing.map((img) => `<img src="${img.url}" style="max-width:100%;" />`).join('');
+  return html;
+}
+
 // Outlook references an inline image from the HTML body as `cid:<contentId>`
 // (angle brackets on the id itself are optional depending on how the message
 // was authored). Rewriting these to the saved attachment's URL is what makes
@@ -87,6 +123,10 @@ router.post('/', upload.single('file'), async (req, res) => {
   try {
     const buffer = await readFile(req.file.path);
     const reader = new MsgReader(buffer);
+    // Needed to read each attachment's PidTagRenderingPosition (see
+    // renderingPositionOf below) — the library only maps well-known
+    // properties to friendly field names by default.
+    reader.parserConfig = { includeRawProps: true };
     const data = reader.getFileData();
     if (data.error) throw new Error(data.error);
 
@@ -122,7 +162,7 @@ router.post('/', upload.single('file'), async (req, res) => {
           }
         }
         if (!inlined && att.attachmentHidden && isImageAttachment(att)) {
-          strayInlineImages.push(url);
+          strayInlineImages.push({ url, position: renderingPositionOf(att) });
         } else if (!inlined) {
           attachments.push({ name: safeName, size: extracted.content.length, url });
         }
@@ -132,12 +172,11 @@ router.post('/', upload.single('file'), async (req, res) => {
     }
 
     if (strayInlineImages.length) {
-      const imgTags = strayInlineImages.map((url) => `<img src="${url}" style="max-width:100%;" />`).join('<br/>');
       if (bodyHtml) {
+        const imgTags = strayInlineImages.map((img) => `<img src="${img.url}" style="max-width:100%;" />`).join('<br/>');
         bodyHtml = /<\/body>/i.test(bodyHtml) ? bodyHtml.replace(/<\/body>/i, `${imgTags}</body>`) : `${bodyHtml}${imgTags}`;
       } else {
-        const textHtml = data.body ? `<pre style="white-space:pre-wrap;font-family:inherit;margin:0;">${escapeHtml(data.body)}</pre>` : '';
-        bodyHtml = `${textHtml}${imgTags}`;
+        bodyHtml = buildInlinedBodyFromText(data.body, strayInlineImages);
       }
     }
 
