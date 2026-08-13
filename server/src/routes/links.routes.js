@@ -169,6 +169,30 @@ router.get('/mentions', async (req, res) => {
   res.json({ mentions: mentions.slice(0, 5).map(({ matchText, ...rest }) => rest) });
 });
 
+// Free-text search across every linkable entity, for adding a connection
+// the AI didn't suggest (suggestions/mentions are both bounded, curated
+// lists — this is the "search for anything" escape hatch).
+router.get('/search', async (req, res) => {
+  const { type, id, q } = req.query;
+  if (!ENTITY_TYPES.has(type) || !id) return res.status(400).json({ error: 'type and id are required' });
+  const query = (q || '').trim().toLowerCase();
+  if (query.length < 2) return res.json({ results: [] });
+
+  const [outgoing, incoming] = await Promise.all([
+    prisma.link.findMany({ where: { userId: req.effectiveUserId, fromType: type, fromId: id }, select: { toType: true, toId: true } }),
+    prisma.link.findMany({ where: { userId: req.effectiveUserId, toType: type, toId: id }, select: { fromType: true, fromId: true } }),
+  ]);
+  const exclude = new Set([`${type}:${id}`, ...outgoing.map((l) => `${l.toType}:${l.toId}`), ...incoming.map((l) => `${l.fromType}:${l.fromId}`)]);
+
+  const all = await allTitledEntities(req.effectiveUserId);
+  const results = all
+    .filter((e) => !exclude.has(`${e.type}:${e.id}`) && e.matchText?.toLowerCase().includes(query))
+    .slice(0, 20)
+    .map(({ matchText, ...rest }) => rest);
+
+  res.json({ results });
+});
+
 router.get('/resurface', async (req, res) => {
   const items = await getResurfacedItems(req.effectiveUserId);
   res.json({ items });

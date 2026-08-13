@@ -1340,6 +1340,8 @@ export const translations = {
       noSuggestions: 'No suggestions right now.',
       mentionsTitle: 'Mentioned in the text, not linked yet',
       similarTitle: 'Also similar',
+      searchPlaceholder: 'Search anything to link…',
+      searchNoResults: 'No matches.',
     },
     graph: {
       title: 'Knowledge Graph',
@@ -2710,6 +2712,8 @@ export const translations = {
       noSuggestions: 'Sem sugestões de momento.',
       mentionsTitle: 'Mencionado no texto, ainda não ligado',
       similarTitle: 'Também parecido',
+      searchPlaceholder: 'Pesquisar o que quiseres ligar…',
+      searchNoResults: 'Sem resultados.',
     },
     graph: {
       title: 'Grafo de Conhecimento',

@@ -19,6 +19,9 @@ export default function LinkedItemsPanel({ entityType, entityId, theme, t }) {
   const [loaded, setLoaded] = useState(false);
   const [addingKey, setAddingKey] = useState(null);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   const typeLabel = {
     note: t('search.typeNote'),
@@ -42,15 +45,38 @@ export default function LinkedItemsPanel({ entityType, entityId, theme, t }) {
   useEffect(() => {
     setLoaded(false);
     setSuggestionsOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
     if (entityId) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityType, entityId]);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return undefined;
+    }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { results } = await api.searchLinkable(entityType, entityId, q);
+        setSearchResults(results || []);
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery, entityType, entityId]);
 
   const linkSuggestion = async (s) => {
     const key = `${s.type}-${s.id}`;
     setAddingKey(key);
     try {
       await api.createLink({ fromType: entityType, fromId: entityId, toType: s.type, toId: s.id });
+      setSearchQuery('');
+      setSearchResults([]);
       await load();
     } finally {
       setAddingKey(null);
@@ -92,6 +118,50 @@ export default function LinkedItemsPanel({ entityType, entityId, theme, t }) {
                 </span>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '8px 10px' }}>
+          <Icon name="search" size={13} color={theme.textMuted} />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('links.searchPlaceholder')}
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 12.5, color: theme.textPrimary, width: '100%' }}
+          />
+        </div>
+        {searchQuery.trim().length >= 2 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+            {searching ? null : searchResults.length === 0 ? (
+              <div style={{ fontSize: 12, color: theme.textMuted, padding: '4px 2px' }}>{t('links.searchNoResults')}</div>
+            ) : (
+              searchResults.map((s) => {
+                const key = `${s.type}-${s.id}`;
+                return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: theme.subtleBg }}>
+                    <span style={{ display: 'flex', flexShrink: 0, opacity: 0.7 }}>
+                      <Icon name={TYPE_ICON[s.type]} size={14} color={theme.textMuted} />
+                    </span>
+                    <div onClick={() => navigateToEntity(navigate, s)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{typeLabel[s.type]}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
+                    </div>
+                    <span
+                      onClick={() => (addingKey === key ? null : linkSuggestion(s))}
+                      title={t('links.addConnection')}
+                      style={{
+                        cursor: addingKey === key ? 'default' : 'pointer', color: theme.accentText, fontSize: 11.5, fontWeight: 700,
+                        padding: '4px 8px', flexShrink: 0, opacity: addingKey === key ? 0.5 : 1, whiteSpace: 'nowrap',
+                      }}
+                    >
+                      + {t('common.add')}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>

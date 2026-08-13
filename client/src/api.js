@@ -240,6 +240,7 @@ export const api = {
   listLinks: (type, id) => request(`/links?type=${type}&id=${id}`),
   listLinkSuggestions: (type, id) => request(`/links/suggestions?type=${type}&id=${id}`),
   listUnlinkedMentions: (type, id) => request(`/links/mentions?type=${type}&id=${id}`),
+  searchLinkable: (type, id, q) => request(`/links/search?type=${type}&id=${id}&q=${encodeURIComponent(q)}`),
   createLink: (payload) => request('/links', { method: 'POST', body: payload }),
   deleteLink: (id) => request(`/links/${id}`, { method: 'DELETE' }),
   getLinksGraph: () => request('/links/graph'),
