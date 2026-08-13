@@ -718,6 +718,7 @@ export const translations = {
       deleteFolder: 'Delete folder',
       confirmDeleteRequest: 'Delete this request?',
       confirmDeleteFolder: 'Delete folder "{name}"? Requests inside move to "No folder", not deleted.',
+      saveAsNote: 'Save as note',
     },
     documentacao: {
       title: 'Documentation',
@@ -2090,6 +2091,7 @@ export const translations = {
       deleteFolder: 'Eliminar pasta',
       confirmDeleteRequest: 'Eliminar este request?',
       confirmDeleteFolder: 'Eliminar a pasta "{name}"? Os requests dentro passam para "Sem pasta", não são eliminados.',
+      saveAsNote: 'Guardar como nota',
     },
     documentacao: {
       title: 'Documentação',

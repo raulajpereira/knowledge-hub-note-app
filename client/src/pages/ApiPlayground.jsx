@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
+import { useCounts } from '../context/CountsContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
@@ -12,6 +14,22 @@ import { highlightCode, tokenColor } from '../lib/highlight.js';
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const METHOD_COLORS = { GET: 145, POST: 260, PUT: 60, PATCH: 40, DELETE: 25, HEAD: 280, OPTIONS: 280 };
 const optionStyle = { color: '#1a1a1a', background: '#fff' };
+
+let noteBlockIdCounter = 0;
+const newNoteBlockId = () => `b${Date.now()}-${noteBlockIdCounter++}`;
+
+function escapeHtmlText(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Renders enabled key/value rows (Params/Headers/form Body) as one line per
+// row — the same shape the request editor itself uses, just flattened to text.
+function fieldsHtml(rows) {
+  return (rows || [])
+    .filter((r) => r.enabled !== false && r.key)
+    .map((r) => `${escapeHtmlText(r.key)}: ${escapeHtmlText(r.value || '')}`)
+    .join('<br>');
+}
 
 function responseLanguage(response) {
   const contentType = response?.headers?.['content-type'] || '';
@@ -74,7 +92,10 @@ export default function ApiPlayground() {
   const { t } = useLanguage();
   const confirm = useConfirm();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const { refresh: refreshCounts } = useCounts();
   const listPanel = useResizablePanel('apiPlayground.list', 300, { min: 260, max: 520 });
+  const [savingNote, setSavingNote] = useState(false);
 
   const [folders, setFolders] = useState([]);
   const [requests, setRequests] = useState([]);
@@ -175,6 +196,75 @@ export default function ApiPlayground() {
     }
     for (const p of enabledParams) url.searchParams.set(p.key, p.value || '');
     return url.toString();
+  };
+
+  // Mirrors the request as note blocks: a colored method+URL line, then one
+  // text block per non-empty section (Params/Headers/Body), and — the one
+  // piece that's genuinely code rather than a list of fields — the last
+  // response body as a syntax-highlighted snippet.
+  const buildNoteBlocks = (req) => {
+    const blocks = [];
+    const hue = METHOD_COLORS[req.method] || 280;
+    blocks.push({
+      id: newNoteBlockId(),
+      type: 'text',
+      format: 'html',
+      value: `<p><span style="font-weight:800;color:oklch(0.55 0.18 ${hue})">${req.method}</span> <span style="font-weight:600">${escapeHtmlText(buildUrl(req))}</span></p>`,
+    });
+
+    const paramsHtml = fieldsHtml(req.queryParams);
+    if (paramsHtml) {
+      blocks.push({ id: newNoteBlockId(), type: 'text', format: 'html', value: `<p><b>${t('apiPlayground.tabParams')}</b><br>${paramsHtml}</p>` });
+    }
+    const headersHtml = fieldsHtml(req.headers);
+    if (headersHtml) {
+      blocks.push({ id: newNoteBlockId(), type: 'text', format: 'html', value: `<p><b>${t('apiPlayground.tabHeaders')}</b><br>${headersHtml}</p>` });
+    }
+    if (req.bodyType === 'form') {
+      const formHtml = fieldsHtml(req.formBody);
+      if (formHtml) blocks.push({ id: newNoteBlockId(), type: 'text', format: 'html', value: `<p><b>${t('apiPlayground.tabBody')}</b><br>${formHtml}</p>` });
+    } else if (req.bodyType !== 'none' && (req.body || '').trim()) {
+      blocks.push({ id: newNoteBlockId(), type: 'text', format: 'html', value: `<p><b>${t('apiPlayground.tabBody')}</b></p>` });
+      blocks.push({ id: newNoteBlockId(), type: 'code', language: req.bodyType === 'json' ? 'json' : 'plaintext', value: req.body });
+    }
+
+    if (req.lastResponse?.error) {
+      blocks.push({ id: newNoteBlockId(), type: 'text', format: 'html', value: `<p><b>${t('apiPlayground.tabResponse')}</b></p>` });
+      blocks.push({ id: newNoteBlockId(), type: 'code', language: 'plaintext', value: req.lastResponse.error });
+    } else if (req.lastResponse) {
+      const r = req.lastResponse;
+      blocks.push({
+        id: newNoteBlockId(),
+        type: 'text',
+        format: 'html',
+        value: `<p><b>${t('apiPlayground.tabResponse')}</b> — ${r.status} ${escapeHtmlText(r.statusText || '')} (${r.timeMs} ms)</p>`,
+      });
+      blocks.push({ id: newNoteBlockId(), type: 'code', language: responseLanguage(r), value: r.body || '' });
+    }
+
+    return blocks;
+  };
+
+  // Plain-text mirror of the blocks, same idea as Notes' own contentFromBlocks
+  // — feeds the note list's search box and preview snippet.
+  const blocksToContent = (blocks) =>
+    blocks
+      .map((b) => (b.type === 'text' ? b.value.replace(/<[^>]+>/g, ' ') : b.value || ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const saveAsNote = async () => {
+    if (!selected || savingNote) return;
+    setSavingNote(true);
+    try {
+      const blocks = buildNoteBlocks(selected);
+      const { note } = await api.createNote({ title: selected.name, content: blocksToContent(blocks), blocks });
+      refreshCounts();
+      navigate('/notes', { state: { noteId: note.id } });
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   const sendRequest = async () => {
@@ -343,6 +433,13 @@ export default function ApiPlayground() {
               placeholder={t('apiPlayground.namePlaceholder')}
               style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}
             />
+            <span
+              onClick={saveAsNote}
+              title={t('apiPlayground.saveAsNote')}
+              style={{ cursor: savingNote ? 'default' : 'pointer', color: theme.textMuted, display: 'flex', opacity: savingNote ? 0.5 : 1 }}
+            >
+              <Icon name="bookmark" size={16} />
+            </span>
             <span onClick={() => removeRequest(selected.id)} title={t('apiPlayground.deleteRequest')} style={{ cursor: 'pointer', color: theme.textMuted, display: 'flex' }}>
               <Icon name="trash" size={16} />
             </span>
