@@ -299,14 +299,17 @@ router.post('/', upload.single('file'), async (req, res) => {
     // the body) stays a normal attachment.
     let bodyHtml = data.bodyHtml || null;
     const attachments = [];
-    // Hidden images (PidTagAttachmentHidden) that couldn't be cid-matched
-    // into an HTML body — e.g. a Rich Text format message with no HTML/cid
-    // to match against at all, or an HTML message where this particular
-    // picture just isn't cid-referenced in the markup (common for images
-    // pasted straight into the body rather than "inserted"). Outlook
-    // doesn't list these as attachments either, so instead of dropping them
-    // (losing the picture) they're positioned into `blocks` below using
-    // their own recorded renderingPosition.
+    // Images that couldn't be cid-matched into an HTML body but are still
+    // meant to render inline rather than as a download — e.g. a Rich Text
+    // format message with no HTML/cid to match against at all, or an HTML
+    // message where this particular picture just isn't cid-referenced in
+    // the markup (common for images pasted straight into the body rather
+    // than "inserted"). Outlook marks these PidTagAttachmentHidden, but
+    // that flag isn't reliably set by every sender/relay — a present,
+    // non-sentinel PidTagRenderingPosition is the more direct MAPI signal
+    // that this attachment is meant to render inline (that property only
+    // makes sense for inline content), so either one qualifies. These get
+    // positioned into `blocks` below instead of listed as an attachment.
     const strayInlineImages = [];
     for (const att of data.attachments || []) {
       try {
@@ -324,8 +327,9 @@ router.post('/', upload.single('file'), async (req, res) => {
             inlined = true;
           }
         }
-        if (!inlined && att.attachmentHidden && isImageAttachment(att)) {
-          strayInlineImages.push({ url, position: renderingPositionOf(att) });
+        const renderingPosition = renderingPositionOf(att);
+        if (!inlined && isImageAttachment(att) && (att.attachmentHidden || renderingPosition !== undefined)) {
+          strayInlineImages.push({ url, position: renderingPosition });
         } else if (!inlined) {
           attachments.push({ name: safeName, size: extracted.content.length, url });
         }

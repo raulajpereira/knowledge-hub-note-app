@@ -7,10 +7,28 @@ import Icon from '../components/Icon.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import PanelDivider from '../components/PanelDivider.jsx';
 import { useResizablePanel } from '../lib/useResizablePanel.js';
+import { highlightCode, tokenColor } from '../lib/highlight.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const METHOD_COLORS = { GET: 145, POST: 260, PUT: 60, PATCH: 40, DELETE: 25, HEAD: 280, OPTIONS: 280 };
 const optionStyle = { color: '#1a1a1a', background: '#fff' };
+
+function responseLanguage(response) {
+  const contentType = response?.headers?.['content-type'] || '';
+  if (/json/i.test(contentType)) return 'json';
+  if (/javascript/i.test(contentType)) return 'javascript';
+  if (/xml|html/i.test(contentType)) return 'plaintext';
+  const body = (response?.body || '').trim();
+  if (body.startsWith('{') || body.startsWith('[')) {
+    try {
+      JSON.parse(body);
+      return 'json';
+    } catch {
+      // not actually JSON despite looking like it — fall through
+    }
+  }
+  return 'plaintext';
+}
 
 function KeyValueRows({ rows, onChange, keyPlaceholder, valuePlaceholder, addLabel, theme }) {
   const list = rows || [];
@@ -518,7 +536,16 @@ export default function ApiPlayground() {
                     </span>
                   </div>
                   <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5, background: theme.subtleBg, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 12, maxHeight: 400, overflowY: 'auto', color: theme.textPrimary }}>
-                    {selected.lastResponse.body}
+                    {highlightCode(selected.lastResponse.body, responseLanguage(selected.lastResponse)).map((tokens, i) => (
+                      <div key={i}>
+                        {tokens.map((tok, j) => (
+                          <span key={j} style={{ color: tokenColor(tok.type, theme.dark) }}>
+                            {tok.text}
+                          </span>
+                        ))}
+                        {tokens.length === 0 && ' '}
+                      </div>
+                    ))}
                   </pre>
                 </>
               )}
