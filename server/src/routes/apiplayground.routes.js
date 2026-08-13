@@ -151,7 +151,7 @@ router.patch('/requests/:id', async (req, res) => {
   const request = await prisma.apiRequest.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!request) return res.status(404).json({ error: 'Request not found' });
 
-  const { name, method, url, headers, queryParams, bodyType, body, authType, authConfig, folderId, lastResponse } = req.body || {};
+  const { name, method, url, headers, queryParams, bodyType, body, formBody, authType, authConfig, folderId, lastResponse } = req.body || {};
   const data = {};
   if (name !== undefined) data.name = name.trim() || request.name;
   if (method !== undefined) {
@@ -166,6 +166,7 @@ router.patch('/requests/:id', async (req, res) => {
     data.bodyType = bodyType;
   }
   if (body !== undefined) data.body = body;
+  if (formBody !== undefined) data.formBody = Array.isArray(formBody) ? formBody : null;
   if (authType !== undefined) {
     if (!AUTH_TYPES.includes(authType)) return res.status(400).json({ error: 'Invalid authType' });
     data.authType = authType;
