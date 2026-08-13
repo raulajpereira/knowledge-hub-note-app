@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { api } from '../api.js';
 import Icon from './Icon.jsx';
+import AccountModal from './AccountModal.jsx';
 import logoWordmarkDark from '../assets/logo-wordmark-dark.png';
 import logoWordmarkLight from '../assets/logo-wordmark-light.png';
 
@@ -28,6 +29,7 @@ export default function Layout() {
   const { t } = useLanguage();
   const location = useLocation();
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const loadPending = () => {
     api.listCodeRequests().then((r) => setPendingRequests(r.requests.filter((req) => req.status === 'pending').length)).catch(() => {});
@@ -84,7 +86,10 @@ export default function Layout() {
           </NavLink>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, background: theme.subtleBg, marginTop: 10 }}>
+        <div
+          onClick={() => setAccountOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, background: theme.subtleBg, marginTop: 10, cursor: 'pointer' }}
+        >
           <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: theme.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12.5 }}>
             {userInitials(user?.name)}
           </div>
@@ -131,6 +136,7 @@ export default function Layout() {
           <Outlet context={{ onCodeRequestsChanged: () => window.dispatchEvent(new Event('kh-backoffice:code-requests-changed')) }} />
         </div>
       </div>
+      {accountOpen && <AccountModal onClose={() => setAccountOpen(false)} />}
     </div>
   );
 }

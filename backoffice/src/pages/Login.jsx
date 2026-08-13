@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import PreAuthLanguageToggle from '../components/PreAuthLanguageToggle.jsx';
 import logoIcon from '../assets/logo-icon.png';
 
 export default function Login() {
   const { login, completeLogin2fa } = useAuth();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [reveal, setReveal] = useState(false);
@@ -82,15 +83,7 @@ export default function Login() {
           background: 'linear-gradient(90deg, rgba(6,7,10,0.62) 0%, rgba(6,7,10,0.3) 48%, rgba(6,7,10,0.12) 100%)',
         }}
       />
-      <div
-        style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 46, display: 'flex', alignItems: 'center',
-          padding: '0 28px', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
-          color: 'oklch(0.82 0.1 70)', background: 'rgba(0,0,0,0.28)', borderBottom: '1px solid oklch(0.74 0.16 70 / 0.35)', zIndex: 5,
-        }}
-      >
-        {t('backoffice.stripeLabel')} <b style={{ color: 'oklch(0.9 0.12 70)', marginLeft: 6, fontWeight: 800 }}>{t('backoffice.stripeSub')}</b>
-      </div>
+      <PreAuthLanguageToggle lang={lang} onChange={setLanguage} />
       <div
         style={{
           position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center',
@@ -98,12 +91,7 @@ export default function Login() {
         }}
       >
         <div style={{ flex: '1 1 380px', maxWidth: 540, display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src={logoIcon} alt="" style={{ height: 26, width: 'auto', filter: 'brightness(0) invert(1)' }} />
-            <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'oklch(0.82 0.1 70)' }}>
-              {t('backoffice.tag')}
-            </div>
-          </div>
+          <img src={logoIcon} alt="" style={{ height: 26, width: 'auto', alignSelf: 'flex-start', filter: 'brightness(0) invert(1)' }} />
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4.4vw, 54px)', fontWeight: 800, lineHeight: 1.06, letterSpacing: '-0.02em' }}>
             {t('backoffice.heroTitle')}<br />{t('backoffice.heroTitle2')}
           </div>
@@ -168,10 +156,7 @@ export default function Login() {
             </>
           ) : (
             <>
-              <div>
-                <div style={{ fontSize: 17, fontWeight: 800 }}>{t('backoffice.signInTitle')}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>{t('backoffice.signInDesc')}</div>
-              </div>
+              <div style={{ fontSize: 17, fontWeight: 800 }}>{t('backoffice.signInTitle')}</div>
 
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{t('login.email')}</div>
@@ -218,8 +203,6 @@ export default function Login() {
               >
                 {submitting ? t('login.signingIn') : t('backoffice.signIn')}
               </button>
-
-              <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)' }}>🔒 {t('backoffice.restrictedNote')}</div>
             </>
           )}
         </form>
