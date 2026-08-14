@@ -7,13 +7,15 @@ set -euo pipefail
 
 EXT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_DIR="$EXT_DIR/../client/public/extension"
-STAGE="$(mktemp -d)"
-trap 'rm -rf "$STAGE"' EXIT
-
-mkdir -p "$STAGE/knowledge-hub-clipper" "$OUT_DIR"
-cp -r "$EXT_DIR"/* "$STAGE/knowledge-hub-clipper/"
+mkdir -p "$OUT_DIR"
 rm -f "$OUT_DIR/knowledge-hub-clipper.zip"
 
-(cd "$STAGE" && zip -r -X "$OUT_DIR/knowledge-hub-clipper.zip" knowledge-hub-clipper -x "*.DS_Store" >/dev/null)
+# No wrapper directory inside the zip: manifest.json sits at the zip root.
+# Both Windows' "Extract All" and macOS' Archive Utility already create a
+# folder named after the zip on extraction — wrapping the contents in a
+# same-named folder ourselves would double-nest manifest.json one level
+# deeper than where the user points "Load unpacked", which is exactly the
+# "manifest file is missing" error users hit.
+(cd "$EXT_DIR" && zip -r -X "$OUT_DIR/knowledge-hub-clipper.zip" . -x "*.DS_Store" -x "build-zip.sh" >/dev/null)
 
 echo "==> Wrote $OUT_DIR/knowledge-hub-clipper.zip"
