@@ -293,6 +293,58 @@ function VpsCard({ theme, t, card, user, refreshMe }) {
   );
 }
 
+function ExtensionCard({ theme, t, card }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText('chrome://extensions');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const steps = [t('settings.extensionStep1'), t('settings.extensionStep2'), t('settings.extensionStep3'), t('settings.extensionStep4')];
+
+  return (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: theme.cardBg, border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon name="plug" size={17} color={theme.textPrimary} />
+        </div>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.extension')}</div>
+          <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.extensionDesc')}</div>
+        </div>
+        <a
+          href="/extension/knowledge-hub-clipper.zip"
+          download
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: theme.accent, color: '#fff', borderRadius: 8, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}
+        >
+          <Icon name="download" size={15} color="#fff" />
+          {t('settings.extensionDownload')}
+        </a>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 14, borderTop: `1px solid ${theme.border}` }}>
+        {steps.map((step, i) => (
+          <div key={i} style={{ display: 'flex', gap: 10, fontSize: 12.5, color: theme.textMuted, alignItems: 'flex-start' }}>
+            <span style={{ width: 18, height: 18, borderRadius: '50%', background: theme.subtleBg, color: theme.textPrimary, fontSize: 10.5, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+              {i + 1}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {step}
+              {i === 1 && (
+                <span onClick={copyUrl} title="chrome://extensions" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer', color: copied ? theme.accentText : theme.textMuted }}>
+                  <Icon name={copied ? 'check' : 'copy'} size={12} />
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function detectedProviderLabel(agent) {
   if (agent.provider === 'anthropic') return 'Anthropic';
   const host = (() => {
@@ -764,6 +816,8 @@ export default function Settings() {
 
       {activeTab === 'integrations' && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <ExtensionCard theme={theme} t={t} card={nestedCard} />
+
       {hasFeature(user, 'serverInfo') && <VpsCard theme={theme} t={t} card={nestedCard} user={user} refreshMe={refreshMe} />}
 
       {hasFeature(user, 'agents') && (
