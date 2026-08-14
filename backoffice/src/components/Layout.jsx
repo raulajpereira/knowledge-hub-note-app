@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/contas', icon: 'users', labelKey: 'backoffice.navAccounts' },
   { to: '/templates', icon: 'doc', labelKey: 'backoffice.navTemplates' },
   { to: '/logs', icon: 'history', labelKey: 'backoffice.navActivityLog' },
+  { to: '/vps', icon: 'server', labelKey: 'backoffice.navVps' },
 ];
 
 function userInitials(name) {

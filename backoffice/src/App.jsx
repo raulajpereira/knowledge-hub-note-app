@@ -11,6 +11,7 @@ import CreateCodes from './pages/CreateCodes.jsx';
 import Accounts from './pages/Accounts.jsx';
 import Templates from './pages/Templates.jsx';
 import ActivityLog from './pages/ActivityLog.jsx';
+import VpsManagement from './pages/VpsManagement.jsx';
 import Appearance from './pages/Appearance.jsx';
 
 function FullScreenLoader() {
@@ -49,6 +50,7 @@ function AuthedApp() {
           <Route path="/contas" element={<Accounts />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/logs" element={<ActivityLog />} />
+          <Route path="/vps" element={<VpsManagement />} />
           <Route path="/aparencia" element={<Appearance />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

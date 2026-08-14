@@ -58,4 +58,8 @@ export const api = {
 
   listAuditLog: (params) => request(`/audit-log${params ? `?${new URLSearchParams(params)}` : ''}`),
   purgeAuditLog: (olderThanDays) => request(`/audit-log?${new URLSearchParams({ olderThanDays })}`, { method: 'DELETE' }),
+
+  setHostingerToken: (token) => request('/vps/token', { method: 'POST', body: { token } }),
+  clearHostingerToken: () => request('/vps/token', { method: 'DELETE' }),
+  getVpsStatus: () => request('/vps/status'),
 };
