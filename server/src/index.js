@@ -44,7 +44,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
+// CLIENT_ORIGIN pins CORS to a single origin in production (see
+// DEPLOYMENT.md) — the browser clipper extension calls this API directly
+// from its own chrome-extension://<id> origin, which never matches that, so
+// it's allowed explicitly. CORS is a browser-side convenience here, not the
+// security boundary: every data route still requires a valid Bearer token
+// regardless of Origin.
+const clientOrigin = process.env.CLIENT_ORIGIN;
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || !clientOrigin || origin === clientOrigin || origin.startsWith('chrome-extension://')) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
+}));
 app.use(express.json({ limit: '5mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use(auditMiddleware);

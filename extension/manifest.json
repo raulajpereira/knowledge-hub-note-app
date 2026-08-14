@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Knowledge Hub Clipper",
+  "short_name": "KH Clipper",
+  "version": "1.0.0",
+  "description": "Guarda a página que estás a ver como nota no teu Knowledge Hub.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Knowledge Hub Clipper"
+  },
+  "permissions": ["activeTab", "scripting", "storage"]
+}
