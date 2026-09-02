@@ -76,6 +76,10 @@ model User {
   sessions            Session[]
   emails              Email[]
   emailFolders        EmailFolder[]
+  people              Person[]
+  managementTopics    ManagementTopic[]
+  managementTasks     ManagementTask[]
+  allocations         Allocation[]
 
   @@map("users")
 }
@@ -102,6 +106,9 @@ model Project {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   transportRequests TransportRequest[]
+  managementTopics  ManagementTopic[]
+  managementTasks   ManagementTask[]
+  allocations       Allocation[]
 
   @@index([userId])
   @@map("projects")
@@ -934,4 +941,106 @@ model EmailFolder {
   @@index([userId])
   @@index([parentId])
   @@map("email_folders")
+}
+
+// Everything below backs the "Gestão" page: a private (per-user) space for
+// tracking the people you manage, open management topics, a dedicated task
+// list for management follow-ups, and monthly allocation of people to
+// existing Projects.
+
+model Person {
+  id                  String   @id @default(uuid())
+  userId              String
+  name                String
+  role                String?
+  email               String?
+  phone               String?
+  weeklyCapacityHours Float?
+  skills              Json? // array of strings
+  notes               String?  @db.Text
+  archived            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allocations Allocation[]
+  topics      ManagementTopic[]
+  tasks       ManagementTask[]
+
+  @@index([userId])
+  @@map("management_people")
+}
+
+model ManagementTopic {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  category  String   @default("Decisão") // Decisão | Risco | Bloqueio | Follow-up
+  status    String   @default("Aberto") // Aberto | Em curso | Resolvido
+  ownerId   String?
+  projectId String?
+  due       String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  owner   Person?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  project Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  tasks   ManagementTask[]
+
+  @@index([userId])
+  @@index([ownerId])
+  @@index([projectId])
+  @@map("management_topics")
+}
+
+model ManagementTask {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  status    String   @default("todo") // todo | in_progress | done
+  priority  String   @default("Medium") // Low | Medium | High
+  ownerId   String?
+  projectId String?
+  topicId   String?
+  due       String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  owner   Person?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  project Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  topic   ManagementTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([ownerId])
+  @@index([projectId])
+  @@map("management_tasks")
+}
+
+// Monthly-granularity allocation of a Person to a Project — startMonth/
+// endMonth are "YYYY-MM" strings (inclusive), rendered as bars in the
+// Gestão page's allocation timeline.
+model Allocation {
+  id         String   @id @default(uuid())
+  userId     String
+  personId   String
+  projectId  String
+  startMonth String
+  endMonth   String
+  percent    Int      @default(100)
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([personId])
+  @@index([projectId])
+  @@map("allocations")
 }

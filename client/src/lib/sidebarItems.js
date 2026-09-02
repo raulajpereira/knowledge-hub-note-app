@@ -20,6 +20,7 @@ export const SIDEBAR_ITEMS = [
   { key: 'sapSystems', to: '/sap-systems', icon: 'server', countKey: 'sapSystems' },
   { key: 'transportRequests', to: '/transport-requests', icon: 'truck', countKey: 'transportRequests' },
   { key: 'contacts', to: '/contacts', icon: 'idCard', countKey: 'contacts' },
+  { key: 'management', to: '/management', icon: 'briefcase' },
   { key: 'emails', to: '/emails', icon: 'mail', countKey: 'emails' },
   { key: 'calendar', to: '/calendar', icon: 'calendar' },
   { key: 'graph', to: '/graph', icon: 'graph' },

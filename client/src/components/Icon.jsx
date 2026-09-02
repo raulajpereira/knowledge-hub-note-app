@@ -228,6 +228,12 @@ const PATHS = {
     ['path', { d: 'M20 11a8 8 0 0 0-14.5-4.5M4 5v5h5' }],
     ['path', { d: 'M4 13a8 8 0 0 0 14.5 4.5M20 19v-5h-5' }],
   ],
+  briefcase: [
+    ['rect', { x: 3, y: 7.5, width: 18, height: 12, rx: 1.8 }],
+    ['path', { d: 'M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5' }],
+    ['path', { d: 'M3 12.5h18' }],
+    ['path', { d: 'M10.3 12.5v1.8h3.4v-1.8' }],
+  ],
 };
 
 export default function Icon({ name, size = 18, color = 'currentColor', strokeWidth = 1.8 }) {

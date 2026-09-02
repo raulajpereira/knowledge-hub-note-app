@@ -29,6 +29,7 @@ import Clients from './pages/Clients.jsx';
 import SapSystems from './pages/SapSystems.jsx';
 import TransportRequests from './pages/TransportRequests.jsx';
 import Contacts from './pages/Contacts.jsx';
+import Management from './pages/Management.jsx';
 import Emails from './pages/Emails.jsx';
 import Graph from './pages/Graph.jsx';
 import ApiPlayground from './pages/ApiPlayground.jsx';
@@ -98,6 +99,7 @@ export default function App() {
                   <Route path="/sap-systems" element={<FeatureRoute feature="sapSystems"><SapSystems /></FeatureRoute>} />
                   <Route path="/transport-requests" element={<FeatureRoute feature="transportRequests"><TransportRequests /></FeatureRoute>} />
                   <Route path="/contacts" element={<FeatureRoute feature="contacts"><Contacts /></FeatureRoute>} />
+                  <Route path="/management" element={<FeatureRoute feature="management"><Management /></FeatureRoute>} />
                   <Route path="/emails" element={<FeatureRoute feature="emails"><Emails /></FeatureRoute>} />
                   <Route path="/calendar" element={<FeatureRoute feature="calendar"><Calendar /></FeatureRoute>} />
                   <Route path="/graph" element={<FeatureRoute feature="graph"><Graph /></FeatureRoute>} />

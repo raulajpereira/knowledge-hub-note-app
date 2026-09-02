@@ -25,6 +25,7 @@ export const FEATURE_KEYS = [
   'agents',
   'screenCapture',
   'serverInfo',
+  'management',
 ];
 
 // null/undefined enabledFeatures means "every feature" (grandfathered

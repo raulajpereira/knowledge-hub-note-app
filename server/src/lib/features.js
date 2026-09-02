@@ -27,6 +27,7 @@ export const FEATURE_KEYS = [
   'agents',
   'screenCapture',
   'serverInfo',
+  'management',
 ];
 
 const FEATURE_KEY_SET = new Set(FEATURE_KEYS);

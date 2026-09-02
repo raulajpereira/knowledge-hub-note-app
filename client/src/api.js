@@ -223,6 +223,26 @@ export const api = {
   updateContact: (id, payload) => request(`/contacts/${id}`, { method: 'PATCH', body: payload }),
   deleteContact: (id) => request(`/contacts/${id}`, { method: 'DELETE' }),
 
+  listPeople: () => request('/management/people'),
+  createPerson: (payload) => request('/management/people', { method: 'POST', body: payload }),
+  updatePerson: (id, payload) => request(`/management/people/${id}`, { method: 'PATCH', body: payload }),
+  deletePerson: (id) => request(`/management/people/${id}`, { method: 'DELETE' }),
+
+  listManagementTopics: () => request('/management/topics'),
+  createManagementTopic: (payload) => request('/management/topics', { method: 'POST', body: payload }),
+  updateManagementTopic: (id, payload) => request(`/management/topics/${id}`, { method: 'PATCH', body: payload }),
+  deleteManagementTopic: (id) => request(`/management/topics/${id}`, { method: 'DELETE' }),
+
+  listManagementTasks: () => request('/management/tasks'),
+  createManagementTask: (payload) => request('/management/tasks', { method: 'POST', body: payload }),
+  updateManagementTask: (id, payload) => request(`/management/tasks/${id}`, { method: 'PATCH', body: payload }),
+  deleteManagementTask: (id) => request(`/management/tasks/${id}`, { method: 'DELETE' }),
+
+  listAllocations: () => request('/management/allocations'),
+  createAllocation: (payload) => request('/management/allocations', { method: 'POST', body: payload }),
+  updateAllocation: (id, payload) => request(`/management/allocations/${id}`, { method: 'PATCH', body: payload }),
+  deleteAllocation: (id) => request(`/management/allocations/${id}`, { method: 'DELETE' }),
+
   listTransportRequests: (projectId) => request(`/transport-requests${projectId ? `?projectId=${projectId}` : ''}`),
   createTransportRequest: (payload) => request('/transport-requests', { method: 'POST', body: payload }),
   updateTransportRequest: (id, payload) => request(`/transport-requests/${id}`, { method: 'PATCH', body: payload }),
