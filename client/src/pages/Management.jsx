@@ -4,8 +4,12 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { useConfirm } from '../context/ConfirmContext.jsx';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import TemplateMenu from '../components/TemplateMenu.jsx';
+import SaveTemplateButton from '../components/SaveTemplateButton.jsx';
+import PanelDivider from '../components/PanelDivider.jsx';
 import { backdropClose } from '../lib/backdropClose.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { useResizablePanel } from '../lib/useResizablePanel.js';
 
 const TOPIC_CATEGORIES = ['Decisão', 'Risco', 'Bloqueio', 'Follow-up'];
 const TOPIC_STATUSES = ['Aberto', 'Em curso', 'Resolvido'];
@@ -15,6 +19,12 @@ const CATEGORY_HUES = { 'Decisão': 250, 'Risco': 20, 'Bloqueio': 25, 'Follow-up
 const TOPIC_STATUS_HUES = { Aberto: 60, 'Em curso': 290, Resolvido: 145 };
 const TASK_STATUS_HUES = { todo: 60, in_progress: 290, done: 145 };
 const PRIORITY_HUES = { Low: 250, Medium: 60, High: 25 };
+const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
+const TASK_FILTERS = [
+  { key: 'active', labelKey: 'tasks.filterActive' },
+  { key: 'done', labelKey: 'tasks.filterDone' },
+  { key: 'all', labelKey: 'tasks.filterAll' },
+];
 
 function hueFromString(s) {
   let h = 0;
@@ -102,6 +112,7 @@ export default function Management() {
   const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const isMobile = useIsMobile();
+  const taskListPanel = useResizablePanel('management.tasks.list', 340, { min: 260, max: 560 });
 
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('dashboard');
@@ -115,6 +126,13 @@ export default function Management() {
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [allocationFormOpen, setAllocationFormOpen] = useState(false);
+
+  const [taskView, setTaskView] = useState('list');
+  const [taskFilter, setTaskFilter] = useState('active');
+  const [taskSortBy, setTaskSortBy] = useState('recent');
+  const [taskSearch, setTaskSearch] = useState('');
+  const [taskSelectMode, setTaskSelectMode] = useState(false);
+  const [taskSelectedIds, setTaskSelectedIds] = useState(() => new Set());
 
   useEffect(() => {
     Promise.all([
@@ -186,6 +204,21 @@ export default function Management() {
     const { task } = await api.createManagementTask({ title: t('management.untitledTask') });
     setMgmtTasks((prev) => [task, ...prev]);
     setSelectedTaskId(task.id);
+    setTaskView('list');
+    setTaskFilter('active');
+  };
+  const addMgmtTaskFromTemplate = async (tpl) => {
+    const { task } = await api.createManagementTask({
+      title: tpl.data.title || tpl.name,
+      priority: tpl.data.priority,
+      notes: tpl.data.notes,
+      ownerId: tpl.data.ownerId,
+      projectId: tpl.data.projectId,
+    });
+    setMgmtTasks((prev) => [task, ...prev]);
+    setSelectedTaskId(task.id);
+    setTaskView('list');
+    setTaskFilter('active');
   };
   const patchMgmtTask = async (id, payload) => {
     const { task } = await api.updateManagementTask(id, payload);
@@ -198,6 +231,51 @@ export default function Management() {
     setMgmtTasks((prev) => prev.filter((tk) => tk.id !== id));
     setSelectedTaskId(null);
   };
+
+  const toggleTaskSelected = (id) => {
+    setTaskSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const clearTaskSelection = () => {
+    setTaskSelectedIds(new Set());
+    setTaskSelectMode(false);
+  };
+  const bulkDeleteTasks = async () => {
+    const ok = await confirm({ message: t('common.confirmDeleteMessage') });
+    if (!ok) return;
+    const ids = [...taskSelectedIds];
+    await Promise.all(ids.map((id) => api.deleteManagementTask(id)));
+    setMgmtTasks((prev) => prev.filter((tk) => !taskSelectedIds.has(tk.id)));
+    if (selectedTaskId && taskSelectedIds.has(selectedTaskId)) setSelectedTaskId(null);
+    clearTaskSelection();
+  };
+  const bulkMarkTasksDone = async () => {
+    const ids = [...taskSelectedIds];
+    const updated = await Promise.all(ids.map((id) => api.updateManagementTask(id, { status: 'done' })));
+    const byId = new Map(updated.map(({ task }) => [task.id, task]));
+    setMgmtTasks((prev) => prev.map((tk) => byId.get(tk.id) || tk));
+    clearTaskSelection();
+  };
+
+  const filteredTasks = useMemo(() => {
+    const list = mgmtTasks
+      .filter((tk) => (taskFilter === 'active' ? tk.status !== 'done' : taskFilter === 'done' ? tk.status === 'done' : true))
+      .filter((tk) => !taskSearch.trim() || tk.title.toLowerCase().includes(taskSearch.toLowerCase()));
+    if (taskSortBy === 'priority') {
+      return [...list].sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+    }
+    return list;
+  }, [mgmtTasks, taskFilter, taskSearch, taskSortBy]);
+
+  useEffect(() => {
+    if (tab === 'tasks' && taskView === 'list' && !isMobile && !selectedTaskId && filteredTasks.length > 0) {
+      setSelectedTaskId(filteredTasks[0].id);
+    }
+  }, [tab, taskView, filteredTasks, selectedTaskId, isMobile]);
 
   // ---- People -------------------------------------------------------------
 
@@ -438,36 +516,197 @@ export default function Management() {
 
       {tab === 'tasks' && (
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button onClick={addMgmtTask} style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-              <Icon name="plus" size={15} color="#fff" /> {t('management.newTask')}
-            </button>
-          </div>
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, overflowX: 'auto' }}>
-            {TASK_STATUSES.map((status) => (
-              <div
-                key={status}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => patchMgmtTask(e.dataTransfer.getData('text/task-id'), { status })}
-                style={{ flex: '1 1 240px', minWidth: 220, background: theme.subtleBg, borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '100%', overflowY: 'auto' }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: theme.subtleBg, borderRadius: 10, padding: '9px 12px', flex: '1 1 220px', minWidth: 0, maxWidth: 340 }}>
+              <span style={{ opacity: 0.5, display: 'flex' }}><Icon name="search" size={15} /></span>
+              <input
+                value={taskSearch}
+                onChange={(e) => setTaskSearch(e.target.value)}
+                placeholder={t('tasks.searchPlaceholder')}
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13.5, flex: 1, minWidth: 0, color: theme.textPrimary }}
+              />
+            </div>
+            {taskView === 'list' && (
+              <button
+                onClick={() => (taskSelectMode ? clearTaskSelection() : setTaskSelectMode(true))}
+                title={t('tasks.selectMode')}
+                style={{
+                  display: 'flex', alignItems: 'center', background: taskSelectMode ? theme.accentSoftBg : 'transparent',
+                  color: taskSelectMode ? theme.accentText : theme.textMuted, border: `1px solid ${theme.border}`, borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0,
+                }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 4px 8px' }}>
-                  <Badge label={t(`management.taskStatus.${status}`)} hue={TASK_STATUS_HUES[status]} theme={theme} />
-                  <span style={{ fontSize: 11.5, color: theme.textMuted }}>{mgmtTasks.filter((tk) => tk.status === status).length}</span>
+                <Icon name="check" size={16} />
+              </button>
+            )}
+            <TemplateMenu entityType="managementTask" onUse={addMgmtTaskFromTemplate} />
+            <button onClick={addMgmtTask} title={t('management.newTask')} style={{ display: 'flex', alignItems: 'center', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 12px', cursor: 'pointer', flexShrink: 0 }}>
+              <Icon name="plus" size={16} color="#fff" />
+            </button>
+            <div style={{ flex: 1 }} />
+            <div style={{ display: 'flex', background: theme.subtleBg, borderRadius: 9, padding: 3, gap: 3 }}>
+              {[{ key: 'list', icon: 'doc' }, { key: 'board', icon: 'archive' }].map((v) => (
+                <div
+                  key={v.key}
+                  onClick={() => setTaskView(v.key)}
+                  title={t(`tasks.view${v.key === 'list' ? 'List' : 'Board'}`)}
+                  style={{
+                    padding: '7px 10px', borderRadius: 7, cursor: 'pointer', display: 'flex',
+                    background: taskView === v.key ? theme.cardBg : 'transparent',
+                    color: taskView === v.key ? theme.accentText : theme.textMuted,
+                  }}
+                >
+                  <Icon name={v.icon} size={15} />
                 </div>
-                {mgmtTasks.filter((tk) => tk.status === status).map((mtask) => (
-                  <div key={mtask.id} draggable onDragStart={(e) => e.dataTransfer.setData('text/task-id', mtask.id)} onClick={() => setSelectedTaskId(mtask.id)} style={cardStyle}>
-                    <div style={{ fontSize: 13, fontWeight: 700 }}>{mtask.title}</div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <Badge label={mtask.priority} hue={PRIORITY_HUES[mtask.priority]} theme={theme} />
-                    </div>
-                    {mtask.owner && <div style={{ fontSize: 11, color: theme.textMuted }}>{mtask.owner.name}</div>}
-                    {mtask.due && <div style={{ fontSize: 11, color: theme.textMuted }}>{t('common.due', { date: mtask.due })}</div>}
+              ))}
+            </div>
+          </div>
+
+          {taskView === 'list' && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {TASK_FILTERS.map((f) => (
+                  <div
+                    key={f.key}
+                    onClick={() => setTaskFilter(f.key)}
+                    style={{
+                      padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                      background: taskFilter === f.key ? theme.accentSoftBg : theme.subtleBg,
+                      color: taskFilter === f.key ? theme.accentText : theme.textMuted,
+                    }}
+                  >
+                    {t(f.labelKey)}
                   </div>
                 ))}
               </div>
-            ))}
-          </div>
+              <select
+                value={taskSortBy}
+                onChange={(e) => setTaskSortBy(e.target.value)}
+                style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: '6px 8px', fontSize: 12, fontWeight: 600, background: theme.subtleBg, color: theme.textPrimary, outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="recent" style={optionStyle()}>{t('tasks.sortBy')}: {t('tasks.sortRecent')}</option>
+                <option value="priority" style={optionStyle()}>{t('tasks.sortBy')}: {t('tasks.sortPriority')}</option>
+              </select>
+            </div>
+          )}
+
+          {taskView === 'list' && taskSelectMode && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', background: theme.accentSoftBg, borderRadius: 10, padding: '8px 10px' }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: theme.accentText, marginRight: 4 }}>{t('tasks.selectedCount', { n: taskSelectedIds.size })}</span>
+              <button onClick={bulkDeleteTasks} disabled={taskSelectedIds.size === 0} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: taskSelectedIds.size ? 'pointer' : 'default', opacity: taskSelectedIds.size ? 1 : 0.5 }}>
+                {t('common.delete')}
+              </button>
+              <button onClick={bulkMarkTasksDone} disabled={taskSelectedIds.size === 0} style={{ background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textPrimary, borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: taskSelectedIds.size ? 'pointer' : 'default', opacity: taskSelectedIds.size ? 1 : 0.5 }}>
+                {t('tasks.markDone')}
+              </button>
+              <span onClick={clearTaskSelection} style={{ marginLeft: 'auto', cursor: 'pointer', color: theme.textMuted, fontSize: 12.5, fontWeight: 600 }}>{t('common.cancel')}</span>
+            </div>
+          )}
+
+          {taskView === 'board' ? (
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, overflowX: 'auto' }}>
+              {TASK_STATUSES.map((status) => (
+                <div
+                  key={status}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => patchMgmtTask(e.dataTransfer.getData('text/task-id'), { status })}
+                  style={{ flex: '1 1 240px', minWidth: 220, background: theme.subtleBg, borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '100%', overflowY: 'auto' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 4px 8px' }}>
+                    <Badge label={t(`management.taskStatus.${status}`)} hue={TASK_STATUS_HUES[status]} theme={theme} />
+                    <span style={{ fontSize: 11.5, color: theme.textMuted }}>
+                      {mgmtTasks.filter((tk) => tk.status === status && (!taskSearch.trim() || tk.title.toLowerCase().includes(taskSearch.toLowerCase()))).length}
+                    </span>
+                  </div>
+                  {mgmtTasks
+                    .filter((tk) => tk.status === status && (!taskSearch.trim() || tk.title.toLowerCase().includes(taskSearch.toLowerCase())))
+                    .map((mtask) => (
+                      <div
+                        key={mtask.id}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('text/task-id', mtask.id)}
+                        onClick={() => { setSelectedTaskId(mtask.id); setTaskView('list'); }}
+                        style={cardStyle}
+                      >
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>{mtask.title}</div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <Badge label={mtask.priority} hue={PRIORITY_HUES[mtask.priority]} theme={theme} />
+                        </div>
+                        {mtask.owner && <div style={{ fontSize: 11, color: theme.textMuted }}>{mtask.owner.name}</div>}
+                        {mtask.due && <div style={{ fontSize: 11, color: theme.textMuted }}>{t('common.due', { date: mtask.due })}</div>}
+                      </div>
+                    ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: isMobile ? 0 : 12 }}>
+              {!(isMobile && selectedTaskId) && (
+                <div style={{ flex: isMobile ? '1 1 auto' : `0 0 ${taskListPanel.width}px`, minWidth: isMobile ? 0 : 240, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: 1, minHeight: 0 }}>
+                    {filteredTasks.length === 0 && <div style={{ padding: 14, fontSize: 13, color: theme.textMuted }}>{t('tasks.noTasksHere')}</div>}
+                    {filteredTasks.map((mtask) => {
+                      const hue = PRIORITY_HUES[mtask.priority];
+                      const isDone = mtask.status === 'done';
+                      const active = taskSelectMode ? taskSelectedIds.has(mtask.id) : selectedTaskId === mtask.id;
+                      return (
+                        <div
+                          key={mtask.id}
+                          onClick={() => (taskSelectMode ? toggleTaskSelected(mtask.id) : setSelectedTaskId(mtask.id))}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', background: active ? theme.accentSoftBg : 'transparent' }}
+                        >
+                          {taskSelectMode ? (
+                            <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${taskSelectedIds.has(mtask.id) ? theme.accent : theme.border}`, background: taskSelectedIds.has(mtask.id) ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {taskSelectedIds.has(mtask.id) && <Icon name="check" size={11} color="#fff" strokeWidth={3} />}
+                            </span>
+                          ) : (
+                            <div
+                              onClick={(e) => { e.stopPropagation(); patchMgmtTask(mtask.id, { status: isDone ? 'todo' : 'done' }); }}
+                              style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${isDone ? theme.accent : theme.border}`, background: isDone ? theme.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                            >
+                              {isDone && <Icon name="check" size={12} color="#fff" strokeWidth={2.5} />}
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 700, textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {mtask.title}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: theme.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {mtask.owner?.name || t('management.none')}{mtask.due ? ` · ${t('common.due', { date: mtask.due })}` : ''}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, flexShrink: 0, background: `oklch(0.93 0.06 ${hue})`, color: `oklch(0.45 0.14 ${hue})` }}>
+                            {mtask.priority}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {!isMobile && <PanelDivider theme={theme} onResize={taskListPanel.onResize} onResizeEnd={taskListPanel.onResizeEnd} />}
+
+              {(!isMobile || selectedTaskId) && (selectedTask ? (
+                <TaskDetailPanel
+                  key={selectedTask.id}
+                  mtask={selectedTask}
+                  people={people}
+                  projects={projects}
+                  topics={topics}
+                  theme={theme}
+                  t={t}
+                  isMobile={isMobile}
+                  fieldStyle={fieldStyle}
+                  areaStyle={areaStyle}
+                  onBack={() => setSelectedTaskId(null)}
+                  onPatch={(payload) => patchMgmtTask(selectedTask.id, payload)}
+                  onRemove={() => removeMgmtTask(selectedTask.id)}
+                />
+              ) : (
+                <div style={{ flex: '1 1 420px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textMuted }}>{t('tasks.selectOrCreate')}</div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -483,22 +722,6 @@ export default function Management() {
           onClose={() => setSelectedTopicId(null)}
           onPatch={(payload) => patchTopic(selectedTopic.id, payload)}
           onRemove={() => removeTopic(selectedTopic.id)}
-        />
-      )}
-
-      {selectedTask && (
-        <TaskModal
-          mtask={selectedTask}
-          people={people}
-          projects={projects}
-          topics={topics}
-          theme={theme}
-          t={t}
-          fieldStyle={fieldStyle}
-          areaStyle={areaStyle}
-          onClose={() => setSelectedTaskId(null)}
-          onPatch={(payload) => patchMgmtTask(selectedTask.id, payload)}
-          onRemove={() => removeMgmtTask(selectedTask.id)}
         />
       )}
 
@@ -690,82 +913,118 @@ function TopicModal({ topic, people, projects, theme, t, fieldStyle, areaStyle, 
   );
 }
 
-function TaskModal({ mtask, people, projects, topics, theme, t, fieldStyle, areaStyle, onClose, onPatch, onRemove }) {
+function TaskDetailPanel({ mtask, people, projects, topics, theme, t, isMobile, fieldStyle, areaStyle, onBack, onPatch, onRemove }) {
   const [titleDraft, setTitleDraft] = useState(mtask.title);
   const [notesDraft, setNotesDraft] = useState(mtask.notes || '');
 
+  useEffect(() => {
+    setTitleDraft(mtask.title);
+    setNotesDraft(mtask.notes || '');
+  }, [mtask.id]);
+
+  const commitTitle = () => {
+    if (titleDraft.trim() && titleDraft !== mtask.title) onPatch({ title: titleDraft });
+  };
+  const commitNotes = () => {
+    if (notesDraft !== (mtask.notes || '')) onPatch({ notes: notesDraft });
+  };
+
   return (
-    <ModalShell onClose={onClose}>
-      <div style={modalCardStyle(theme)}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={() => titleDraft.trim() && titleDraft !== mtask.title && onPatch({ title: titleDraft })}
-            style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 17, fontWeight: 800, color: theme.textPrimary }}
-          />
-          <span onClick={onClose} style={{ cursor: 'pointer', opacity: 0.5, fontSize: 18, color: theme.textPrimary }}>×</span>
-        </div>
-
-        <div>
-          <FieldLabel theme={theme}>{t('management.status')}</FieldLabel>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {TASK_STATUSES.map((s) => (
-              <Pill key={s} label={t(`management.taskStatus.${s}`)} hue={TASK_STATUS_HUES[s]} active={mtask.status === s} onClick={() => onPatch({ status: s })} theme={theme} />
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <FieldLabel theme={theme}>{t('management.priority')}</FieldLabel>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {TASK_PRIORITIES.map((p) => (
-              <Pill key={p} label={p} hue={PRIORITY_HUES[p]} active={mtask.priority === p} onClick={() => onPatch({ priority: p })} theme={theme} />
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div>
-            <FieldLabel theme={theme}>{t('management.owner')}</FieldLabel>
-            <select value={mtask.ownerId || ''} onChange={(e) => onPatch({ ownerId: e.target.value || null })} style={selectStyle(theme)}>
-              <option value="" style={optionStyle()}>{t('management.none')}</option>
-              {people.map((p) => <option key={p.id} value={p.id} style={optionStyle()}>{p.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <FieldLabel theme={theme}>{t('management.project')}</FieldLabel>
-            <select value={mtask.projectId || ''} onChange={(e) => onPatch({ projectId: e.target.value || null })} style={selectStyle(theme)}>
-              <option value="" style={optionStyle()}>{t('management.none')}</option>
-              {projects.map((p) => <option key={p.id} value={p.id} style={optionStyle()}>{p.name}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div>
-            <FieldLabel theme={theme}>{t('management.relatedTopic')}</FieldLabel>
-            <select value={mtask.topicId || ''} onChange={(e) => onPatch({ topicId: e.target.value || null })} style={selectStyle(theme)}>
-              <option value="" style={optionStyle()}>{t('management.none')}</option>
-              {topics.map((tp) => <option key={tp.id} value={tp.id} style={optionStyle()}>{tp.title}</option>)}
-            </select>
-          </div>
-          <div>
-            <FieldLabel theme={theme}>{t('management.due')}</FieldLabel>
-            <input type="date" value={mtask.due || ''} onChange={(e) => onPatch({ due: e.target.value || null })} style={fieldStyle} />
-          </div>
-        </div>
-
-        <div>
-          <FieldLabel theme={theme}>{t('projects.notes')}</FieldLabel>
-          <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} onBlur={() => onPatch({ notes: notesDraft })} rows={3} style={areaStyle} />
-        </div>
-
-        <button onClick={onRemove} style={{ alignSelf: 'flex-start', background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '7px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+    <div style={{ flex: isMobile ? '1 1 auto' : '1 1 420px', minWidth: 0, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+        {isMobile && (
+          <span onClick={onBack} style={{ display: 'flex', cursor: 'pointer', color: theme.textMuted, transform: 'rotate(180deg)', flexShrink: 0 }}>
+            <Icon name="chevron" size={18} />
+          </span>
+        )}
+        <input
+          value={titleDraft}
+          onChange={(e) => setTitleDraft(e.target.value)}
+          onBlur={commitTitle}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+          style={{ flex: '1 1 160px', minWidth: 160, border: 'none', outline: 'none', background: 'transparent', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}
+        />
+        <span onClick={() => onPatch({ favorite: !mtask.favorite })} style={{ display: 'flex', cursor: 'pointer', flexShrink: 0 }}>
+          <Icon name="pin" size={17} color={mtask.favorite ? theme.accentText : theme.textMuted} />
+        </span>
+        <button onClick={onRemove} style={{ background: 'transparent', border: '1px solid oklch(0.55 0.18 25 / 0.35)', color: 'oklch(0.55 0.18 25)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
           {t('common.delete')}
         </button>
       </div>
-    </ModalShell>
+
+      <SaveTemplateButton
+        entityType="managementTask"
+        getData={() => ({ title: mtask.title, priority: mtask.priority, notes: mtask.notes, ownerId: mtask.ownerId, projectId: mtask.projectId })}
+      />
+
+      <button
+        onClick={() => onPatch({ status: mtask.status === 'done' ? 'todo' : 'done' })}
+        style={{ alignSelf: 'flex-start', background: theme.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+      >
+        {mtask.status === 'done' ? t('tasks.markActive') : t('tasks.markDone')}
+      </button>
+
+      <div>
+        <FieldLabel theme={theme}>{t('management.status')}</FieldLabel>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {TASK_STATUSES.map((s) => (
+            <Pill key={s} label={t(`management.taskStatus.${s}`)} hue={TASK_STATUS_HUES[s]} active={mtask.status === s} onClick={() => onPatch({ status: s })} theme={theme} />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <FieldLabel theme={theme}>{t('management.priority')}</FieldLabel>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {TASK_PRIORITIES.map((p) => (
+            <Pill key={p} label={p} hue={PRIORITY_HUES[p]} active={mtask.priority === p} onClick={() => onPatch({ priority: p })} theme={theme} />
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div>
+          <FieldLabel theme={theme}>{t('management.owner')}</FieldLabel>
+          <select value={mtask.ownerId || ''} onChange={(e) => onPatch({ ownerId: e.target.value || null })} style={selectStyle(theme)}>
+            <option value="" style={optionStyle()}>{t('management.none')}</option>
+            {people.map((p) => <option key={p.id} value={p.id} style={optionStyle()}>{p.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <FieldLabel theme={theme}>{t('management.project')}</FieldLabel>
+          <select value={mtask.projectId || ''} onChange={(e) => onPatch({ projectId: e.target.value || null })} style={selectStyle(theme)}>
+            <option value="" style={optionStyle()}>{t('management.none')}</option>
+            {projects.map((p) => <option key={p.id} value={p.id} style={optionStyle()}>{p.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div>
+          <FieldLabel theme={theme}>{t('management.relatedTopic')}</FieldLabel>
+          <select value={mtask.topicId || ''} onChange={(e) => onPatch({ topicId: e.target.value || null })} style={selectStyle(theme)}>
+            <option value="" style={optionStyle()}>{t('management.none')}</option>
+            {topics.map((tp) => <option key={tp.id} value={tp.id} style={optionStyle()}>{tp.title}</option>)}
+          </select>
+        </div>
+        <div>
+          <FieldLabel theme={theme}>{t('management.due')}</FieldLabel>
+          <input type="date" value={mtask.due || ''} onChange={(e) => onPatch({ due: e.target.value || null })} style={fieldStyle} />
+        </div>
+      </div>
+
+      <div>
+        <FieldLabel theme={theme}>{t('tasks.notes')}</FieldLabel>
+        <textarea
+          value={notesDraft}
+          onChange={(e) => setNotesDraft(e.target.value)}
+          onBlur={commitNotes}
+          rows={7}
+          placeholder={t('tasks.notesPlaceholder')}
+          style={areaStyle}
+        />
+      </div>
+    </div>
   );
 }
 

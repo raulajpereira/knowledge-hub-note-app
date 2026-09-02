@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 
-const ENTITY_TYPES = new Set(['note', 'task', 'issue']);
+const ENTITY_TYPES = new Set(['note', 'task', 'issue', 'managementTask']);
 
 const router = Router();
 router.use(requireAuth);

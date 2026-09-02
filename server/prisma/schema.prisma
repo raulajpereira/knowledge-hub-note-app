@@ -1001,6 +1001,7 @@ model ManagementTask {
   title     String
   status    String   @default("todo") // todo | in_progress | done
   priority  String   @default("Medium") // Low | Medium | High
+  favorite  Boolean  @default(false)
   ownerId   String?
   projectId String?
   topicId   String?

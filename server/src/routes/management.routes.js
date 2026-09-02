@@ -163,7 +163,7 @@ router.get('/tasks', async (req, res) => {
 });
 
 router.post('/tasks', async (req, res) => {
-  const { title, status, priority, ownerId, projectId, topicId, due, notes } = req.body || {};
+  const { title, status, priority, ownerId, projectId, topicId, due, notes, favorite } = req.body || {};
   if (!title?.trim()) return res.status(400).json({ error: 'title is required' });
   if (!(await assertOwnedPerson(req.effectiveUserId, ownerId))) return res.status(400).json({ error: 'Invalid ownerId' });
   if (!(await assertOwnedProject(req.effectiveUserId, projectId))) return res.status(400).json({ error: 'Invalid projectId' });
@@ -175,6 +175,7 @@ router.post('/tasks', async (req, res) => {
       title: title.trim(),
       status: TASK_STATUSES.includes(status) ? status : TASK_STATUSES[0],
       priority: TASK_PRIORITIES.includes(priority) ? priority : TASK_PRIORITIES[1],
+      favorite: !!favorite,
       ownerId: ownerId || null,
       projectId: projectId || null,
       topicId: topicId || null,
@@ -190,7 +191,7 @@ router.patch('/tasks/:id', async (req, res) => {
   const task = await prisma.managementTask.findFirst({ where: { id: req.params.id, userId: req.effectiveUserId } });
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  const { title, status, priority, ownerId, projectId, topicId, due, notes } = req.body || {};
+  const { title, status, priority, ownerId, projectId, topicId, due, notes, favorite } = req.body || {};
   if (ownerId !== undefined && !(await assertOwnedPerson(req.effectiveUserId, ownerId))) return res.status(400).json({ error: 'Invalid ownerId' });
   if (projectId !== undefined && !(await assertOwnedProject(req.effectiveUserId, projectId))) return res.status(400).json({ error: 'Invalid projectId' });
   if (topicId !== undefined && !(await assertOwnedTopic(req.effectiveUserId, topicId))) return res.status(400).json({ error: 'Invalid topicId' });
@@ -199,6 +200,7 @@ router.patch('/tasks/:id', async (req, res) => {
   if (title !== undefined) data.title = title.trim() || task.title;
   if (status !== undefined) data.status = TASK_STATUSES.includes(status) ? status : task.status;
   if (priority !== undefined) data.priority = TASK_PRIORITIES.includes(priority) ? priority : task.priority;
+  if (favorite !== undefined) data.favorite = !!favorite;
   if (ownerId !== undefined) data.ownerId = ownerId || null;
   if (projectId !== undefined) data.projectId = projectId || null;
   if (topicId !== undefined) data.topicId = topicId || null;
