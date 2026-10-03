@@ -18,7 +18,7 @@ async function request(path, { method = 'GET', body } = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${import.meta.env.BASE_URL.replace(/\/backoffice\/$/, '')}/api${path}`, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),

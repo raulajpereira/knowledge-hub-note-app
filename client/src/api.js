@@ -1,5 +1,8 @@
 const TOKEN_KEY = 'kh-token';
 
+// "" normally, "/v1" when the app is built for a sub-path.
+export const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -15,7 +18,7 @@ async function request(path, { method = 'GET', body, isForm = false } = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
   if (!isForm && body !== undefined) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${BASE_PATH}/api${path}`, {
     method,
     headers,
     body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
@@ -36,7 +39,7 @@ async function requestBlob(path, { method = 'GET' } = {}) {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`/api${path}`, { method, headers });
+  const res = await fetch(`${BASE_PATH}/api${path}`, { method, headers });
   if (!res.ok) {
     const isJson = res.headers.get('content-type')?.includes('application/json');
     const data = isJson ? await res.json() : null;

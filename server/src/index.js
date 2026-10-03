@@ -40,6 +40,7 @@ import codeRequestsRoutes from './routes/coderequests.routes.js';
 import managementRoutes from './routes/management.routes.js';
 import { purgeExpiredTrash } from './lib/trashPurge.js';
 import { auditMiddleware } from './lib/auditLog.js';
+import { basePath, uploadsPrefixMiddleware } from './lib/basePath.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -61,6 +62,7 @@ app.use(cors({
   },
 }));
 app.use(express.json({ limit: '5mb' }));
+app.use(uploadsPrefixMiddleware);
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use(auditMiddleware);
 
@@ -131,5 +133,16 @@ const PURGE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 purgeExpiredTrash().catch((err) => console.error('Trash purge failed', err));
 setInterval(() => purgeExpiredTrash().catch((err) => console.error('Trash purge failed', err)), PURGE_INTERVAL_MS);
 
+// BASE_PATH (e.g. "/v1") mounts the whole app — API, uploads, backoffice and
+// client — under a sub-path, so this version can share a domain with a newer
+// app served at the root. Unset, everything lives at "/" exactly as before.
+const root = express();
+if (basePath) {
+  root.get('/', (req, res) => res.redirect(`${basePath}/`));
+  root.use(basePath, app);
+} else {
+  root.use(app);
+}
+
 const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`Knowledge Hub API listening on :${port}`));
+root.listen(port, () => console.log(`Knowledge Hub API listening on :${port}${basePath ? ` (base path ${basePath})` : ''}`));

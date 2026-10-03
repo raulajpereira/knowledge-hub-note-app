@@ -1,5 +1,9 @@
 const CACHE_NAME = 'kh-shell-v2';
 
+// The worker's scope is the app's base ("/" or e.g. "/v1/"), so every
+// app-relative path below is built from it rather than hardcoded to "/".
+const BASE = new URL(self.registration.scope).pathname;
+
 // A service worker doesn't control the page that triggered its own
 // install/activate — that page's initial navigation request already
 // completed before the worker existed, so it's never seen by the fetch
@@ -9,7 +13,7 @@ const CACHE_NAME = 'kh-shell-v2';
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
-      fetch('/').then((res) => (res.ok ? cache.put('/', res) : null)).catch(() => {})
+      fetch(BASE).then((res) => (res.ok ? cache.put(BASE, res) : null)).catch(() => {})
     )
   );
   self.skipWaiting();
@@ -28,16 +32,16 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) return;
+  if (!url.pathname.startsWith(BASE) || url.pathname.startsWith(`${BASE}api/`) || url.pathname.startsWith(`${BASE}uploads/`)) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          caches.open(CACHE_NAME).then((cache) => cache.put('/', res.clone()));
+          caches.open(CACHE_NAME).then((cache) => cache.put(BASE, res.clone()));
           return res;
         })
-        .catch(() => caches.match('/').then((cached) => cached || caches.match(request)))
+        .catch(() => caches.match(BASE).then((cached) => cached || caches.match(request)))
     );
     return;
   }
@@ -45,7 +49,7 @@ self.addEventListener('fetch', (event) => {
   // Vite's build output (/assets/*.js, *.css, and any imported image) is
   // content-hashed — a given URL's bytes never change once built — so
   // cache-first is safe and avoids a network round-trip on every load.
-  if (url.pathname.startsWith('/assets/')) {
+  if (url.pathname.startsWith(`${BASE}assets/`)) {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;

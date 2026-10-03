@@ -545,7 +545,7 @@ export default function Notes() {
 
   const copyShareLink = () => {
     if (!selected?.shareToken) return;
-    navigator.clipboard.writeText(`${window.location.origin}/s/${selected.shareToken}`);
+    navigator.clipboard.writeText(`${window.location.origin}${import.meta.env.BASE_URL}s/${selected.shareToken}`);
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 1500);
   };
@@ -1575,7 +1575,7 @@ export default function Notes() {
                       <>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: theme.subtleBg, borderRadius: 7, padding: '7px 9px' }}>
                           <div style={{ flex: 1, minWidth: 0, fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: theme.textMuted }}>
-                            {`${window.location.origin}/s/${selected.shareToken}`}
+                            {`${window.location.origin}${import.meta.env.BASE_URL}s/${selected.shareToken}`}
                           </div>
                           <span onClick={copyShareLink} style={{ cursor: 'pointer', color: theme.accentText, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                             {shareCopied ? t('notes.shareCopied') : t('notes.shareCopy')}

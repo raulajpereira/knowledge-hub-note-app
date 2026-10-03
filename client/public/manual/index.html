@@ -310,7 +310,7 @@
     try { token = localStorage.getItem('kh-token'); } catch (e) {}
     if (!token) return;
 
-    fetch('/api/settings', { headers: { Authorization: 'Bearer ' + token } })
+    fetch('../api/settings', { headers: { Authorization: 'Bearer ' + token } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         var s = data && data.settings;

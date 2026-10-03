@@ -34,8 +34,24 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Pulling latest code"
-git pull origin main
+# Which branch this checkout tracks (main by default; the frozen v1 checkout
+# is deployed from the "v1" branch — see .github/workflows/deploy.yml).
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
+[ "$DEPLOY_BRANCH" = "HEAD" ] && DEPLOY_BRANCH=main
+
+echo "==> Pulling latest code ($DEPLOY_BRANCH)"
+git pull origin "$DEPLOY_BRANCH"
+
+# Per-checkout settings from server/.env: BASE_PATH serves this copy from a
+# sub-path (e.g. /v1) and must be known at client build time; PM2_NAME keeps
+# two checkouts on one VPS from restarting each other's process.
+env_value() {
+  grep -E "^$1=" "$APP_DIR/server/.env" 2>/dev/null | tail -n1 | cut -d= -f2- | sed -e 's/^["'\'']//' -e 's/["'\'']$//' || true
+}
+export BASE_PATH="${BASE_PATH:-$(env_value BASE_PATH)}"
+PM2_NAME="${PM2_NAME:-$(env_value PM2_NAME)}"
+PM2_NAME="${PM2_NAME:-knowledge-hub-api}"
+echo "==> BASE_PATH='${BASE_PATH}' PM2_NAME='${PM2_NAME}'"
 
 # Best-effort: PDF export (Documentação) shells out to LibreOffice. Never
 # fail the deploy over this — if it can't be installed (no sudo, no apt,
@@ -90,7 +106,7 @@ npm run build
 
 echo "==> Restarting API (PM2)"
 cd "$APP_DIR/server"
-pm2 restart knowledge-hub-api || pm2 start src/index.js --name knowledge-hub-api
+pm2 restart "$PM2_NAME" --update-env || pm2 start src/index.js --name "$PM2_NAME"
 pm2 save
 
 echo "==> Deploy complete"

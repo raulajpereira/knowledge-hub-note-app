@@ -3,10 +3,10 @@ import logoIcon from '../assets/logo-icon.png';
 import { backdropClose } from '../lib/backdropClose.js';
 
 const APP_VERSION = '1.0.0';
-const MANUAL_URL = '/manual/index.html';
+const MANUAL_URL = `${import.meta.env.BASE_URL}manual/index.html`;
 const MANUAL_PDF_BY_LANG = {
-  pt: { href: '/manual/Knowledge-Hub-Manual-PT.pdf', filename: 'Knowledge-Hub-Manual-PT.pdf' },
-  en: { href: '/manual/Knowledge-Hub-Manual-EN.pdf', filename: 'Knowledge-Hub-Manual-EN.pdf' },
+  pt: { href: `${import.meta.env.BASE_URL}manual/Knowledge-Hub-Manual-PT.pdf`, filename: 'Knowledge-Hub-Manual-PT.pdf' },
+  en: { href: `${import.meta.env.BASE_URL}manual/Knowledge-Hub-Manual-EN.pdf`, filename: 'Knowledge-Hub-Manual-EN.pdf' },
 };
 
 export default function AboutModal({ theme, t, lang, onClose }) {

@@ -315,7 +315,7 @@ function ExtensionCard({ theme, t, card }) {
           <div style={{ fontSize: 12, color: theme.textMuted }}>{t('settings.extensionDesc')}</div>
         </div>
         <a
-          href="/extension/knowledge-hub-clipper.zip"
+          href={`${import.meta.env.BASE_URL}extension/knowledge-hub-clipper.zip`}
           download
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: theme.accent, color: '#fff', borderRadius: 8, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}
         >
@@ -736,7 +736,7 @@ export default function Settings() {
         <div style={{ fontSize: 15, fontWeight: 700 }}>{t('settings.favicon')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ width: 44, height: 44, borderRadius: 8, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${theme.border}`, overflow: 'hidden' }}>
-            <img src={user?.settings?.faviconUrl || '/icon.png'} alt="Favicon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={user?.settings?.faviconUrl || `${import.meta.env.BASE_URL}icon.png`} alt="Favicon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 200 }}>
             <div style={{ fontSize: 12.5, color: theme.textMuted }}>{t('settings.faviconDesc')}</div>

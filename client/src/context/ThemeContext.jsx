@@ -40,7 +40,7 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const link = document.getElementById('dynamic-favicon');
-    if (link) link.href = faviconUrl || '/icon.png?v=2';
+    if (link) link.href = faviconUrl || `${import.meta.env.BASE_URL}icon.png?v=2`;
   }, [faviconUrl]);
 
   const setMode = async (nextMode) => {
