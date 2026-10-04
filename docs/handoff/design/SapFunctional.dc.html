@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./fn-schema.js"></script></helmet>
+<div style="height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;color:#fbf8f5;">
+  <section style="position:relative;isolation:isolate;flex:1;min-height:0;display:grid;grid-template-rows:minmax(0,1fr);grid-template-columns:{{ colTpl }};border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);">
+    <div style="position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;backdrop-filter:blur(34px) saturate(150%);-webkit-backdrop-filter:blur(34px) saturate(150%);"></div>
+    <div onPointerDown="{{ colDown }}" onDoubleClick="{{ colReset }}" style="position:absolute;top:0;bottom:0;left:{{ colHandleL }};width:14px;z-index:6;cursor:col-resize;display:flex;align-items:center;justify-content:center;"><div style="width:4px;height:48px;border-radius:4px;background:{{ colBar }};box-shadow:0 0 0 1px rgba(255,255,255,.08);"></div></div>
+    <div style="min-height:0;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.1);">
+      <div style="flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding:20px 16px 12px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div style="display:flex;flex-direction:column;gap:3px;margin-right:auto;min-width:0;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em;">{{ P.title }}</h1><span style="font-size:12.5px;line-height:1.4;color:rgba(255,248,240,.65);text-wrap:pretty;">{{ P.sub }}</span></div>
+          <button onClick="{{ onNew }}" title="{{ L.new }}" style="width:34px;height:34px;flex:none;border-radius:50%;border:0;background:#fbf8f5;color:#2a211c;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,248,240,.6)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+          <input value="{{ q }}" onChange="{{ onQ }}" placeholder="{{ L.search }}" style="flex:1;min-width:0;border:0;outline:none;background:transparent;color:#fbf8f5;font:inherit;font-size:13.5px;">
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
+          <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3"><select value="{{ f.val }}" onChange="{{ f.onChange }}" style="min-width:0;height:32px;padding:0 24px 0 11px;border-radius:999px;border:1px solid {{ f.bd }};background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 9px center;background-size:10px;text-overflow:ellipsis;"><sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          <sc-for list="{{ stChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.onClick }}" style="height:26px;padding:0 10px;border-radius:999px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:#fbf8f5;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">{{ c.label }}<span style="font-family:'Geist Mono',monospace;font-size:10.5px;opacity:.75;">{{ c.n }}</span></button></sc-for>
+        </div>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding:0 8px 12px;display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <div onClick="{{ g.onToggle }}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;cursor:pointer;user-select:none;" style-hover="background:rgba(255,255,255,.06);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,248,240,.7)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate({{ g.rot }});transition:transform .15s;"><path d="M6 9l6 6 6-6"></path></svg><span style="font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,248,240,.75);">{{ g.name }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:rgba(255,248,240,.5);">{{ g.n }}</span></div>
+            <sc-if value="{{ g.open }}" hint-placeholder-val="{{ true }}">
+              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+                <div onClick="{{ it.onClick }}" style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;padding:11px 12px;border-radius:16px;cursor:pointer;background:{{ it.bg }};border:1px solid {{ it.bd }};" style-hover="background:rgba(255,255,255,.08);">
+                  <div style="display:flex;align-items:flex-start;gap:8px;min-width:0;"><span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.3;">{{ it.title }}</span><span style="flex:none;height:20px;padding:0 8px;border-radius:999px;display:flex;align-items:center;font-size:10.5px;font-weight:700;background:{{ it.stBg }};">{{ it.st }}</span></div>
+                  <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,248,240,.62);min-width:0;white-space:nowrap;overflow:hidden;"><span style="font-family:'Geist Mono',monospace;overflow:hidden;text-overflow:ellipsis;">{{ it.code }}</span><span style="flex:none;">{{ it.meta }}</span></div>
+                  <sc-if value="{{ it.hasProg }}" hint-placeholder-val="{{ false }}"><div style="height:4px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;"><div style="height:100%;width:{{ it.prog }};background:oklch(0.8 0.14 150);border-radius:999px;"></div></div></sc-if>
+                </div>
+              </sc-for>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding:30px 10px;text-align:center;font-size:13px;color:rgba(255,248,240,.6);">{{ L.empty }}</div></sc-if>
+      </div>
+    </div>
+    <div style="min-height:0;min-width:0;overflow:auto;">
+      <sc-if value="{{ has }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:18px;padding:24px 26px 30px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;">
+              <input value="{{ r.code }}" onChange="{{ r.onCode }}" placeholder="{{ P.codeLbl }}" spellcheck="false" style="width:100%;padding:0;border:0;background:transparent;color:rgba(255,248,240,.75);font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;outline:none;">
+              <input value="{{ r.title }}" onChange="{{ r.onTitle }}" style="width:100%;padding:0;border:0;background:transparent;color:#fbf8f5;font:inherit;font-size:24px;font-weight:600;letter-spacing:-.02em;outline:none;">
+            </div>
+            <select value="{{ r.st }}" onChange="{{ r.onSt }}" style="height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background-color:{{ r.stBg }};color:#fbf8f5;font:inherit;font-size:12.5px;font-weight:600;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center;background-size:10px;"><sc-for list="{{ stOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+            <button onClick="{{ r.onDel }}" title="{{ L.del }}" style="width:34px;height:34px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#ffc9b8;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path></svg></button>
+          </div>
+          <sc-if value="{{ r.hasProg }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);">
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;"><span style="font-family:'Geist Mono',monospace;font-size:22px;font-weight:700;">{{ r.progPct }}</span><sc-for list="{{ r.progParts }}" as="p" hint-placeholder-count="3"><span style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(255,248,240,.8);"><span style="width:9px;height:9px;border-radius:3px;background:{{ p.c }};"></span>{{ p.label }} <b style="font-family:'Geist Mono',monospace;">{{ p.n }}</b></span></sc-for></div>
+              <div style="display:flex;height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);"><sc-for list="{{ r.progParts }}" as="p" hint-placeholder-count="3"><div style="width:{{ p.w }};background:{{ p.c }};"></div></sc-for></div>
+            </div>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;">
+            <sc-for list="{{ r.fields }}" as="f" hint-placeholder-count="6">
+              <label style="display:flex;flex-direction:column;gap:6px;min-width:0;grid-column:{{ f.span }};">
+                <span style="font-size:12px;color:rgba(255,248,240,.72);">{{ f.label }}</span>
+                <sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}"><input value="{{ f.val }}" onChange="{{ f.onChange }}" type="{{ f.type }}" spellcheck="false" style="height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fbf8f5;font-family:{{ f.font }};font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;color-scheme:dark;"></sc-if>
+                <sc-if value="{{ f.isArea }}" hint-placeholder-val="{{ false }}"><textarea value="{{ f.val }}" onChange="{{ f.onChange }}" rows="3" style="min-height:80px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fbf8f5;font-family:{{ f.font }};font-size:13.5px;line-height:1.5;outline:none;resize:vertical;box-sizing:border-box;width:100%;white-space:pre-wrap;"></textarea></sc-if>
+                <sc-if value="{{ f.isSel }}" hint-placeholder-val="{{ false }}"><select value="{{ f.val }}" onChange="{{ f.onChange }}" style="height:38px;padding:0 30px 0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;width:100%;min-width:0;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 12px center;background-size:11px;"><sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></sc-if>
+              </label>
+            </sc-for>
+          </div>
+          <sc-if value="{{ r.hasRows }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:16px;font-weight:600;margin-right:auto;">{{ r.rowsTitle }}</span><button onClick="{{ r.onAddRow }}" style="height:30px;padding:0 12px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background:transparent;color:rgba(255,248,240,.88);font:inherit;font-size:12px;font-weight:600;cursor:pointer;">+ {{ L.addRow }}</button></div>
+              <div style="border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);overflow:auto;">
+                <div style="min-width:560px;">
+                  <div data-rth="fn-{{ r.page }}" style="display:grid;grid-template-columns:var(--rt, {{ r.grid }});align-items:center;height:38px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.08));border-bottom:1px solid rgba(255,255,255,.12);font-size:12px;font-weight:600;color:rgba(255,248,240,.85);">
+                    <span style="text-align:center;font-family:'Geist Mono',monospace;color:rgba(255,248,240,.55);">#</span>
+                    <sc-for list="{{ r.cols }}" as="c" hint-placeholder-count="3"><span style="padding:0 10px;">{{ c.label }}</span></sc-for>
+                    <span></span>
+                  </div>
+                  <sc-for list="{{ r.rows }}" as="row" hint-placeholder-count="3">
+                    <div style="display:grid;grid-template-columns:var(--rt, {{ r.grid }});align-items:center;min-height:44px;border-bottom:1px solid rgba(255,255,255,.06);" style-hover="background:rgba(255,255,255,.03);">
+                      <span style="text-align:center;font-family:'Geist Mono',monospace;font-size:12px;color:rgba(255,248,240,.5);">{{ row.n }}</span>
+                      <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="3">
+                        <span style="padding:4px 6px;min-width:0;">
+                          <sc-if value="{{ c.isText }}" hint-placeholder-val="{{ true }}"><input value="{{ c.val }}" onChange="{{ c.onChange }}" spellcheck="false" style="width:100%;height:32px;padding:0 8px;border-radius:9px;border:1px solid transparent;background:transparent;color:#fbf8f5;font-family:{{ c.font }};font-size:13px;outline:none;box-sizing:border-box;" style-focus="border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.06);"></sc-if>
+                          <sc-if value="{{ c.isSel }}" hint-placeholder-val="{{ false }}"><select value="{{ c.val }}" onChange="{{ c.onChange }}" style="width:100%;height:30px;padding:0 22px 0 10px;border-radius:999px;border:0;background-color:{{ c.bg }};color:#fbf8f5;font:inherit;font-size:12px;font-weight:600;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 8px center;background-size:9px;"><sc-for list="{{ c.opts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></sc-if>
+                        </span>
+                      </sc-for>
+                      <button onClick="{{ row.onDel }}" title="{{ L.delRow }}" style="justify-self:center;width:28px;height:28px;border-radius:50%;border:0;background:transparent;color:rgba(255,248,240,.5);cursor:pointer;padding:0;font-size:15px;" style-hover="background:rgba(255,255,255,.08);color:#ffc9b8;">×</button>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ r.noRows }}" hint-placeholder-val="{{ false }}"><div style="padding:16px;font-size:13px;color:rgba(255,248,240,.6);">{{ L.noRows }}</div></sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ r.hasKids }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;"><span style="font-size:14px;font-weight:600;">{{ L.kids }}</span><div style="display:flex;flex-wrap:wrap;gap:6px;"><sc-for list="{{ r.kids }}" as="k" hint-placeholder-count="2"><button onClick="{{ k.onClick }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:#fbf8f5;font:inherit;font-size:12.5px;cursor:pointer;">{{ k.label }}</button></sc-for></div></div>
+          </sc-if>
+          <span style="font-size:11.5px;color:rgba(255,248,240,.5);">{{ r.meta }}</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}"><div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(255,248,240,.6);">{{ L.pick }}</div></sc-if>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;page&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;fn_cfg&quot;, &quot;fn_proc&quot;, &quot;fn_test&quot;, &quot;fn_ricef&quot;, &quot;fn_mig&quot;, &quot;fn_cut&quot;, &quot;fn_kb&quot;, &quot;fn_glo&quot;], &quot;default&quot;: &quot;fn_cfg&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;lang&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;pt&quot;, &quot;en&quot;], &quot;default&quot;: &quot;pt&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+const FN_KEY = 'kv.fn.v1';
+const FN_L = {
+  pt: { new: 'Novo registo', search: 'Pesquisar…', allMods: 'Todos os módulos', allClients: 'Todos os clientes', allProj: 'Todos os projetos', all: 'Todos', empty: 'Sem registos.', del: 'Eliminar', addRow: 'Linha', delRow: 'Remover linha', noRows: 'Sem linhas. Use "+ Linha".', pick: 'Selecione ou crie um registo.', kids: 'Elementos dependentes', none: '—', created: 'Criado', updated: 'Atualizado', confirm: 'Eliminar este registo?', newTitle: 'Novo registo', noModule: 'Sem módulo', done: 'concluído' },
+  en: { new: 'New record', search: 'Search…', allMods: 'All modules', allClients: 'All clients', allProj: 'All projects', all: 'All', empty: 'No records.', del: 'Delete', addRow: 'Row', delRow: 'Remove row', noRows: 'No rows yet. Use "+ Row".', pick: 'Select or create a record.', kids: 'Dependent elements', none: '—', created: 'Created', updated: 'Updated', confirm: 'Delete this record?', newTitle: 'New record', noModule: 'No module', done: 'complete' }
+};
+const fnNow = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ', ' + p(d.getHours()) + ':' + p(d.getMinutes()); };
+const FN_RC = { pass: 'oklch(0.78 0.14 150)', done: 'oklch(0.78 0.14 150)', fail: 'oklch(0.7 0.17 25)', run: 'oklch(0.82 0.13 85)', todo: 'rgba(255,255,255,.22)', skip: 'rgba(255,255,255,.4)' };
+
+class Component extends DCLogic {
+  state = { d: null, sel: {}, q: '', fMod: '', fCli: '', fProj: '', fSt: '', col: {}, colW: (() => { try { return +localStorage.getItem('kv.fn.colW') || 340; } catch (e) { return 340; } })() };
+  componentDidMount() { const go = () => { if (!window.FN_SCHEMA) return false; let d = null; try { d = JSON.parse(localStorage.getItem(FN_KEY)); } catch (e) {} if (!Array.isArray(d)) d = window.FN_SCHEMA.SEED; const before = d.length; d = d.filter(r => window.FN_SCHEMA.PAGES[r.page]); if (d.length !== before) { try { localStorage.setItem(FN_KEY, JSON.stringify(d)); } catch (e) {} } this.setState({ d }); return true; }; if (!go()) this._t = setInterval(() => { if (go()) clearInterval(this._t); }, 80); }
+  componentWillUnmount() { clearInterval(this._t); }
+  save(d) { this.setState({ d }); clearTimeout(this._sv); this._sv = setTimeout(() => { try { localStorage.setItem(FN_KEY, JSON.stringify(this.state.d)); window.dispatchEvent(new Event('kv-fn')); } catch (e) {} }, 300); }
+  renderVals() {
+    const S = this.state, en = this.props.lang === 'en', L = FN_L[en ? 'en' : 'pt'], tr = o => (o && typeof o === 'object' && 'pt' in o) ? (en ? o.en : o.pt) : o;
+    const page = this.props.page || 'fn_cfg', SC = window.FN_SCHEMA;
+    const base = { L, P: { title: '', sub: '', codeLbl: '' }, groups: [], filters: [], stChips: [], has: false, noSel: true, empty: false, colTpl: '340px minmax(0,1fr)', colHandleL: '333px', colBar: 'rgba(255,255,255,.22)', stOpts: [] };
+    if (!SC || !S.d) return base;
+    const PG = SC.PAGES[page] || SC.PAGES.fn_proc, ST = PG.st, stOf = k => ST.find(x => x[0] === k) || ST[0];
+    let MG = {}; try { MG = JSON.parse(localStorage.getItem('kv.mg.v3')) || {}; } catch (e) {}
+    const CL = MG.clients || [], PJ = MG.projects || [], PP = MG.people || [];
+    const cName = id => (CL.find(c => c.id === id) || {}).name, pCode = id => (PJ.find(p => p.id === id) || {}).code;
+    const all = S.d.filter(r => r.page === page), q = S.q.trim().toLowerCase();
+    const list = all.filter(r => (!S.fMod || (r.f || {}).module === S.fMod) && (!S.fCli || (r.f || {}).client === S.fCli) && (!S.fProj || (r.f || {}).project === S.fProj) && (!S.fSt || r.st === S.fSt) && (!q || JSON.stringify([r.title, r.code, r.f, r.rows]).toLowerCase().includes(q)));
+    const selId = S.sel[page], sel = all.find(r => r.id === selId) || list[0];
+    const prog = r => { if (!PG.progress || !PG.rows || !PG.rows.status) return null; const n = (r.rows || []).length; if (!n) return { pct: 0, parts: [] }; const cnt = {}; r.rows.forEach(x => { cnt[x.st || 'todo'] = (cnt[x.st || 'todo'] || 0) + 1; }); const ok = (cnt.pass || 0) + (cnt.done || 0) + (cnt.skip || 0); return { pct: Math.round(ok / n * 100), parts: PG.rows.status.map(([k, lb]) => ({ label: tr(lb), n: String(cnt[k] || 0), c: FN_RC[k], w: ((cnt[k] || 0) / n * 100) + '%' })).filter(p => p.n !== '0') }; };
+    const gm = new Map(); list.forEach(r => { const k = (r.f || {}).module || (page === 'fn_cut' ? (pCode((r.f || {}).project) || '—') : L.noModule); if (!gm.has(k)) gm.set(k, []); gm.get(k).push(r); });
+    const cw = S.colW;
+    const used = k => [...new Set(all.map(r => (r.f || {})[k]).filter(Boolean))];
+    const fsel = (key, val, first, opts) => ({ val: val || '', bd: val ? 'rgba(255,255,255,.4)' : 'rgba(255,255,255,.14)', opts: [{ v: '', l: first }, ...opts], onChange: e => this.setState({ [key]: e.target.value }) });
+    const out = { ...base, P: { title: tr(PG.title), sub: tr(PG.sub), codeLbl: tr(PG.codeLbl) }, q: S.q, onQ: e => this.setState({ q: e.target.value }),
+      colTpl: 'min(' + cw + 'px, calc(100% - 420px)) minmax(0,1fr)', colHandleL: 'calc(min(' + cw + 'px, calc(100% - 420px)) - 7px)', colBar: S.colDrag ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.22)',
+      colReset: () => { this.setState({ colW: 340 }); try { localStorage.setItem('kv.fn.colW', '340'); } catch (e) {} },
+      colDown: e => { e.preventDefault(); const sec = e.currentTarget.parentElement, zf = (sec.getBoundingClientRect().width / (sec.offsetWidth || 1)) || 1, max = Math.max(300, sec.offsetWidth - 440), x0 = e.clientX, w0 = cw; this.setState({ colDrag: true }); document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+        const mv = ev => this.setState({ colW: Math.round(Math.max(240, Math.min(max, w0 + (ev.clientX - x0) / zf))) });
+        const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); document.body.style.cursor = ''; document.body.style.userSelect = ''; this.setState({ colDrag: false }); try { localStorage.setItem('kv.fn.colW', String(this.state.colW)); } catch (e2) {} };
+        window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); },
+      filters: [fsel('fMod', S.fMod, L.allMods, SC.MOD.filter(m => used('module').includes(m)).map(m => ({ v: m, l: m }))), fsel('fCli', S.fCli, L.allClients, CL.filter(c => used('client').includes(c.id)).map(c => ({ v: c.id, l: c.name }))), fsel('fProj', S.fProj, L.allProj, PJ.filter(p => used('project').includes(p.id)).map(p => ({ v: p.id, l: p.code })))],
+      stChips: [['', L.all, 'rgba(255,255,255,.06)'], ...ST.map(s => [s[0], tr(s[1]), s[2]])].map(([k, lb, c]) => { const on = S.fSt === k; return { label: lb, n: String(k ? all.filter(r => r.st === k).length : all.length), bg: on ? (k ? c : 'rgba(255,255,255,.18)') : 'rgba(255,255,255,.04)', bd: on ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.12)', onClick: () => this.setState({ fSt: k }) }; }),
+      groups: [...gm.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, items]) => { const ck = page + ':' + k, closed = (S.col || {})[ck] && !q; return { name: k, n: String(items.length), open: !closed, rot: closed ? '-90deg' : '0deg', onToggle: () => this.setState(st => ({ col: { ...(st.col || {}), [ck]: !(st.col || {})[ck] } })),
+        items: items.map(r => { const on = sel && r.id === sel.id, s = stOf(r.st), p = prog(r), f = r.f || {}; return { title: r.title, code: r.code || '', meta: [f.module && page === 'fn_glo' ? '' : '', cName(f.client) ? '· ' + cName(f.client) : '', page === 'fn_glo' && f.sapterm ? '· ' + f.sapterm : ''].filter(Boolean).join(' '), st: tr(s[1]), stBg: s[2], hasProg: !!p, prog: p ? p.pct + '%' : '0%', bg: on ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.03)', bd: on ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.07)', onClick: () => this.setState(st => ({ sel: { ...st.sel, [page]: r.id } })) }; }) }; }),
+      empty: !list.length, stOpts: ST.map(s => ({ v: s[0], l: tr(s[1]) })),
+      onNew: () => { const id = 'n' + Date.now(), f = {}; if (S.fMod) f.module = S.fMod; if (S.fCli) f.client = S.fCli; if (S.fProj) f.project = S.fProj; const r = { id, page, title: L.newTitle, code: '', st: ST[0][0], f, rows: [], created: fnNow(), updated: fnNow() }; this.save([r, ...S.d]); this.setState(st => ({ sel: { ...st.sel, [page]: id }, q: '', fSt: '' })); },
+      has: !!sel, noSel: !sel };
+    if (sel) {
+      const up = fn => { const d = S.d.map(x => x.id === sel.id ? JSON.parse(JSON.stringify(x)) : x), r = d.find(x => x.id === sel.id); r.f = r.f || {}; r.rows = r.rows || []; fn(r); r.updated = fnNow(); this.save(d); };
+      const f = sel.f || {}, s = stOf(sel.st), p = prog(sel);
+      const optsFor = fd => { if (fd.type === 'mod') return [{ v: '', l: L.none }, ...SC.MOD.map(m => ({ v: m, l: m }))]; if (fd.type === 'client') return [{ v: '', l: L.none }, ...CL.map(c => ({ v: c.id, l: c.name }))]; if (fd.type === 'project') return [{ v: '', l: L.none }, ...PJ.map(x => ({ v: x.id, l: x.code + ' · ' + x.name }))]; if (fd.type === 'person') return [{ v: '', l: L.none }, ...PP.map(x => ({ v: x.id, l: x.name }))]; if (fd.type === 'parent') return [{ v: '', l: L.none }, ...all.filter(x => x.id !== sel.id).map(x => ({ v: x.id, l: x.title + (x.code ? ' (' + x.code + ')' : '') }))]; return [{ v: '', l: L.none }, ...(fd.opts || []).map(o => Array.isArray(o) ? { v: o[0], l: tr(o[1]) } : { v: o, l: o })]; };
+      out.r = { page, title: sel.title, code: sel.code || '', st: sel.st, stBg: s[2], onTitle: e => { const v = e.target.value; up(r => { r.title = v; }); }, onCode: e => { const v = e.target.value; up(r => { r.code = v; }); }, onSt: e => { const v = e.target.value; up(r => { r.st = v; }); },
+        onDel: () => { if (!window.confirm(L.confirm)) return; this.save(S.d.filter(x => x.id !== sel.id)); this.setState(st => ({ sel: { ...st.sel, [page]: null } })); },
+        hasProg: !!p, progPct: p ? p.pct + '% ' + L.done : '', progParts: p ? p.parts : [],
+        fields: PG.fields.map(fd => { const isSel = ['mod', 'client', 'project', 'person', 'sel', 'parent'].includes(fd.type), isArea = fd.type === 'area', v = f[fd.k];
+          return { label: tr(fd.label), span: fd.full ? '1 / -1' : 'auto', isSel, isArea, isText: !isSel && !isArea, type: fd.type === 'date' ? 'date' : fd.type === 'num' ? 'number' : 'text', font: fd.mono ? "'Geist Mono',monospace" : 'inherit', opts: isSel ? optsFor(fd) : [],
+            val: fd.type === 'tags' ? (v || []).join(', ') : (v == null ? '' : String(v)), onChange: e => { const nv = e.target.value; up(r => { r.f[fd.k] = fd.type === 'tags' ? nv.split(',').map(x => x.trim()).filter((x, i, a) => x || i === a.length - 1) : fd.type === 'num' ? (nv === '' ? '' : +nv) : nv; }); } }; }),
+        hasRows: !!PG.rows, meta: L.created + ' ' + sel.created + ' · ' + L.updated + ' ' + sel.updated };
+      if (PG.rows) { const R = PG.rows;
+        out.r.rowsTitle = tr(R.title); out.r.cols = R.cols.map(c => ({ label: tr(c[1]) })); out.r.grid = '44px ' + R.cols.map(c => 'minmax(' + (c[2] === 'rst' ? 120 : 120) + 'px,' + c[3] + 'fr)').join(' ') + ' 44px';
+        out.r.rows = (sel.rows || []).map((row, i) => ({ n: String(i + 1), onDel: () => up(r => { r.rows.splice(i, 1); }), cells: R.cols.map(c => { const isSel = c[2] === 'rst', v = row[c[0]] || (isSel ? 'todo' : ''); return { isSel, isText: !isSel, val: v, font: c[4] ? "'Geist Mono',monospace" : 'inherit', bg: isSel ? ({ pass: 'oklch(0.72 0.14 150 / .5)', done: 'oklch(0.72 0.14 150 / .5)', fail: 'oklch(0.66 0.17 25 / .6)', run: 'oklch(0.78 0.13 85 / .5)', skip: 'rgba(255,255,255,.18)' }[v] || 'rgba(255,255,255,.1)') : '', opts: isSel ? R.status.map(([k, lb]) => ({ v: k, l: tr(lb) })) : [], onChange: e => { const nv = e.target.value; up(r => { r.rows[i][c[0]] = nv; }); } }; }) }));
+        out.r.noRows = !(sel.rows || []).length; out.r.onAddRow = () => up(r => { const o = {}; R.cols.forEach(c => { o[c[0]] = c[2] === 'rst' ? 'todo' : ''; }); r.rows.push(o); }); }
+      if (page === 'fn_glo') { const kids = all.filter(x => (x.f || {}).parent === sel.id); out.r.hasKids = kids.length > 0; out.r.kids = kids.map(k => ({ label: k.title + (k.code ? ' · ' + k.code : ''), onClick: () => this.setState(st => ({ sel: { ...st.sel, [page]: k.id } })) })); }
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

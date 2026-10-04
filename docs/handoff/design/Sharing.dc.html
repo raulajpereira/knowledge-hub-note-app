@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="color:#fbf8f5;">
+  <sc-if value="{{ isFolder }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onClose }}" data-kv-dim="1" style="position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,14,10,.12);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+      <div onClick="{{ stop }}" style="width:min(560px,100%);max-height:100%;overflow:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.08)),rgba(34,27,23,.42);backdrop-filter:blur(40px) saturate(170%);-webkit-backdrop-filter:blur(40px) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;"><span style="font-size:20px;font-weight:600;letter-spacing:-.02em;">{{ fpTitle }}</span><span style="font-size:13px;color:rgba(255,248,240,.88);text-wrap:pretty;">{{ fpSub }}</span></div>
+          <button onClick="{{ onClose }}" style="width:34px;height:34px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;font-size:15px;">×</button>
+        </div>
+        <sc-if value="{{ fpNeedName }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:8px;"><input value="{{ fpName }}" onChange="{{ fpOnName }}" onKeyDown="{{ fpKey }}" placeholder="{{ T.fpNamePh }}" style="flex:1;min-width:0;height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:14px;outline:none;"><button onClick="{{ fpCreate }}" style="height:40px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">{{ T.fpCreate }}</button></div>
+        </sc-if>
+        <sc-for list="{{ oneFolder }}" as="f" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:34px;height:34px;flex:none;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="16" cy="14" r="2"></circle><path d="M12.5 18.5a3.5 3.5 0 0 1 7 0"></path></svg></span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;"><span style="font-size:15px;font-weight:600;">{{ f.name }}</span><span style="font-size:12px;color:rgba(255,248,240,.62);">{{ f.kind }} · {{ f.nMem }}</span></span>
+              <button onClick="{{ f.onPause }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:{{ f.pauseBg }};color:#fbf8f5;font:inherit;font-size:12px;font-weight:600;cursor:pointer;">{{ f.pauseLbl }}</button>
+              <button onClick="{{ f.onDel }}" title="{{ T.delete }}" style="width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:#ffc9b8;cursor:pointer;padding:0;font-size:16px;">×</button>
+            </div>
+            <sc-for list="{{ f.members }}" as="m" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 6px;border-radius:12px;opacity:{{ m.op }};">
+                <span style="width:30px;height:30px;flex:none;border-radius:50%;background:{{ m.av }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">{{ m.ini }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;"><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</span><span style="font-size:11.5px;color:rgba(255,248,240,.6);">{{ m.email }} · <span style="color:{{ m.stC }};">{{ m.st }}</span></span></span>
+                <select value="{{ m.perm }}" onChange="{{ m.onPerm }}" style="height:30px;padding:0 24px 0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;"><sc-for list="{{ permOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+                <button onClick="{{ m.onPause }}" title="{{ m.pauseLbl }}" style="height:30px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:transparent;color:#fbf8f5;font:inherit;font-size:12px;cursor:pointer;">{{ m.pauseLbl }}</button>
+                <button onClick="{{ m.onDel }}" title="{{ T.remove }}" style="width:28px;height:28px;border-radius:50%;border:0;background:transparent;color:rgba(255,248,240,.55);cursor:pointer;padding:0;font-size:15px;">×</button>
+              </div>
+            </sc-for>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;gap:8px;"><input value="{{ f.q }}" onChange="{{ f.onQ }}" onKeyDown="{{ f.onKey }}" placeholder="{{ T.emailPh }}" type="email" style="flex:1;min-width:0;height:36px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13px;outline:none;"><button onClick="{{ f.onAdd }}" style="height:36px;padding:0 14px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;">{{ T.share }}</button></div>
+              <sc-for list="{{ f.sugg }}" as="u" hint-placeholder-count="2"><button onClick="{{ u.onPick }}" style="display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:10px;border:0;background:rgba(255,255,255,.05);color:#fbf8f5;font:inherit;font-size:12.5px;cursor:pointer;text-align:left;"><span style="font-weight:600;">{{ u.name }}</span><span style="color:rgba(255,248,240,.6);">{{ u.email }}</span></button></sc-for>
+              <sc-if value="{{ f.askInvite }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:oklch(0.75 0.12 245 / .16);border:1px solid oklch(0.78 0.12 245 / .4);font-size:12.5px;"><span style="flex:1;">{{ f.inviteTxt }}</span><button onClick="{{ f.onInvite }}" style="height:30px;padding:0 12px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12px;font-weight:600;cursor:pointer;">{{ T.sendInvite }}</button><button onClick="{{ f.onNoInvite }}" style="height:30px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fbf8f5;font:inherit;font-size:12px;cursor:pointer;">{{ T.cancel }}</button></div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+        <div style="display:flex;justify-content:flex-end;"><button onClick="{{ onClose }}" style="height:38px;padding:0 18px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;">{{ T.fpDone }}</button></div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isLink }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onClose }}" data-kv-dim="1" style="position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,14,10,.12);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+      <div onClick="{{ stop }}" style="width:min(520px,100%);display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.08)),rgba(34,27,23,.42);backdrop-filter:blur(40px) saturate(170%);-webkit-backdrop-filter:blur(40px) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;"><span style="font-size:20px;font-weight:600;letter-spacing:-.02em;">{{ T.shareTitle }}</span><span style="font-size:13px;color:rgba(255,248,240,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ itemTitle }}</span></div>
+          <button onClick="{{ onClose }}" style="width:34px;height:34px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;font-size:15px;">×</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:rgba(20,15,12,.3);border:1px solid rgba(255,255,255,.14);">
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:600;">{{ T.pubLink }}</span><span style="font-size:12.5px;color:rgba(255,248,240,.88);">{{ T.pubDesc }}</span></span>
+          <button onClick="{{ onToggle }}" style="width:44px;height:26px;flex:none;border-radius:999px;border:0;padding:3px;cursor:pointer;background:{{ tBg }};display:flex;justify-content:{{ tJ }};"><span style="width:20px;height:20px;border-radius:50%;background:#fbf8f5;"></span></button>
+        </div>
+        <sc-if value="{{ hasLink }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;gap:8px;"><input value="{{ url }}" readonly="" style="flex:1;min-width:0;height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(20,15,12,.3);color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:12px;outline:none;"><button onClick="{{ onCopy }}" style="height:38px;padding:0 16px;border-radius:999px;border:0;background:{{ copyBg }};color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">{{ copyLbl }}</button></div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+              <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:rgba(255,248,240,.9);">{{ T.expires }}</span><input type="date" value="{{ expires }}" onChange="{{ onExp }}" style="height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(20,15,12,.3);color:#fbf8f5;font:inherit;font-size:13px;outline:none;color-scheme:dark;"></label>
+              <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:rgba(255,248,240,.9);">{{ T.pwd }}</span><input type="text" value="{{ pwd }}" onChange="{{ onPwd }}" placeholder="{{ T.pwdPh }}" style="height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(20,15,12,.3);color:#fbf8f5;font:inherit;font-size:13px;outline:none;"></label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;font-size:12.5px;color:rgba(255,248,240,.9);"><span style="display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg><b style="font-family:'Geist Mono',monospace;color:#fbf8f5;">{{ views }}</b> {{ T.views }}</span><span style="margin-right:auto;">· {{ T.readOnly }}</span><button onClick="{{ onRevoke }}" style="height:32px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,200,180,.35);background:transparent;color:#ffc9b8;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;">{{ T.revoke }}</button></div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <div style="display:flex;flex-direction:column;gap:14px;padding:24px;border-radius:26px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.14);">
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="font-size:18px;font-weight:600;">{{ T.folders }}</div><div style="font-size:14px;color:rgba(255,248,240,.68);">{{ T.foldersDesc }}</div></div>
+        <div style="display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:8px;">
+          <select value="{{ nKind }}" onChange="{{ onNKind }}" style="height:38px;padding:0 28px 0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;"><sc-for list="{{ kindOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+          <input value="{{ nName }}" onChange="{{ onNName }}" placeholder="{{ T.folderName }}" style="height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;min-width:0;">
+          <button onClick="{{ onNew }}" style="height:38px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">+ {{ T.create }}</button>
+        </div>
+        <sc-for list="{{ folders }}" as="f" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:34px;height:34px;flex:none;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="16" cy="14" r="2"></circle><path d="M12.5 18.5a3.5 3.5 0 0 1 7 0"></path></svg></span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;"><span style="font-size:15px;font-weight:600;">{{ f.name }}</span><span style="font-size:12px;color:rgba(255,248,240,.62);">{{ f.kind }} · {{ f.nMem }}</span></span>
+              <button onClick="{{ f.onPause }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:{{ f.pauseBg }};color:#fbf8f5;font:inherit;font-size:12px;font-weight:600;cursor:pointer;">{{ f.pauseLbl }}</button>
+              <button onClick="{{ f.onDel }}" title="{{ T.delete }}" style="width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:#ffc9b8;cursor:pointer;padding:0;font-size:16px;">×</button>
+            </div>
+            <sc-for list="{{ f.members }}" as="m" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 6px;border-radius:12px;opacity:{{ m.op }};">
+                <span style="width:30px;height:30px;flex:none;border-radius:50%;background:{{ m.av }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">{{ m.ini }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;"><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</span><span style="font-size:11.5px;color:rgba(255,248,240,.6);">{{ m.email }} · <span style="color:{{ m.stC }};">{{ m.st }}</span></span></span>
+                <select value="{{ m.perm }}" onChange="{{ m.onPerm }}" style="height:30px;padding:0 24px 0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;"><sc-for list="{{ permOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+                <button onClick="{{ m.onPause }}" title="{{ m.pauseLbl }}" style="height:30px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:transparent;color:#fbf8f5;font:inherit;font-size:12px;cursor:pointer;">{{ m.pauseLbl }}</button>
+                <button onClick="{{ m.onDel }}" title="{{ T.remove }}" style="width:28px;height:28px;border-radius:50%;border:0;background:transparent;color:rgba(255,248,240,.55);cursor:pointer;padding:0;font-size:15px;">×</button>
+              </div>
+            </sc-for>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;gap:8px;"><input value="{{ f.q }}" onChange="{{ f.onQ }}" onKeyDown="{{ f.onKey }}" placeholder="{{ T.emailPh }}" type="email" style="flex:1;min-width:0;height:36px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13px;outline:none;"><button onClick="{{ f.onAdd }}" style="height:36px;padding:0 14px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;">{{ T.share }}</button></div>
+              <sc-for list="{{ f.sugg }}" as="u" hint-placeholder-count="2"><button onClick="{{ u.onPick }}" style="display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:10px;border:0;background:rgba(255,255,255,.05);color:#fbf8f5;font:inherit;font-size:12.5px;cursor:pointer;text-align:left;"><span style="font-weight:600;">{{ u.name }}</span><span style="color:rgba(255,248,240,.6);">{{ u.email }}</span></button></sc-for>
+              <sc-if value="{{ f.askInvite }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:oklch(0.75 0.12 245 / .16);border:1px solid oklch(0.78 0.12 245 / .4);font-size:12.5px;"><span style="flex:1;">{{ f.inviteTxt }}</span><button onClick="{{ f.onInvite }}" style="height:30px;padding:0 12px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12px;font-weight:600;cursor:pointer;">{{ T.sendInvite }}</button><button onClick="{{ f.onNoInvite }}" style="height:30px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fbf8f5;font:inherit;font-size:12px;cursor:pointer;">{{ T.cancel }}</button></div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noFolders }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:rgba(255,248,240,.6);">{{ T.noFolders }}</div></sc-if>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;padding:24px;border-radius:26px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.14);">
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="font-size:18px;font-weight:600;">{{ T.people }}</div><div style="font-size:14px;color:rgba(255,248,240,.68);">{{ T.peopleDesc }}</div></div>
+        <sc-for list="{{ people }}" as="p" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:4px 6px;border-radius:12px;opacity:{{ p.op }};">
+            <span style="width:32px;height:32px;flex:none;border-radius:50%;background:{{ p.av }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">{{ p.ini }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;"><span style="font-size:13.5px;font-weight:600;">{{ p.name }}</span><span style="font-size:11.5px;color:rgba(255,248,240,.6);">{{ p.email }} · {{ p.nf }}</span></span>
+            <button onClick="{{ p.onPause }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:{{ p.pauseBg }};color:#fbf8f5;font:inherit;font-size:12px;font-weight:600;cursor:pointer;">{{ p.pauseLbl }}</button>
+            <button onClick="{{ p.onDel }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,200,180,.35);background:transparent;color:#ffc9b8;font:inherit;font-size:12px;font-weight:600;cursor:pointer;">{{ T.removeAll }}</button>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noPeople }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:rgba(255,248,240,.6);">{{ T.noPeople }}</div></sc-if>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;padding:24px;border-radius:26px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.14);">
+        <div style="font-size:18px;font-weight:600;">{{ T.links }}</div>
+        <sc-for list="{{ links }}" as="l" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 10px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">
+            <span style="height:22px;padding:0 8px;border-radius:999px;display:flex;align-items:center;font-size:11px;font-weight:700;background:rgba(255,255,255,.1);">{{ l.kind }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;"><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ l.title }}</span><span style="font-size:11.5px;color:rgba(255,248,240,.6);">{{ l.meta }}</span></span>
+            <button onClick="{{ l.onCopy }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fbf8f5;font:inherit;font-size:12px;cursor:pointer;">{{ T.copy }}</button>
+            <button onClick="{{ l.onRevoke }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,200,180,.35);background:transparent;color:#ffc9b8;font:inherit;font-size:12px;font-weight:600;cursor:pointer;">{{ T.revoke }}</button>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noLinks }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:rgba(255,248,240,.6);">{{ T.noLinks }}</div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mode&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;settings&quot;, &quot;link&quot;, &quot;folder&quot;], &quot;default&quot;: &quot;settings&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;lang&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;pt&quot;, &quot;en&quot;], &quot;default&quot;: &quot;pt&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;kind&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;string&quot;}, &quot;refId&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;string&quot;}, &quot;title&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;string&quot;}, &quot;folderId&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;string&quot;}, &quot;onClose&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;() =&gt; void&quot;}}">
+const SH_KEY = 'kv.share';
+const shLoad = () => { try { const v = JSON.parse(localStorage.getItem(SH_KEY)); if (v && v.folders) return v; } catch (e) {} return { links: [], folders: [], users: {} }; };
+const SH_T = {
+  pt: { fpTitle: 'Partilhar pasta', fpNew: 'Nova pasta partilhada', fpNewSub: 'Dê um nome à pasta e depois adicione as pessoas com quem a quer partilhar.', fpNamePh: 'Nome da pasta', fpCreate: 'Criar', fpDone: 'Concluído', fpNoMem: 'ainda sem membros', shareTitle: 'Partilhar', pubLink: 'Link público', pubDesc: 'Qualquer pessoa com o link pode ver, só em leitura.', expires: 'Expira em (opcional)', pwd: 'Password (opcional)', pwdPh: 'Sem password', views: 'visualizações', readOnly: 'Só leitura', revoke: 'Remover partilha', copy: 'Copiar', copied: 'Copiado ✓', folders: 'Pastas Partilhadas', foldersDesc: 'Pastas de notas, tarefas ou artefactos partilhadas com outras pessoas. Aparecem nas respetivas páginas com o símbolo de partilha.', folderName: 'Nome da pasta', create: 'Criar', delete: 'Eliminar pasta', remove: 'Remover', emailPh: 'Email da pessoa…', share: 'Partilhar', sendInvite: 'Enviar convite', cancel: 'Cancelar', noFolders: 'Ainda não há pastas partilhadas.', people: 'Pessoas com Acesso', peopleDesc: 'Pause ou remova o acesso de alguém a todas as pastas de uma vez.', removeAll: 'Remover tudo', noPeople: 'Ninguém tem acesso às suas pastas.', links: 'Links Públicos', noLinks: 'Sem links públicos ativos.', notes: 'Notas', tasks: 'Tarefas', arts: 'Artefactos', note: 'Nota', art: 'Artefacto', read: 'Leitura', edit: 'Edição', pause: 'Pausar', resume: 'Retomar', active: 'Ativo', paused: 'Em pausa', invited: 'Convite enviado', members0: 'sem membros', members1: ' membro', membersN: ' membros', folders1: ' pasta', foldersN: ' pastas', created: 'Criado', exp: 'expira', noUser: ' não tem conta no KnowledgeHub. Enviar convite por email?' },
+  en: { fpTitle: 'Share folder', fpNew: 'New shared folder', fpNewSub: 'Name the folder, then add the people you want to share it with.', fpNamePh: 'Folder name', fpCreate: 'Create', fpDone: 'Done', fpNoMem: 'no members yet', shareTitle: 'Share', pubLink: 'Public link', pubDesc: 'Anyone with the link can view it, read-only.', expires: 'Expires on (optional)', pwd: 'Password (optional)', pwdPh: 'No password', views: 'views', readOnly: 'Read-only', revoke: 'Stop sharing', copy: 'Copy', copied: 'Copied ✓', folders: 'Shared Folders', foldersDesc: 'Note, task or artifact folders shared with other people. They show in their pages with a share icon.', folderName: 'Folder name', create: 'Create', delete: 'Delete folder', remove: 'Remove', emailPh: 'Person’s email…', share: 'Share', sendInvite: 'Send invite', cancel: 'Cancel', noFolders: 'No shared folders yet.', people: 'People with Access', peopleDesc: 'Pause or remove someone’s access to all your folders at once.', removeAll: 'Remove all', noPeople: 'No one has access to your folders.', links: 'Public Links', noLinks: 'No active public links.', notes: 'Notes', tasks: 'Tasks', arts: 'Artifacts', note: 'Note', art: 'Artifact', read: 'Read', edit: 'Edit', pause: 'Pause', resume: 'Resume', active: 'Active', paused: 'Paused', invited: 'Invite sent', members0: 'no members', members1: ' member', membersN: ' members', folders1: ' folder', foldersN: ' folders', created: 'Created', exp: 'expires', noUser: ' has no KnowledgeHub account. Send an email invite?' }
+};
+const shIni = n => (n || '?').split(/[\s.@]+/).filter(Boolean).slice(0, 2).map(s => s[0]).join('').toUpperCase();
+const shAv = s => { let h = 0; for (const c of s || '') h = (h * 31 + c.charCodeAt(0)) % 360; return 'oklch(0.58 0.1 ' + h + ')'; };
+
+class Component extends DCLogic {
+  state = { d: shLoad(), copied: false, nKind: 'notes', nName: '', q: {}, ask: {} };
+  componentDidMount() { this._ev = () => this.setState({ d: shLoad() }); window.addEventListener('kv-share', this._ev); if (this.props.mode === 'folder' && this.props.refId) { const kind = this.props.kind || 'notes', src = String(this.props.refId); if (!this.state.d.folders.some(f => f.kind === kind && f.srcId === src)) { const id = 'sh' + Date.now(); this.upd(d => { d.folders.push({ id, kind, name: this.props.title || 'Pasta', srcId: src, members: [], paused: false }); }); this.setState({ fpId: id }); } } }
+  componentWillUnmount() { window.removeEventListener('kv-share', this._ev); }
+  save(d) { this.setState({ d }); try { localStorage.setItem(SH_KEY, JSON.stringify(d)); } catch (e) {} window.dispatchEvent(new Event('kv-share')); }
+  upd(fn) { const d = JSON.parse(JSON.stringify(this.state.d)); fn(d); this.save(d); }
+  dir() { let P = []; try { P = (JSON.parse(localStorage.getItem('kv.mg.v3')) || {}).people || []; } catch (e) {} return P.filter(p => p.email).map(p => ({ email: p.email.toLowerCase(), name: p.name })); }
+  renderVals() {
+    const S = this.state, en = this.props.lang === 'en', T = SH_T[en ? 'en' : 'pt'], D = S.d, mode = this.props.mode || 'settings';
+    const DIR = this.dir(), nameOf = e => (DIR.find(u => u.email === e) || {}).name || e.split('@')[0];
+    const out = { T, stop: e => e.stopPropagation(), isLink: mode === 'link', isSettings: mode === 'settings', isFolder: mode === 'folder', onClose: () => this.props.onClose && this.props.onClose() };
+    if (mode === 'link') {
+      const kind = this.props.kind, ref = String(this.props.refId), L = D.links.find(l => l.kind === kind && l.ref === ref && l.active);
+      out.itemTitle = this.props.title || ''; out.hasLink = !!L; out.tBg = L ? 'oklch(0.78 0.14 150)' : 'rgba(255,255,255,.2)'; out.tJ = L ? 'flex-end' : 'flex-start';
+      out.onToggle = () => this.upd(d => { const x = d.links.find(l => l.kind === kind && l.ref === ref && l.active); if (x) x.active = false; else d.links.unshift({ id: 'l' + Date.now(), kind, ref, title: this.props.title || '', token: Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6), created: new Date().toISOString().slice(0, 10), expires: '', pwd: '', views: 0, active: true }); });
+      if (L) { out.url = 'https://knowledgehub.app/s/' + L.token; out.expires = L.expires || ''; out.pwd = L.pwd || ''; out.views = String(L.views || 0); out.copyLbl = S.copied ? T.copied : T.copy; out.copyBg = S.copied ? 'oklch(0.82 0.14 150)' : '#fbf8f5';
+        out.onCopy = () => { try { navigator.clipboard.writeText(out.url); } catch (e) {} this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1400); };
+        out.onExp = e => { const v = e.target.value; this.upd(d => { d.links.find(l => l.id === L.id).expires = v; }); }; out.onPwd = e => { const v = e.target.value; this.upd(d => { d.links.find(l => l.id === L.id).pwd = v; }); };
+        out.onRevoke = () => this.upd(d => { d.links.find(l => l.id === L.id).active = false; }); }
+      return out;
+    }
+    const KN = { notes: T.notes, tasks: T.tasks, arts: T.arts };
+    out.kindOpts = [['notes', T.notes], ['tasks', T.tasks], ['arts', T.arts]].map(([v, l]) => ({ v, l })); out.permOpts = [{ v: 'read', l: T.read }, { v: 'edit', l: T.edit }];
+    out.nKind = S.nKind; out.onNKind = e => this.setState({ nKind: e.target.value }); out.nName = S.nName; out.onNName = e => this.setState({ nName: e.target.value });
+    out.onNew = () => { const n = S.nName.trim(); if (!n) return; this.upd(d => { d.folders.push({ id: 'sh' + Date.now(), kind: S.nKind, name: n, members: [], paused: false }); }); this.setState({ nName: '' }); };
+    const addMember = (fid, email, invited) => this.upd(d => { const f = d.folders.find(x => x.id === fid); if (!f.members.some(m => m.email === email)) f.members.push({ email, perm: 'read', paused: false, status: invited ? 'invited' : 'active' }); });
+    out.folders = D.folders.map(f => { const q = (S.q[f.id] || '').trim().toLowerCase(), ask = S.ask[f.id];
+      const tryAdd = () => { if (!q || !/^\S+@\S+\.\S+$/.test(q)) return; if (DIR.some(u => u.email === q)) { addMember(f.id, q, false); this.setState(st => ({ q: { ...st.q, [f.id]: '' } })); } else this.setState(st => ({ ask: { ...st.ask, [f.id]: q } })); };
+      return { name: f.name, kind: KN[f.kind], nMem: f.members.length ? f.members.length + (f.members.length === 1 ? T.members1 : T.membersN) : T.members0, pauseLbl: f.paused ? T.resume : T.pause, pauseBg: f.paused ? 'oklch(0.78 0.13 85 / .35)' : 'rgba(255,255,255,.08)',
+        onPause: () => this.upd(d => { const x = d.folders.find(y => y.id === f.id); x.paused = !x.paused; }), onDel: () => this.upd(d => { d.folders = d.folders.filter(y => y.id !== f.id); }),
+        members: f.members.map(m => { const gp = (D.users[m.email] || {}).paused, ps = m.paused || gp || f.paused; return { email: m.email, name: nameOf(m.email), ini: shIni(nameOf(m.email)), av: shAv(m.email), perm: m.perm, op: ps ? .55 : 1, st: m.status === 'invited' ? T.invited : ps ? T.paused : T.active, stC: m.status === 'invited' ? 'oklch(0.84 0.12 245)' : ps ? 'oklch(0.86 0.12 85)' : 'oklch(0.84 0.13 150)', pauseLbl: m.paused ? T.resume : T.pause,
+          onPerm: e => { const v = e.target.value; this.upd(d => { d.folders.find(y => y.id === f.id).members.find(x => x.email === m.email).perm = v; }); }, onPause: () => this.upd(d => { const x = d.folders.find(y => y.id === f.id).members.find(z => z.email === m.email); x.paused = !x.paused; }), onDel: () => this.upd(d => { const x = d.folders.find(y => y.id === f.id); x.members = x.members.filter(z => z.email !== m.email); }) }; }),
+        q: S.q[f.id] || '', onQ: e => { const v = e.target.value; this.setState(st => ({ q: { ...st.q, [f.id]: v }, ask: { ...st.ask, [f.id]: null } })); }, onKey: e => { if (e.key === 'Enter') tryAdd(); }, onAdd: tryAdd,
+        sugg: q.length >= 2 ? DIR.filter(u => (u.email.includes(q) || u.name.toLowerCase().includes(q)) && !f.members.some(m => m.email === u.email)).slice(0, 4).map(u => ({ name: u.name, email: u.email, onPick: () => { addMember(f.id, u.email, false); this.setState(st => ({ q: { ...st.q, [f.id]: '' } })); } })) : [],
+        askInvite: !!ask, inviteTxt: (ask || '') + T.noUser, onInvite: () => { addMember(f.id, ask, true); this.setState(st => ({ q: { ...st.q, [f.id]: '' }, ask: { ...st.ask, [f.id]: null } })); }, onNoInvite: () => this.setState(st => ({ ask: { ...st.ask, [f.id]: null } })) }; });
+    if (mode === 'folder') { const kind = this.props.kind || 'notes', src = this.props.refId ? String(this.props.refId) : '', tf = D.folders.find(f => f.id === (S.fpId || this.props.folderId)) || (src ? D.folders.find(f => f.kind === kind && f.srcId === src) : null), idx = tf ? D.folders.indexOf(tf) : -1;
+      out.oneFolder = idx >= 0 ? [out.folders[idx]] : []; out.fpNeedName = !tf; out.fpName = S.fpName || ''; out.fpOnName = e => this.setState({ fpName: e.target.value });
+      const mk = () => { const n = (this.state.fpName || '').trim() || this.props.title || ''; if (!n) return; const id = 'sh' + Date.now(); this.upd(d => { d.folders.push({ id, kind, name: n, srcId: src, members: [], paused: false }); }); this.setState({ fpId: id, fpName: '' }); if (this.props.onCreated) this.props.onCreated(id); };
+      out.fpCreate = mk; out.fpKey = e => { if (e.key === 'Enter') mk(); };
+      out.fpTitle = tf ? T.fpTitle : T.fpNew; out.fpSub = tf ? (tf.name + ' · ' + (tf.members.length ? tf.members.length + (tf.members.length === 1 ? T.members1 : T.membersN) : T.fpNoMem)) : T.fpNewSub; }
+    out.noFolders = !D.folders.length;
+    const emails = [...new Set(D.folders.flatMap(f => f.members.map(m => m.email)))];
+    out.people = emails.map(e => { const nf = D.folders.filter(f => f.members.some(m => m.email === e)).length, gp = !!(D.users[e] || {}).paused; return { email: e, name: nameOf(e), ini: shIni(nameOf(e)), av: shAv(e), nf: nf + (nf === 1 ? T.folders1 : T.foldersN), op: gp ? .55 : 1, pauseLbl: gp ? T.resume : T.pause, pauseBg: gp ? 'oklch(0.78 0.13 85 / .35)' : 'rgba(255,255,255,.08)',
+      onPause: () => this.upd(d => { d.users[e] = { ...(d.users[e] || {}), paused: !gp }; }), onDel: () => this.upd(d => { d.folders.forEach(f => { f.members = f.members.filter(m => m.email !== e); }); delete d.users[e]; }) }; });
+    out.noPeople = !emails.length;
+    const al = D.links.filter(l => l.active);
+    out.links = al.map(l => ({ kind: l.kind === 'note' ? T.note : T.art, title: l.title, meta: T.created + ' ' + l.created + (l.expires ? ' · ' + T.exp + ' ' + l.expires : '') + ' · ' + (l.views || 0) + ' ' + T.views + (l.pwd ? ' · ' + T.pwd.split(' (')[0] : ''), onCopy: () => { try { navigator.clipboard.writeText('https://knowledgehub.app/s/' + l.token); } catch (e) {} }, onRevoke: () => this.upd(d => { d.links.find(x => x.id === l.id).active = false; }) }));
+    out.noLinks = !al.length;
+    return out;
+  }
+}
+</script>
+</body>
+</html>

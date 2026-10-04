@@ -1,0 +1,155 @@
+# KnowledgeHub v2 — production stack (VPS Hostinger KVM 1: 1 vCPU / 4 GB).
+# Memory limits keep the whole stack (plus the v1 app still on the host)
+# inside 4 GB; see docs/DEPLOY.md. Values come from .env (see .env.example).
+#
+#   docker compose run --rm migrate      # apply DB migrations
+#   docker compose up -d                 # start / update
+#   docker compose --profile edge up -d  # + Caddy on 80/443 (after the cut-over)
+
+name: knowledgehub
+
+x-app: &app
+  env_file: .env
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: postgres://kh_app:${KH_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    DATABASE_ADMIN_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    REDIS_URL: redis://redis:6379
+    S3_ENDPOINT: http://minio:9000
+  restart: unless-stopped
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    minio-init: { condition: service_completed_successfully }
+  logging: &logging
+    driver: json-file
+    options: { max-size: 10m, max-file: '3' }
+
+services:
+  web:
+    <<: *app
+    image: ${KH_IMAGE_REPO:-ghcr.io/raulajpereira/knowledgehub}-web:${KH_IMAGE_TAG:-latest}
+    # Loopback only: reached by the host Nginx (/v2) now, by Caddy later.
+    ports: ['127.0.0.1:${KH_WEB_PORT:-3100}:3000']
+    mem_limit: 640m
+
+  worker:
+    <<: *app
+    image: ${KH_IMAGE_REPO:-ghcr.io/raulajpereira/knowledgehub}-worker:${KH_IMAGE_TAG:-latest}
+    mem_limit: 384m
+
+  migrate:
+    <<: *app
+    image: ${KH_IMAGE_REPO:-ghcr.io/raulajpereira/knowledgehub}-worker:${KH_IMAGE_TAG:-latest}
+    command: ['node', 'dist/migrate.mjs']
+    restart: 'no'
+    profiles: ['tools']
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      KH_APP_DB_PASSWORD: ${KH_APP_DB_PASSWORD}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - max_connections=60
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 640m
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # BullMQ requires noeviction (it must never silently lose jobs).
+    command:
+      ['redis-server', '--appendonly', 'yes', '--maxmemory', '128mb', '--maxmemory-policy', 'noeviction']
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 192m
+    logging: *logging
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ['server', '/data']
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+      MINIO_BROWSER: 'off'
+    volumes: [miniodata:/data]
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 384m
+    logging: *logging
+
+  # One-shot: creates the private bucket if it doesn't exist yet.
+  minio-init:
+    image: minio/mc:latest
+    restart: 'no'
+    depends_on:
+      minio: { condition: service_healthy }
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+    entrypoint:
+      - sh
+      - -c
+      - >
+        mc alias set kh http://minio:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" &&
+        mc mb --ignore-existing "kh/$$S3_BUCKET" &&
+        mc anonymous set none "kh/$$S3_BUCKET"
+
+  # Edge proxy — only after the cut-over (replaces the host Nginx on 80/443).
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: ['edge']
+    ports: ['80:80', '443:443', '443:443/udp']
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      KH_DOMAIN: ${KH_DOMAIN:-knowledge-hub.cloud}
+      KH_V1_UPSTREAM: ${KH_V1_UPSTREAM:-host.docker.internal:4000}
+    extra_hosts: ['host.docker.internal:host-gateway']
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on: [web]
+    mem_limit: 128m
+    logging: *logging
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  caddydata:
+  caddyconfig:

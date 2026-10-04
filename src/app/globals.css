@@ -1,0 +1,89 @@
+@import 'tailwindcss';
+
+/* Design tokens — docs/handoff/README.md §6. User-adjustable values (accent,
+   blur, scales, background) are CSS variables so preferences only ever
+   change variables, never component styles. */
+:root {
+  --accent: oklch(0.76 0.17 245);
+  --glass-blur: 34px;
+  --font-scale: 1;
+  --ui-scale: 1;
+
+  --bg-base: #121315;
+  --bg-gradient:
+    radial-gradient(1100px 700px at 15% 20%, rgba(255, 255, 255, 0.07), transparent 60%),
+    radial-gradient(900px 600px at 85% 85%, oklch(0.45 0.08 245 / 0.28), transparent 60%),
+    linear-gradient(160deg, #1f2124, #17181b 55%, #121315);
+
+  --text: #fbf8f5;
+  --text-2: rgba(255, 248, 240, 0.75);
+  --text-3: rgba(255, 248, 240, 0.6);
+  --placeholder: rgba(255, 248, 240, 0.42);
+
+  --glass-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 30px 80px rgba(0, 0, 0, 0.35);
+  --glass-filter: blur(var(--glass-blur)) saturate(160%);
+
+  --btn-primary-bg: #fbf8f5;
+  --btn-primary-fg: #2a211c;
+
+  --ok: oklch(0.78 0.14 150);
+  --warn: oklch(0.82 0.13 85);
+  --danger: oklch(0.7 0.17 25);
+  --mgmt: oklch(0.76 0.14 305);
+
+  --radius-pill: 999px;
+  --radius-panel: 30px;
+  --radius-card: 24px;
+  --radius-input: 13px;
+}
+
+@theme inline {
+  --color-accent: var(--accent);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-mgmt: var(--mgmt);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --radius-pill: var(--radius-pill);
+  --radius-panel: var(--radius-panel);
+  --radius-card: var(--radius-card);
+  --radius-input: var(--radius-input);
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: calc(16px * var(--font-scale));
+}
+
+a {
+  color: var(--text);
+}
+a:hover {
+  color: #fff;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--placeholder);
+}
+
+.kh-bg {
+  background: var(--bg-gradient);
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}

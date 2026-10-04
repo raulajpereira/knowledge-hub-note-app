@@ -1,0 +1,175 @@
+name: v2 — CI & Deploy
+
+# KnowledgeHub v2 only. Lives on the v2 branch and never touches v1 (main /
+# v1 branches, the v1 checkout, PM2 process or MySQL database).
+on:
+  push:
+    branches: [v2]
+  pull_request:
+    branches: [v2]
+  workflow_dispatch:
+
+concurrency:
+  group: v2-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Path v2 is served from: "/v2" until the cut-over. GitHub variables can't
+  # be empty, so the repo variable KH_BASE_PATH is set to "/" for the root.
+  KH_BASE_PATH: ${{ vars.KH_BASE_PATH || '/v2' }}
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: kh_owner
+          POSTGRES_PASSWORD: owner
+          POSTGRES_DB: knowledgehub
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U kh_owner" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      APP_URL: http://127.0.0.1:3100
+      DATABASE_ADMIN_URL: postgres://kh_owner:owner@localhost:5432/knowledgehub
+      DATABASE_URL: postgres://kh_app:ci-app@localhost:5432/knowledgehub
+      TEST_DATABASE_ADMIN_URL: postgres://kh_owner:owner@localhost:5432/knowledgehub
+      TEST_DATABASE_URL: postgres://kh_app:ci-app@localhost:5432/knowledgehub
+      REDIS_URL: redis://localhost:6379
+      S3_ENDPOINT: http://localhost:9000
+      S3_BUCKET: kh-files
+      S3_ACCESS_KEY: kh-minio
+      S3_SECRET_KEY: ci-minio-secret
+      ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+    steps:
+      - name: Resolve base path
+        run: |
+          bp="$KH_BASE_PATH"; [ "$bp" = "/" ] && bp=""
+          echo "NEXT_PUBLIC_BASE_PATH=$bp" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=$S3_ACCESS_KEY -e MINIO_ROOT_PASSWORD=$S3_SECRET_KEY \
+            minio/minio:latest server /data
+          for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/ready && break; sleep 1; done
+          docker run --rm --network host --entrypoint sh minio/mc:latest -c \
+            "mc alias set kh http://localhost:9000 $S3_ACCESS_KEY $S3_SECRET_KEY && mc mb --ignore-existing kh/$S3_BUCKET"
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint -- --max-warnings 0
+      - run: npm run typecheck
+      - run: npm run format:check
+      - name: Unit & integration tests (incl. RLS)
+        run: npm test
+      - name: Migrations
+        run: npm run db:migrate
+      - name: Build
+        run: npm run build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Start worker
+        run: node dist/worker.mjs > worker.log 2>&1 &
+      - name: E2E (Playwright)
+        run: npm run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            worker.log
+          retention-days: 7
+
+  image:
+    needs: ci
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        target: [web, worker]
+    steps:
+      - name: Resolve base path
+        run: |
+          bp="$KH_BASE_PATH"; [ "$bp" = "/" ] && bp=""
+          echo "NEXT_PUBLIC_BASE_PATH=$bp" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: true
+          build-args: |
+            NEXT_PUBLIC_BASE_PATH=${{ env.NEXT_PUBLIC_BASE_PATH }}
+            APP_VERSION=${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/knowledgehub-${{ matrix.target }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/knowledgehub-${{ matrix.target }}:latest
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+
+  deploy:
+    needs: image
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Deploy to VPS (v2 directory only)
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          KH_APP_DIR: ${{ secrets.VPS_APP_DIR_V2 }}
+          KH_IMAGE_TAG: ${{ github.sha }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: KH_APP_DIR,KH_IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -e
+            if [ -z "$KH_APP_DIR" ]; then
+              echo "VPS_APP_DIR_V2 secret not set — skipping deploy (see docs/DEPLOY.md)."
+              exit 0
+            fi
+            cd "$KH_APP_DIR"
+            git fetch origin v2
+            git reset --hard origin/v2
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export KH_IMAGE_TAG
+            docker compose pull web worker migrate
+            docker compose run --rm migrate
+            docker compose up -d --remove-orphans
+            docker logout ghcr.io
+            docker image prune -f
+            for i in $(seq 1 30); do
+              if docker compose ps web --format '{{.Health}}' | grep -q healthy; then
+                echo "v2 is healthy ($KH_IMAGE_TAG)"; exit 0
+              fi
+              sleep 5
+            done
+            docker compose logs --tail 80 web worker
+            echo "v2 did not become healthy" >&2
+            exit 1

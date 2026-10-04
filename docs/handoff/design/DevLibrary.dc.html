@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./devlib-langs.js"></script></helmet>
+<div style="height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;color:#fbf8f5;">
+  <section style="position:relative;isolation:isolate;flex:1;min-height:0;display:grid;grid-template-rows:minmax(0,1fr);grid-template-columns:{{ colTpl }};border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);">
+    <div style="position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;backdrop-filter:blur(34px) saturate(150%);-webkit-backdrop-filter:blur(34px) saturate(150%);"></div>
+    <div onPointerDown="{{ colDown }}" onDoubleClick="{{ colReset }}" title="{{ T.resize }}" style="position:absolute;top:0;bottom:0;left:{{ colHandleL }};width:14px;z-index:6;cursor:col-resize;display:flex;align-items:center;justify-content:center;"><div style="width:4px;height:48px;border-radius:4px;background:{{ colBar }};box-shadow:0 0 0 1px rgba(255,255,255,.08);"></div></div>
+
+    <div style="min-height:0;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.1);">
+      <div style="flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding:20px 16px 12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;flex-direction:column;gap:2px;margin-right:auto;min-width:0;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em;">{{ T.title }}</h1><span style="font-size:12.5px;color:rgba(255,248,240,.65);">{{ sub }}</span></div>
+          <button onClick="{{ onNew }}" title="{{ T.newSnippet }}" style="width:34px;height:34px;flex:none;border-radius:50%;border:0;background:#fbf8f5;color:#2a211c;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,12,9,.22);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,248,240,.6)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+          <input value="{{ q }}" onChange="{{ onQ }}" placeholder="{{ T.search }}" style="flex:1;min-width:0;border:0;outline:none;background:transparent;color:#fbf8f5;font:inherit;font-size:13.5px;">
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;">
+          <select value="{{ langF }}" onChange="{{ onLangF }}" style="height:32px;padding:0 26px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;min-width:0;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center;background-size:10px;"><sc-for list="{{ langFOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}" style="background-color:#2b2c33;color:#f4f2f0;">{{ o.l }}</option></sc-for></select>
+          <select value="{{ typeF }}" onChange="{{ onTypeF }}" style="height:32px;padding:0 26px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;min-width:0;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center;background-size:10px;"><sc-for list="{{ typeFOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}" style="background-color:#2b2c33;color:#f4f2f0;">{{ o.l }}</option></sc-for></select>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.onClick }}" style="height:28px;padding:0 11px;border-radius:999px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">{{ c.label }}<span style="font-family:'Geist Mono',monospace;font-size:10.5px;opacity:.7;">{{ c.n }}</span></button></sc-for>
+        </div>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding:0 8px 12px;display:flex;flex-direction:column;gap:12px;">
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <div onClick="{{ g.onToggle }}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;cursor:pointer;user-select:none;" style-hover="background:rgba(255,255,255,.06);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,248,240,.7)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;transform:rotate({{ g.rot }});transition:transform .15s;"><path d="M6 9l6 6 6-6"></path></svg><span style="width:8px;height:8px;border-radius:2px;background:{{ g.color }};"></span><span style="font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,248,240,.72);">{{ g.name }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:rgba(255,248,240,.5);">{{ g.n }}</span></div>
+            <sc-if value="{{ g.open }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+              <div onClick="{{ it.onClick }}" style="flex-shrink:0;display:flex;flex-direction:column;gap:5px;padding:10px 12px;border-radius:16px;cursor:pointer;background:{{ it.bg }};border:1px solid {{ it.bd }};" style-hover="background:rgba(255,255,255,.08);">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;"><span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.title }}</span><sc-if value="{{ it.fav }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="oklch(0.86 0.13 85)"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4l-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"></path></svg></sc-if></div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,248,240,.62);min-width:0;white-space:nowrap;overflow:hidden;"><span style="flex:none;">{{ it.type }}</span><span style="flex:none;">· {{ it.files }}</span><span style="overflow:hidden;text-overflow:ellipsis;">{{ it.tags }}</span></div>
+              </div>
+            </sc-for></sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding:30px 10px;text-align:center;font-size:13px;color:rgba(255,248,240,.6);">{{ T.empty }}</div></sc-if>
+      </div>
+    </div>
+
+    <div style="min-height:0;min-width:0;display:flex;flex-direction:column;">
+      <sc-if value="{{ has }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:16px;padding:22px 26px 26px;">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}"><button onClick="{{ onBack }}" title="{{ backTip }}" style="height:30px;padding:0 12px 0 8px;flex:none;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;max-width:200px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M15 6l-6 6 6 6"></path></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ backLbl }}</span></button></sc-if>
+            <input value="{{ s.title }}" onChange="{{ s.onTitle }}" style="flex:1;min-width:0;padding:0;border:0;background:transparent;color:#fbf8f5;font:inherit;font-size:24px;font-weight:600;letter-spacing:-.02em;outline:none;">
+            <button onClick="{{ s.onFav }}" title="{{ T.fav }}" style="width:36px;height:36px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:{{ s.favC }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="{{ s.favFill }}" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4l-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"></path></svg></button>
+            <button onClick="{{ s.onDel }}" title="{{ T.del }}" style="width:36px;height:36px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#ffc9b8;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path></svg></button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+            <label style="display:flex;flex-direction:column;gap:6px;min-width:0;"><span style="font-size:12px;color:rgba(255,248,240,.72);">{{ T.type }}</span><select value="{{ s.type }}" onChange="{{ s.onType }}" style="height:36px;padding:0 30px 0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 12px center;background-size:11px;"><sc-for list="{{ typeOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}" style="background-color:#2b2c33;color:#f4f2f0;">{{ o.l }}</option></sc-for></select></label>
+            <label style="display:flex;flex-direction:column;gap:6px;min-width:0;grid-column:span 2;"><span style="font-size:12px;color:rgba(255,248,240,.72);">{{ T.tags }}</span><input value="{{ s.tags }}" onChange="{{ s.onTags }}" placeholder="{{ T.tagsPh }}" style="height:36px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13px;outline:none;box-sizing:border-box;width:100%;"></label>
+          </div>
+          <textarea value="{{ s.desc }}" onChange="{{ s.onDesc }}" placeholder="{{ T.descPh }}" rows="2" style="min-height:56px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(18,12,9,.16);color:#fbf8f5;font:inherit;font-size:13.5px;line-height:1.5;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+
+          <div style="flex:1;min-height:360px;display:flex;flex-direction:column;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(14,10,8,.32);overflow:hidden;">
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:4px;padding:6px;border-bottom:1px solid rgba(255,255,255,.08);overflow-x:auto;">
+              <sc-for list="{{ files }}" as="f" hint-placeholder-count="1"><button onClick="{{ f.onClick }}" style="flex:none;height:30px;padding:0 12px;border-radius:10px;border:0;background:{{ f.bg }};color:{{ f.fg }};font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;"><span style="width:7px;height:7px;border-radius:50%;background:{{ f.color }};"></span>{{ f.name }}</button></sc-for>
+              <button onClick="{{ onAddFile }}" title="{{ T.addFile }}" style="flex:none;width:30px;height:30px;border-radius:10px;border:1px dashed rgba(255,255,255,.25);background:transparent;color:rgba(255,248,240,.8);cursor:pointer;padding:0;font-size:16px;line-height:1;">+</button>
+            </div>
+            <div style="flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.08);">
+              <input value="{{ fa.name }}" onChange="{{ fa.onName }}" spellcheck="false" style="width:200px;height:30px;padding:0 10px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(18,12,9,.25);color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:12px;outline:none;">
+              <select value="{{ fa.lang }}" onChange="{{ fa.onLang }}" style="height:30px;padding:0 26px 0 10px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 9px center;background-size:10px;"><sc-for list="{{ langOpts }}" as="o" hint-placeholder-count="5"><option value="{{ o.v }}" style="background-color:#2b2c33;color:#f4f2f0;">{{ o.l }}</option></sc-for></select>
+              <span style="font-family:'Geist Mono',monospace;font-size:11.5px;color:rgba(255,248,240,.55);margin-right:auto;">{{ fa.stats }}</span>
+              <button onClick="{{ fa.onCopy }}" style="height:30px;padding:0 12px;border-radius:999px;border:0;background:{{ fa.copyBg }};color:#2a211c;font:inherit;font-size:12px;font-weight:600;cursor:pointer;">{{ fa.copyLbl }}</button>
+              <button onClick="{{ fa.onDownload }}" title="{{ T.download }}" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"></path><path d="M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg></button>
+              <sc-if value="{{ fa.canDel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ fa.onDel }}" title="{{ T.delFile }}" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#ffc9b8;cursor:pointer;padding:0;font-size:14px;">×</button></sc-if>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;">
+              <pre ref="{{ gutRef }}" style="flex:none;margin:0;padding:14px 10px 14px 14px;min-width:44px;box-sizing:border-box;text-align:right;font-family:'Geist Mono',monospace;font-size:13px;line-height:1.6;color:rgba(255,248,240,.32);overflow:hidden;user-select:none;border-right:1px solid rgba(255,255,255,.06);">{{ gutter }}</pre>
+              <div style="position:relative;flex:1;min-width:0;">
+                {{ hlEl }}
+                <textarea ref="{{ taRef }}" value="{{ fa.code }}" onChange="{{ fa.onCode }}" onScroll="{{ onScroll }}" onKeyDown="{{ onKey }}" spellcheck="false" wrap="off" style="position:absolute;inset:0;width:100%;height:100%;margin:0;padding:14px 16px;box-sizing:border-box;border:0;outline:none;resize:none;background:transparent;color:transparent;caret-color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:13px;line-height:1.6;white-space:pre;overflow:auto;tab-size:2;"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <span style="font-size:14px;font-weight:600;">{{ T.related }}</span>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;">
+              <sc-for list="{{ rel }}" as="r" hint-placeholder-count="2">
+                <span style="display:flex;align-items:center;height:30px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);overflow:hidden;">
+                  <button onClick="{{ r.onOpen }}" style="height:100%;padding:0 6px 0 12px;border:0;background:transparent;color:#fbf8f5;font:inherit;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:7px;"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.color }};"></span>{{ r.title }}</button>
+                  <button onClick="{{ r.onDel }}" style="height:100%;width:26px;border:0;background:transparent;color:rgba(255,248,240,.55);cursor:pointer;padding:0;font-size:13px;">×</button>
+                </span>
+              </sc-for>
+              <select value="" onChange="{{ onAddRel }}" style="height:30px;padding:0 26px 0 12px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background-color:transparent;color:rgba(255,248,240,.85);font:inherit;font-size:12.5px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;"><option value="" style="background-color:#2b2c33;color:#f4f2f0;">{{ T.addRel }}</option><sc-for list="{{ relOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}" style="background-color:#2b2c33;color:#f4f2f0;">{{ o.l }}</option></sc-for></select>
+            </div>
+          </div>
+          <span style="font-size:11.5px;color:rgba(255,248,240,.5);">{{ s.meta }}</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}"><div style="margin:auto;font-size:14px;color:rgba(255,248,240,.6);">{{ T.pick }}</div></sc-if>
+    </div>
+  </section>
+  <sc-if value="{{ nwOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ nw.onClose }}" data-kv-dim="1" style="position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,14,10,.12);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+      <div onClick="{{ stop }}" style="width:min(460px,100%);display:flex;flex-direction:column;gap:14px;padding:24px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));backdrop-filter:blur(40px) saturate(170%);-webkit-backdrop-filter:blur(40px) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);color:#fbf8f5;">
+        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em;">{{ nw.l.h }}</span>
+        <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:rgba(255,248,240,.75);">{{ nw.l.t }}</span><input value="{{ nw.title }}" onChange="{{ nw.onT }}" placeholder="{{ nw.l.ph }}" style="height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;"></label>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;">
+          <label style="display:flex;flex-direction:column;gap:6px;min-width:0;"><span style="font-size:12px;color:rgba(255,248,240,.75);">{{ nw.l.lg }}</span><select value="{{ nw.lang }}" onChange="{{ nw.onLg }}" style="height:38px;padding:0 30px 0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;width:100%;box-sizing:border-box;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 12px center;background-size:11px;"><sc-for list="{{ langOpts }}" as="o" hint-placeholder-count="5"><option value="{{ o.v }}" style="background-color:#2b2c33;color:#f4f2f0;">{{ o.l }}</option></sc-for></select></label>
+          <label style="display:flex;flex-direction:column;gap:6px;min-width:0;"><span style="font-size:12px;color:rgba(255,248,240,.75);">{{ nw.l.ty }}</span><select value="{{ nw.type }}" onChange="{{ nw.onTy }}" style="height:38px;padding:0 30px 0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;width:100%;box-sizing:border-box;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 12px center;background-size:11px;"><sc-for list="{{ typeOpts }}" as="o" hint-placeholder-count="5"><option value="{{ o.v }}" style="background-color:#2b2c33;color:#f4f2f0;">{{ o.l }}</option></sc-for></select></label>
+        </div>
+        <sc-if value="{{ nw.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:#ffc9b8;">{{ nw.err }}</span></sc-if>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
+          <button onClick="{{ nw.onClose }}" style="height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fbf8f5;font:inherit;font-size:13px;cursor:pointer;">{{ nw.l.c }}</button>
+          <button onClick="{{ nw.onOk }}" style="height:38px;padding:0 18px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;">{{ nw.l.ok }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;lang&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;pt&quot;, &quot;en&quot;], &quot;default&quot;: &quot;pt&quot;, &quot;tsType&quot;: &quot;string&quot;}}">const DL_KEY = 'kv.dev.v1';
+const DL_TYPES = [['snippet', 'Snippet', 'Snippet'], ['function', 'Função', 'Function'], ['class', 'Classe', 'Class'], ['component', 'Componente', 'Component'], ['hook', 'Hook', 'Hook'], ['script', 'Script', 'Script'], ['query', 'Query', 'Query'], ['regex', 'Regex', 'Regex'], ['config', 'Configuração', 'Config'], ['template', 'Template', 'Template'], ['command', 'Comando', 'Command']];
+const DL_T = {
+  pt: { title: 'Biblioteca de Código', resize: 'Arraste para ajustar · duplo clique repõe', newSnippet: 'Novo Snippet', search: 'Pesquisar título, tags, código…', allLangs: 'Todas as linguagens', allTypes: 'Todos os tipos', all: 'Todos', favs: 'Favoritos', empty: 'Nenhum snippet encontrado.', fav: 'Favorito', del: 'Eliminar snippet', type: 'Tipo', tags: 'Tags', tagsPh: 'ex.: utils, async, api', descPh: 'Descrição, notas de uso, dependências…', addFile: 'Adicionar ficheiro', download: 'Descarregar ficheiro', delFile: 'Remover ficheiro', copy: 'Copiar', copied: 'Copiado ✓', related: 'Relacionados', addRel: '+ Relacionar snippet', pick: 'Selecione ou crie um snippet.', back: 'Voltar a', lines: ' linhas', file: ' ficheiro', filesN: ' ficheiros', snips: ' snippets', created: 'Criado', updated: 'Atualizado', confirmDel: 'Eliminar este snippet?', newTitle: 'Novo snippet' },
+  en: { title: 'Code Library', resize: 'Drag to resize · double-click to reset', newSnippet: 'New Snippet', search: 'Search title, tags, code…', allLangs: 'All languages', allTypes: 'All types', all: 'All', favs: 'Favorites', empty: 'No snippets found.', fav: 'Favorite', del: 'Delete snippet', type: 'Type', tags: 'Tags', tagsPh: 'e.g. utils, async, api', descPh: 'Description, usage notes, dependencies…', addFile: 'Add file', download: 'Download file', delFile: 'Remove file', copy: 'Copy', copied: 'Copied ✓', related: 'Related', addRel: '+ Link snippet', pick: 'Select or create a snippet.', back: 'Back to', lines: ' lines', file: ' file', filesN: ' files', snips: ' snippets', created: 'Created', updated: 'Updated', confirmDel: 'Delete this snippet?', newTitle: 'New snippet' }
+};
+const dlNow = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ', ' + p(d.getHours()) + ':' + p(d.getMinutes()); };
+const DL_SEED = [
+  { id: 'd1', title: 'Debounce', type: 'function', tags: ['utils', 'performance'], fav: true, desc: 'Atrasa a execução até não haver chamadas durante `wait` ms. Útil em pesquisas e resize.', rel: ['d5'], files: [{ id: 'f1', name: 'debounce.js', lang: 'javascript', code: "export function debounce(fn, wait = 250) {\n  let t;\n  return function (...args) {\n    clearTimeout(t);\n    t = setTimeout(() => fn.apply(this, args), wait);\n  };\n}\n\n// Uso\nconst onSearch = debounce(q => fetchResults(q), 300);\ninput.addEventListener('input', e => onSearch(e.target.value));\n" }] },
+  { id: 'd2', title: 'Retry com backoff exponencial', type: 'function', tags: ['resilience', 'http'], fav: false, desc: 'Decorator que repete uma função em caso de exceção, com espera crescente.', rel: [], files: [{ id: 'f1', name: 'retry.py', lang: 'python', code: "import time\nimport functools\n\n\ndef retry(times=3, base=0.5, exceptions=(Exception,)):\n    def deco(fn):\n        @functools.wraps(fn)\n        def wrapper(*args, **kwargs):\n            for attempt in range(times):\n                try:\n                    return fn(*args, **kwargs)\n                except exceptions:\n                    if attempt == times - 1:\n                        raise\n                    time.sleep(base * 2 ** attempt)\n        return wrapper\n    return deco\n\n\n@retry(times=5)\ndef fetch_orders():\n    ...\n" }] },
+  { id: 'd3', title: 'Top N por grupo', type: 'query', tags: ['window functions', 'reporting'], fav: true, desc: 'Devolve as N linhas mais recentes por cliente com ROW_NUMBER().', rel: [], files: [{ id: 'f1', name: 'top_n.sql', lang: 'sql', code: "WITH ranked AS (\n  SELECT o.*,\n         ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY created_at DESC) AS rn\n  FROM orders o\n  WHERE created_at >= CURRENT_DATE - INTERVAL '90 days'\n)\nSELECT customer_id, order_id, total, created_at\nFROM ranked\nWHERE rn <= 3\nORDER BY customer_id, rn;\n" }] },
+  { id: 'd4', title: 'Backup de diretório com rotação', type: 'script', tags: ['devops', 'backup'], fav: false, desc: 'Cria um tar.gz datado e mantém apenas os últimos 7.', rel: [], files: [{ id: 'f1', name: 'backup.sh', lang: 'bash', code: "#!/usr/bin/env bash\nset -euo pipefail\n\nSRC=\"${1:-/var/www}\"\nDEST=\"${2:-/backups}\"\nSTAMP=$(date +%Y%m%d-%H%M)\n\nmkdir -p \"$DEST\"\ntar -czf \"$DEST/backup-$STAMP.tar.gz\" -C \"$SRC\" .\n\n# manter apenas os 7 mais recentes\nls -1t \"$DEST\"/backup-*.tar.gz | tail -n +8 | xargs -r rm --\necho \"Backup criado: backup-$STAMP.tar.gz\"\n" }] },
+  { id: 'd5', title: 'useFetch', type: 'hook', tags: ['react', 'api'], fav: false, desc: 'Hook React com estado de loading/erro e cancelamento via AbortController.', rel: ['d1'], files: [{ id: 'f1', name: 'useFetch.ts', lang: 'typescript', code: "import { useEffect, useState } from 'react';\n\nexport function useFetch<T>(url: string) {\n  const [data, setData] = useState<T | null>(null);\n  const [error, setError] = useState<Error | null>(null);\n  const [loading, setLoading] = useState(true);\n\n  useEffect(() => {\n    const ctrl = new AbortController();\n    setLoading(true);\n    fetch(url, { signal: ctrl.signal })\n      .then(r => (r.ok ? r.json() : Promise.reject(new Error(r.statusText))))\n      .then(setData)\n      .catch(e => e.name !== 'AbortError' && setError(e))\n      .finally(() => setLoading(false));\n    return () => ctrl.abort();\n  }, [url]);\n\n  return { data, error, loading };\n}\n" }, { id: 'f2', name: 'example.tsx', lang: 'typescript', code: "const { data, loading } = useFetch<User[]>('/api/users');\nif (loading) return <Spinner />;\nreturn <UserList users={data ?? []} />;\n" }] },
+  { id: 'd6', title: 'Docker multi-stage Node', type: 'config', tags: ['docker', 'node'], fav: false, desc: 'Imagem de produção leve com build separado e compose para desenvolvimento.', rel: [], files: [{ id: 'f1', name: 'Dockerfile', lang: 'dockerfile', code: "FROM node:20-alpine AS build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM node:20-alpine\nWORKDIR /app\nENV NODE_ENV=production\nCOPY --from=build /app/dist ./dist\nCOPY package*.json ./\nRUN npm ci --omit=dev\nEXPOSE 3000\nCMD [\"node\", \"dist/server.js\"]\n" }, { id: 'f2', name: 'docker-compose.yml', lang: 'yaml', code: "services:\n  app:\n    build: .\n    ports:\n      - \"3000:3000\"\n    env_file: .env\n    restart: unless-stopped\n" }] }
+].map(s => ({ ...s, created: '01/10/2026, 10:00', updated: '01/10/2026, 10:00' }));
+const dlEsc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const dlHL = (code, L) => {
+  if (!L || L.id === 'plain' || L.id === 'markdown') return dlEsc(code);
+  const parts = [];
+  (L.cm || []).forEach(c => { if (c === '//') parts.push('\\/\\/[^\\n]*'); else if (c === '/*') parts.push('\\/\\*[\\s\\S]*?(?:\\*\\/|$)'); else if (c === '#') parts.push('#[^\\n]*'); else if (c === '--') parts.push('--[^\\n]*'); else if (c === '<!--') parts.push('<!--[\\s\\S]*?(?:-->|$)'); });
+  const cmN = parts.length;
+  parts.push('"(?:\\\\.|[^"\\\\\\n])*"|\'(?:\\\\.|[^\'\\\\\\n])*\'|`(?:\\\\.|[^`\\\\])*`');
+  parts.push('\\b\\d+(?:\\.\\d+)?\\b');
+  const isMk = L.id === 'html' || L.id === 'xml';
+  if (isMk) parts.push('<\\/?[\\w:-]+|\\/?>');
+  const kw = (L.kw || []).filter(Boolean);
+  if (kw.length) parts.push('\\b(?:' + kw.map(k => k.replace(/[-]/g, '\\-')).join('|') + ')\\b');
+  const re = new RegExp(parts.map(p => '(' + p + ')').join('|'), L.id === 'sql' ? 'gi' : 'g');
+  const col = i => { if (i < cmN) return 'color:rgba(255,248,240,.42);font-style:italic'; const j = i - cmN; if (j === 0) return 'color:oklch(0.85 0.12 150)'; if (j === 1) return 'color:oklch(0.85 0.12 60)'; if (isMk && j === 2) return 'color:oklch(0.8 0.14 25)'; return 'color:oklch(0.8 0.13 250);font-weight:600'; };
+  let out = '', last = 0, m;
+  while ((m = re.exec(code))) { if (!m[0]) { re.lastIndex++; continue; } out += dlEsc(code.slice(last, m.index)); const gi = m.slice(1).findIndex(x => x !== undefined); out += '<span style="' + col(gi) + '">' + dlEsc(m[0]) + '</span>'; last = m.index + m[0].length; }
+  return out + dlEsc(code.slice(last));
+};
+
+class Component extends DCLogic {
+  state = { col: (() => { try { return JSON.parse(localStorage.getItem('kv.dev.col')) || {}; } catch (e) { return {}; } })(), d: (() => { try { const v = JSON.parse(localStorage.getItem(DL_KEY)); if (Array.isArray(v)) return v; } catch (e) {} return DL_SEED; })(), sel: 'd1', fileId: null, q: '', langF: '', typeF: '', favF: false, hist: [], copied: false, colW: (() => { try { return +localStorage.getItem('kv.dev.colW') || 340; } catch (e) { return 340; } })() };
+  componentDidMount() { if (!window.DEV_LANGS) { this._lt = setInterval(() => { if (window.DEV_LANGS) { clearInterval(this._lt); this.forceUpdate(); } }, 100); } }
+  componentWillUnmount() { clearInterval(this._lt); }
+  save(d) { this.setState({ d }); clearTimeout(this._sv); this._sv = setTimeout(() => { try { localStorage.setItem(DL_KEY, JSON.stringify(this.state.d)); window.dispatchEvent(new Event('kv-dev')); } catch (e) {} }, 300); }
+  upd(fn) { const d = JSON.parse(JSON.stringify(this.state.d)); const s = d.find(x => x.id === this.state.sel); if (!s) return; fn(s, d); s.updated = dlNow(); this.save(d); }
+  renderVals() {
+    const S = this.state, en = this.props.lang === 'en', T = DL_T[en ? 'en' : 'pt'];
+    const LANGS = window.DEV_LANGS || [{ id: 'plain', name: 'Texto simples', ext: 'txt', color: '#9a9a9a', cm: [], kw: [] }];
+    const LB = Object.fromEntries(LANGS.map(l => [l.id, l])), langOf = id => LB[id] || LB.plain || LANGS[LANGS.length - 1];
+    const lname = l => l.id === 'plain' ? (en ? 'Plain text' : 'Texto simples') : l.name;
+    const TY = Object.fromEntries(DL_TYPES.map(([k, p, e]) => [k, en ? e : p]));
+    const D = S.d, q = S.q.trim().toLowerCase();
+    const mainLang = s => (s.files[0] || {}).lang || 'plain';
+    const list = D.filter(s => (!S.favF || s.fav) && (!S.typeF || s.type === S.typeF) && (!S.langF || s.files.some(f => f.lang === S.langF)) && (!q || [s.title, s.desc, (s.tags || []).join(' '), ...s.files.map(f => f.name + ' ' + f.code)].join(' ').toLowerCase().includes(q)));
+    const gm = new Map(); list.forEach(s => { const k = mainLang(s); if (!gm.has(k)) gm.set(k, []); gm.get(k).push(s); });
+    const sel = D.find(s => s.id === S.sel);
+    const go = (id, push) => this.setState(st => ({ sel: id, fileId: null, copied: false, hist: push ? [...st.hist, st.sel] : [] }));
+    const usedLangs = [...new Set(D.flatMap(s => s.files.map(f => f.lang)))];
+    const cw = S.colW;
+    const out = {
+      stop: e => e.stopPropagation(), T, sub: D.length + T.snips, q: S.q, onQ: e => this.setState({ q: e.target.value }),
+      gutRef: el => { this._gut = el; }, taRef: el => { this._ta = el; },
+      colTpl: 'min(' + cw + 'px, calc(100% - 420px)) minmax(0,1fr)', colHandleL: 'calc(min(' + cw + 'px, calc(100% - 420px)) - 7px)', colBar: S.colDrag ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.22)',
+      colReset: () => { this.setState({ colW: 340 }); try { localStorage.setItem('kv.dev.colW', '340'); } catch (e) {} },
+      colDown: e => { e.preventDefault(); const sec = e.currentTarget.parentElement, zf = (sec.getBoundingClientRect().width / (sec.offsetWidth || 1)) || 1, max = Math.max(300, sec.offsetWidth - 440), x0 = e.clientX, w0 = cw; this.setState({ colDrag: true }); document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+        const mv = ev => this.setState({ colW: Math.round(Math.max(240, Math.min(max, w0 + (ev.clientX - x0) / zf))) });
+        const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); document.body.style.cursor = ''; document.body.style.userSelect = ''; this.setState({ colDrag: false }); try { localStorage.setItem('kv.dev.colW', String(this.state.colW)); } catch (e2) {} };
+        window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); },
+      langF: S.langF, onLangF: e => this.setState({ langF: e.target.value }), langFOpts: [{ v: '', l: T.allLangs }, ...LANGS.filter(l => usedLangs.includes(l.id)).map(l => ({ v: l.id, l: lname(l) }))],
+      typeF: S.typeF, onTypeF: e => this.setState({ typeF: e.target.value }), typeFOpts: [{ v: '', l: T.allTypes }, ...DL_TYPES.map(([k]) => ({ v: k, l: TY[k] }))],
+      chips: [[false, T.all, D.length], [true, '★ ' + T.favs, D.filter(s => s.fav).length]].map(([f, label, n]) => { const on = S.favF === f; return { label, n: String(n), bg: on ? '#fbf8f5' : 'rgba(255,255,255,.06)', fg: on ? '#2a211c' : '#fbf8f5', bd: on ? '#fbf8f5' : 'rgba(255,255,255,.16)', onClick: () => this.setState({ favF: f }) }; }),
+      groups: [...gm.entries()].sort((a, b) => lname(langOf(a[0])).localeCompare(lname(langOf(b[0])))).map(([k, items]) => ({ name: lname(langOf(k)), color: langOf(k).color, n: String(items.length), open: !(S.col || {})[k] || !!q, rot: ((S.col || {})[k] && !q) ? '-90deg' : '0deg', onToggle: () => this.setState(st => { const c = { ...(st.col || {}), [k]: !(st.col || {})[k] }; try { localStorage.setItem('kv.dev.col', JSON.stringify(c)); } catch (e) {} return { col: c }; }),
+        items: items.sort((a, b) => a.title.localeCompare(b.title)).map(s => { const on = sel && s.id === sel.id; return { title: s.title, fav: !!s.fav, type: TY[s.type] || s.type, files: s.files.length + (s.files.length === 1 ? T.file : T.filesN), tags: (s.tags || []).length ? '· ' + s.tags.join(', ') : '', bg: on ? 'rgba(255,255,255,.14)' : 'transparent', bd: on ? 'rgba(255,255,255,.2)' : 'transparent', onClick: () => go(s.id, false) }; }) })),
+      empty: !list.length,
+      onNew: () => this.setState({ nw: { title: '', lang: S.langF || 'javascript', type: S.typeF || 'snippet', err: '' } }),
+      nwOpen: !!S.nw, nw: S.nw ? { title: S.nw.title, lang: S.nw.lang, type: S.nw.type, err: S.nw.err, hasErr: !!S.nw.err, l: en ? { h: 'New Snippet', t: 'Title', lg: 'Language', ty: 'Type', c: 'Cancel', ok: 'Create', ph: 'e.g. Debounce function' } : { h: 'Novo Snippet', t: 'Título', lg: 'Linguagem', ty: 'Tipo', c: 'Cancelar', ok: 'Criar', ph: 'ex.: Função debounce' },
+        onT: e => { const v = e.target.value; this.setState(st => ({ nw: { ...st.nw, title: v, err: '' } })); }, onLg: e => { const v = e.target.value; this.setState(st => ({ nw: { ...st.nw, lang: v } })); }, onTy: e => { const v = e.target.value; this.setState(st => ({ nw: { ...st.nw, type: v } })); },
+        onClose: () => this.setState({ nw: null }),
+        onOk: () => { const n = this.state.nw, tt = (n.title || '').trim(); if (!tt) return this.setState({ nw: { ...n, err: en ? 'Enter a title.' : 'Indique um título.' } }); const id = 'd' + Date.now(), L = langOf(n.lang), base = tt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'snippet'; const s = { id, title: tt, type: n.type, tags: [], fav: false, desc: '', rel: [], files: [{ id: 'f1', name: L.id === 'dockerfile' ? 'Dockerfile' : base + '.' + L.ext, lang: n.lang, code: '' }], created: dlNow(), updated: dlNow() }; this.save([s, ...this.state.d]); this.setState({ nw: null, sel: id, fileId: 'f1', hist: [], q: '', favF: false }); } } : {},
+      has: !!sel, noSel: !sel, typeOpts: DL_TYPES.map(([k]) => ({ v: k, l: TY[k] })), langOpts: LANGS.map(l => ({ v: l.id, l: lname(l) })),
+      canBack: S.hist.length > 0 && !!D.find(x => x.id === S.hist[S.hist.length - 1]), backLbl: '', backTip: '', onBack: null
+    };
+    if (out.canBack) { const prev = D.find(x => x.id === S.hist[S.hist.length - 1]); out.backLbl = prev.title; out.backTip = T.back + ' ' + prev.title; out.onBack = () => this.setState(st => ({ sel: st.hist[st.hist.length - 1], hist: st.hist.slice(0, -1), fileId: null })); }
+    if (sel) {
+      const fa = sel.files.find(f => f.id === S.fileId) || sel.files[0], L = langOf(fa.lang), lines = (fa.code || '').split('\n').length;
+      out.s = { title: sel.title, onTitle: e => { const v = e.target.value; this.upd(s => { s.title = v; }); }, type: sel.type, onType: e => { const v = e.target.value; this.upd(s => { s.type = v; }); },
+        tags: (sel.tags || []).join(', '), onTags: e => { const v = e.target.value; this.upd(s => { s.tags = v.split(',').map(x => x.trim()).filter((x, i, a) => x || i === a.length - 1); }); },
+        desc: sel.desc || '', onDesc: e => { const v = e.target.value; this.upd(s => { s.desc = v; }); },
+        favC: sel.fav ? 'oklch(0.86 0.13 85)' : '#fbf8f5', favFill: sel.fav ? 'currentColor' : 'none', onFav: () => this.upd(s => { s.fav = !s.fav; }),
+        onDel: () => { if (!window.confirm(T.confirmDel)) return; const d = D.filter(x => x.id !== sel.id).map(x => ({ ...x, rel: (x.rel || []).filter(r => r !== sel.id) })); this.save(d); this.setState({ sel: (d[0] || {}).id, hist: [] }); },
+        meta: T.created + ' ' + sel.created + ' · ' + T.updated + ' ' + sel.updated };
+      out.files = sel.files.map(f => { const on = f.id === fa.id; return { name: f.name, color: langOf(f.lang).color, bg: on ? 'rgba(255,255,255,.14)' : 'transparent', fg: on ? '#fbf8f5' : 'rgba(255,248,240,.7)', onClick: () => this.setState({ fileId: f.id, copied: false }) }; });
+      out.onAddFile = () => { const id = 'f' + Date.now(); this.upd(s => { const lg = fa.lang; s.files.push({ id, name: 'file' + (s.files.length + 1) + '.' + langOf(lg).ext, lang: lg, code: '' }); }); this.setState({ fileId: id }); };
+      const updF = fn => this.upd(s => { fn(s.files.find(f => f.id === fa.id)); });
+      out.fa = { name: fa.name, onName: e => { const v = e.target.value; updF(f => { f.name = v; }); }, lang: fa.lang, onLang: e => { const v = e.target.value; updF(f => { const old = langOf(f.lang).ext, nx = langOf(v).ext; f.lang = v; if (old && f.name.endsWith('.' + old)) f.name = f.name.slice(0, -old.length) + nx; }); },
+        code: fa.code || '', onCode: e => { const v = e.target.value; updF(f => { f.code = v; }); }, stats: lines + T.lines + ' · ' + (fa.code || '').length + ' chars',
+        copyLbl: S.copied ? T.copied : T.copy, copyBg: S.copied ? 'oklch(0.82 0.14 150)' : '#fbf8f5',
+        onCopy: () => { try { navigator.clipboard.writeText(fa.code || ''); } catch (e) {} this.setState({ copied: true }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: false }), 1400); },
+        onDownload: () => { const u = URL.createObjectURL(new Blob([fa.code || ''], { type: 'text/plain' })); const a = document.createElement('a'); a.href = u; a.download = fa.name || 'snippet.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(u), 3000); },
+        canDel: sel.files.length > 1, onDel: () => { this.upd(s => { s.files = s.files.filter(f => f.id !== fa.id); }); this.setState({ fileId: null }); } };
+      out.gutter = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+      out.hlEl = React.createElement('pre', { ref: el => { this._pre = el; if (el && this._ta) { el.scrollTop = this._ta.scrollTop; el.scrollLeft = this._ta.scrollLeft; } }, 'aria-hidden': true, style: { position: 'absolute', inset: 0, margin: 0, padding: '14px 16px', boxSizing: 'border-box', fontFamily: "'Geist Mono',monospace", fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre', overflow: 'hidden', color: '#fbf8f5', tabSize: 2, pointerEvents: 'none' }, dangerouslySetInnerHTML: { __html: dlHL(fa.code || '', L) + '\n' } });
+      out.onScroll = e => { const t = e.target; if (this._pre) { this._pre.scrollTop = t.scrollTop; this._pre.scrollLeft = t.scrollLeft; } if (this._gut) this._gut.scrollTop = t.scrollTop; };
+      out.onKey = e => { if (e.key === 'Tab') { e.preventDefault(); const t = e.target, a = t.selectionStart, b = t.selectionEnd, v = t.value, nv = v.slice(0, a) + '  ' + v.slice(b); updF(f => { f.code = nv; }); requestAnimationFrame(() => { if (this._ta) { this._ta.selectionStart = this._ta.selectionEnd = a + 2; } }); } };
+      out.rel = (sel.rel || []).map(id => D.find(x => x.id === id)).filter(Boolean).map(r => ({ title: r.title, color: langOf(mainLang(r)).color, onOpen: () => go(r.id, true), onDel: () => this.upd(s => { s.rel = s.rel.filter(x => x !== r.id); }) }));
+      out.relOpts = D.filter(x => x.id !== sel.id && !(sel.rel || []).includes(x.id)).map(x => ({ v: x.id, l: x.title + ' · ' + lname(langOf(mainLang(x))) }));
+      out.onAddRel = e => { const v = e.target.value; if (!v) return; this.upd((s, d) => { s.rel = [...(s.rel || []), v]; const o = d.find(x => x.id === v); if (o && !(o.rel || []).includes(s.id)) o.rel = [...(o.rel || []), s.id]; }); };
+    }
+    return out;
+  }
+}</script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;color:#fbf8f5;">
+  <section style="position:relative;isolation:isolate;flex:1;min-height:0;display:flex;flex-direction:column;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);">
+    <div style="position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;backdrop-filter:blur(34px) saturate(150%);-webkit-backdrop-filter:blur(34px) saturate(150%);"></div>
+    <div style="flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:22px 24px 14px;">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+        <div style="display:flex;flex-direction:column;gap:4px;margin-right:auto;min-width:0;"><h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em;">SAP News</h1><span style="font-size:13px;color:rgba(255,248,240,.68);">{{ sub }}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:38px;width:240px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,248,240,.6)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+          <input value="{{ q }}" onChange="{{ onQ }}" placeholder="{{ T.search }}" style="flex:1;min-width:0;border:0;outline:none;background:transparent;color:#fbf8f5;font:inherit;font-size:13px;">
+        </div>
+        <button onClick="{{ onRefresh }}" title="{{ T.refresh }}" style="width:38px;height:38px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate({{ spin }});transition:transform .6s;"><path d="M20 11a8 8 0 1 0-2.3 5.7"></path><path d="M20 4v7h-7"></path></svg></button>
+        <button onClick="{{ onSrc }}" title="{{ T.sources }}" style="width:38px;height:38px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1.2"></circle></svg></button>
+        <button onClick="{{ onSaved }}" style="height:38px;flex:none;padding:0 8px 0 14px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12v18l-6-4-6 4z"></path></svg>{{ T.saved }}<span style="min-width:22px;height:22px;padding:0 7px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#2a211c;color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:700;">{{ nSaved }}</span></button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.onClick }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;"><sc-if value="{{ c.hasDot }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:{{ c.dot }};"></span></sc-if>{{ c.label }}<span style="font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;">{{ c.n }}</span></button></sc-for>
+      </div>
+    </div>
+    <div style="flex:1;min-height:0;overflow:auto;padding:4px 24px 24px;">
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="padding:60px 0;text-align:center;font-size:14px;color:rgba(255,248,240,.7);">{{ T.loading }}</div></sc-if>
+      <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="margin-bottom:14px;padding:12px 16px;border-radius:16px;background:oklch(0.75 0.13 60 / .14);border:1px solid oklch(0.8 0.13 70 / .35);font-size:13px;display:flex;align-items:center;gap:10px;"><span style="flex:1;">{{ errTxt }}</span><button onClick="{{ onErrX }}" style="width:26px;height:26px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fbf8f5;cursor:pointer;padding:0;font-size:14px;">×</button></div></sc-if>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:16px;">
+        <sc-for list="{{ cards }}" as="n" hint-placeholder-count="6">
+          <article style="display:flex;flex-direction:column;border-radius:24px;overflow:hidden;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);min-width:0;transition:transform .15s,border-color .15s;" style-hover="border-color:rgba(255,255,255,.24);transform:translateY(-2px);">
+            <div onClick="{{ n.onRead }}" style="position:relative;aspect-ratio:16 / 9;cursor:pointer;background:{{ n.ph }};overflow:hidden;">
+              <sc-if value="{{ n.hasImg }}" hint-placeholder-val="{{ false }}"><img src="{{ n.img }}" alt="" loading="lazy" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"></sc-if>
+              <sc-if value="{{ n.noImg }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;letter-spacing:-.02em;color:rgba(255,255,255,.85);">{{ n.srcName }}</span></sc-if>
+              <span style="position:absolute;left:12px;top:12px;height:24px;padding:0 10px;border-radius:999px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;background:rgba(20,16,14,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);"><span style="width:7px;height:7px;border-radius:50%;background:{{ n.color }};"></span>{{ n.srcName }}</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:10px;padding:16px 18px 16px;">
+              <span style="font-size:12px;color:rgba(255,248,240,.6);">{{ n.date }}</span>
+              <span onClick="{{ n.onRead }}" style="font-size:16px;font-weight:600;line-height:1.35;letter-spacing:-.01em;cursor:pointer;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty;">{{ n.title }}</span>
+              <span style="font-size:13px;line-height:1.55;color:rgba(255,248,240,.72);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">{{ n.excerpt }}</span>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:6px;">
+                <button onClick="{{ n.onRead }}" style="height:34px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;">{{ T.read }}</button>
+                <button onClick="{{ n.onSave }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ n.saveBd }};background:{{ n.saveBg }};color:#fbf8f5;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="{{ n.saveFill }}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"></path></svg>{{ n.saveLbl }}</button>
+              </div>
+            </div>
+          </article>
+        </sc-for>
+      </div>
+      <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding:60px 0;text-align:center;font-size:14px;color:rgba(255,248,240,.62);">{{ T.empty }}</div></sc-if>
+    </div>
+  </section>
+
+  <sc-if value="{{ readOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ rd.onClose }}" data-kv-dim="1" style="position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,14,10,.12);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+      <div onClick="{{ stop }}" style="width:min(820px,100%);max-height:100%;display:flex;flex-direction:column;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));backdrop-filter:blur(40px) saturate(170%);-webkit-backdrop-filter:blur(40px) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);color:#fbf8f5;">
+        <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.1);">
+          <span style="height:26px;padding:0 11px;border-radius:999px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;background:rgba(255,255,255,.1);"><span style="width:7px;height:7px;border-radius:50%;background:{{ rd.color }};"></span>{{ rd.srcName }}</span>
+          <span style="font-size:12.5px;color:rgba(255,248,240,.68);margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ rd.meta }}</span>
+          <button onClick="{{ rd.onSave }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:{{ rd.saveBg }};color:#fbf8f5;font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="{{ rd.saveFill }}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"></path></svg>{{ rd.saveLbl }}</button>
+          <a href="{{ rd.link }}" target="_blank" rel="noopener" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fbf8f5;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none;">{{ T.original }} ↗</a>
+          <button onClick="{{ rd.onClose }}" title="{{ T.close }}" style="width:34px;height:34px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="flex:1;min-height:0;overflow:auto;">
+          <div style="padding:24px 32px 34px;display:flex;flex-direction:column;gap:16px;">
+            <h2 style="margin:0;font-size:28px;line-height:1.25;font-weight:600;letter-spacing:-.02em;text-wrap:pretty;">{{ rd.title }}</h2>
+            {{ rd.body }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ savedOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ sv.onClose }}" data-kv-dim="1" style="position:fixed;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,14,10,.12);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+      <div onClick="{{ stop }}" style="width:min(620px,100%);max-height:min(720px,100%);display:flex;flex-direction:column;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));backdrop-filter:blur(40px) saturate(170%);-webkit-backdrop-filter:blur(40px) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);color:#fbf8f5;">
+        <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:20px 20px 14px;">
+          <span style="font-size:20px;font-weight:600;letter-spacing:-.02em;">{{ T.savedTitle }}</span>
+          <span style="min-width:24px;height:24px;padding:0 8px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.14);font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;margin-right:auto;">{{ nSaved }}</span>
+          <button onClick="{{ sv.onClose }}" title="{{ T.close }}" style="width:34px;height:34px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <div style="flex:1;min-height:0;overflow:auto;padding:0 14px 16px;display:flex;flex-direction:column;gap:6px;">
+          <sc-for list="{{ sv.items }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);" style-hover="background:rgba(255,255,255,.1);">
+              <div onClick="{{ s.onRead }}" style="position:relative;width:96px;height:64px;flex:none;border-radius:12px;overflow:hidden;background:{{ s.ph }};cursor:pointer;"><sc-if value="{{ s.hasImg }}" hint-placeholder-val="{{ false }}"><img src="{{ s.img }}" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block;"></sc-if></div>
+              <div onClick="{{ s.onRead }}" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;cursor:pointer;">
+                <span style="font-size:14px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ s.title }}</span>
+                <span style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,248,240,.62);"><span style="width:6px;height:6px;border-radius:50%;background:{{ s.color }};"></span>{{ s.srcName }} · {{ s.date }}</span>
+              </div>
+              <button onClick="{{ s.onDone }}" title="{{ T.markRead }}" style="height:32px;flex:none;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fbf8f5;font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;" style-hover="background:oklch(0.78 0.14 150 / .3);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>{{ T.markRead }}</button>
+            </div>
+          </sc-for>
+          <sc-if value="{{ sv.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 10px;text-align:center;font-size:13.5px;color:rgba(255,248,240,.65);">{{ T.noSaved }}</div></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ srcOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ sc.onClose }}" data-kv-dim="1" style="position:fixed;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,14,10,.12);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+      <div onClick="{{ stop }}" style="width:min(560px,100%);display:flex;flex-direction:column;gap:14px;padding:22px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));backdrop-filter:blur(40px) saturate(170%);-webkit-backdrop-filter:blur(40px) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);color:#fbf8f5;">
+        <span style="font-size:20px;font-weight:600;letter-spacing:-.02em;">{{ T.sources }}</span>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <sc-for list="{{ sc.items }}" as="x" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:10px;min-height:46px;padding:4px 8px;border-radius:14px;" style-hover="background:rgba(255,255,255,.06);">
+              <button onClick="{{ x.onToggle }}" style="width:40px;height:24px;flex:none;border-radius:999px;border:0;padding:2px;cursor:pointer;background:{{ x.tBg }};display:flex;justify-content:{{ x.tJ }};"><span style="width:20px;height:20px;border-radius:50%;background:#fbf8f5;"></span></button>
+              <span style="width:8px;height:8px;flex:none;border-radius:50%;background:{{ x.color }};"></span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;"><span style="font-size:13.5px;font-weight:600;">{{ x.name }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:rgba(255,248,240,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ x.url }}</span></span>
+              <button onClick="{{ x.onDel }}" title="{{ T.remove }}" style="width:28px;height:28px;flex:none;border-radius:50%;border:0;background:transparent;color:rgba(255,248,240,.55);cursor:pointer;padding:0;font-size:15px;">×</button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) auto;gap:8px;">
+          <input value="{{ sc.name }}" onChange="{{ sc.onName }}" placeholder="{{ T.srcName }}" style="height:36px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13px;outline:none;min-width:0;">
+          <input value="{{ sc.url }}" onChange="{{ sc.onUrl }}" placeholder="https://…/feed" spellcheck="false" style="height:36px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:12px;outline:none;min-width:0;">
+          <button onClick="{{ sc.onAdd }}" style="height:36px;padding:0 14px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;">{{ T.add }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;lang&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;pt&quot;, &quot;en&quot;], &quot;default&quot;: &quot;pt&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+const NW_SRC = [
+  { id: 'sapnews', name: 'SAP News Center', url: 'https://news.sap.com/feed/', color: 'oklch(0.76 0.15 245)', on: true },
+  { id: 'erptoday', name: 'ERP Today', url: 'https://erp.today/feed/', color: 'oklch(0.78 0.14 150)', on: true },
+  { id: 'saptech', name: 'SAP Tech Bytes (Developers)', url: 'https://community.sap.com/khhcw49343/rss/board?board.id=technology-blog-sap', color: 'oklch(0.75 0.14 305)', on: true }
+];
+const NW_T = {
+  pt: { search: 'Pesquisar notícias…', refresh: 'Atualizar', sources: 'Fontes', saved: 'Guardadas', all: 'Todas', loading: 'A carregar notícias…', empty: 'Sem notícias para mostrar.', read: 'Ler', save: 'Guardar', savedLbl: 'Guardada', original: 'Ver original', close: 'Fechar', savedTitle: 'Guardadas para mais tarde', markRead: 'Marcar como lida', noSaved: 'Não tem notícias guardadas.', remove: 'Remover', srcName: 'Nome da fonte', add: 'Adicionar', updated: 'Atualizado às ', err: 'Não foi possível carregar: ', by: 'por ' },
+  en: { search: 'Search news…', refresh: 'Refresh', sources: 'Sources', saved: 'Saved', all: 'All', loading: 'Loading news…', empty: 'No news to show.', read: 'Read', save: 'Save', savedLbl: 'Saved', original: 'View original', close: 'Close', savedTitle: 'Saved for later', markRead: 'Mark as read', noSaved: 'No saved news.', remove: 'Remove', srcName: 'Source name', add: 'Add', updated: 'Updated at ', err: 'Could not load: ', by: 'by ' }
+};
+const nwLS = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+const nwText = h => { const t = document.createElement('textarea'); t.innerHTML = String(h || ''); const d = document.createElement('div'); d.innerHTML = t.value; return (d.textContent || '').replace(/<!\[CDATA\[|\]\]>/g, '').replace(/\s+/g, ' ').trim(); };
+const nwFirstImg = h => { const m = /<img[^>]+src=["']([^"']+)["']/i.exec(h || ''); return m ? m[1] : ''; };
+const nwClean = html => {
+  const doc = new DOMParser().parseFromString('<div>' + (html || '') + '</div>', 'text/html'), root = doc.body.firstChild;
+  root.querySelectorAll('script,style,iframe,object,embed,form,noscript,link,meta').forEach(n => n.remove());
+  root.querySelectorAll('*').forEach(el => { [...el.attributes].forEach(a => { if (/^on/i.test(a.name) || a.name === 'style' || a.name === 'class' || a.name === 'id' || a.name === 'width' || a.name === 'height' || a.name === 'srcset' || a.name === 'sizes') el.removeAttribute(a.name); });
+    const t = el.tagName, S = { P: 'margin:0 0 14px;', IMG: 'max-width:100%;height:auto;border-radius:14px;display:block;margin:10px 0;', A: 'color:oklch(0.82 0.12 245);text-decoration:underline;', H1: 'font-size:22px;margin:18px 0 8px;', H2: 'font-size:20px;margin:18px 0 8px;', H3: 'font-size:17px;margin:16px 0 6px;', H4: 'font-size:15px;margin:14px 0 6px;', UL: 'margin:0 0 14px;padding-left:22px;', OL: 'margin:0 0 14px;padding-left:22px;', LI: 'margin:4px 0;', BLOCKQUOTE: 'margin:12px 0;padding:10px 16px;border-left:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.05);border-radius:0 12px 12px 0;', PRE: 'white-space:pre-wrap;padding:12px;border-radius:12px;background:rgba(0,0,0,.25);font-family:Geist Mono,monospace;font-size:12.5px;', FIGURE: 'margin:10px 0;', FIGCAPTION: 'font-size:12px;color:rgba(255,248,240,.6);margin-top:4px;', TABLE: 'border-collapse:collapse;width:100%;margin:10px 0;', TD: 'border:1px solid rgba(255,255,255,.15);padding:6px 8px;', TH: 'border:1px solid rgba(255,255,255,.15);padding:6px 8px;text-align:left;' };
+    if (S[t]) el.setAttribute('style', S[t]); if (t === 'A') { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener'); } if (t === 'IMG') { el.setAttribute('referrerpolicy', 'no-referrer'); el.setAttribute('loading', 'lazy'); } });
+  return root.innerHTML;
+};
+const nwFetch = async src => {
+  try { const r = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(src.url)); const j = await r.json(); if (j && j.status === 'ok' && Array.isArray(j.items)) return j.items.map(it => { const html = it.content || it.description || ''; return { id: it.guid || it.link, src: src.id, title: nwText(it.title), link: it.link, date: it.pubDate ? it.pubDate.replace(' ', 'T') + 'Z' : '', author: it.author || '', img: it.thumbnail || (it.enclosure && it.enclosure.link) || nwFirstImg(html), html, excerpt: nwText(it.description || html).slice(0, 260) }; }); } catch (e) {}
+  const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(src.url)); const xml = new DOMParser().parseFromString(await r.text(), 'text/xml');
+  const items = [...xml.querySelectorAll('item, entry')]; if (!items.length) throw new Error('feed');
+  const g = (n, s) => { const el = n.getElementsByTagName(s)[0]; return el ? el.textContent : ''; };
+  return items.map(n => { const html = g(n, 'content:encoded') || g(n, 'content') || g(n, 'description') || g(n, 'summary'); const linkEl = n.querySelector('link'); const link = (linkEl && (linkEl.getAttribute('href') || linkEl.textContent)) || ''; const media = n.getElementsByTagName('media:content')[0] || n.getElementsByTagName('media:thumbnail')[0] || n.querySelector('enclosure'); return { id: g(n, 'guid') || g(n, 'id') || link, src: src.id, title: nwText(g(n, 'title')), link, date: g(n, 'pubDate') || g(n, 'published') || g(n, 'updated'), author: g(n, 'dc:creator') || g(n, 'author'), img: (media && (media.getAttribute('url'))) || nwFirstImg(html), html, excerpt: nwText(g(n, 'description') || html).slice(0, 260) }; });
+};
+
+class Component extends DCLogic {
+  state = { items: nwLS('kv.news.cache', { ts: 0, items: [] }).items || [], ts: nwLS('kv.news.cache', { ts: 0 }).ts || 0, src: nwLS('kv.news.src', NW_SRC).filter(s => s.id !== 'sapinsider'), saved: nwLS('kv.news.saved', []), f: 'all', q: '', loading: false, errs: [], reading: null, savedOpen: false, srcOpen: false, nName: '', nUrl: '', spin: 0 };
+  componentDidMount() { if (!this.state.items.length || Date.now() - this.state.ts > 30 * 60000) this.load(); }
+  async load() {
+    const on = this.state.src.filter(s => s.on); this.setState(st => ({ loading: !st.items.length, errs: [], errDismiss: false, spin: st.spin + 360 }));
+    const res = await Promise.allSettled(on.map(nwFetch)); const items = [], errs = [];
+    res.forEach((r, i) => { if (r.status === 'fulfilled') items.push(...r.value); else errs.push(on[i].name); });
+    const seen = new Set(), uniq = items.filter(x => x.title && !seen.has(x.link) && seen.add(x.link)).sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0)).slice(0, 120);
+    const ts = Date.now(); if (uniq.length) { try { localStorage.setItem('kv.news.cache', JSON.stringify({ ts, items: uniq })); } catch (e) {} }
+    this.setState(st => ({ items: uniq.length ? uniq : st.items, ts: uniq.length ? ts : st.ts, errs, loading: false }));
+  }
+  setSaved(saved) { this.setState({ saved }); try { localStorage.setItem('kv.news.saved', JSON.stringify(saved)); } catch (e) {} window.dispatchEvent(new Event('kv-news')); }
+  setSrc(src) { this.setState({ src }); try { localStorage.setItem('kv.news.src', JSON.stringify(src)); } catch (e) {} }
+  renderVals() {
+    const S = this.state, en = this.props.lang === 'en', T = NW_T[en ? 'en' : 'pt'];
+    const SB = Object.fromEntries(S.src.map(s => [s.id, s])), srcOf = id => SB[id] || { name: id, color: 'rgba(255,255,255,.5)' };
+    const fmt = d => { const t = Date.parse(d); if (!t) return ''; return new Date(t).toLocaleDateString(en ? 'en-GB' : 'pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }); };
+    const ph = s => 'linear-gradient(135deg,' + String(srcOf(s).color).replace(')', ' / .55)') + ',rgba(255,255,255,.06))';
+    const isSaved = x => S.saved.some(y => y.link === x.link);
+    const toggleSave = x => this.setSaved(isSaved(x) ? S.saved.filter(y => y.link !== x.link) : [{ ...x }, ...S.saved]);
+    const active = S.src.filter(s => s.on).map(s => s.id), q = S.q.trim().toLowerCase();
+    const list = S.items.filter(x => active.includes(x.src) && (S.f === 'all' || x.src === S.f) && (!q || (x.title + ' ' + x.excerpt).toLowerCase().includes(q)));
+    const card = x => { const sv = isSaved(x), s = srcOf(x.src); return { title: x.title, excerpt: x.excerpt, img: x.img, hasImg: !!x.img, noImg: !x.img, ph: ph(x.src), color: s.color, srcName: s.name, date: fmt(x.date), saveLbl: sv ? T.savedLbl : T.save, saveFill: sv ? 'currentColor' : 'none', saveBg: sv ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.06)', saveBd: sv ? 'rgba(255,255,255,.4)' : 'rgba(255,255,255,.16)', onRead: () => this.setState({ reading: x }), onSave: () => toggleSave(x) }; };
+    const R = S.reading;
+    const time = S.ts ? new Date(S.ts).toLocaleTimeString(en ? 'en-GB' : 'pt-PT', { hour: '2-digit', minute: '2-digit' }) : '';
+    return {
+      T, stop: e => e.stopPropagation(), q: S.q, onQ: e => this.setState({ q: e.target.value }), spin: S.spin + 'deg',
+      sub: S.src.filter(s => s.on).length + ' ' + T.sources.toLowerCase() + (time ? ' · ' + T.updated + time : ''),
+      onRefresh: () => this.load(), onSrc: () => this.setState({ srcOpen: true }), onSaved: () => this.setState({ savedOpen: true }), nSaved: String(S.saved.length),
+      chips: [{ id: 'all', name: T.all, color: '' }, ...S.src.filter(s => s.on)].map(s => { const on = S.f === s.id; return { label: s.name, dot: s.color, hasDot: s.id !== 'all', n: String(s.id === 'all' ? S.items.filter(x => active.includes(x.src)).length : S.items.filter(x => x.src === s.id).length), bg: on ? '#fbf8f5' : 'rgba(255,255,255,.06)', fg: on ? '#2a211c' : '#fbf8f5', bd: on ? '#fbf8f5' : 'rgba(255,255,255,.16)', onClick: () => this.setState({ f: s.id }) }; }),
+      loading: S.loading && !S.items.length, hasErr: S.errs.length > 0 && !S.errDismiss, onErrX: () => this.setState({ errDismiss: true }), errTxt: T.err + S.errs.join(', '),
+      cards: list.map(card), empty: !S.loading && !list.length,
+      readOpen: !!R, rd: R ? (() => { const sv = isSaved(R), s = srcOf(R.src); return { hH: R.img ? '260px' : '120px', ph: ph(R.src), title: R.title, link: R.link, img: R.img, hasImg: !!R.img, color: s.color, srcName: s.name, meta: [fmt(R.date), R.author ? T.by + R.author : ''].filter(Boolean).join(' · '), saveLbl: sv ? T.savedLbl : T.save, saveFill: sv ? 'currentColor' : 'none', saveBg: sv ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.08)', onSave: () => toggleSave(R), onClose: () => this.setState({ reading: null }),
+        body: React.createElement('div', { style: { fontSize: 15, lineHeight: 1.7, color: 'rgba(255,248,240,.9)', wordBreak: 'break-word' }, dangerouslySetInnerHTML: { __html: nwClean(R.html || ('<p>' + (R.excerpt || '') + '</p>')) } }) }; })() : {},
+      savedOpen: S.savedOpen, sv: { onClose: () => this.setState({ savedOpen: false }), empty: !S.saved.length, items: S.saved.map(x => { const s = srcOf(x.src); return { title: x.title, img: x.img, hasImg: !!x.img, ph: ph(x.src), color: s.color, srcName: s.name, date: fmt(x.date), onRead: () => this.setState({ reading: x }), onDone: () => this.setSaved(S.saved.filter(y => y.link !== x.link)) }; }) },
+      srcOpen: S.srcOpen, sc: { onClose: () => this.setState({ srcOpen: false }), name: S.nName, url: S.nUrl, onName: e => this.setState({ nName: e.target.value }), onUrl: e => this.setState({ nUrl: e.target.value }),
+        onAdd: () => { const u = S.nUrl.trim(); if (!/^https?:\/\//.test(u)) return; const C = ['oklch(0.8 0.13 20)', 'oklch(0.82 0.12 190)', 'oklch(0.84 0.12 100)', 'oklch(0.74 0.14 280)']; this.setSrc([...S.src, { id: 's' + Date.now(), name: S.nName.trim() || u.replace(/^https?:\/\//, '').split('/')[0], url: u, color: C[S.src.length % C.length], on: true }]); this.setState({ nName: '', nUrl: '' }); setTimeout(() => this.load(), 50); },
+        items: S.src.map(s => ({ name: s.name, url: s.url, color: s.color, tBg: s.on ? 'oklch(0.78 0.14 150)' : 'rgba(255,255,255,.18)', tJ: s.on ? 'flex-end' : 'flex-start', onToggle: () => { this.setSrc(S.src.map(x => x.id === s.id ? { ...x, on: !x.on } : x)); setTimeout(() => this.load(), 50); }, onDel: () => this.setSrc(S.src.filter(x => x.id !== s.id)) })) }
+    };
+  }
+}
+</script>
+</body>
+</html>

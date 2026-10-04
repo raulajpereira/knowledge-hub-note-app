@@ -1,0 +1,10 @@
+# Local development: only the backing services, published on localhost so
+# `npm run dev` / `npm run worker` on the host can reach them.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis minio minio-init
+services:
+  postgres:
+    ports: ['127.0.0.1:5432:5432']
+  redis:
+    ports: ['127.0.0.1:6379:6379']
+  minio:
+    ports: ['127.0.0.1:9000:9000']

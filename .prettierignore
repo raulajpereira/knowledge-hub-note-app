@@ -1,0 +1,6 @@
+docs/
+drizzle/
+.next/
+dist/
+node_modules/
+package-lock.json

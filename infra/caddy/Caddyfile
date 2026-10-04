@@ -1,0 +1,38 @@
+# Used only after the cut-over (`docker compose --profile edge up -d`), when
+# Caddy replaces the host Nginx on 80/443:
+#   https://knowledge-hub.cloud/      → v2 (web container)
+#   https://knowledge-hub.cloud/v1/   → v1 (still running on the host via PM2,
+#                                       with BASE_PATH=/v1 in its server/.env)
+{
+	email {$ACME_EMAIL}
+}
+
+{$KH_DOMAIN}, www.{$KH_DOMAIN} {
+	encode zstd gzip
+
+	@www host www.{$KH_DOMAIN}
+	redir @www https://{$KH_DOMAIN}{uri} permanent
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	request_body {
+		max_size 50MB
+	}
+
+	redir /v1 /v1/ permanent
+	handle /v1/* {
+		reverse_proxy {$KH_V1_UPSTREAM}
+	}
+
+	# Old bookmarks of the pre-cut-over address.
+	redir /v2 / permanent
+	@v2 path_regexp v2 ^/v2(/.*)$
+	redir @v2 {re.v2.1}{?query} permanent
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
