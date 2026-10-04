@@ -55,4 +55,5 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | D12 | `tenant_id` em **todas** as tabelas de conteúdo (incl. `vault_items`, `task_subtasks`, `voice_notes`…) para RLS uniforme; app liga-se como `kh_app` (não owner, sem BYPASSRLS) | Claude |
 | D13 | Conteúdo de utilizador (Artifacts HTML) servido de `usercontent.knowledge-hub.cloud` (origem separada, sem cookies) — DNS a criar na Fase 6 | Claude |
 | D14 | Fase 0 = infra + fundações técnicas; componentes/i18n na Fase 1 (ordem do DECISIONS §8) | DECISIONS_AND_INFRA |
+| D16 | **A confirmar:** a MinIO deixou de publicar imagens (`minio/minio`, `minio/mc` já não existem no Docker Hub). Provisoriamente: `pgsty/minio` + `pgsty/mc` (builds comunitários do mesmo código MinIO), fixados a uma versão. Alternativas: Garage ou RustFS (S3-compatíveis, imagens oficiais) | Claude → utilizador |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

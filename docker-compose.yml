@@ -93,8 +93,11 @@ services:
     mem_limit: 192m
     logging: *logging
 
+  # MinIO stopped publishing images/binaries in late 2025 (minio/minio and
+  # minio/mc no longer exist on Docker Hub). pgsty/* are the community-
+  # maintained builds of the same MinIO code, pinned to a release tag.
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     restart: unless-stopped
     command: ['server', '/data']
     environment:
@@ -102,20 +105,17 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
       MINIO_BROWSER: 'off'
     volumes: [miniodata:/data]
-    healthcheck:
-      test: ['CMD', 'mc', 'ready', 'local']
-      interval: 10s
-      timeout: 5s
-      retries: 10
     mem_limit: 384m
     logging: *logging
 
-  # One-shot: creates the private bucket if it doesn't exist yet.
+  # One-shot: waits for MinIO, then creates the private bucket if missing.
+  # (Readiness is checked from here so it doesn't depend on tools inside
+  # the MinIO image.)
   minio-init:
-    image: minio/mc:latest
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     restart: 'no'
     depends_on:
-      minio: { condition: service_healthy }
+      minio: { condition: service_started }
     environment:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
@@ -124,7 +124,11 @@ services:
       - sh
       - -c
       - >
-        mc alias set kh http://minio:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" &&
+        for i in $$(seq 1 60); do
+          mc alias set kh http://minio:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" >/dev/null 2>&1 && mc ready kh >/dev/null 2>&1 && break;
+          sleep 2;
+        done &&
+        mc ready kh &&
         mc mb --ignore-existing "kh/$$S3_BUCKET" &&
         mc anonymous set none "kh/$$S3_BUCKET"
 
