@@ -30,6 +30,7 @@ export default defineConfig({
     ? undefined
     : {
         command: `npx next start -p ${port} -H 127.0.0.1`,
+        env: { KH_UI_CATALOG: 'true' },
         // Not /api/health: it may legitimately answer 503 while a dependency
         // is down, and Playwright treats that as "not ready".
         url: `http://127.0.0.1:${port}${basePath}/`,

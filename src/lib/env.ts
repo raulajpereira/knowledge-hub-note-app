@@ -39,6 +39,9 @@ export const serverEnvSchema = z.object({
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().optional(),
 
+  // Serves the component catalogue (/ui) in production builds too.
+  KH_UI_CATALOG: bool.default(false),
+
   SUPERADMIN_EMAIL: z.email().optional(),
   SUPERADMIN_NAME: z.string().optional(),
 });

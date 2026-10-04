@@ -17,6 +17,9 @@ tocada a partir daqui.
 - Nunca credenciais no código; variáveis novas vão para `.env.example` (documentadas) e `src/lib/env.ts`.
 - Permissões, limites FREE e papéis de admin verificados sempre no servidor.
 - Acesso a dados de tenant sempre via `withTenant()` com a ligação `kh_app`.
+- UI: usar sempre os componentes de `src/components/ui` (catálogo em `/ui`); estilos novos com os valores exatos do protótipo.
+- Textos: nunca strings soltas — `useI18n().t(key)`; chaves vêm de `src/i18n/dict` (re-extrair com `node scripts/extract-i18n.mjs`; rótulos genéricos em `ui.*.json`).
+- Não escrever `-webkit-backdrop-filter` à mão (o build trata do prefixo; escrever os dois faz desaparecer a propriedade normal).
 
 ## Verificações antes de cada push
 

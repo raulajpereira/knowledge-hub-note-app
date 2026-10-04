@@ -1,0 +1,1002 @@
+/* KnowledgeHub UI primitives — values taken 1:1 from the hi-fi prototypes
+   (docs/handoff/design). Every surface's blur follows the prototype's own
+   value unless the user overrides it (Definições › Liquid Glass), which sets
+   --glass-blur-user on <html> — same behaviour as data-kv-glass="on". */
+
+:root {
+  --kh-blur-panel: var(--glass-blur-user, 34px);
+  --kh-blur-menu: var(--glass-blur-user, 36px);
+  --kh-blur-modal: var(--glass-blur-user, 40px);
+  --kh-blur-header: var(--glass-blur-user, 30px);
+  --kh-danger-solid: oklch(0.62 0.18 28);
+  --kh-error-text: #ffc9b8;
+  --kh-error-border: rgba(255, 170, 150, 0.7);
+  --kh-field-border: rgba(255, 255, 255, 0.16);
+  --kh-field-focus: rgba(255, 255, 255, 0.45);
+}
+
+/* ── Scrollbars: hidden until a container opts in (data-zs) ─────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+[data-zs]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+}
+[data-zs]::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.34);
+}
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  [data-zs] {
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  }
+}
+
+/* ── Glass surfaces ─────────────────────────────────────────────────────── */
+.kh-glass {
+  color: var(--text);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  backdrop-filter: blur(var(--kh-blur-panel)) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 30px 80px rgba(0, 0, 0, 0.35);
+}
+.kh-glass--panel {
+  border-radius: 30px;
+}
+.kh-glass--card {
+  border-radius: 24px;
+}
+/* Inner, quieter surfaces (drawer, nested panels). */
+.kh-glass--soft {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(var(--kh-blur-panel)) saturate(150%);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+/* Sunken area (tables, wells). */
+.kh-well {
+  background: rgba(18, 12, 9, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.kh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    opacity 0.15s,
+    transform 0.1s;
+}
+.kh-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.kh-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.kh-btn:focus-visible,
+.kh-icon-btn:focus-visible,
+.kh-chip:focus-visible,
+.kh-seg button:focus-visible,
+.kh-check:focus-visible,
+.kh-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.kh-btn--sm {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+.kh-btn--lg {
+  height: 46px;
+  font-size: 15px;
+}
+.kh-btn--block {
+  width: 100%;
+}
+/* Auth submit (Login / Register): deeper shadow, as in the prototypes. */
+.kh-btn--lg.kh-btn--primary {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+.kh-btn--primary {
+  background: #fbf8f5;
+  color: #2a211c;
+  border-color: #fbf8f5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+.kh-btn--primary:hover:not(:disabled) {
+  background: #fff;
+}
+.kh-btn--glass {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.kh-btn--glass:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+.kh-btn--ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.kh-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+.kh-btn--danger {
+  background: var(--kh-danger-solid);
+  border-color: var(--kh-danger-solid);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+.kh-btn--danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.kh-btn--danger-ghost {
+  background: transparent;
+  border-color: rgba(255, 170, 150, 0.4);
+  color: var(--kh-error-text);
+}
+.kh-btn--danger-ghost:hover:not(:disabled) {
+  background: rgba(255, 170, 150, 0.1);
+}
+.kh-btn--accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b1a2c;
+}
+.kh-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: kh-spin 0.7s linear infinite;
+}
+@keyframes kh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Round icon buttons (header, close). */
+.kh-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(var(--kh-blur-panel)) saturate(160%);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.kh-icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+.kh-icon-btn--sm {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: none;
+}
+.kh-icon-btn--lg {
+  width: 44px;
+  height: 44px;
+}
+.kh-icon-btn--accent {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+.kh-icon-btn--light {
+  background: #fbf8f5;
+  border-color: #fbf8f5;
+  color: #2a211c;
+}
+
+/* ── Chips, pills, badges ──────────────────────────────────────────────── */
+.kh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.kh-chip:hover:not([aria-pressed='true']) {
+  background: rgba(255, 255, 255, 0.1);
+}
+.kh-chip[aria-pressed='true'] {
+  background: #fbf8f5;
+  border-color: #fbf8f5;
+  color: #2a211c;
+}
+.kh-chip__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  opacity: 0.7;
+}
+.kh-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* Counter next to sidebar items. */
+.kh-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 248, 240, 0.85);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* Status / code tag (tables): 22px, radius 7, mono uppercase. */
+.kh-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fbf8f5;
+}
+
+/* Status variant: pill, sans, no uppercase (prototype chipC). */
+.kh-tag--status {
+  border-radius: 999px;
+  font-family: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Soft label pill (e.g. "Máx / Mín –"). */
+.kh-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 248, 240, 0.85);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/* ── Form fields ───────────────────────────────────────────────────────── */
+.kh-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.kh-field__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255, 248, 240, 0.88);
+}
+.kh-field__hint {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.6);
+}
+.kh-field__error {
+  font-size: 12px;
+  color: var(--kh-error-text);
+}
+.kh-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 46px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid var(--kh-field-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 14.5px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.kh-input:focus {
+  border-color: var(--kh-field-focus);
+}
+.kh-input[aria-invalid='true'] {
+  border-color: var(--kh-error-border);
+}
+.kh-input:disabled {
+  opacity: 0.55;
+}
+/* Compact variant used inside panels / drawers / settings. */
+.kh-input--md {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(18, 12, 9, 0.22);
+  font-size: 13.5px;
+}
+textarea.kh-input {
+  height: auto;
+  min-height: 96px;
+  padding: 12px 16px;
+  line-height: 1.5;
+  resize: vertical;
+}
+textarea.kh-input--md {
+  padding: 10px 12px;
+}
+.kh-input-wrap {
+  position: relative;
+  display: flex;
+}
+.kh-input-wrap > .kh-input--with-end {
+  padding-right: 50px;
+}
+.kh-input-end {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 248, 240, 0.8);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kh-input-end:hover {
+  color: #fff;
+}
+
+/* Header search: glass pill with icon. */
+.kh-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(var(--kh-blur-panel)) saturate(160%);
+  color: rgba(255, 248, 240, 0.7);
+}
+.kh-search svg {
+  position: absolute;
+  left: 16px;
+  pointer-events: none;
+}
+.kh-search input {
+  width: 100%;
+  text-overflow: ellipsis;
+  height: 100%;
+  padding: 0 16px 0 44px;
+  border: 0;
+  background: transparent;
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+/* Checkbox ("Lembrar-me"). */
+.kh-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 248, 240, 0.88);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: left;
+}
+.kh-check__box {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  box-sizing: border-box;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: #2a211c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kh-check[aria-checked='true'] .kh-check__box {
+  border-color: #fbf8f5;
+  background: #fbf8f5;
+}
+
+/* Switch (Definições). */
+.kh-switch {
+  flex: none;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  transition: background 0.15s;
+}
+.kh-switch__knob {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 248, 240, 0.8);
+  margin-left: 0;
+  transition: margin 0.15s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.kh-switch[aria-checked='true'] {
+  background: #fbf8f5;
+  border-color: #fbf8f5;
+}
+.kh-switch[aria-checked='true'] .kh-switch__knob {
+  background: #2a211c;
+  margin-left: 16px;
+}
+.kh-switch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Segmented control (PT/EN). */
+.kh-seg {
+  display: inline-flex;
+  align-self: flex-start;
+  width: fit-content;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  backdrop-filter: blur(var(--kh-blur-panel)) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.kh-seg button {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(255, 248, 240, 0.82);
+}
+.kh-seg button[aria-checked='true'] {
+  background: #fbf8f5;
+  color: #2a211c;
+}
+
+/* Inline message (Login: ok / error). */
+.kh-msg {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  border: 1px solid oklch(0.78 0.14 35 / 0.4);
+  background: oklch(0.7 0.14 30 / 0.18);
+}
+.kh-msg--ok {
+  border-color: oklch(0.8 0.13 150 / 0.4);
+  background: oklch(0.75 0.13 150 / 0.18);
+}
+
+/* ── Select (custom glass menu — prototype initSelects) ────────────────── */
+.kh-select {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  padding-right: 34px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-select__chev {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.kh-select__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-select__placeholder {
+  color: rgba(255, 248, 240, 0.55);
+}
+.kh-menu {
+  position: fixed;
+  z-index: 10000;
+  box-sizing: border-box;
+  padding: 6px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #fbf8f5;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 18px 50px rgba(0, 0, 0, 0.35);
+}
+.kh-menu__search {
+  box-sizing: border-box;
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fbf8f5;
+  font: inherit;
+  outline: none;
+}
+.kh-menu__list {
+  overflow-y: auto;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kh-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 500;
+  background: transparent;
+}
+.kh-menu__item[aria-selected='true'] {
+  background: rgba(255, 255, 255, 0.07);
+  font-weight: 600;
+}
+.kh-menu__item[data-active='true'] {
+  background: rgba(255, 255, 255, 0.12);
+}
+.kh-menu__item[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+.kh-menu__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-menu__empty {
+  padding: 10px 12px;
+  color: rgba(255, 248, 240, 0.6);
+  font-size: 0.95em;
+}
+
+/* ── Overlays ──────────────────────────────────────────────────────────── */
+.kh-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 14, 10, 0.18);
+  backdrop-filter: blur(8px);
+  animation: kh-fade 0.15s ease-out;
+}
+/* Second layer (e.g. a confirm over a modal) dims less so the stack reads
+   as layers of glass rather than a darker and darker screen. */
+.kh-overlay--confirm {
+  background: rgba(20, 14, 10, 0.12);
+  backdrop-filter: blur(6px);
+}
+.kh-modal {
+  box-sizing: border-box;
+  width: min(640px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px;
+  border-radius: 30px;
+  overflow: auto;
+  color: #fbf8f5;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(var(--kh-blur-modal)) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 40px 90px rgba(0, 0, 0, 0.35);
+  animation: kh-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.kh-modal--sm {
+  width: min(440px, 100%);
+  gap: 14px;
+  border-radius: 28px;
+  backdrop-filter: blur(var(--kh-blur-modal)) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 30px 70px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.18);
+}
+.kh-modal--lg {
+  width: min(880px, 100%);
+}
+.kh-modal__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.kh-modal__titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kh-modal__title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.kh-modal__sub {
+  font-size: 13px;
+  color: rgba(255, 248, 240, 0.75);
+}
+.kh-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+.kh-confirm__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fbf8f5;
+}
+.kh-confirm__icon--danger {
+  background: oklch(0.62 0.18 28 / 0.3);
+  color: #ffd2c4;
+}
+.kh-confirm__title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.kh-confirm__body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 248, 240, 0.85);
+  text-wrap: pretty;
+}
+@keyframes kh-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes kh-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+
+/* ── Drawer (resizable side panel) ─────────────────────────────────────── */
+.kh-drawer {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex: none;
+}
+.kh-drawer__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -11px;
+  width: 12px;
+  z-index: 5;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+.kh-drawer__bar {
+  width: 4px;
+  height: 44px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background 0.15s;
+}
+.kh-drawer__handle:hover .kh-drawer__bar,
+.kh-drawer__handle[data-dragging='true'] .kh-drawer__bar {
+  background: rgba(255, 255, 255, 0.6);
+}
+.kh-drawer__body {
+  position: relative;
+  isolation: isolate;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 30px;
+}
+
+/* ── Resizable table (prototype initRT / data-rth) ─────────────────────── */
+.kh-table {
+  overflow: auto;
+  isolation: isolate;
+  clip-path: inset(0 round 22px);
+}
+.kh-table__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  height: 46px;
+  align-items: center;
+  border-radius: 21px 21px 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(var(--kh-blur-header)) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.kh-table__th {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+button.kh-table__th {
+  cursor: pointer;
+}
+.kh-table__grip {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+  touch-action: none;
+}
+.kh-table__row {
+  display: grid;
+  min-height: 48px;
+  align-items: center;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.kh-table__row--click {
+  cursor: pointer;
+}
+.kh-table__row--click:hover,
+.kh-table__row[aria-selected='true'] {
+  background: rgba(255, 255, 255, 0.08);
+}
+.kh-table__td {
+  min-width: 0;
+  padding: 0 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-table__empty {
+  padding: 28px 14px;
+  text-align: center;
+  color: rgba(255, 248, 240, 0.6);
+  font-size: 14px;
+}
+.kh-resize-line {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.7);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ── Toasts ────────────────────────────────────────────────────────────── */
+.kh-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 11000;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.kh-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(520px, calc(100vw - 32px));
+  min-height: 44px;
+  padding: 0 8px 0 16px;
+  border-radius: 999px;
+  color: #fbf8f5;
+  font-size: 13.5px;
+  font-weight: 500;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 18px 50px rgba(0, 0, 0, 0.35);
+  animation: kh-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.kh-toast__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.kh-toast--success .kh-toast__dot {
+  background: var(--ok);
+}
+.kh-toast--error .kh-toast__dot {
+  background: var(--danger);
+}
+.kh-toast--warning .kh-toast__dot {
+  background: var(--warn);
+}
+.kh-toast__text {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0;
+}
+.kh-toast__close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 248, 240, 0.7);
+  cursor: pointer;
+}
+.kh-toast__close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* ── Ambient background ────────────────────────────────────────────────── */
+/* Sits under the app: render it first and wrap the content in .kh-above
+   (a negative z-index would hide it behind the body background). */
+.kh-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.kh-ambient__blob {
+  position: absolute;
+  border-radius: 50%;
+}
+.kh-ambient__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kh-above {
+  position: relative;
+  z-index: 1;
+}

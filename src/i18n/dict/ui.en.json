@@ -1,0 +1,11 @@
+{
+  "ui_cancel": "Cancel",
+  "ui_close": "Close",
+  "ui_confirm": "Confirm",
+  "ui_dismiss": "Dismiss",
+  "ui_loading": "Loading…",
+  "ui_noResults": "No Results",
+  "ui_resizeHint": "Drag to resize · double-click to reset",
+  "ui_search": "Search…",
+  "ui_showHidePassword": "Show/hide password"
+}

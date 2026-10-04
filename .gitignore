@@ -10,3 +10,4 @@ playwright-report/
 test-results/
 coverage/
 infra/backup/.env.backup
+*.tmp.mjs

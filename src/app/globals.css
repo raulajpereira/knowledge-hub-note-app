@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '../components/ui/ui.css';
 
 /* Design tokens — docs/handoff/README.md §6. User-adjustable values (accent,
    blur, scales, background) are CSS variables so preferences only ever
@@ -83,7 +84,6 @@ textarea::placeholder {
 .glass {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-filter);
-  -webkit-backdrop-filter: var(--glass-filter);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
