@@ -126,8 +126,8 @@ test('favourites, header search, links between notes', async ({ page }) => {
   await expect(page.getByLabel('Sem título')).toHaveValue('');
   await page.getByLabel('Sem título').fill('Debug de jobs');
   await page.getByPlaceholder('Pesquisar itens para ligar…').click();
-  await page.locator('.kh-nt-insp__results > div', { hasText: 'Go-live' }).click();
-  await expect(page.locator('.kh-nt-link')).toContainText('Go-live SuccessFactors');
+  await page.locator('.kh-cx__results > div', { hasText: 'Go-live' }).click();
+  await expect(page.locator('.kh-cx__link')).toContainText('Go-live SuccessFactors');
 
   await page.getByRole('textbox', { name: 'Pesquisar notas, objetos, transações…' }).fill('STRUST');
   await expect(page.locator('.kh-nt-card')).toHaveCount(1);
@@ -155,4 +155,48 @@ test('Trash: delete, restore, delete permanently', async ({ page }) => {
   await page.getByRole('button', { name: 'Eliminar Definitivamente' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Eliminar Definitivamente' }).click();
   await expect(page.getByText('O Lixo está vazio')).toBeVisible();
+});
+
+test('tasks: create, subtasks, repetition, filters, link to a note, Trash', async ({ page }) => {
+  await login(page);
+  await page.goto('app/tasks');
+  await page.getByRole('button', { name: 'Nova Tarefa' }).click();
+  const title = page.locator('.kh-tk-title');
+  await expect(title).toHaveValue('Nova Tarefa');
+  await title.fill('Revisão semanal de dumps');
+  await title.blur();
+  await page.locator('.kh-tk-prios').getByRole('button', { name: 'Alta' }).click();
+  await page.locator('.kh-tk-grid input[type=date]').fill('2026-10-06');
+  await page.locator('.kh-tk-grid select').nth(1).selectOption('weekly');
+  for (const s of ['Ver dumps', 'Limpar logs']) {
+    await page.getByPlaceholder('Adicionar subtarefa e premir Enter').fill(s);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.kh-tk-sub input').last()).toHaveValue(s);
+  }
+  await page.locator('.kh-tk-sub button.kh-tk-ck').first().click();
+  await expect(page.locator('.kh-tk-progress')).toContainText('1/2');
+  await page.getByPlaceholder('Pesquisar notas, notas de voz ou tarefas para ligar…').click();
+  await page.locator('.kh-cx__results > div', { hasText: 'Go-live' }).click();
+  await expect(page.locator('.kh-cx__link')).toContainText('Go-live SuccessFactors');
+  await expect(
+    page.getByRole('complementary', { name: 'Navigation' }).locator('.kh-nav__item', { hasText: 'Tarefas' }),
+  ).toContainText('1');
+
+  // Done → the weekly task comes back for next week.
+  await page.getByRole('button', { name: 'Marcar como Concluída' }).click();
+  await expect(page.getByText('próxima criada para 13/10/2026')).toBeVisible();
+  await expect(page.locator('.kh-tk-item')).toHaveCount(1);
+  await expect(page.locator('.kh-tk-item')).toContainText('13/10/2026');
+  await page.locator('.kh-tk-fchip', { hasText: 'Concluídas' }).click();
+  await expect(page.locator('.kh-tk-item')).toHaveCount(1);
+  await page.locator('.kh-tk-fchip', { hasText: 'Todas' }).click();
+  await expect(page.locator('.kh-tk-item')).toHaveCount(2);
+
+  // Trash
+  await page.locator('.kh-tk-item').first().click();
+  await page.locator('.kh-tk-detail').getByRole('button', { name: 'Eliminar' }).click();
+  await page.getByRole('button', { name: 'Mover para o Lixo' }).click();
+  await expect(page.locator('.kh-tk-item')).toHaveCount(1);
+  await page.goto('app/trash');
+  await expect(page.locator('.kh-tr__row')).toContainText('Tarefa');
 });

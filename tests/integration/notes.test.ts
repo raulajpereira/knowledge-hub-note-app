@@ -33,6 +33,7 @@ describe.skipIf(!enabled)('notes', () => {
   let session: typeof import('@/server/auth/session');
   let seed: typeof import('@/db/seed/index');
   let notes: typeof import('@/server/content/notes');
+  let tasksSvc: typeof import('@/server/content/tasks');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -42,19 +43,20 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, dbm] = await Promise.all([
+    [svc, codesSvc, session, seed, notes, tasksSvc, dbm] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
       import('@/server/auth/session'),
       import('@/db/seed/index'),
       import('@/server/content/notes'),
+      import('@/server/content/tasks'),
       import('@/db/client'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE item_links, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE item_links, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -215,5 +217,79 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.unlinkItems(ana, { type: 'note', id: a.id }, { type: 'note', id: b.id });
     const [{ n }] = (await admin`select count(*)::int as n from item_links`) as unknown as [{ n: number }];
     expect(n).toBe(0);
+  });
+
+  it('tasks: private, subtasks, repetition, Trash and links with notes', async () => {
+    const ana = await signedIn('ana@tasks.pt');
+    const rui = await signedIn('rui@tasks.pt');
+    const t = await tasksSvc.createTask(ana, { title: 'Revisão semanal', type: 'mgmt' });
+    expect(t).toMatchObject({ type: 'mgmt', priority: 'medium', repeat: 'none', doneAt: null });
+
+    // Rui sees nothing and can't touch Ana's task or its subtasks.
+    expect(await tasksSvc.listTasks(rui)).toEqual([]);
+    expect(await codeOf(tasksSvc.getTask(rui, t.id))).toBe('not_found');
+    expect(await codeOf(tasksSvc.updateTask(rui, t.id, { title: 'x' }))).toBe('not_found');
+    expect(await codeOf(tasksSvc.addSubtask(rui, t.id, 'x'))).toBe('not_found');
+
+    let full = await tasksSvc.addSubtask(ana, t.id, 'Ver dumps');
+    full = await tasksSvc.addSubtask(ana, t.id, 'Limpar logs');
+    full = await tasksSvc.updateSubtask(ana, t.id, full.subtasks[0]!.id, { done: true });
+    expect(full.subs).toEqual({ done: 1, total: 2 });
+    expect(await codeOf(tasksSvc.updateSubtask(rui, t.id, full.subtasks[0]!.id, { done: false }))).toBe(
+      'not_found',
+    );
+    expect((await tasksSvc.listTasks(ana))[0]!.subs).toEqual({ done: 1, total: 2 });
+
+    // Completing a weekly task creates the next one (subtasks unticked, due + 7 days).
+    await tasksSvc.updateTask(ana, t.id, { repeat: 'weekly', dueOn: '2026-10-06', priority: 'high' });
+    const r = await tasksSvc.updateTask(ana, t.id, { done: true });
+    expect(r.task.doneAt).not.toBeNull();
+    expect(r.task.repeat).toBe('none');
+    expect(r.next).toMatchObject({
+      title: 'Revisão semanal',
+      dueOn: '2026-10-13',
+      repeat: 'weekly',
+      priority: 'high',
+      doneAt: null,
+    });
+    expect(r.next!.subtasks.map((s) => [s.title, s.done])).toEqual([
+      ['Ver dumps', false],
+      ['Limpar logs', false],
+    ]);
+    // Reopening doesn't spawn another.
+    const again = await tasksSvc.updateTask(ana, t.id, { done: false });
+    expect(again.next).toBeNull();
+    expect(again.task.doneAt).toBeNull();
+
+    // Links between a note and a task, in both directions.
+    const n = await notes.createNote(ana, { title: 'Dumps' });
+    await notes.linkItems(ana, { type: 'note', id: n.id }, { type: 'task', id: t.id });
+    expect(await notes.linksOf(ana, { type: 'task', id: t.id })).toEqual([
+      { type: 'note', id: n.id, title: 'Dumps' },
+    ]);
+    expect(
+      (await notes.linkCandidates(ana, { type: 'note', id: n.id }, 'revis')).map((c) => [c.type, c.title]),
+    ).toEqual([
+      ['task', 'Revisão semanal'],
+      ['task', 'Revisão semanal'],
+    ]);
+    expect(
+      await codeOf(notes.linkItems(rui, { type: 'task', id: t.id }, { type: 'task', id: r.next!.id })),
+    ).toBe('not_found');
+
+    // Trash: task deleted, listed, restored, purged with its links and subtasks.
+    await tasksSvc.trashTask(ana, t.id);
+    expect((await notes.listTrash(ana)).map((x) => [x.kind, x.title])).toEqual([['task', 'Revisão semanal']]);
+    await notes.restoreTrash(ana, [{ kind: 'task', id: t.id }]);
+    expect((await tasksSvc.getTask(ana, t.id)).title).toBe('Revisão semanal');
+    await tasksSvc.trashTask(ana, t.id);
+    await notes.purgeTrash(ana, [{ kind: 'task', id: t.id }]);
+    const [{ n: left }] =
+      (await admin`select count(*)::int as n from task_subtasks where task_id = ${t.id}`) as unknown as [
+        { n: number },
+      ];
+    expect(left).toBe(0);
+    expect(await notes.linksOf(ana, { type: 'note', id: n.id })).toEqual([]);
+    expect(await notes.contentCounts(ana, new Set(['notes', 'tasks']))).toEqual({ notes: 1, tasks: 1 });
   });
 });

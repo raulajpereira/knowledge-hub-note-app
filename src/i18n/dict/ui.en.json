@@ -110,5 +110,12 @@
   "ne_copy": " (copy)",
   "ne_limit": "You reached the Free plan note limit.",
   "ne_unfav": "Remove from favorites",
-  "ne_addFav": "Add to favorites"
+  "ne_addFav": "Add to favorites",
+  "tk_tech": "Functional / Technical",
+  "tk_mgmt": "Management",
+  "tk_allTypes": "All types",
+  "tk_limit": "You reached the Free plan task limit.",
+  "tk_nextCreated": "Repeating task: next one created for {d}.",
+  "tk_noDue": "No due date",
+  "tk_removeSub": "Remove subtask"
 }

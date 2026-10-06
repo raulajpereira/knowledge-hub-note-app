@@ -11,10 +11,17 @@ import './trash.css';
 // ZNotes.dc.html `isTrash`: everything deleted in the app, kept 30 days.
 // Today notes and notebooks; other kinds join as their modules arrive.
 
-type Item = { id: string; kind: 'note' | 'folder'; title: string; deletedAt: string; daysLeft: number };
+type Item = {
+  id: string;
+  kind: 'note' | 'folder' | 'task';
+  title: string;
+  deletedAt: string;
+  daysLeft: number;
+};
 const KINDS: Record<Item['kind'], { label: string; icon: string }> = {
   note: { label: 'h_k_note', icon: 'notes' },
   folder: { label: 'p_folder', icon: 'notes' },
+  task: { label: 'h_k_task', icon: 'tasks' },
 };
 
 function Check({ on }: { on: boolean }) {

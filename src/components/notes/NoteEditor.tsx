@@ -12,6 +12,7 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import { useI18n } from '@/i18n/client';
 import { useToast } from '@/components/ui';
 import { Callout, LinkCard, NoteImage } from './extensions';
+import { itemHref } from '@/components/content/Connections';
 import { notesApi, type Candidate } from './notesApi';
 
 // Prototype NoteEditor on TipTap: toolbar H1 B I • ☐ </> ↗ IMG (+ callout),
@@ -423,7 +424,7 @@ export function InsertBar({
       return onClose();
     }
     if (isUrl(u)) insertLink(withScheme(u), withScheme(u));
-    else if (found[0]) insertLink(`/app/notes?n=${found[0].id}`, found[0].title || t('ne_untitled'));
+    else if (found[0]) insertLink(itemHref(found[0].type, found[0].id), found[0].title || t('ne_untitled'));
   };
 
   return (
@@ -503,9 +504,9 @@ export function InsertBar({
               key={c.id}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => insertLink(`/app/notes?n=${c.id}`, c.title || t('ne_untitled'))}
+              onClick={() => insertLink(itemHref(c.type, c.id), c.title || t('ne_untitled'))}
             >
-              <span className="kh-ne-ask__k">{t('k_note')}</span>
+              <span className="kh-ne-ask__k">{t(c.type === 'task' ? 'k_task' : 'k_note')}</span>
               <span className="kh-ne-ask__t">{c.title || t('ne_untitled')}</span>
             </button>
           ))}

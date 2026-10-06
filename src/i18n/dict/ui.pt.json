@@ -110,5 +110,12 @@
   "ne_copy": " (cópia)",
   "ne_limit": "Atingiste o limite de notas do plano gratuito.",
   "ne_unfav": "Remover dos favoritos",
-  "ne_addFav": "Adicionar aos favoritos"
+  "ne_addFav": "Adicionar aos favoritos",
+  "tk_tech": "Funcional / Técnica",
+  "tk_mgmt": "Gestão",
+  "tk_allTypes": "Todos os tipos",
+  "tk_limit": "Atingiste o limite de tarefas do plano gratuito.",
+  "tk_nextCreated": "Tarefa repetida: próxima criada para {d}.",
+  "tk_noDue": "Sem prazo",
+  "tk_removeSub": "Remover subtarefa"
 }

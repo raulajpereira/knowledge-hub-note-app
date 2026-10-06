@@ -9,7 +9,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
 | 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
 | 3 — Shell, Definições, Dashboard | ✅ feito (3.1 Estrutura · 3.2 Definições · 3.3 Início; Personalizar refeito após feedback) |
-| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo feito — a aguardar testes do utilizador · 4.2 Tarefas · 4.3 Calendário/Etiquetas |
+| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo ✅ · 4.2 Tarefas feito — a aguardar testes do utilizador · 4.3 Calendário/Etiquetas |
 | 5 — Cofre, Emails, Issues | ⏳ |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
 | 7 — SAP | ⏳ |
@@ -137,6 +137,21 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - O título é uma caixa que quebra linha (no protótipo era uma linha só e cortava títulos longos).
 - Textos novos: placeholders/etiquetas do editor ("Aviso", "Do computador", "Como cartão", "Endereço do link ou nome de uma nota", "+ Etiqueta", "Nome da pasta"), confirmação "Eliminar a pasta?", mensagens de erro de imagem/gravação/limite FREE.
 
+## Fase 4.2 — Tarefas (feito)
+- **Dados**: migração `0006_tasks` (`tasks`, `task_subtasks`) com RLS por tenant e dono; prazo guardado como dia (`due_on date`, sem surpresas de fuso horário).
+- **API**: `tasks` (GET todas · POST), `tasks/:id` (GET · PATCH · DELETE → Lixo), `tasks/:id/subtasks` (POST) e `…/:subId` (PATCH · DELETE). Sessão + módulo `tasks` no servidor; limite FREE (20 tarefas) no create.
+- **Ecrã Tarefas** igual ao protótipo: pesquisa, filtros Ativas / Concluídas / Todas e por tipo (Funcional / Técnica, Gestão) com contagens, ordenação (Recentes, Prazo, Prioridade), fixadas no topo, barra de cor do tipo, prazo (Hoje / até dd/mm / Atrasada), subtarefas x/y e prioridade. Detalhe: título, tipo, criada/concluída em, fixar, eliminar, concluir/reabrir com barra de subtarefas, prioridade, prazo, projeto, repetir, subtarefas (marcar, editar, remover, Enter para adicionar), notas e Ligações. Filtros e ordenação lembrados (preferências). Tarefa aberta no URL (`?t=`). Contador na barra lateral = tarefas ativas.
+- **Repetição**: ao concluir uma tarefa que repete (diária, semanal, mensal), é criada logo a seguinte com o prazo avançado (mensal mantém o dia, ajustado ao fim do mês) e as subtarefas por marcar; aparece um aviso com a nova data. A concluída deixa de repetir (reabri-la não cria outra).
+- **Ligações** passaram a ser um componente comum: notas ↔ tarefas nos dois sentidos (inspetor das notas e detalhe da tarefa), com as cores do protótipo (nota amarela, tarefa laranja). Só aparecem tipos de módulos do plano.
+- **Lixo**: tarefas eliminadas aparecem com o tipo "Tarefa"; recuperar / eliminar definitivamente (apaga subtarefas e ligações).
+- **Testes**: 121 unitários/integração (repetição, RLS de tarefas e subtarefas, Lixo, ligações nota↔tarefa) + 24 E2E.
+- **Screenshots** `docs/screenshots/fase-4/50–52` e `cmp-tarefas.png`.
+
+## Fase 4.2 — desvios / adiado
+- **Projeto**: a lista de projetos vem do Management (Fase 8); até lá só "Sem Projeto" (o campo já existe na base de dados).
+- **Pastas partilhadas** de tarefas → Fase 9. **Ordens de Transporte** no detalhe → Fase 7.
+- Textos novos: "Funcional / Técnica", "Gestão", "Todos os tipos" (estavam no código do protótipo, não no dicionário), aviso da repetição, limite FREE de tarefas.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -175,4 +190,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D28 | Meteorologia e favicons pedidos pelo servidor (sem geojs/bigdatacloud/Google no browser); localização automática só a pedido do utilizador | Claude (SECURITY.md) |
 | D29 | Imagens das notas guardadas sempre com a nota (upload ou importadas pelo servidor); o documento só referencia `/api/v1/files/<id>` — sem hot-linking a sites externos | Claude (SECURITY.md) |
 | D30 | Conteúdo das notas em JSON do TipTap, validado no servidor por lista de nós/marcas permitidos (não HTML) | Claude |
+| D31 | Repetição de tarefas: a próxima é criada no momento em que se conclui a atual (sem job agendado); a concluída deixa de repetir | Claude |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

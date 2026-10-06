@@ -9,43 +9,18 @@ import { isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
-import { Icon } from '@/components/shell/icons';
 import { refreshCounts } from '@/components/shell/counts';
+import { Connections } from '@/components/content/Connections';
+import { useWhen } from '@/components/content/useWhen';
+import { ColHandle } from '@/components/content/ColHandle';
 import { ChecklistBar, EditorContent, EditorToolbar, InsertBar, useNoteEditor } from './NoteEditor';
-import {
-  notesApi,
-  type Folder,
-  type FolderList,
-  type LinkItem,
-  type Candidate,
-  type Note,
-  type NoteItem,
-} from './notesApi';
+import { notesApi, type Folder, type FolderList, type Note, type NoteItem } from './notesApi';
 import './notes.css';
 
 // ZNotes.dc.html `isNotes`: folders + list column · editor · inspector.
 
 type Cols = { side?: number; list?: number; insp?: number };
 const NO_FOLDER = { name: '', color: 'rgba(255,248,240,.35)' };
-
-const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-function useWhen() {
-  const { t, lang } = useI18n();
-  const loc = lang === 'en' ? 'en-GB' : 'pt-PT';
-  return useCallback(
-    (iso: string, full = false) => {
-      const d = new Date(iso);
-      const hm = d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
-      const now = new Date();
-      const y = new Date(now);
-      y.setDate(now.getDate() - 1);
-      if (!full && sameDay(d, now)) return `${t('t_today')}, ${hm}`;
-      if (!full && sameDay(d, y)) return `${t('c_yesterday')}, ${hm}`;
-      return `${d.toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${hm}`;
-    },
-    [loc, t],
-  );
-}
 
 const P = {
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
@@ -70,63 +45,6 @@ function Svg({ d, size = 14, sw = 1.9 }: { d: string; size?: number; sw?: number
       aria-hidden="true"
       dangerouslySetInnerHTML={{ __html: d }}
     />
-  );
-}
-
-// ── Column resize handle (same look as the shell's) ────────────────────────
-function ColHandle({
-  value,
-  limits,
-  dir,
-  onLive,
-  onDone,
-  onReset,
-  style,
-}: {
-  style: React.CSSProperties;
-  value: number;
-  limits: readonly [number, number];
-  dir: 1 | -1;
-  onLive: (w: number | null) => void;
-  onDone: (w: number) => void;
-  onReset: () => void;
-}) {
-  const { t } = useI18n();
-  const [drag, setDrag] = useState(false);
-  return (
-    <div
-      className="kh-handle kh-nt-handle"
-      data-drag={drag}
-      style={style}
-      title={t('resize')}
-      role="separator"
-      aria-orientation="vertical"
-      aria-valuenow={value}
-      onDoubleClick={onReset}
-      onPointerDown={(e) => {
-        e.preventDefault();
-        const x0 = e.clientX;
-        const clamp = (w: number) => Math.round(Math.max(limits[0], Math.min(limits[1], w)));
-        setDrag(true);
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        const move = (ev: PointerEvent) => onLive(clamp(value + dir * (ev.clientX - x0)));
-        const up = (ev: PointerEvent) => {
-          window.removeEventListener('pointermove', move);
-          window.removeEventListener('pointerup', up);
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-          setDrag(false);
-          onLive(null);
-          const w = clamp(value + dir * (ev.clientX - x0));
-          if (w !== value) onDone(w);
-        };
-        window.addEventListener('pointermove', move);
-        window.addEventListener('pointerup', up);
-      }}
-    >
-      <div className="kh-handle__bar" />
-    </div>
   );
 }
 
@@ -567,128 +485,12 @@ function EditorCard({
 }
 
 // ── Inspector: Ligações + Detalhes ─────────────────────────────────────────
-function Inspector({
-  note,
-  folderName,
-  author,
-  onOpen,
-}: {
-  note: Note;
-  folderName: string;
-  author: string;
-  onOpen: (id: string) => void;
-}) {
+function Inspector({ note, folderName, author }: { note: Note; folderName: string; author: string }) {
   const { t } = useI18n();
   const when = useWhen();
-  const [links, setLinks] = useState<LinkItem[]>([]);
-  const [q, setQ] = useState('');
-  const [focus, setFocus] = useState(false);
-  const [results, setResults] = useState<Candidate[]>([]);
-
-  useEffect(() => {
-    let live = true;
-    notesApi
-      .links(note.id)
-      .then((r) => live && setLinks(r.links))
-      .catch(() => live && setLinks([]));
-    return () => {
-      live = false;
-    };
-  }, [note.id]);
-
-  useEffect(() => {
-    if (!focus) return;
-    let live = true;
-    const h = setTimeout(() => {
-      notesApi
-        .candidates(note.id, q.trim())
-        .then((r) => live && setResults(r.items.filter((c) => !links.some((l) => l.id === c.id))))
-        .catch(() => live && setResults([]));
-    }, 180);
-    return () => {
-      live = false;
-      clearTimeout(h);
-    };
-  }, [focus, q, note.id, links]);
-
-  const add = async (c: Candidate) => {
-    await notesApi.link(note.id, { type: c.type, id: c.id }).catch(() => {});
-    setLinks((l) => [...l, { type: c.type, id: c.id, title: c.title }]);
-    setQ('');
-  };
-  const remove = async (l: LinkItem) => {
-    await notesApi.unlink(note.id, { type: l.type, id: l.id }).catch(() => {});
-    setLinks((x) => x.filter((y) => !(y.type === l.type && y.id === l.id)));
-  };
-
   return (
     <aside className="kh-nt-insp">
-      <div className="kh-nt-insp__card">
-        <div className="kh-nt-insp__cap">
-          <Svg d={P.link} size={14} sw={2} />
-          {t('cx_title')}
-          <span className="kh-nt-insp__n">{links.length}</span>
-        </div>
-        {links.length === 0 && <div className="kh-nt-insp__empty">{t('cx_empty')}</div>}
-        {links.length > 0 && (
-          <div className="kh-nt-links">
-            {links.map((l) => (
-              <div key={`${l.type}:${l.id}`} className="kh-nt-link">
-                <span className="kh-nt-link__dot" />
-                <span className="kh-nt-link__k">{t('k_note')}</span>
-                <span
-                  className="kh-nt-link__t"
-                  role="link"
-                  tabIndex={0}
-                  title={l.title}
-                  onClick={() => onOpen(l.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && onOpen(l.id)}
-                >
-                  {l.title || t('ne_untitled')}
-                </span>
-                <button
-                  type="button"
-                  title={t('cx_unlink')}
-                  aria-label={t('cx_unlink')}
-                  onClick={() => void remove(l)}
-                >
-                  <Svg d={P.x} size={11} sw={2.4} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <label className="kh-nt-insp__search">
-          <Icon name="search" size={15} sw={2} />
-          <input
-            value={q}
-            placeholder={t('cx_ph')}
-            aria-label={t('cx_ph')}
-            onChange={(e) => setQ(e.target.value)}
-            onFocus={() => setFocus(true)}
-            onBlur={() => setTimeout(() => setFocus(false), 150)}
-          />
-        </label>
-        {focus && results.length > 0 && (
-          <div className="kh-nt-insp__results">
-            {results.map((r) => (
-              <div
-                key={r.id}
-                role="option"
-                aria-selected={false}
-                tabIndex={-1}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => void add(r)}
-              >
-                <span className="kh-nt-link__dot" />
-                <span className="kh-nt-insp__rk">{t('k_note')}</span>
-                <span className="kh-nt-insp__rt">{r.title || t('ne_untitled')}</span>
-                <span className="kh-nt-insp__rs">{when(r.sub)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <Connections type="note" id={note.id} />
       <div className="kh-nt-insp__card kh-nt-insp__card--details">
         <div className="kh-nt-insp__h">{t('details')}</div>
         {[
@@ -1026,7 +828,7 @@ export function NotesView() {
             onDone={(w) => setCols({ ...cols, insp: w })}
             onReset={() => setCols({ ...cols, insp: COL_DEFAULTS.insp })}
           />
-          <Inspector note={note} folderName={curFolder.name} author={me.user.name} onOpen={open} />
+          <Inspector note={note} folderName={curFolder.name} author={me.user.name} />
         </>
       )}
     </div>

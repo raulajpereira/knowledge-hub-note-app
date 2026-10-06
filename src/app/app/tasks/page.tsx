@@ -1,25 +1,30 @@
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { getAuth } from '@/server/auth/request';
 import { getEntitlements } from '@/server/licensing/entitlements';
 import { getLang } from '@/i18n/server';
 import { translate } from '@/i18n';
 import { Placeholder } from '@/components/shell/Placeholder';
-import { TrashView } from '@/components/trash/TrashView';
+import { TasksView } from '@/components/tasks/TasksView';
 
-export const metadata = { title: 'KnowledgeHub · Lixo' };
+export const metadata = { title: 'KnowledgeHub · Tarefas' };
 
-export default async function TrashPage() {
+export default async function TasksPage() {
   const auth = await getAuth();
   if (!auth) notFound();
   const [ent, lang] = await Promise.all([getEntitlements(auth.tenant.id), getLang()]);
-  if (!ent.modules.includes('notes') && !ent.modules.includes('tasks'))
+  if (!ent.modules.includes('tasks'))
     return (
       <Placeholder
-        icon="notes"
-        title={translate(lang, 'nav_trash')}
+        icon="tasks"
+        title={translate(lang, 'nav_tasks')}
         body={translate(lang, 'soon_notInPlan')}
         muted
       />
     );
-  return <TrashView />;
+  return (
+    <Suspense>
+      <TasksView />
+    </Suspense>
+  );
 }

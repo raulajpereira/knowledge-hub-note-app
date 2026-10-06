@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { folders, itemLinks, noteAttachments, notes } from '@/db/schema';
+import { folders, itemLinks, noteAttachments, notes, tasks } from '@/db/schema';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
 import { s3 } from '@/lib/storage';
@@ -351,9 +351,10 @@ export async function trashNote(auth: AuthContext, id: string) {
 }
 
 // ── Trash (prototype isTrash) ──────────────────────────────────────────────
+export type TrashKind = 'note' | 'folder' | 'task';
 export type TrashItem = {
   id: string;
-  kind: 'note' | 'folder';
+  kind: TrashKind;
   title: string;
   deletedAt: string;
   daysLeft: number;
@@ -369,8 +370,19 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: folders.id, title: folders.name, deletedAt: folders.deletedAt })
       .from(folders)
       .where(and(eq(folders.kind, 'notes'), isNotNull(folders.deletedAt)));
+    const ts = await tx
+      .select({ id: tasks.id, title: tasks.title, deletedAt: tasks.deletedAt })
+      .from(tasks)
+      .where(isNotNull(tasks.deletedAt));
     const left = (d: Date) => Math.max(0, TRASH_DAYS - Math.floor((Date.now() - d.getTime()) / 86_400_000));
     return [
+      ...ts.map((x) => ({
+        id: x.id,
+        kind: 'task' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
       ...fs.map((f) => ({
         id: f.id,
         kind: 'folder' as const,
@@ -389,10 +401,12 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
   });
 }
 
-export async function restoreTrash(auth: AuthContext, items: Array<{ kind: 'note' | 'folder'; id: string }>) {
+export async function restoreTrash(auth: AuthContext, items: Array<{ kind: TrashKind; id: string }>) {
   await asUser(auth, async (tx) => {
     const fIds = items.filter((i) => i.kind === 'folder').map((i) => i.id);
     const nIds = items.filter((i) => i.kind === 'note').map((i) => i.id);
+    const tIds = items.filter((i) => i.kind === 'task').map((i) => i.id);
+    if (tIds.length) await tx.update(tasks).set({ deletedAt: null }).where(inArray(tasks.id, tIds));
     if (fIds.length) {
       const fs = await tx
         .update(folders)
@@ -419,20 +433,24 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: 'note
   });
 }
 
+async function unlinkAll(tx: Tx, type: string, ids: string[]) {
+  await tx
+    .delete(itemLinks)
+    .where(
+      or(
+        and(eq(itemLinks.aType, type), inArray(itemLinks.aId, ids)),
+        and(eq(itemLinks.bType, type), inArray(itemLinks.bId, ids)),
+      ),
+    );
+}
+
 async function purgeNotesTx(tx: Tx, ids: string[]) {
   if (!ids.length) return;
   const files = await tx
     .delete(noteAttachments)
     .where(inArray(noteAttachments.noteId, ids))
     .returning({ key: noteAttachments.storageKey });
-  await tx
-    .delete(itemLinks)
-    .where(
-      or(
-        and(eq(itemLinks.aType, 'note'), inArray(itemLinks.aId, ids)),
-        and(eq(itemLinks.bType, 'note'), inArray(itemLinks.bId, ids)),
-      ),
-    );
+  await unlinkAll(tx, 'note', ids);
   await tx.delete(notes).where(inArray(notes.id, ids));
   for (const f of files)
     await s3()
@@ -440,14 +458,15 @@ async function purgeNotesTx(tx: Tx, ids: string[]) {
       .catch(() => {});
 }
 
-export async function purgeTrash(
-  auth: AuthContext,
-  items: Array<{ kind: 'note' | 'folder'; id: string }> | 'all',
-) {
+export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKind; id: string }> | 'all') {
   await asUser(auth, async (tx) => {
     let nIds: string[];
     let fIds: string[];
+    let tIds: string[];
     if (items === 'all') {
+      tIds = (await tx.select({ id: tasks.id }).from(tasks).where(isNotNull(tasks.deletedAt))).map(
+        (r) => r.id,
+      );
       nIds = (await tx.select({ id: notes.id }).from(notes).where(isNotNull(notes.deletedAt))).map(
         (r) => r.id,
       );
@@ -460,6 +479,7 @@ export async function purgeTrash(
     } else {
       fIds = items.filter((i) => i.kind === 'folder').map((i) => i.id);
       nIds = items.filter((i) => i.kind === 'note').map((i) => i.id);
+      tIds = items.filter((i) => i.kind === 'task').map((i) => i.id);
       if (fIds.length)
         nIds.push(
           ...(
@@ -471,6 +491,10 @@ export async function purgeTrash(
         );
     }
     await purgeNotesTx(tx, [...new Set(nIds)]);
+    if (tIds.length) {
+      await unlinkAll(tx, 'task', tIds);
+      await tx.delete(tasks).where(and(inArray(tasks.id, tIds), isNotNull(tasks.deletedAt)));
+    }
     if (fIds.length)
       await tx.delete(folders).where(and(inArray(folders.id, fIds), isNotNull(folders.deletedAt)));
   });
@@ -620,13 +644,15 @@ export async function unlinkItems(auth: AuthContext, a: ItemRef, b: ItemRef) {
   );
 }
 
-/** Item types that can be linked today; tasks, issues… join as their modules arrive. */
-const LINKABLE: Record<string, { table: typeof notes; title: typeof notes.title }> = {
+/** Item types that can be linked today; issues, voice notes… join as their modules arrive. */
+const LINKABLE = {
   note: { table: notes, title: notes.title },
-};
+  task: { table: tasks, title: tasks.title },
+} as const;
+export type LinkType = keyof typeof LINKABLE;
 
 async function assertOwned(tx: Tx, ref: ItemRef) {
-  const L = LINKABLE[ref.type];
+  const L = LINKABLE[ref.type as LinkType];
   if (!L) throw new ApiError(400, 'invalid_input');
   const [r] = await tx
     .select({ id: L.table.id })
@@ -649,25 +675,47 @@ export async function linksOf(auth: AuthContext, ref: ItemRef) {
     const others = rows.map((r) =>
       r.aType === ref.type && r.aId === ref.id ? { type: r.bType, id: r.bId } : { type: r.aType, id: r.aId },
     );
-    const noteIds = others.filter((o) => o.type === 'note').map((o) => o.id);
-    const titles = noteIds.length
-      ? await tx
-          .select({ id: notes.id, title: notes.title })
-          .from(notes)
-          .where(and(inArray(notes.id, noteIds), isNull(notes.deletedAt)))
-      : [];
-    const t = new Map(titles.map((x) => [x.id, x.title]));
-    return others.filter((o) => t.has(o.id)).map((o) => ({ ...o, title: t.get(o.id) ?? '' }));
+    const titles = new Map<string, string>();
+    for (const [type, L] of Object.entries(LINKABLE)) {
+      const ids = others.filter((o) => o.type === type).map((o) => o.id);
+      if (!ids.length) continue;
+      const found = await tx
+        .select({ id: L.table.id, title: L.title })
+        .from(L.table)
+        .where(and(inArray(L.table.id, ids), isNull(L.table.deletedAt)));
+      for (const f of found) titles.set(`${type}:${f.id}`, f.title);
+    }
+    return others
+      .filter((o) => titles.has(`${o.type}:${o.id}`))
+      .map((o) => ({ ...o, title: titles.get(`${o.type}:${o.id}`) ?? '' }));
   });
 }
 
-/** Items the user can link to (search box in "Ligações"). */
-export async function linkCandidates(auth: AuthContext, ref: ItemRef, query: string) {
-  const items = await listNotes(auth, { search: query || undefined });
-  return items
-    .filter((n) => !(ref.type === 'note' && n.id === ref.id))
-    .slice(0, 8)
-    .map((n) => ({ type: 'note', id: n.id, title: n.title, sub: n.updatedAt }));
+/** Items the user can link to (search box in "Ligações"): notes and tasks. */
+export async function linkCandidates(
+  auth: AuthContext,
+  ref: ItemRef,
+  query: string,
+  types: LinkType[] = ['note', 'task'],
+) {
+  const like = `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  return asUser(auth, async (tx) => {
+    const out: Array<{ type: LinkType; id: string; title: string; sub: string }> = [];
+    for (const type of types) {
+      const L = LINKABLE[type];
+      const at = type === 'note' ? notes.updatedAt : tasks.createdAt;
+      const rows = await tx
+        .select({ id: L.table.id, title: L.title, at })
+        .from(L.table)
+        .where(and(isNull(L.table.deletedAt), query ? ilike(L.title, like) : sql`true`))
+        .orderBy(desc(at))
+        .limit(8);
+      for (const r of rows)
+        if (!(r.id === ref.id && type === ref.type))
+          out.push({ type, id: r.id, title: r.title, sub: r.at.toISOString() });
+    }
+    return out.sort((a, b) => b.sub.localeCompare(a.sub)).slice(0, 8);
+  });
 }
 
 export { docChecklist };
@@ -681,6 +729,14 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(notes)
         .where(isNull(notes.deletedAt));
+      return r?.n ?? 0;
+    });
+  if (modules.has('tasks'))
+    out.tasks = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(tasks)
+        .where(and(isNull(tasks.deletedAt), isNull(tasks.doneAt)));
       return r?.n ?? 0;
     });
   return out;
