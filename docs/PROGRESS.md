@@ -170,6 +170,15 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - O ecrã não está desenhado no protótipo; feito com o aspeto do Lixo: lista das etiquetas usadas nas notas com a contagem de notas, pesquisa e **editar o nome** (em todas as notas; se o novo nome já existir, as duas juntam-se). Não mostra as notas (pedido do utilizador).
 - API `GET /api/v1/tags` · `PATCH /api/v1/tags { from, to }` (módulo Notas). Screenshots `65–66`.
 
+## Fase 5.1 — Palavras-passe (cofre de conhecimento zero) (feito)
+- **Cifra no browser** (D9): a palavra-passe mestra passa por Argon2id (64 MiB, t=3, p=1) e embrulha uma chave de dados (DEK) aleatória de 256 bits; cada entrada é cifrada com AES-256-GCM. O servidor guarda só texto cifrado (`vault_keys`, `vault_items`, migração `0008_vault`, RLS por tenant e dono) — nem o nome das entradas é legível.
+- **Chave de recuperação** (`KHRK-…`, 256 bits) mostrada uma vez na criação, com Recovery Kit (.txt) e confirmação obrigatória; serve para definir nova palavra-passe mestra se for esquecida. Em "Segurança do cofre": alterar a palavra-passe mestra, voltar a descarregar o kit (pede a palavra-passe), gerar nova chave (invalida a anterior), tempo de bloqueio automático (1/5/15/30/60 min, por omissão 1 min como no protótipo). "Não tenho a chave" → repor e apagar o cofre.
+- **Ecrã** igual ao protótipo: ecrã de bloqueio (força da palavra-passe na criação, 5 falhas → 30 s), cartões de saúde (Total, Fracas, Reutilizadas, Mais de 90 dias — servem de filtro), pastas (criar, duplo clique para renomear, eliminar, arrastar entradas para uma pasta), tabela, painel lateral ajustável: copiar utilizador/password (área de transferência limpa após 30 s; regista "Último uso"), mostrar, avisos, código 2FA (TOTP calculado localmente) com contagem, URL, notas, gerador (8–64, maiúsculas, minúsculas, dígitos, símbolos, sem ambíguos), detalhes e eliminar.
+- Gravação automática cifrada 600 ms após escrever (e ao bloquear/sair da página); se a entrada foi alterada noutro dispositivo, a versão do servidor é mostrada e é avisado (controlo de versão otimista, 409).
+- **Diferenças ao protótipo**: as entradas apagadas não vão para o Lixo (o nome está cifrado, o Lixo não o conseguiria mostrar) — a confirmação avisa que é definitivo. "Partilhadas / Só minhas" e o bloco "Partilha" ficam para a Fase 9 (Partilha).
+- **Módulo**: Palavras-passe (como Emails e Tarefas de Projeto) não pertence a nenhum plano do protótipo — é um extra por tenant. Até haver Consola de Admin (Fase 10): `node dist/cli.mjs tenants:module --email <email> --add passwords`.
+- **Testes**: unitários (Argon2id/DEK/chave de recuperação, gerador, TOTP RFC 6238), integração (só texto cifrado, RLS, versões, repor) e E2E (criar → chave → entrada cifrada → bloquear/desbloquear → recuperar com a chave). Screenshots `fase-5/70–77` e `cmp-cofre*.png`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -211,4 +220,6 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D31 | Repetição de tarefas: a próxima é criada no momento em que se conclui a atual (sem job agendado); a concluída deixa de repetir | Claude |
 | D32 | Notas de Voz na Fase 4 com transcrição escrita à mão (sem transcrição automática) | utilizador |
 | D33 | Calendário segue o protótipo: vista das tarefas (e depois problemas) pelo prazo, sem tabela de eventos própria | protótipo |
+| D34 | Entradas do cofre eliminadas definitivamente (sem Lixo); a lista de pastas e a chave de recuperação ficam no `meta` cifrado | Claude |
+| D35 | Palavras-passe/Emails/Tarefas de Projeto são extras por tenant (não estão em nenhum plano do protótipo); comando CLI `tenants:module` até à Consola | protótipo |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

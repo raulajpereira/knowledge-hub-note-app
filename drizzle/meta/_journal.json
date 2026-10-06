@@ -57,6 +57,13 @@
       "when": 1791321009318,
       "tag": "0007_voice",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791323419458,
+      "tag": "0008_vault",
+      "breakpoints": true
     }
   ]
 }

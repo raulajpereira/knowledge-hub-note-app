@@ -216,3 +216,44 @@ export const voiceNotes = pgTable(
     ),
   ],
 );
+
+/**
+ * Password vault (SECURITY.md §4, D9 — zero-knowledge): the server keeps only
+ * what the browser sends — Argon2id salt/params, the DEK wrapped by the master
+ * password and by the recovery key, the recovery key's fingerprint and
+ * AES-256-GCM ciphertext. Never the master password, the DEK or plaintext.
+ */
+export const vaultKeys = pgTable('vault_keys', {
+  ownerId: uuid('owner_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: tenantId(),
+  kdfSalt: text('kdf_salt').notNull(),
+  kdfParams: jsonb('kdf_params').$type<{ alg: 'argon2id'; m: number; t: number; p: number }>().notNull(),
+  dekWrappedMp: text('dek_wrapped_mp').notNull(),
+  dekWrappedRk: text('dek_wrapped_rk'),
+  rkFingerprint: text('rk_fingerprint'),
+  rkCreatedAt: ts('rk_created_at'),
+  // Encrypted vault metadata (folder names) — same DEK, opaque to the server.
+  metaCt: text('meta_ct'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+export const vaultItems = pgTable(
+  'vault_items',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    /** base64(iv ‖ AES-256-GCM ciphertext) of the item JSON. */
+    ciphertext: text('ciphertext').notNull(),
+    version: integer('version').notNull().default(1),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('vault_items_owner_idx').on(t.tenantId, t.ownerId),
+    check('vault_items_ct_len', sql`char_length(${t.ciphertext}) <= 90000`),
+  ],
+);

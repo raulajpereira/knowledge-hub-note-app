@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { folders, itemLinks, noteAttachments, notes, tasks, voiceNotes } from '@/db/schema';
+import { folders, itemLinks, noteAttachments, notes, tasks, vaultItems, voiceNotes } from '@/db/schema';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
 import { s3 } from '@/lib/storage';
@@ -775,6 +775,11 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(tasks)
         .where(and(isNull(tasks.deletedAt), isNull(tasks.doneAt)));
+      return r?.n ?? 0;
+    });
+  if (modules.has('passwords'))
+    out.passwords = await asUser(auth, async (tx) => {
+      const [r] = await tx.select({ n: sql<number>`count(*)::int` }).from(vaultItems);
       return r?.n ?? 0;
     });
   return out;

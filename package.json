@@ -51,6 +51,7 @@
     "bullmq": "^5.81.5",
     "drizzle-orm": "^0.45.3",
     "geist": "^1.7.2",
+    "hash-wasm": "^4.12.0",
     "ioredis": "^5.11.1",
     "next": "^15.5.27",
     "nodemailer": "^10.0.15",

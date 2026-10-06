@@ -6,14 +6,16 @@
 //   codes:list [--all]
 //   codes:pause|codes:resume|codes:revoke|codes:restore <KH-…-######>
 //   users:list
+//   tenants:module --email <owner@…> --add|--remove <module>   (add-ons: passwords, emails, issues…)
 //   superadmin:resend-setup
-import { desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db, sqlClient } from '@/db/client';
-import { codes, plans, tenants, users } from '@/db/schema';
+import { codes, modules, plans, tenantModules, tenants, users } from '@/db/schema';
 import { env } from '@/lib/env';
 import { createCode, pauseCode, restoreCode, resumeCode, revokeCode } from '@/server/licensing/codes';
 import { sendSetupLink } from '@/server/auth/service';
 import { normalizeCode } from '@/server/licensing/codeFormat';
+import { invalidateEntitlements } from '@/server/licensing/entitlements';
 
 function flags(argv: string[]) {
   const out: Record<string, string | true> = {};
@@ -108,6 +110,29 @@ async function main() {
         .leftJoin(plans, eq(plans.id, tenants.planId))
         .where(isNull(tenants.deletedAt));
       console.table(rows.map((r) => ({ ...r, verified: r.verified ? 'sim' : 'não' })));
+      break;
+    }
+    case 'tenants:module': {
+      const email = str(f.email)?.toLowerCase();
+      const add = str(f.add);
+      const remove = str(f.remove);
+      const mod = add ?? remove;
+      if (!email || !mod) throw new Error('--email and --add|--remove <module> are required');
+      const [u] = await db().select({ tenantId: users.tenantId }).from(users).where(eq(users.email, email));
+      if (!u) throw new Error(`no user ${email}`);
+      const [m] = await db().select({ id: modules.id }).from(modules).where(eq(modules.id, mod));
+      if (!m) throw new Error(`unknown module ${mod}`);
+      if (add)
+        await db()
+          .insert(tenantModules)
+          .values({ tenantId: u.tenantId, moduleId: mod })
+          .onConflictDoNothing();
+      else
+        await db()
+          .delete(tenantModules)
+          .where(and(eq(tenantModules.tenantId, u.tenantId), eq(tenantModules.moduleId, mod)));
+      await invalidateEntitlements(u.tenantId);
+      console.log(`\n  ${add ? '+' : '-'} ${mod} (tenant ${u.tenantId})\n`);
       break;
     }
     case 'superadmin:resend-setup': {

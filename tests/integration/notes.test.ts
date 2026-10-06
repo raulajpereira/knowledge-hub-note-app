@@ -36,6 +36,7 @@ describe.skipIf(!enabled)('notes', () => {
   let tasksSvc: typeof import('@/server/content/tasks');
   let voiceSvc: typeof import('@/server/content/voice');
   let homeSvc: typeof import('@/server/content/home');
+  let vault: typeof import('@/server/content/vault');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -45,7 +46,7 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm] = await Promise.all([
+    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
       import('@/server/auth/session'),
@@ -55,12 +56,13 @@ describe.skipIf(!enabled)('notes', () => {
       import('@/server/content/voice'),
       import('@/server/content/home'),
       import('@/db/client'),
+      import('@/server/content/vault'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -399,5 +401,52 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await codeOf(notes.renameTag(ana, 'nao-existe', 'x'))).toBe('not_found');
     // Rui's notes are untouched.
     expect(await notes.listTags(rui)).toEqual([{ name: 'Performance', count: 1 }]);
+  });
+
+  it('vault: ciphertext only, private to its owner, optimistic versions, wipe', async () => {
+    const a = await signedIn('vault-a@example.pt');
+    const b = await signedIn('vault-b@example.pt');
+    const keys = {
+      kdfSalt: 'c2FsdHNhbHRzYWx0c2FsdA==',
+      kdfParams: { alg: 'argon2id' as const, m: 65536, t: 3, p: 1 },
+      dekWrappedMp: 'd3JhcHBlZE1Q',
+      dekWrappedRk: 'd3JhcHBlZFJL',
+      rkFingerprint: 'ABCD 1234 EF01 5678',
+    };
+    expect((await vault.getVault(a)).keys).toBeNull();
+    expect(await codeOf(vault.createVaultItem(a, 'Y3Q='))).toBe('vault_missing');
+    await vault.setupVault(a, keys);
+    expect(await codeOf(vault.setupVault(a, keys))).toBe('vault_exists');
+
+    const it1 = await vault.createVaultItem(a, 'Y3QxCg==');
+    expect(it1.version).toBe(1);
+    const up = await vault.updateVaultItem(a, it1.id, 'Y3QyCg==', 1);
+    expect(up.version).toBe(2);
+    // a second device still editing version 1 is refused and gets the current copy
+    const stale = await vault.updateVaultItem(a, it1.id, 'Y3QzCg==', 1).catch((e: unknown) => e);
+    expect(stale).toMatchObject({ code: 'version_conflict', status: 409 });
+
+    // another user sees nothing and cannot touch the item
+    expect(await vault.getVault(b)).toEqual({ keys: null, items: [] });
+    expect(await codeOf(vault.updateVaultItem(b, it1.id, 'eA==', 2))).toBe('not_found');
+    expect(await codeOf(vault.deleteVaultItem(b, it1.id))).toBe('not_found');
+
+    // re-wrap keeps the items; a new recovery key moves its date
+    await vault.updateVaultKeys(
+      a,
+      { dekWrappedRk: 'bmV3Uks=', rkFingerprint: 'FFFF 0000 FFFF 0000' },
+      'vault.recovery_key_regenerated',
+    );
+    await vault.saveVaultMeta(a, 'bWV0YQ==');
+    const v = await vault.getVault(a);
+    expect(v.keys).toMatchObject({
+      dekWrappedRk: 'bmV3Uks=',
+      rkFingerprint: 'FFFF 0000 FFFF 0000',
+      metaCt: 'bWV0YQ==',
+    });
+    expect(v.items.map((x) => [x.ciphertext, x.version])).toEqual([['Y3QyCg==', 2]]);
+
+    await vault.wipeVault(a);
+    expect(await vault.getVault(a)).toEqual({ keys: null, items: [] });
   });
 });
