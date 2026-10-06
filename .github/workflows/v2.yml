@@ -38,7 +38,7 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      APP_URL: http://127.0.0.1:3100
+      APP_URL: http://127.0.0.1:3100/v2
       DATABASE_ADMIN_URL: postgres://kh_owner:owner@localhost:5432/knowledgehub
       DATABASE_URL: postgres://kh_app:ci-app@localhost:5432/knowledgehub
       TEST_DATABASE_ADMIN_URL: postgres://kh_owner:owner@localhost:5432/knowledgehub

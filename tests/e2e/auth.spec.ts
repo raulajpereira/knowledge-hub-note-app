@@ -28,8 +28,10 @@ async function linkFor(kind: string, email: string): Promise<string> {
       : [];
     if (files.length) {
       const msg = JSON.parse(fs.readFileSync(path.join(outbox!, files.at(-1)!), 'utf8')) as { text: string };
-      const url = /https?:\/\/\S+token=[A-Za-z0-9_-]+/.exec(msg.text)![0];
-      return new URL(url).pathname.replace(/^\/v2\//, '') + new URL(url).search;
+      const url = new URL(/https?:\/\/\S+token=[A-Za-z0-9_-]+/.exec(msg.text)![0]);
+      // Relative to the test baseURL (which already includes the base path).
+      const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      return url.pathname.replace(new RegExp(`^${base}/`), '').replace(/^\//, '') + url.search;
     }
     await new Promise((r) => setTimeout(r, 250));
   }
