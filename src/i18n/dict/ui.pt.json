@@ -30,6 +30,9 @@
   "auth_verifyOkS": "A sua conta está ativa. Já pode iniciar sessão.",
   "auth_verifyOkT": "Email confirmado",
   "auth_verifySent": "Conta criada. Enviámos um email para confirmar o seu endereço — abra o link para ativar a conta.",
+  "home_edit": "Editar",
+  "home_noItems": "Sem itens por agora.",
+  "home_noNotes": "As notas recentes aparecem aqui.",
   "lic_all": "Inclui todos os módulos",
   "lic_DEVELOPER": "Code Library, API Playground e artefactos",
   "lic_MANAGEMENT": "Equipas, recursos, alocações e projetos",
@@ -68,7 +71,6 @@
   "shell_notifications": "Notificações",
   "shell_upTitle": "Mudar para PRO",
   "soon_body": "Este módulo chega numa próxima fase do KnowledgeHub 2.0.",
-  "soon_home": "O painel com cartões chega na próxima entrega desta fase.",
   "soon_notInPlan": "Este módulo não está incluído no seu plano.",
   "soon_title": "Em construção",
   "ticker_empty": "Sem notícias de momento.",
@@ -80,5 +82,7 @@
   "ui_noResults": "Sem resultados",
   "ui_resizeHint": "Arraste para redimensionar · duplo clique para repor",
   "ui_search": "Pesquisar…",
-  "ui_showHidePassword": "Mostrar/ocultar password"
+  "ui_showHidePassword": "Mostrar/ocultar password",
+  "wx_myLoc": "A minha localização",
+  "wx_useGeo": "Usar a minha localização"
 }

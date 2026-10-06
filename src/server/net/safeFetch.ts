@@ -62,9 +62,10 @@ const guardedLookup: LookupFunction = (hostname, options, callback) => {
   });
 };
 
+type Raw = { status: number; contentType: string; body: Buffer; url: string };
 type Result = { status: number; contentType: string; body: string; url: string };
 
-function once(url: URL, timeoutMs: number, maxBytes: number): Promise<Result & { location?: string }> {
+function once(url: URL, timeoutMs: number, maxBytes: number): Promise<Raw & { location?: string }> {
   return new Promise((resolve, reject) => {
     if (isIP(url.hostname.replace(/^\[|\]$/g, '')) && isPrivateAddress(url.hostname.replace(/^\[|\]$/g, '')))
       return reject(new SafeFetchError('blocked_address'));
@@ -86,7 +87,7 @@ function once(url: URL, timeoutMs: number, maxBytes: number): Promise<Result & {
           return resolve({
             status,
             contentType: '',
-            body: '',
+            body: Buffer.alloc(0),
             url: url.href,
             location: res.headers.location,
           });
@@ -105,7 +106,7 @@ function once(url: URL, timeoutMs: number, maxBytes: number): Promise<Result & {
           resolve({
             status,
             contentType: String(res.headers['content-type'] ?? ''),
-            body: Buffer.concat(chunks).toString('utf8'),
+            body: Buffer.concat(chunks),
             url: url.href,
           }),
         );
@@ -117,10 +118,17 @@ function once(url: URL, timeoutMs: number, maxBytes: number): Promise<Result & {
   });
 }
 
-export async function safeFetchText(
+export async function safeFetchText(input: string, opts: Opts = {}): Promise<Result> {
+  const r = await safeFetchBytes(input, opts);
+  return { ...r, body: r.body.toString('utf8') };
+}
+
+type Opts = { timeoutMs?: number; maxBytes?: number; maxRedirects?: number };
+
+export async function safeFetchBytes(
   input: string,
-  { timeoutMs = 6000, maxBytes = 2 * 1024 * 1024, maxRedirects = 3 } = {},
-): Promise<Result> {
+  { timeoutMs = 6000, maxBytes = 2 * 1024 * 1024, maxRedirects = 3 }: Opts = {},
+): Promise<Raw> {
   let url: URL;
   try {
     url = new URL(input);

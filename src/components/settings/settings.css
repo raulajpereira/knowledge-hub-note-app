@@ -229,9 +229,6 @@
 .kh-set__row input[type='range'] {
   accent-color: #fbf8f5;
 }
-.kh-mono {
-  font-family: var(--font-mono);
-}
 /* Fonts */
 .kh-set__fonts {
   display: grid;

@@ -30,6 +30,9 @@
   "auth_verifyOkS": "Your account is active. You can sign in now.",
   "auth_verifyOkT": "Email confirmed",
   "auth_verifySent": "Account created. We sent you an email to confirm your address — open the link to activate your account.",
+  "home_edit": "Edit",
+  "home_noItems": "Nothing here yet.",
+  "home_noNotes": "Your recent notes appear here.",
   "lic_all": "Includes every module",
   "lic_DEVELOPER": "Code Library, API Playground and artifacts",
   "lic_MANAGEMENT": "Teams, resources, allocations and projects",
@@ -68,7 +71,6 @@
   "shell_notifications": "Notifications",
   "shell_upTitle": "Upgrade to PRO",
   "soon_body": "This module arrives in a later phase of KnowledgeHub 2.0.",
-  "soon_home": "The dashboard with cards arrives in the next delivery of this phase.",
   "soon_notInPlan": "This module isn’t included in your plan.",
   "soon_title": "Coming soon",
   "ticker_empty": "No news right now.",
@@ -80,5 +82,7 @@
   "ui_noResults": "No Results",
   "ui_resizeHint": "Drag to resize · double-click to reset",
   "ui_search": "Search…",
-  "ui_showHidePassword": "Show/hide password"
+  "ui_showHidePassword": "Show/hide password",
+  "wx_myLoc": "My location",
+  "wx_useGeo": "Use my location"
 }

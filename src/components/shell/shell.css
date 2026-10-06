@@ -946,3 +946,7 @@
   border-radius: 32px;
   padding: 40px 30px 26px;
 }
+
+.kh-mono {
+  font-family: var(--font-mono);
+}

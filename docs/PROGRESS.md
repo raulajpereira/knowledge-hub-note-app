@@ -8,7 +8,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 0 — Infra + fundações técnicas | ✅ feito |
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
 | 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
-| 3 — Shell, Definições, Dashboard | 🔧 3.1 Estrutura ✅ · 3.2 Definições ✅ · 3.3 Dashboard |
+| 3 — Shell, Definições, Dashboard | ✅ feito (3.1 Estrutura · 3.2 Definições · 3.3 Início) — a aguardar testes do utilizador |
 | 4 — Notas, Tarefas, Calendário | ⏳ |
 | 5 — Cofre, Emails, Issues | ⏳ |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
@@ -107,6 +107,16 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - Por omissão (catálogo do protótipo) os planos não incluem os módulos de "Personalização" (são add-ons): um cliente PRO/ULTRA só vê Tipo de Letra, Liquid Glass, Cor de Destaque, Marca, Barra lateral e Foto de fundo se esses módulos lhe forem atribuídos (na consola, Fase 10). O teu tenant tem todos.
 - Textos novos (curtos): "A imagem é demasiado grande.", "Não foi possível ler esta imagem. Use PNG, JPEG ou WebP.", "A carregar…". Os restantes vêm do protótipo.
 
+## Fase 3.3 — Início (feito)
+- **Meteorologia** (igual ao protótipo: céu animado — sol, estrelas/lua, nuvens, chuva, trovoada, neve, nevoeiro —, temperatura, sensação, máx/mín, humidade, vento, avisos calculados da previsão — trovoada, chuva forte, vento, calor, frio, neve, UV — e 5 dias com barra de temperaturas). Os dados vêm do **servidor** (`/api/v1/weather`, Open-Meteo, cache Redis 30 min por célula de ~1 km); o browser não fala com serviços externos. Cidade por nome (`/api/v1/weather/geocode`) ou "Usar a minha localização" (geolocalização do browser, só quando o utilizador carrega); por omissão Lisboa. Mostrar/ocultar no modo de edição.
+- **Cartões** (14 tipos do protótipo, os de módulos fora do plano não aparecem nem podem ser adicionados): Hoje, Captura Rápida (atalhos para páginas da app), Atalhos (links externos), Transações Favoritas, Tarefas Prioritárias, Próximos Prazos, Notas Recentes, Favoritos, Sessão de Foco, Ordens em Curso, Problemas Abertos, Acesso Rápido SAP, Notas Rápidas, Emails Importantes. Os que dependem de conteúdo das próximas fases mostram 0 / o texto de vazio do protótipo e passam a ter dados à medida que os módulos chegam.
+- **Modo de edição** ("Personalizar" / "Concluir"): arrastar para reordenar, ajustar a largura arrastando a margem entre cartões (a linha mantém 100 %), tamanho S/M/L/XL, remover, adicionar cartão, mostrar/ocultar meteorologia, repor o painel original. Como pede o ROADMAP, Captura Rápida e Atalhos só são editáveis em modo de edição.
+- **Atalhos**: ícones dos sites obtidos pelo servidor (`/api/v1/favicon`, com a proteção SSRF, só ícones raster, cache 7 dias) em vez do serviço de favicons da Google do protótipo; sem ícone → inicial do domínio.
+- **Sessão de Foco**: 25/5 min, continua a contar ao mudar de página, sessões do dia guardadas nas preferências.
+- Tudo guardado em `user_prefs.home` / `user_prefs.weatherLoc` (validado; sincronizado entre dispositivos).
+- **Testes**: 107 unitários/integração + 20 E2E (o painel personalizado mantém-se após recarregar, cartões fora do plano ausentes, atalho novo, temporizador, repor).
+- **Screenshots** `docs/screenshots/fase-3/30-*`, `31-*` e `cmp-inicio-painel.png` (meteorologia com dados de exemplo — o ambiente de desenvolvimento não tem acesso à internet).
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -142,4 +152,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D25 | RSS do rodapé lido no servidor (sem rss2json/allorigins do protótipo), com proteção SSRF e cache Redis | Claude (SECURITY.md) |
 | D26 | Imagens do utilizador servidas pela app (stream do MinIO, só ao dono), não por URLs assinados: o MinIO não fica exposto à internet | Claude |
 | D27 | Fontes tipográficas servidas pela app (@fontsource), sem Google Fonts | Claude |
+| D28 | Meteorologia e favicons pedidos pelo servidor (sem geojs/bigdatacloud/Google no browser); localização automática só a pedido do utilizador | Claude (SECURITY.md) |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

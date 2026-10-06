@@ -69,6 +69,64 @@ const pct = z.number().int().min(0).max(80);
 // Values end up in CSS, so only exact swatches or a #rrggbb colour are accepted.
 const Accent = z.union([z.enum(ACCENT_SWATCHES), z.string().regex(/^#[0-9a-fA-F]{6}$/)]);
 
+// Início (prototype HOME_DEF / HOME_TYPES / QUICK_DEF / SC_DEF / HOME_SPAN).
+export const HOME_TYPES = [
+  'today',
+  'capture',
+  'shortcuts',
+  'tcodes',
+  'tasks',
+  'deadlines',
+  'notes',
+  'favs',
+  'focus',
+  'transports',
+  'issues',
+  'systems',
+  'qnotes',
+  'emails',
+] as const;
+export type HomeType = (typeof HOME_TYPES)[number];
+export const HOME_SIZES = ['S', 'M', 'L', 'XL'] as const;
+export const HOME_SPAN = { S: 4, M: 6, L: 8, XL: 12 } as const;
+
+const Widget = z.object({
+  id: z.string().regex(/^[\w-]{1,40}$/),
+  type: z.enum(HOME_TYPES),
+  size: z.enum(HOME_SIZES),
+  fr: z.number().min(0).max(1).optional(),
+});
+const Shortcut = z.object({
+  id: z.string().regex(/^[\w-]{1,40}$/),
+  title: z.string().max(80),
+  url: z
+    .string()
+    .max(500)
+    .regex(/^https?:\/\/[^\s]+$/i),
+});
+export const HomePrefs = z.object({
+  widgets: z.array(Widget).max(40),
+  showWx: z.boolean().optional(),
+  quick: z
+    .array(z.string().regex(/^[a-z][a-z0-9_]{1,31}$/))
+    .max(24)
+    .optional(),
+  shortcuts: z.array(Shortcut).max(40).optional(),
+  pomoDone: z.number().int().min(0).max(500).optional(),
+  pomoDay: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
+export type HomePrefs = z.infer<typeof HomePrefs>;
+export const WeatherLoc = z.object({
+  lat: z.number().min(-90).max(90),
+  lon: z.number().min(-180).max(180),
+  city: z.string().max(80),
+  manual: z.boolean().optional(),
+});
+export type WeatherLoc = z.infer<typeof WeatherLoc>;
+
 export const PREF_SCHEMAS = {
   cols: z.object({ side: col('side'), list: col('list'), insp: col('insp') }).partial(),
   nav: z.array(NavEntry).max(120),
@@ -79,6 +137,8 @@ export const PREF_SCHEMAS = {
   uiScale: z.number().min(0.8).max(1.2),
   glassBlur: z.number().int().min(0).max(80),
   accent: Accent,
+  home: HomePrefs,
+  weatherLoc: WeatherLoc,
 } satisfies Record<string, z.ZodTypeAny>;
 
 /**

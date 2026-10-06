@@ -186,3 +186,36 @@ test('settings: plan-gated tabs, background preset syncs, profile photo upload',
   await expect(img).toBeVisible();
   expect(await img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(256);
 });
+
+test('início: weather card, cards customised and kept after reload, focus timer', async ({ page }) => {
+  await login(page);
+  await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), Shell$/ })).toBeVisible();
+  await expect(page.getByTestId('weather')).toBeVisible();
+  const cards = page.locator('[data-hw]');
+  await expect(cards.filter({ hasText: 'Sessão de Foco' })).toHaveCount(1);
+  await expect(cards.filter({ hasText: 'Ordens em Curso' })).toHaveCount(0); // SAP isn't in PRO
+
+  await page.getByRole('button', { name: 'Personalizar' }).click();
+  await page.getByRole('button', { name: 'Eliminar Sessão de Foco' }).click();
+  await expect(cards.filter({ hasText: 'Sessão de Foco' })).toHaveCount(0);
+  await page.getByRole('button', { name: '+ Adicionar Atalho' }).click();
+  await page.getByLabel('Nome (opcional)').fill('Exemplo');
+  await page.getByLabel('URL').fill('example.org');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  await page.waitForTimeout(1200);
+  await page.reload();
+  await expect(cards.filter({ hasText: 'Sessão de Foco' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Exemplo/ })).toHaveAttribute('href', 'https://example.org');
+
+  await page.getByRole('button', { name: 'Personalizar' }).click();
+  await page.getByRole('button', { name: '+ Sessão de Foco' }).click();
+  await page.getByRole('button', { name: 'Concluir' }).click();
+  await page.getByRole('button', { name: 'Iniciar' }).click();
+  await expect(page.getByRole('timer')).not.toHaveText('25:00', { timeout: 4000 });
+  await page.getByRole('button', { name: 'Pausar' }).click();
+
+  await page.getByRole('button', { name: 'Personalizar' }).click();
+  await page.getByRole('button', { name: 'Repor Painel Original' }).click();
+  await expect(page.getByRole('link', { name: /Exemplo/ })).toHaveCount(0);
+});
