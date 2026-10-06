@@ -37,8 +37,8 @@ if [ ! -f /etc/docker/daemon.json ]; then
   systemctl restart docker
 fi
 
-echo "==> Swap (2 GB)"
-if ! swapon --show | grep -q '/swapfile'; then
+echo "==> Swap (2 GB, only if the VPS has none yet)"
+if [ -z "$(swapon --noheadings --show)" ]; then
   fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
   grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
   sysctl -w vm.swappiness=10 && echo 'vm.swappiness=10' > /etc/sysctl.d/99-kh-swap.conf
