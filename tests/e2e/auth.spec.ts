@@ -72,11 +72,17 @@ test('register with a license code, confirm the email, sign in and out', async (
 
   await login(page, password);
   await page.waitForURL(/\/app$/);
-  await expect(page.getByRole('heading', { name: 'Olá, E2E Tester' })).toBeVisible();
-  await expect(page.getByText('Plano PRO')).toBeVisible();
-  await expect(page.getByText('E2E Lda')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Bom dia|Boa tarde|Boa noite), E2E$/ })).toBeVisible();
+  const account = page.getByTitle('Conta e Dados');
+  await expect(account).toContainText('PRO');
 
-  await page.getByRole('button', { name: 'Terminar sessão' }).click();
+  await account.click();
+  await page.getByRole('button', { name: 'Terminar Sessão' }).click();
+  await page
+    .getByRole('dialog', { name: undefined })
+    .last()
+    .getByRole('button', { name: 'Terminar Sessão' })
+    .click();
   await page.waitForURL(/\/login$/);
   await page.goto('app');
   await expect(page).toHaveURL(/\/login\?next=/);

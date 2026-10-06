@@ -1,41 +1,49 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { usePrefsContext } from '@/components/shell/PrefsProvider';
 
 const PREFIX = 'kh.ui.';
 
 /**
- * UI preference persisted per browser (column widths, panel sizes…).
- * Phase 3 moves these into user_prefs (synced across devices) behind the
- * same API, so components don't change.
+ * UI preference (column widths, panel sizes…). Inside the signed-in app it
+ * lives in user_prefs under `ui.<key>` and syncs across devices; elsewhere
+ * (component catalogue) it falls back to localStorage.
  */
 export function usePersistentState<T>(key: string, initial: T): [T, (v: T) => void, () => void] {
-  const [value, setValue] = useState<T>(initial);
+  const prefs = usePrefsContext();
+  const [local, setLocal] = useState<T>(initial);
 
   // Read after mount so server and first client render match.
   useEffect(() => {
+    if (prefs) return;
     try {
       const raw = localStorage.getItem(PREFIX + key);
-      if (raw !== null) setValue(JSON.parse(raw) as T);
+      if (raw !== null) setLocal(JSON.parse(raw) as T);
     } catch {
       // storage unavailable or corrupt value: keep the default
     }
-  }, [key]);
+  }, [key, prefs]);
+
+  const prefKey = `ui.${key}`;
+  const value = prefs ? ((prefs.prefs[prefKey] as T | undefined) ?? initial) : local;
 
   const set = useCallback(
     (v: T) => {
-      setValue(v);
+      if (prefs) return prefs.setPref(prefKey, v);
+      setLocal(v);
       try {
         localStorage.setItem(PREFIX + key, JSON.stringify(v));
       } catch {
         // quota / private mode: preference just won't persist
       }
     },
-    [key],
+    [key, prefKey, prefs],
   );
 
   const reset = useCallback(() => {
-    setValue(initial);
+    if (prefs) return prefs.setPref(prefKey, null);
+    setLocal(initial);
     try {
       localStorage.removeItem(PREFIX + key);
     } catch {
@@ -43,7 +51,7 @@ export function usePersistentState<T>(key: string, initial: T): [T, (v: T) => vo
     }
     // `initial` is a default literal; callers pass a stable value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, prefKey, prefs]);
 
   return [value, set, reset];
 }

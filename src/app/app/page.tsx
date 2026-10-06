@@ -1,36 +1,28 @@
-import { redirect } from 'next/navigation';
-import { eq } from 'drizzle-orm';
-import { db } from '@/db/client';
-import { admins, modules } from '@/db/schema';
 import { getAuth } from '@/server/auth/request';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { getLang } from '@/i18n/server';
-import { AppHome } from './AppHome';
+import { translate } from '@/i18n';
+import { Placeholder } from '@/components/shell/Placeholder';
 
-export const dynamic = 'force-dynamic';
 export const metadata = { title: 'KnowledgeHub' };
 
-// Phase 2 landing after sign-in; the real shell (sidebar, dashboard)
-// replaces it in Phase 3.
-export default async function AppPage() {
-  const auth = await getAuth();
-  if (!auth) redirect('/login?next=/app');
-  const [ent, mods, admin, lang] = await Promise.all([
-    getEntitlements(auth.tenant.id),
-    db().select().from(modules).orderBy(modules.sort),
-    db().select({ role: admins.role }).from(admins).where(eq(admins.userId, auth.user.id)).limit(1),
-    getLang(),
-  ]);
-  const included = mods
-    .filter((m) => ent.modules.includes(m.id))
-    .map((m) => (lang === 'en' ? m.labelEn : m.labelPt));
+function greetingKey(hour: number) {
+  return hour < 12 ? 'h_morning' : hour < 20 ? 'h_afternoon' : 'h_evening';
+}
+
+// Início. The widget dashboard (Phase 3.3) replaces this placeholder.
+export default async function HomePage() {
+  const [auth, lang] = await Promise.all([getAuth(), getLang()]);
+  const first = auth?.user.name.split(/\s+/)[0] ?? '';
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Lisbon' }).format(
+      new Date(),
+    ),
+  );
   return (
-    <AppHome
-      name={auth.user.name}
-      tenant={auth.tenant.name}
-      plan={auth.tenant.planCode ?? '—'}
-      modules={included}
-      isAdmin={Boolean(admin[0])}
+    <Placeholder
+      icon="home"
+      title={`${translate(lang, greetingKey(hour))}, ${first}`}
+      body={translate(lang, 'soon_home')}
     />
   );
 }

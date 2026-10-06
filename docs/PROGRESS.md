@@ -7,8 +7,8 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 |---|---|
 | 0 — Infra + fundações técnicas | ✅ feito |
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
-| 2 — Auth, tenants, códigos, entitlements | ✅ feito (a aguardar validação) |
-| 3 — Shell, Definições, Dashboard | ⏳ |
+| 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
+| 3 — Shell, Definições, Dashboard | 🔧 3.1 Estrutura feita · 3.2 Definições · 3.3 Dashboard |
 | 4 — Notas, Tarefas, Calendário | ⏳ |
 | 5 — Cofre, Emails, Issues | ⏳ |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
@@ -41,7 +41,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 
 ## Fase 1 — notas / desvios
 - **Toast** não existe nos protótipos como componente: estilizado a partir do menu de vidro (pílula ao fundo, ao centro).
-- Larguras de colunas/painéis ficam por agora no `localStorage` (`usePersistentState`); passam para `user_prefs` (sincronizadas) na Fase 3 sem mudar os componentes.
+- Larguras de colunas/painéis ficavam no `localStorage` (`usePersistentState`); desde a Fase 3.1 vão para `user_prefs` (chaves `ui.*`, sincronizadas) dentro da app, sem mudar os componentes.
 - Uma regra de tradução da consola (texto de "Revogar") usava uma função e não é extraída; o próprio texto contradiz a decisão dos 30 dias e será reescrito na Fase 10.
 - O Tailwind/Lightning CSS eliminava o `backdrop-filter` quando eu escrevia também `-webkit-backdrop-filter`: os estilos usam só a propriedade normal e o build acrescenta o prefixo.
 
@@ -61,10 +61,35 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/sem lugares, email já registado, password comprometida, acesso suspenso/revogado, passo 2FA, página "Confirmar email", título "Definir password" do primeiro acesso, página `/app` provisória e os 4 emails (`src/i18n/dict/ui.*.json`, `src/server/mail/templates.ts`). A mensagem do registo mudou de "A redirecionar para o início de sessão" para "Enviámos um email para confirmar" (verificação obrigatória — SECURITY.md).
 
 ## Fase 2 — adiado (com fase prevista)
-- Ecrã para ativar 2FA e ver sessões abertas → Fase 3 (Definições › Conta). A API já existe.
+- ~~Ecrã para ativar 2FA e ver sessões abertas~~ → feito na Fase 3.1 (Conta e Dados).
 - 2FA obrigatório para administradores da consola → Fase 10 (Admin Console).
 - CAPTCHA (Turnstile) após falhas → Fase 11 (precisa de chaves Cloudflare).
 - Job diário de expiração de licenças / purge dos revogados (30 dias) → Fase 10.
+
+## Fase 3.1 — Estrutura da app (feito)
+- **Shell** (`src/components/shell/`, igual ao `ZNotes.dc.html`): grelha 64 px / conteúdo / 36 px; barra superior (logótipo, pesquisa, SAP TCodes e SAP News só com os módulos `tcodes`/`news`, relógio Geist Mono + data, Whiteboard só com `whiteboard`, Atividade, Modo Foco, notificações, Consola de Administração só para o owner, bloquear); barra lateral (layout `NAV_DEFAULT`/ícones extraídos do protótipo, grupos recolhíveis, separadores, contadores, cartão "Mudar para PRO" no FREE, Lixo, Definições, Sobre, cartão de conta com iniciais e o selo do plano); rodapé com ticker de notícias.
+- **Barra lateral filtrada pelo plano**: cada item só aparece se o módulo estiver nos entitlements do tenant; grupos e separadores que ficam vazios desaparecem. O servidor volta a verificar: `/app/<módulo>` fora do plano mostra "não está incluído no seu plano"; ids desconhecidos dão 404.
+- **Coluna redimensionável** (pega como no protótipo, 180–480 px, duplo clique repõe 236 px) e **Modo Foco** (esconde a barra lateral).
+- **Preferências sincronizadas** (`user_prefs`): `GET|PUT /api/v1/me/prefs` com merge-patch por chave (dois dispositivos a mudar coisas diferentes não se apagam), chaves validadas por Zod (`cols`, `nav`, `newsSources`, `ui.*`; desconhecidas recusadas; máx. 64 KB), escrita com debounce de 0,5 s e releitura quando a janela volta a ter foco. `usePersistentState` (tabelas, drawers) passou a gravar em `ui.*`.
+- **Ecrã de bloqueio**: estado guardado na sessão do separador (sobrevive a recarregar), desbloqueio com `/auth/reauth` no servidor (bloqueio 5 falhas → 30 s, backoff), "Não é você?" termina a sessão.
+- **Conta e Dados**: nome, licença (plano, validade, as 4 famílias de módulos), atalho para a consola (admins), exportar dados (JSON — perfil, tenant, preferências, sessões; cresce com cada módulo), terminar sessão, **alterar password** (pede a atual, termina as outras sessões, email de confirmação, bloqueio por tentativas), **2FA** (QR gerado no servidor, código, códigos de recuperação; ativar pede reautenticação se a última tem > 15 min; desativar pede password + código), **sessões ativas** (dispositivo pelo user-agent, IP, última atividade; terminar uma / as outras).
+- **Sobre** (versão 2.0.0) e **Atividade** (intervalo + atalhos Hoje/Ontem/Esta Semana/Este Mês; fica vazia até existirem notas/tarefas na Fase 4).
+- **Notícias do rodapé**: o servidor lê os RSS (fontes do protótipo por omissão; editáveis em Definições › Notícias na 3.2) sem proxies de terceiros, com proteção SSRF (só http/https, IPs privados/loopback/metadata bloqueados no momento da ligação, redirecionamentos verificados, 2 MB, 6 s), cache Redis 15 min, intercalado como no protótipo.
+- **Páginas provisórias** para os módulos das fases seguintes e para `/admin` (só admins ativos; os outros recebem 404).
+- **API nova**: `PATCH /me`, `GET|PUT /me/prefs`, `POST /me/password`, `GET|DELETE /me/sessions`, `DELETE /me/sessions/:id`, `GET /me/export`, `GET /news/ticker`; `/auth/2fa/setup` devolve também o QR (SVG).
+- **Testes**: unitários (prefs, barra lateral/gating, RSS/Atom, SSRF, dispositivos) + integração (prefs merge-patch, alterar password termina as outras sessões, sessões só do próprio, exportação sem segredos) + E2E (barra filtrada e gate do servidor, largura sincronizada entre dois browsers, bloqueio/recarregar/desbloqueio, foco/sobre/conta). 92 unitários/integração + 18 E2E.
+- **Screenshots** em `docs/screenshots/fase-3/` + comparações `cmp-*.png`.
+
+## Fase 3.1 — textos novos (a aprovar)
+"Em construção — Este módulo chega numa próxima fase do KnowledgeHub 2.0.", "Este módulo não está incluído no seu plano.", "O painel com cartões chega na próxima entrega desta fase.", "Sem notícias de momento.", "Confirme a sua password — Por segurança, indique a password para continuar.", texto dos códigos de recuperação do 2FA, "Código da app de autenticação", "Dispositivo desconhecido", "Notificações" (título do sino) (`src/i18n/dict/ui.*.json`). Os restantes vêm do protótipo.
+
+## Fase 3.1 — desvios do protótipo
+- Fotografia de perfil (e no ecrã de bloqueio) → 3.2, junto com o upload da foto de fundo (MinIO). Até lá, iniciais.
+- Linha "O seu plano — Mudar de plano, comparar pacotes e faturação · Gerir plano" omitida: não há faturação na app e os pedidos de plano chegam com a página de preços e a consola (Fase 10). O botão "Go PRO →" do FREE abre por agora uma página provisória.
+- Password mínima: o protótipo da conta diz "Mínimo de 10 caracteres"; uso a mesma regra do registo/reset (8, `MIN_PASSWORD`) e a mensagem do registo, para não haver duas regras.
+- O botão SAP TCodes abre a página de TCodes (popup com catálogo na Fase 7); o sino não tem ainda notificações (não há eventos até às fases de conteúdo).
+- Selo FREE: o protótipo não tinha cor para FREE (caía na do ULTRA); usa um selo neutro claro.
+- Saudação do Início calculada no fuso de Lisboa no servidor; o painel (3.3) passa a usar a hora do browser.
 
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
@@ -96,4 +121,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D21 | Sem SMTP configurado, os emails ficam nos logs do worker (fluxos continuam utilizáveis pelo operador) | Claude |
 | D22 | Bloqueio do login: 5 falhas → 30 s (protótipo), depois 60 s, 120 s… até 15 min (SECURITY.md "backoff progressivo") | Claude |
 | D17 | Backups externos adiados (scripts prontos em `infra/backup/`, não agendados); a ativar antes de haver dados reais na v2 | utilizador |
+| D23 | Ecrã de bloqueio: estado de cliente (sessionStorage) + desbloqueio por `/auth/reauth`; a sessão continua válida no backend (SECURITY.md §2) | SECURITY.md |
+| D24 | `user_prefs` por merge-patch de chaves de topo validadas (lista fechada + `ui.*`), não um JSON livre | Claude |
+| D25 | RSS do rodapé lido no servidor (sem rss2json/allorigins do protótipo), com proteção SSRF e cache Redis | Claude (SECURITY.md) |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |
