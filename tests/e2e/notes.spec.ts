@@ -233,3 +233,30 @@ test('voice notes: a recording is listed, played back and transcribed by hand', 
   await page.getByPlaceholder('Pesquisar gravações e transcrições…').fill('nada disto');
   await expect(page.getByText('Sem gravações.')).toBeVisible();
 });
+
+test('calendar: a task added on a day shows in the grid, panel and Início', async ({ page }) => {
+  await login(page);
+  await page.goto('app/calendar');
+  await expect(page.locator('.kh-cal__title')).toHaveText('Calendário');
+  await page.getByPlaceholder('Nova tarefa para este dia…').fill('Reunião de fecho FI');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.kh-cal__sel')).toContainText('Reunião de fecho FI');
+  await expect(page.locator('.kh-cal__day[data-today] .kh-cal__item')).toContainText('Reunião de fecho FI');
+  await page.getByRole('radio', { name: 'Semana' }).click();
+  await expect(page.locator('.kh-cal__day')).toHaveCount(7);
+  await page.getByRole('radio', { name: 'Mês' }).click();
+  // Done from the day panel → disappears unless "Concluídos" is on.
+  const todayItem = page.locator('.kh-cal__day[data-today] .kh-cal__item', {
+    hasText: 'Reunião de fecho FI',
+  });
+  await page.locator('.kh-cal__sel', { hasText: 'Reunião de fecho FI' }).locator('.kh-cal__ck').click();
+  await expect(todayItem).toHaveCount(0);
+  await page.locator('.kh-cal__chip', { hasText: 'Concluídos' }).click();
+  await expect(todayItem).toHaveCount(1);
+
+  // Início: "Tarefas para hoje" counts open tasks due today.
+  await page.locator('.kh-cal__sel', { hasText: 'Reunião de fecho FI' }).locator('.kh-cal__ck').click();
+  await page.locator('.kh-cal__chip', { hasText: 'Concluídos' }).click();
+  await page.goto('app');
+  await expect(page.locator('.kh-stat', { hasText: 'Tarefas para hoje' })).toContainText('1');
+});

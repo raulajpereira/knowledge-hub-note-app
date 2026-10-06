@@ -14,7 +14,11 @@ export const POST = handler(async (req) => {
   const auth = await requireContent('tasks');
   const input = await body(
     req,
-    z.object({ title: z.string().trim().max(300).default(''), type: z.enum(TASK_TYPES).optional() }),
+    z.object({
+      title: z.string().trim().max(300).default(''),
+      type: z.enum(TASK_TYPES).optional(),
+      dueOn: z.iso.date().nullable().optional(),
+    }),
   );
   return json({ task: await createTask(auth, input) }, { status: 201 });
 });

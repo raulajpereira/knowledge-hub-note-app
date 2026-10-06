@@ -1,0 +1,492 @@
+/* Calendário — ZNotes.dc.html `isCalendar`, values 1:1. */
+.kh-cal {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  min-width: 0;
+  border-radius: 30px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(var(--glass-blur-user, 30px)) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 24px 60px rgba(0, 0, 0, 0.22);
+}
+.kh-cal__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.kh-cal__head {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 22px 12px;
+}
+.kh-cal__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+  min-width: 0;
+}
+.kh-cal__title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.kh-cal__sub {
+  font-size: 13px;
+  color: rgba(255, 248, 240, 0.68);
+}
+.kh-cal__modes {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.kh-cal__modes button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: transparent;
+  color: #fbf8f5;
+}
+.kh-cal__modes button[data-on] {
+  background: #fbf8f5;
+  color: #2a211c;
+}
+.kh-cal__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.kh-cal__today {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kh-cal__arrow {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fbf8f5;
+  padding: 0;
+}
+.kh-cal__label {
+  min-width: 150px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.kh-cal__filters {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 22px 12px;
+}
+.kh-cal__chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 248, 240, 0.6);
+}
+.kh-cal__chip[data-on] {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fbf8f5;
+}
+.kh-cal__chip > span:first-child {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.kh-cal__n {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.kh-cal__hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.62);
+}
+.kh-cal__dow {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 22px 6px;
+}
+.kh-cal__dow > div {
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kh-cal__grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  padding: 0 22px 22px;
+  overflow: auto;
+}
+.kh-cal__day {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 7px 6px;
+  border-radius: 16px;
+  cursor: pointer;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.12s;
+  outline: none;
+}
+.kh-cal__day[data-we] {
+  background: rgba(18, 12, 9, 0.18);
+}
+.kh-cal__day:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.kh-cal__day[data-sel] {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.kh-cal__day[data-drop] {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+.kh-cal__day:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+.kh-cal__dayhead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.kh-cal__num {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fbf8f5;
+}
+.kh-cal__day[data-we] .kh-cal__num {
+  color: rgba(255, 248, 240, 0.7);
+}
+.kh-cal__day[data-today] .kh-cal__num {
+  background: #fbf8f5;
+  color: #2a211c;
+}
+.kh-cal__hol {
+  min-width: 0;
+  font-size: 10.5px;
+  color: oklch(0.88 0.1 85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-cal__dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 4px;
+}
+.kh-cal__dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.kh-cal__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 22px;
+  flex: none;
+  padding: 0 7px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 11.5px;
+  border-left: 3px solid;
+}
+.kh-cal__item:hover {
+  filter: brightness(1.25);
+}
+.kh-cal__item span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-cal__more {
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 248, 240, 0.72);
+}
+.kh-cal__resize {
+  flex: none;
+  width: 14px;
+  margin: 10px 0;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+.kh-cal__resize > div {
+  width: 4px;
+  height: 56px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.kh-cal__resize > div[data-drag] {
+  background: rgba(255, 255, 255, 0.75);
+}
+.kh-cal__panel {
+  max-width: 78%;
+  flex: none;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 12, 9, 0.12);
+  overflow: auto;
+  box-sizing: border-box;
+}
+.kh-cal__selhead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kh-cal__rel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 240, 0.62);
+}
+.kh-cal__sellabel {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: capitalize;
+}
+.kh-cal__selhol {
+  font-size: 13px;
+  color: oklch(0.88 0.1 85);
+}
+.kh-cal__add {
+  display: flex;
+  gap: 8px;
+}
+.kh-cal__add input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(18, 12, 9, 0.25);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.kh-cal__add button {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 0;
+  background: #fbf8f5;
+  color: #2a211c;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.kh-cal__selitems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kh-cal__sel {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 3px solid;
+  outline: none;
+}
+.kh-cal__sel:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+.kh-cal__ck {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-top: 1px;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  background: transparent;
+  color: #2a211c;
+}
+.kh-cal__ck[data-on] {
+  border-color: #fbf8f5;
+  background: #fbf8f5;
+}
+.kh-cal__selbody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kh-cal__selbody > span:first-child {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.kh-cal__selmeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: rgba(255, 248, 240, 0.68);
+}
+.kh-cal__selmeta > span {
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #fbf8f5;
+}
+.kh-cal__empty {
+  padding: 24px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255, 248, 240, 0.6);
+}
+.kh-cal__sum {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.kh-cal__sum > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.kh-cal__sum > div > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-width: 0;
+}
+.kh-cal__sum > div > div > span:first-child {
+  font-size: 20px;
+  font-weight: 600;
+  font-family: 'Geist Mono', monospace;
+}
+.kh-cal__sum > div > div > span:last-child {
+  font-size: 11px;
+  color: rgba(255, 248, 240, 0.68);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .kh-cal {
+    flex-direction: column;
+    overflow: auto;
+  }
+  .kh-cal__resize {
+    display: none;
+  }
+  .kh-cal__panel {
+    width: auto !important;
+    max-width: none;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+}

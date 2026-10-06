@@ -1,6 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/client/api';
+import { refreshCounts } from '@/components/shell/counts';
+import { useWhen } from '@/components/content/useWhen';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePref, usePrefsContext } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
@@ -25,6 +29,38 @@ import { WeatherCard } from './WeatherCard';
 import './home.css';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
+type HomeTask = {
+  id: string;
+  title: string;
+  type: 'tech' | 'mgmt';
+  priority: 'low' | 'medium' | 'high';
+  dueOn: string | null;
+  pinned: boolean;
+};
+type HomeData = {
+  tasks?: HomeTask[];
+  recentNotes?: Array<{
+    id: string;
+    title: string;
+    folder: string | null;
+    color: string | null;
+    updatedAt: string;
+  }>;
+  favNotes?: Array<{ id: string; title: string }>;
+};
+// Prototype home: priority dots and the two task groups.
+const H_PRI = {
+  high: 'oklch(0.82 0.1 35)',
+  medium: 'oklch(0.88 0.09 85)',
+  low: 'rgba(255,255,255,.35)',
+} as const;
+const H_GROUPS = [
+  ['tech', 'tk_tech', 'oklch(0.8 0.13 245)'],
+  ['mgmt', 'tk_mgmt', 'oklch(0.8 0.13 305)'],
+] as const;
+const MON_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const svg = (d: string, size = 15, sw = 1.9) => (
   <svg
     width={size}
@@ -51,10 +87,17 @@ const todayIso = () => {
 
 function Favicon({ domain }: { domain: string }) {
   const [failed, setFailed] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  // An error before hydration never reaches onError: check the image once mounted.
+  useEffect(() => {
+    const img = ref.current;
+    if (img?.complete && img.naturalWidth === 0) setFailed(true);
+  }, []);
   if (failed || !domain) return <>{(domain[0] ?? '?').toUpperCase()}</>;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- icon streamed by our own API
     <img
+      ref={ref}
       src={`${BASE}/api/v1/favicon?domain=${encodeURIComponent(domain)}`}
       alt=""
       width={26}
@@ -66,7 +109,7 @@ function Favicon({ domain }: { domain: string }) {
 }
 
 export function HomeView() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { me, modules } = useShell();
   const prefsCtx = usePrefsContext()!;
   const [saved, setHome] = usePref<HomePrefs | undefined>('home', undefined);
@@ -85,6 +128,16 @@ export function HomeView() {
   const [live, setLive] = useState<Record<string, number> | null>(null); // fractions while resizing
   const [hour, setHour] = useState<number | null>(null);
   useEffect(() => setHour(new Date().getHours()), []);
+  const router = useRouter();
+
+  // Real data for the cards (tasks, recent/favourite notes) — Phase 4.
+  const [data, setData] = useState<HomeData>({});
+  const loadData = useCallback(() => {
+    api<HomeData>('/home')
+      .then(setData)
+      .catch(() => {});
+  }, []);
+  useEffect(loadData, [loadData]);
 
   // Focus sessions count, saved per day (prototype pomoDone / pomoDay).
   const onFocusDone = useCallback(() => {
@@ -259,11 +312,62 @@ export function HomeView() {
     setScForm(null);
   };
 
+  // Prototype hTasks / dueItems / favItems, from the server's data.
+  const today = todayIso();
+  const dayDiff = (iso: string) =>
+    Math.round((+new Date(`${iso}T00:00:00`) - +new Date(`${today}T00:00:00`)) / 86_400_000);
+  const relOf = (d: number) =>
+    d < 0
+      ? `${t('h_late')}${-d}d`
+      : d === 0
+        ? t('t_today')
+        : d === 1
+          ? t('h_tomorrow')
+          : `${t('h_inDays')}${d}${t('h_days')}`;
+  const relColor = (d: number) =>
+    d < 0 ? 'oklch(0.8 0.13 30)' : d <= 1 ? '#fbf8f5' : 'rgba(255,248,240,.62)';
+  const active = data.tasks ?? [];
+  const dueToday = active.filter((x) => x.dueOn === today);
+  const overdue = active.filter((x) => x.dueOn && dayDiff(x.dueOn) < 0);
+  const po = { high: 0, medium: 1, low: 2 } as const;
+  const hTasks = active
+    .slice()
+    .sort((a, b) => {
+      const da = a.dueOn ? dayDiff(a.dueOn) : 999;
+      const db = b.dueOn ? dayDiff(b.dueOn) : 999;
+      return Math.min(da, 1) - Math.min(db, 1) || po[a.priority] - po[b.priority] || da - db;
+    })
+    .slice(0, 6);
+  const dueItems = active
+    .filter((x) => x.dueOn && dayDiff(x.dueOn) <= 14)
+    .sort((a, b) => (a.dueOn! < b.dueOn! ? -1 : 1))
+    .slice(0, 6);
+  const favItems = [
+    ...(data.favNotes ?? []).map((n) => ({
+      kind: t('h_k_note'),
+      title: n.title,
+      href: `/app/notes?n=${n.id}`,
+    })),
+    ...active
+      .filter((x) => x.pinned)
+      .map((x) => ({ kind: t('h_k_task'), title: x.title, href: `/app/tasks?t=${x.id}` })),
+  ];
+  const MON = lang === 'en' ? MON_EN : MON_PT;
+  const completeTask = async (id: string) => {
+    setData((d) => ({ ...d, tasks: d.tasks?.filter((x) => x.id !== id) }));
+    await api(`/tasks/${id}`, { done: true }, 'PATCH').catch(() => {});
+    loadData();
+    refreshCounts();
+  };
+  const rowCls = 'kh-hrow';
+  const fmtWhen = useWhen();
+
   const todayStats = [
     {
       m: 'tasks',
       label: t('h_st_tasks'),
-      sub: `0 ${t('h_st_overdue')}`,
+      count: dueToday.length,
+      sub: `${overdue.length} ${t('h_st_overdue')}`,
       dot: 'oklch(0.8 0.13 30)',
       page: 'tasks',
     },
@@ -324,7 +428,7 @@ export function HomeView() {
                   </span>
                 </span>
                 <span className="kh-mono" style={{ fontSize: 30, fontWeight: 600, lineHeight: 1 }}>
-                  0
+                  {'count' in s ? s.count : 0}
                 </span>
                 <span
                   style={{
@@ -645,14 +749,137 @@ export function HomeView() {
       case 'transports':
       case 'issues':
         return <div className="kh-card__empty">{t('home_noItems')}</div>;
-      case 'tasks':
-        return <div className="kh-card__empty">{t('h_noTasks')}</div>;
+      case 'tasks': {
+        const groups = H_GROUPS.map(([k, label, color]) => ({
+          k,
+          label: t(label),
+          color,
+          items: hTasks.filter((x) => x.type === k),
+        })).filter((g) => g.items.length);
+        if (!groups.length) return <div className="kh-card__empty">{t('h_noTasks')}</div>;
+        return (
+          <div className="kh-hlist">
+            {groups.map((g) => (
+              <div key={g.k} style={{ display: 'contents' }}>
+                <div className="kh-hgroup">
+                  <span
+                    style={{ background: g.color, boxShadow: `0 0 0 3px ${g.color.replace(')', ' / .22)')}` }}
+                  />
+                  <span style={{ color: g.color }}>{g.label}</span>
+                  <span className="kh-hgroup__n">{g.items.length}</span>
+                  <span
+                    className="kh-hgroup__line"
+                    style={{
+                      background: `linear-gradient(90deg,${g.color.replace(')', ' / .22)')},transparent)`,
+                    }}
+                  />
+                </div>
+                {g.items.map((x) => {
+                  const d = x.dueOn ? dayDiff(x.dueOn) : null;
+                  return (
+                    <div
+                      key={x.id}
+                      className={rowCls}
+                      role="link"
+                      tabIndex={0}
+                      onClick={() => router.push(`/app/tasks?t=${x.id}`)}
+                      onKeyDown={(e) =>
+                        e.key === 'Enter' &&
+                        e.target === e.currentTarget &&
+                        router.push(`/app/tasks?t=${x.id}`)
+                      }
+                    >
+                      <button
+                        type="button"
+                        className="kh-hck"
+                        style={{ borderColor: g.color }}
+                        aria-label={x.title}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void completeTask(x.id);
+                        }}
+                      />
+                      <span className="kh-hrow__t">{x.title}</span>
+                      {d !== null && (
+                        <span
+                          style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', color: relColor(d) }}
+                        >
+                          {relOf(d)}
+                        </span>
+                      )}
+                      <span className="kh-hdot" style={{ background: H_PRI[x.priority] }} />
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        );
+      }
       case 'deadlines':
-        return <div className="kh-card__empty">{t('h_noDeadlines')}</div>;
+        if (!dueItems.length) return <div className="kh-card__empty">{t('h_noDeadlines')}</div>;
+        return (
+          <div className="kh-hlist">
+            {dueItems.map((x) => {
+              const d = dayDiff(x.dueOn!);
+              const dt = new Date(`${x.dueOn}T00:00:00`);
+              return (
+                <Link key={x.id} href={`/app/tasks?t=${x.id}`} className={rowCls} scroll={false}>
+                  <span
+                    className="kh-hdate"
+                    style={{
+                      background:
+                        d < 0
+                          ? 'oklch(0.65 0.17 30 / .3)'
+                          : d <= 1
+                            ? 'rgba(255,255,255,.22)'
+                            : 'rgba(255,255,255,.1)',
+                    }}
+                  >
+                    <span>{MON[dt.getMonth()]}</span>
+                    <span className="kh-mono">{dt.getDate()}</span>
+                  </span>
+                  <span className="kh-hrow__col">
+                    <span className="kh-hrow__t">{x.title}</span>
+                    <span className="kh-hrow__s">
+                      {t('h_k_task')} ·{' '}
+                      <span style={{ color: relColor(d), fontWeight: 600 }}>{relOf(d)}</span>
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        );
       case 'notes':
-        return <div className="kh-card__empty">{t('home_noNotes')}</div>;
+        if (!data.recentNotes?.length) return <div className="kh-card__empty">{t('home_noNotes')}</div>;
+        return (
+          <div className="kh-hlist">
+            {data.recentNotes.map((n) => (
+              <Link key={n.id} href={`/app/notes?n=${n.id}`} className={rowCls} scroll={false}>
+                <span className="kh-hdot" style={{ background: n.color ?? 'rgba(255,248,240,.35)' }} />
+                <span className="kh-hrow__col">
+                  <span className="kh-hrow__t">{n.title || t('ne_untitled')}</span>
+                  <span className="kh-hrow__s">
+                    {n.folder ?? t('ne_noFolder')} · {fmtWhen(n.updatedAt)}
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        );
       case 'favs':
-        return <div className="kh-card__empty">{t('h_noFavs')}</div>;
+        if (!favItems.length) return <div className="kh-card__empty">{t('h_noFavs')}</div>;
+        return (
+          <div className="kh-hlist">
+            {favItems.map((x) => (
+              <Link key={x.href} href={x.href} className={rowCls} scroll={false}>
+                <span className="kh-hkind">{x.kind}</span>
+                <span className="kh-hrow__t">{x.title || t('ne_untitled')}</span>
+              </Link>
+            ))}
+          </div>
+        );
       case 'tcodes':
         return <div className="kh-card__empty">{t('x_noFav')}</div>;
       case 'systems':
@@ -666,10 +893,10 @@ export function HomeView() {
   const counts: Partial<Record<HomeType, number>> = {
     shortcuts: shortcuts.length,
     tcodes: 0,
-    tasks: 0,
-    deadlines: 0,
-    notes: 0,
-    favs: 0,
+    tasks: hTasks.length,
+    deadlines: dueItems.length,
+    notes: data.recentNotes?.length ?? 0,
+    favs: favItems.length,
     transports: 0,
     issues: 0,
     systems: 0,

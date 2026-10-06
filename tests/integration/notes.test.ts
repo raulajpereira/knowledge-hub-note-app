@@ -35,6 +35,7 @@ describe.skipIf(!enabled)('notes', () => {
   let notes: typeof import('@/server/content/notes');
   let tasksSvc: typeof import('@/server/content/tasks');
   let voiceSvc: typeof import('@/server/content/voice');
+  let homeSvc: typeof import('@/server/content/home');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -44,7 +45,7 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, dbm] = await Promise.all([
+    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
       import('@/server/auth/session'),
@@ -52,6 +53,7 @@ describe.skipIf(!enabled)('notes', () => {
       import('@/server/content/notes'),
       import('@/server/content/tasks'),
       import('@/server/content/voice'),
+      import('@/server/content/home'),
       import('@/db/client'),
     ]);
   });
@@ -343,5 +345,32 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await voiceSvc.readVoiceAudio(ana, v.id)).toBeNull();
     expect(await notes.linksOf(ana, { type: 'task', id: t.id })).toEqual([]);
     expect(await notes.contentCounts(ana, new Set(['voice']))).toEqual({ voice: 0 });
+  });
+
+  it('Início data: active tasks, recent and favourite notes, only for the modules in the plan', async () => {
+    const ana = await signedIn('ana@home.pt');
+    const rui = await signedIn('rui@home.pt');
+    const f = await notes.createFolder(ana, 'Performance');
+    const n1 = await notes.createNote(ana, { folderId: f.id, title: 'FOR ALL ENTRIES' });
+    await notes.updateNote(ana, n1.id, { favorite: true });
+    await notes.createNote(ana, { title: 'Solta' });
+    const t1 = await tasksSvc.createTask(ana, { title: 'Ativar Logs', dueOn: '2026-10-20' });
+    const t2 = await tasksSvc.createTask(ana, { title: 'Feita' });
+    await tasksSvc.updateTask(ana, t2.id, { done: true });
+
+    const d = await homeSvc.homeData(ana, new Set(['notes', 'tasks']));
+    expect(d.tasks?.map((x) => [x.title, x.dueOn])).toEqual([['Ativar Logs', '2026-10-20']]);
+    expect(d.recentNotes?.map((x) => [x.title, x.folder])).toEqual([
+      ['Solta', null],
+      ['FOR ALL ENTRIES', 'Performance'],
+    ]);
+    expect(d.favNotes).toEqual([{ id: n1.id, title: 'FOR ALL ENTRIES' }]);
+    expect(await homeSvc.homeData(ana, new Set(['tasks']))).toEqual({ tasks: d.tasks });
+    expect(await homeSvc.homeData(rui, new Set(['notes', 'tasks']))).toEqual({
+      tasks: [],
+      recentNotes: [],
+      favNotes: [],
+    });
+    expect(t1.dueOn).toBe('2026-10-20');
   });
 });

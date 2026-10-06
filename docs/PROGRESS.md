@@ -9,7 +9,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
 | 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
 | 3 — Shell, Definições, Dashboard | ✅ feito (3.1 Estrutura · 3.2 Definições · 3.3 Início; Personalizar refeito após feedback) |
-| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo ✅ · 4.2 Tarefas ✅ · Notas de Voz feito · 4.3 Calendário/Etiquetas |
+| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo ✅ · 4.2 Tarefas ✅ · Notas de Voz · 4.3 Calendário + Início com dados — a aguardar testes; Etiquetas por decidir (sem desenho) |
 | 5 — Cofre, Emails, Issues | ⏳ |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
 | 7 — SAP | ⏳ |
@@ -159,6 +159,16 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Transcrição manual** (decisão do utilizador): o campo "Transcrição" é um texto livre com Copiar; o botão "Transcrever" do protótipo não existe nesta versão.
 - **Testes**: unitário (verificação do áudio), integração (RLS, transcrição, Lixo apaga o ficheiro, ligações) e E2E. Screenshots `55–57` e `cmp-voz.png`.
 
+## Fase 4.3 — Calendário e cartões do Início (feito)
+- **Calendário** igual ao protótipo: como no protótipo, não tem eventos próprios — mostra as **tarefas pelo prazo** (os Problemas entram na Fase 5). Mês / Semana, Hoje, ‹ ›, feriados de Portugal (fixos e móveis), filtros Tarefas / Concluídos, arrastar uma tarefa para outro dia muda o prazo, painel do dia (criar tarefa nesse dia, concluir, abrir) com largura ajustável e resumo "Neste período" (tarefas, atrasados). Em ecrã estreito os dias mostram pontos. Modo, filtros e largura do painel ficam nas preferências.
+- **Início com dados reais** (`GET /api/v1/home`): Hoje (tarefas para hoje e atrasadas), Tarefas Prioritárias (agrupadas Funcional / Técnica e Gestão, concluir no próprio cartão), Próximos Prazos (14 dias), Notas Recentes, Favoritos (notas favoritas e tarefas fixadas). Problemas, Ordens e Emails continuam a 0 até às suas fases.
+- **Notas Rápidas**: o protótipo atual não tem forma de as criar (a antiga caixa de captura já não existe no desenho), por isso o cartão continua vazio.
+- Ícones dos atalhos: quando o servidor não consegue obter o ícone aparece a inicial do site (antes podia aparecer o ícone de imagem partida).
+- **Testes**: 128 unitários/integração (feriados, dados do Início por plano e por utilizador) + 26 E2E. Screenshots `60–62` e `cmp-calendario.png`.
+
+## Etiquetas — por decidir
+- O ecrã "Etiquetas" da barra lateral **não está desenhado** no protótipo (mostra "Esta página ainda não foi desenhada"). As etiquetas já existem nas notas (chips por baixo do título, pesquisa). Pergunta ao utilizador antes de inventar um ecrã.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -199,4 +209,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D30 | Conteúdo das notas em JSON do TipTap, validado no servidor por lista de nós/marcas permitidos (não HTML) | Claude |
 | D31 | Repetição de tarefas: a próxima é criada no momento em que se conclui a atual (sem job agendado); a concluída deixa de repetir | Claude |
 | D32 | Notas de Voz na Fase 4 com transcrição escrita à mão (sem transcrição automática) | utilizador |
+| D33 | Calendário segue o protótipo: vista das tarefas (e depois problemas) pelo prazo, sem tabela de eventos própria | protótipo |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

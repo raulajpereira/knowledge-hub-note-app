@@ -116,7 +116,10 @@ async function loadTask(tx: Tx, id: string): Promise<Task> {
 
 export const getTask = (auth: AuthContext, id: string) => asUser(auth, (tx) => loadTask(tx, id));
 
-export async function createTask(auth: AuthContext, input: { title: string; type?: TaskType }) {
+export async function createTask(
+  auth: AuthContext,
+  input: { title: string; type?: TaskType; dueOn?: string | null },
+) {
   return asUser(auth, async (tx) => {
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
@@ -130,6 +133,7 @@ export async function createTask(auth: AuthContext, input: { title: string; type
         ownerId: auth.user.id,
         title: input.title,
         type: input.type ?? 'tech',
+        dueOn: input.dueOn ?? null,
       })
       .returning({ id: tasks.id });
     return loadTask(tx, row!.id);

@@ -553,3 +553,121 @@
   color: #2a211c;
   border-color: #fbf8f5;
 }
+
+/* Card lists with real data (prototype hTaskGroups / hDeadlines / hNotes / hFavs) */
+.kh-hlist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -8px;
+}
+.kh-hgroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 4px;
+}
+.kh-hgroup > span:first-child {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.kh-hgroup > span:nth-child(2) {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kh-hgroup__n {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: rgba(255, 248, 240, 0.55);
+}
+.kh-hgroup__line {
+  flex: 1;
+  height: 1px;
+}
+.kh-hrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  color: #fbf8f5;
+  text-decoration: none;
+  outline: none;
+}
+.kh-hrow:hover,
+.kh-hrow:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+}
+.kh-hrow__t {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-hrow__col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kh-hrow__s {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-hck {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  border: 1.5px solid;
+  background: transparent;
+}
+.kh-hdot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+}
+.kh-hdate {
+  width: 54px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0;
+  border-radius: 10px;
+}
+.kh-hdate > span:first-child {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.kh-hdate > span:last-child {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.kh-hkind {
+  width: 64px;
+  flex: none;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 240, 0.6);
+}
