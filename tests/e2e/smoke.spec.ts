@@ -1,10 +1,17 @@
 import { expect, test } from '@playwright/test';
 
-test('placeholder home renders the brand and the glass panel', async ({ page }) => {
+test.use({ locale: 'pt-PT' });
+
+test('the root sends visitors without a session to the login page', async ({ page }) => {
   await page.goto('./');
-  await expect(page).toHaveTitle('KnowledgeHub');
-  await expect(page.getByText('Em construção')).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { name: 'Bem-vindo de volta' })).toBeVisible();
   await expect(page.getByText('Knowledge', { exact: true })).toBeVisible();
+});
+
+test('the app area requires a session', async ({ page }) => {
+  await page.goto('app');
+  await expect(page).toHaveURL(/\/login\?next=%2Fapp$/);
 });
 
 test('health endpoint reports every dependency', async ({ request }) => {

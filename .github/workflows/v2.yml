@@ -49,6 +49,8 @@ jobs:
       S3_ACCESS_KEY: kh-minio
       S3_SECRET_KEY: ci-minio-secret
       ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+      HIBP_CHECK: 'false'
+      MAIL_OUTBOX_DIR: /tmp/kh-outbox
     steps:
       - name: Resolve base path
         run: |
@@ -74,8 +76,8 @@ jobs:
       - run: npm run format:check
       - name: Unit & integration tests (incl. RLS)
         run: npm test
-      - name: Migrations
-        run: npm run db:migrate
+      - name: Migrations + seed
+        run: npm run db:migrate && npm run db:seed
       - name: Build
         run: npm run build
       - name: Install Playwright browser
@@ -162,6 +164,7 @@ jobs:
             export KH_IMAGE_TAG
             docker compose pull web worker migrate
             docker compose run --rm migrate
+            docker compose run --rm migrate node dist/seed.mjs
             docker compose up -d --remove-orphans
             docker logout ghcr.io
             docker image prune -f

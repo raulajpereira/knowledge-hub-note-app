@@ -5,6 +5,8 @@ import appPt from './dict/app.pt.json';
 import appEn from './dict/app.en.json';
 import uiPt from './dict/ui.pt.json';
 import uiEn from './dict/ui.en.json';
+import authPt from './dict/auth.pt.json';
+import authEn from './dict/auth.en.json';
 import adminEx from './dict/admin.pt-en.json';
 import adminRules from './dict/admin.rules.json';
 import mgEx from './dict/mg.pt-en.json';
@@ -17,8 +19,9 @@ export const LANG_COOKIE = 'kh_lang';
 
 // app.*: extracted from the prototypes. ui.*: generic component labels the
 // prototypes inline (e.g. "Pesquisar…" in initSelects) — maintained by hand.
-const PT = { ...appPt, ...uiPt };
-const EN = { ...appEn, ...uiEn };
+// auth.*: Login / Register / ResetPassword prototypes (login_, reg_, reset_).
+const PT = { ...appPt, ...authPt, ...uiPt };
+const EN = { ...appEn, ...authEn, ...uiEn };
 
 export type AppKey = keyof typeof PT;
 type Value = string | readonly string[];

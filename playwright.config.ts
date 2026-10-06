@@ -30,7 +30,9 @@ export default defineConfig({
     ? undefined
     : {
         command: `npx next start -p ${port} -H 127.0.0.1`,
-        env: { KH_UI_CATALOG: 'true' },
+        // Emails sent inside the request and written to MAIL_OUTBOX_DIR, so
+        // the auth flows can follow the links without a worker or SMTP.
+        env: { KH_UI_CATALOG: 'true', MAIL_DIRECT: 'true', HIBP_CHECK: 'false' },
         // Not /api/health: it may legitimately answer 503 while a dependency
         // is down, and Playwright treats that as "not ready".
         url: `http://127.0.0.1:${port}${basePath}/`,

@@ -13,9 +13,10 @@ import vm from 'node:vm';
 const DESIGN = 'docs/handoff/design';
 const OUT = 'src/i18n/dict';
 
-// Returns the source of the object literal assigned to `const <name> =`.
-function literal(src, name) {
-  const start = src.indexOf(`const ${name} = `);
+// Returns the source of the object literal assigned to `const <name> =`
+// (or to a class field `<name> = {` when `field` is set).
+function literal(src, name, field = false) {
+  const start = field ? src.indexOf(` ${name} = { pt:`) : src.indexOf(`const ${name} = `);
   if (start < 0) throw new Error(`${name} not found`);
   let i = src.indexOf('{', start);
   const from = i;
@@ -81,6 +82,22 @@ if (missingEn.length || missingPt.length) {
     JSON.stringify({ missingEn, missingPt }, null, 2) + '\n',
   );
 }
+
+// Public pages (Login / Register / ResetPassword): each has its own `T`
+// dictionary; merged into auth.*.json with a per-page prefix.
+const auth = { pt: {}, en: {} };
+for (const [file, prefix] of [
+  ['Login.dc.html', 'login_'],
+  ['Register.dc.html', 'reg_'],
+  ['ResetPassword.dc.html', 'reset_'],
+]) {
+  const t = evaluate(literal(read(file), 'T', true));
+  for (const lang of ['pt', 'en']) {
+    for (const [k, v] of Object.entries(t[lang])) auth[lang][prefix + k] = v;
+  }
+}
+write('auth.pt.json', auth.pt);
+write('auth.en.json', auth.en);
 
 const admin = read('Admin Console.dc.html');
 const mg = read('Management.dc.html');

@@ -38,6 +38,14 @@ export const serverEnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().optional(),
+  // Without SMTP, emails are written to the logs (and to this folder if set,
+  // one JSON file per message — used by the E2E tests).
+  MAIL_OUTBOX_DIR: z.string().optional(),
+  // Send in the request instead of via the worker queue (tests).
+  MAIL_DIRECT: bool.default(false),
+
+  // Have I Been Pwned check on new passwords (k-anonymity; off in tests).
+  HIBP_CHECK: bool.default(true),
 
   // Serves the component catalogue (/ui) in production builds too.
   KH_UI_CATALOG: bool.default(false),

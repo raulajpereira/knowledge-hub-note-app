@@ -4,6 +4,7 @@ import { createQueueConnection } from '@/lib/redis';
 // Queue names are the contract between the web app (producer) and the worker.
 export const QUEUES = {
   system: 'kh-system',
+  mail: 'kh-mail',
 } as const;
 
 export const WORKER_HEARTBEAT_KEY = 'kh:worker:heartbeat';

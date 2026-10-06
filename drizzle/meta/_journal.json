@@ -8,6 +8,20 @@
       "when": 1791072934689,
       "tag": "0000_foundations",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791292763097,
+      "tag": "0001_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791292764310,
+      "tag": "0002_identity_constraints",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,3 @@
-// Drizzle table definitions. Phase 0 only sets up the database foundations
-// (extensions, kh_app role, RLS helpers — see drizzle/0000_foundations.sql);
-// the identity/licensing tables arrive with auth in the next phases.
-export {};
+// Drizzle table definitions. Database-level foundations (extensions, the
+// kh_app role, RLS helpers) live in drizzle/0000_foundations.sql.
+export * from './identity';

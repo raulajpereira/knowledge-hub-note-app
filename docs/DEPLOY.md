@@ -80,6 +80,41 @@ Um push para o branch `v2` (ou "Run workflow" em Actions → *v2 — CI & Deploy
 faz: CI → imagens no GHCR → SSH → `docker compose pull` → migrações →
 `up -d` → espera pelo `healthy`. Verificar: `https://knowledge-hub.cloud/v2/api/health`.
 
+## 5b. Primeiro acesso do super admin e códigos
+
+Em cada deploy o seed cria (se não existir) o teu utilizador `SUPERADMIN_EMAIL`
+sem password e envia um link "Definir password" válido 7 dias. Enquanto o SMTP
+não estiver configurado, o email fica nos logs do worker:
+
+```bash
+cd /opt/knowledgehub-v2
+docker compose logs worker | grep -A8 "setup for"
+```
+
+Novo link, se expirar: `docker compose run --rm migrate node dist/cli.mjs superadmin:resend-setup`
+
+Códigos de ativação (até existir a Admin Console):
+
+```bash
+cd /opt/knowledgehub-v2
+alias kh='docker compose run --rm migrate node dist/cli.mjs'
+kh codes:create --type license --plan PRO --seats 5 --client "Empresa X" --expires 2027-12-31
+kh codes:create --type invite                      # conta individual FREE
+kh codes:list
+kh codes:pause KH-LIC-123456   # corta o acesso já, mantém os dados
+kh codes:resume KH-LIC-123456
+kh codes:revoke KH-LIC-123456  # corta o acesso, dados mantidos 30 dias
+kh codes:restore KH-LIC-123456
+kh users:list
+```
+
+## 5c. Email (SMTP Hostinger)
+
+1. hPanel → Emails → criar a caixa `no-reply@knowledge-hub.cloud`.
+2. No `.env`: `SMTP_USER=no-reply@knowledge-hub.cloud`, `SMTP_PASS=<password da caixa>`
+   (`SMTP_HOST=smtp.hostinger.com`, `SMTP_PORT=465` já vêm preenchidos).
+3. `docker compose up -d` (recria web e worker com a nova configuração).
+
 ## 6. Backups
 
 ```bash

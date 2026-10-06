@@ -119,7 +119,7 @@
   font-size: 13px;
 }
 .kh-btn--lg {
-  height: 46px;
+  height: 48px;
   font-size: 15px;
 }
 .kh-btn--block {
@@ -999,4 +999,98 @@ button.kh-table__th {
 .kh-above {
   position: relative;
   z-index: 1;
+}
+
+/* ── Public auth pages (Login / Register / ResetPassword) ──────────────── */
+.kh-auth {
+  position: relative;
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 56px 96px;
+  padding: 96px clamp(24px, 7vw, 120px) 64px;
+  background: var(--bg-gradient);
+  color: #fbf8f5;
+  overflow: hidden;
+}
+.kh-auth a {
+  color: #fbf8f5;
+  text-decoration: underline;
+}
+.kh-auth a.kh-btn {
+  text-decoration: none;
+}
+.kh-auth__lang {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+.kh-auth__lang .kh-seg {
+  box-shadow: none;
+}
+.kh-auth__brand {
+  flex: 1 1 420px;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.kh-auth__slogan {
+  font-size: clamp(40px, 5vw, 64px);
+  line-height: 1.04;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.kh-auth__card {
+  flex: 0 1 420px;
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 34px;
+}
+.kh-auth__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.kh-auth__sub {
+  font-size: 14px;
+  color: rgba(255, 248, 240, 0.75);
+  text-wrap: pretty;
+}
+.kh-auth__badge {
+  align-self: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.kh-auth__foot {
+  text-align: center;
+  font-size: 13.5px;
+  color: rgba(255, 248, 240, 0.78);
+}
+.kh-auth__foot a {
+  font-weight: 600;
+}
+.kh-auth__note {
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(255, 248, 240, 0.7);
+  text-wrap: pretty;
+}
+.kh-auth .kh-msg {
+  padding: 10px 14px;
 }

@@ -5,6 +5,8 @@ import { Worker } from 'bullmq';
 import { QUEUES, WORKER_HEARTBEAT_KEY, queue } from '@/lib/queue';
 import { createQueueConnection, redis } from '@/lib/redis';
 import { env } from '@/lib/env';
+import { deliverMail } from '@/server/mail/send';
+import type { MailMessage } from '@/server/mail/templates';
 
 type JobHandler = () => Promise<unknown>;
 
@@ -34,12 +36,22 @@ async function main() {
   );
   worker.on('failed', (job, err) => console.error(`[worker] ${job?.name} failed:`, err));
 
+  // Transactional email (verify, reset, password changed, setup). BullMQ
+  // retries with backoff when the SMTP server hiccups.
+  const mailWorker = new Worker<MailMessage>(QUEUES.mail, (job) => deliverMail(job.data), {
+    connection: createQueueConnection(),
+    concurrency: 2,
+  });
+  mailWorker.on('failed', (job, err) =>
+    console.error(`[worker] mail to ${job?.data.to} failed:`, err.message),
+  );
+
   await handlers.heartbeat!();
   console.log('[worker] started');
 
   const shutdown = async () => {
     console.log('[worker] shutting down');
-    await worker.close();
+    await Promise.all([worker.close(), mailWorker.close()]);
     process.exit(0);
   };
   process.on('SIGTERM', shutdown);

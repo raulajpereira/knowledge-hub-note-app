@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
   reactStrictMode: true,
-  serverExternalPackages: ['postgres', 'bullmq', 'ioredis'],
+  serverExternalPackages: ['postgres', 'bullmq', 'ioredis', '@node-rs/argon2', 'nodemailer'],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
