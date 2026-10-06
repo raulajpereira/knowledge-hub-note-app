@@ -8,8 +8,8 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 0 — Infra + fundações técnicas | ✅ feito |
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
 | 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
-| 3 — Shell, Definições, Dashboard | ✅ feito (3.1 Estrutura · 3.2 Definições · 3.3 Início) — a aguardar testes do utilizador |
-| 4 — Notas, Tarefas, Calendário | ⏳ |
+| 3 — Shell, Definições, Dashboard | ✅ feito (3.1 Estrutura · 3.2 Definições · 3.3 Início; Personalizar refeito após feedback) |
+| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo feito — a aguardar testes do utilizador · 4.2 Tarefas · 4.3 Calendário/Etiquetas |
 | 5 — Cofre, Emails, Issues | ⏳ |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
 | 7 — SAP | ⏳ |
@@ -117,6 +117,26 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Testes**: 107 unitários/integração + 20 E2E (o painel personalizado mantém-se após recarregar, cartões fora do plano ausentes, atalho novo, temporizador, repor).
 - **Screenshots** `docs/screenshots/fase-3/30-*`, `31-*` e `cmp-inicio-painel.png` (meteorologia com dados de exemplo — o ambiente de desenvolvimento não tem acesso à internet).
 
+## Fase 4.1 — Notas e Lixo (feito)
+- **Dados**: migrações `0004_content` (pastas, notas, imagens das notas, ligações entre itens) e `0005_content_rls` (RLS por tenant **e** dono em todas; trigger `kh_note_folder_owner` impede pôr uma nota numa pasta de outro utilizador). Todas as consultas correm como `kh_app` dentro de `withTenant()`.
+- **API** (`/api/v1`, sessão + módulo `notes` verificados no servidor): `folders?kind=notes` (+ `PATCH/DELETE :id`, `POST :id/duplicate`), `notes` (`?folder&fav&q`, `GET/PATCH/DELETE :id`, `POST :id/move`, `POST :id/duplicate`, `POST :id/attachments`), `files/:id`, `trash` (+ `restore`, `purge`), `links` (+ `candidates`), `me/counts` (contador da barra lateral).
+- **Ecrã Notas** igual ao protótipo: pastas (Todas, Favoritos, cadernos com renomear / nova nota / duplicar / eliminar e contagens), lista com cartões, editor e inspetor (Ligações + Detalhes); colunas redimensionáveis (`cols.list` / `cols.insp`, sincronizadas); modo foco esconde o inspetor; pesquisa pela caixa da barra superior (título, texto e etiquetas); arrastar notas para uma pasta ou para Favoritos; nota aberta no URL (`?n=`).
+- **Editor TipTap** com a barra do protótipo — H1 · B · I · • · ☐ · </> · ↗ · IMG — mais **!** (aviso/callout, ROADMAP). Barra de progresso da checklist (% e "x / y concluídas"), ligações (URL ou pesquisa de outra nota → ligação interna; opção "Como cartão" para os cartões com ícone do site), imagens (do computador, de um URL, coladas ou arrastadas), colar HTML de sites (só os elementos permitidos), tabelas coladas. Gravação automática (600 ms) com validação no servidor (`validateDoc`: só nós/marcas conhecidos, URLs seguros, ≤ 1 MB, profundidade ≤ 40).
+- **Imagens**: guardadas com a nota no MinIO privado e servidas pela app (`/files/:id`, só ao dono). "Imagem a partir de link" e imagens de HTML colado são **descarregadas pelo servidor** (proteção SSRF) — o documento nunca aponta para sites externos. Imagem retirada da nota → ficheiro apagado; duplicar nota/caderno copia as imagens.
+- **Etiquetas** por nota (chips por baixo do título, até 30); o ecrã de Etiquetas vem na 4.3.
+- **Lixo** (protótipo `isTrash`): notas e cadernos eliminados ficam 30 dias; filtros por tipo, pesquisa, seleção múltipla, recuperar (um, vários, tudo), eliminar definitivamente, esvaziar. Recuperar um caderno traz as notas eliminadas com ele; uma nota cujo caderno continua no Lixo volta sem caderno. A limpeza automática aos 30 dias entra com os jobs agendados (Fase 11, já previsto no ROADMAP).
+- **CA do ROADMAP**: a nota "Go-live SuccessFactors" (parágrafo com ligação, título, checklist 2/5, ecrãs de referência, aviso, ligações úteis em cartões, ligação para outra nota) foi reproduzida só com a barra do editor — ver `cmp-notas.png` e o teste E2E.
+- **Testes**: 116 unitários/integração (inclui RLS entre utilizadores, trigger de pasta, imagens, Lixo, ligações, validação do documento) + 23 E2E (nota escrita só com a barra e recarregada, favoritos, pesquisa, ligações, Lixo).
+- **Screenshots** `docs/screenshots/fase-4/` (40–46) e comparações `cmp-notas.png`, `cmp-lixo.png`.
+
+## Fase 4.1 — desvios do protótipo / adiado
+- **Partilhar**, pastas partilhadas e ícone de partilha nas pastas → Fase 9 (Partilha).
+- **Objetos Relacionados, Transações, Ordens de Transporte** no inspetor e os chips Projeto/Sistema → Fase 7 (SAP), quando existirem esses dados.
+- Botão **!** (aviso) acrescentado à barra: o ROADMAP pede callout e o protótipo não tinha forma de o criar.
+- Coluna do editor com mínimo de 360 px (protótipo 480 px) para caber em ecrãs de 1280 px com o inspetor aberto.
+- O título é uma caixa que quebra linha (no protótipo era uma linha só e cortava títulos longos).
+- Textos novos: placeholders/etiquetas do editor ("Aviso", "Do computador", "Como cartão", "Endereço do link ou nome de uma nota", "+ Etiqueta", "Nome da pasta"), confirmação "Eliminar a pasta?", mensagens de erro de imagem/gravação/limite FREE.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -153,4 +173,6 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D26 | Imagens do utilizador servidas pela app (stream do MinIO, só ao dono), não por URLs assinados: o MinIO não fica exposto à internet | Claude |
 | D27 | Fontes tipográficas servidas pela app (@fontsource), sem Google Fonts | Claude |
 | D28 | Meteorologia e favicons pedidos pelo servidor (sem geojs/bigdatacloud/Google no browser); localização automática só a pedido do utilizador | Claude (SECURITY.md) |
+| D29 | Imagens das notas guardadas sempre com a nota (upload ou importadas pelo servidor); o documento só referencia `/api/v1/files/<id>` — sem hot-linking a sites externos | Claude (SECURITY.md) |
+| D30 | Conteúdo das notas em JSON do TipTap, validado no servidor por lista de nós/marcas permitidos (não HTML) | Claude |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

@@ -11,6 +11,9 @@ export type ShellApi = {
   lock: () => void;
   openAccount: () => void;
   openAbout: () => void;
+  /** Header search box; pages that list items (Notes…) filter with it. */
+  query: string;
+  setQuery: (q: string) => void;
 };
 
 export const ShellContext = createContext<ShellApi | null>(null);

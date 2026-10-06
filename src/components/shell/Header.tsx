@@ -28,10 +28,9 @@ function useClock(lang: string) {
 
 export function Header({ onActivity, activityOpen }: { onActivity: () => void; activityOpen: boolean }) {
   const { t, lang } = useI18n();
-  const { modules, me, focus, toggleFocus, lock } = useShell();
+  const { modules, me, focus, toggleFocus, lock, query, setQuery } = useShell();
   const path = usePathname();
   const { clock, date } = useClock(lang);
-  const [query, setQuery] = useState('');
   const isOwner = me.admin?.role === 'owner';
 
   return (

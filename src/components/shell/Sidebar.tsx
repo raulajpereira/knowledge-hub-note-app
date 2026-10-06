@@ -9,6 +9,7 @@ import { normalizeNav, sideRows } from './nav';
 import { Crown, Icon, NavIcon } from './icons';
 import { tierGradient, tierOf } from './plan';
 import { AvatarFace } from './Avatar';
+import { useCounts } from './counts';
 import { usePref } from './PrefsProvider';
 import { useShell } from './ShellContext';
 
@@ -27,7 +28,8 @@ export function Sidebar() {
       ),
     [saved, modules, openMap],
   );
-  const rows = useMemo(() => sideRows(layout, modules, t), [layout, modules, t]);
+  const counts = useCounts();
+  const rows = useMemo(() => sideRows(layout, modules, t, counts), [layout, modules, t, counts]);
   const tier = tierOf(me.tenant.planCode);
 
   const toggleGroup = (index: number) => {

@@ -45,6 +45,7 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const [accOpen, setAccOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [actOpen, setActOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
   // Locked state survives a reload in this tab (prototype kv.locked in sessionStorage).
   useEffect(() => {
@@ -117,8 +118,10 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
       lock,
       openAccount: () => setAccOpen(true),
       openAbout: () => setAboutOpen(true),
+      query,
+      setQuery,
     }),
-    [me, modules, focus, lock],
+    [me, modules, focus, lock, query],
   );
 
   return (

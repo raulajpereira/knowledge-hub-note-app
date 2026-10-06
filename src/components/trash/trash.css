@@ -1,0 +1,303 @@
+/* Lixo — ZNotes.dc.html `isTrash`, values 1:1. */
+.kh-tr {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border-radius: 30px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(var(--glass-blur-user, 30px)) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 24px 60px rgba(0, 0, 0, 0.22);
+}
+.kh-tr__head {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 22px 12px;
+}
+.kh-tr__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+  min-width: 0;
+}
+.kh-tr__title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.kh-tr__sub {
+  font-size: 13px;
+  color: rgba(255, 248, 240, 0.68);
+}
+.kh-tr__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  width: 240px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgba(18, 12, 9, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.kh-tr__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 14px;
+}
+.kh-tr__btn {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kh-tr__btn--danger {
+  border: 0;
+  background: oklch(0.62 0.18 28);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.kh-tr__chips {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 22px 12px;
+}
+.kh-tr-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fbf8f5;
+}
+.kh-tr-chip[data-on] {
+  border-color: #fbf8f5;
+  background: #fbf8f5;
+  color: #2a211c;
+}
+.kh-tr-chip span {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.kh-tr__sel {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 22px 12px;
+  padding: 10px 12px 10px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+.kh-tr__sel > span {
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: auto;
+}
+.kh-tr__selRestore,
+.kh-tr__selPurge,
+.kh-tr__selCancel {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kh-tr__selRestore {
+  border: 0;
+  background: #fbf8f5;
+  color: #2a211c;
+}
+.kh-tr__selPurge {
+  border: 1px solid oklch(0.7 0.15 28 / 0.6);
+  background: oklch(0.6 0.16 28 / 0.3);
+  color: #ffe0d6;
+}
+.kh-tr__selCancel {
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 248, 240, 0.8);
+  font-weight: 400;
+  text-decoration: underline;
+}
+.kh-tr__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 22px 22px;
+}
+.kh-tr__table {
+  min-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kh-tr__th,
+.kh-tr__row {
+  display: grid;
+  grid-template-columns: 34px 120px minmax(180px, 1fr) 170px 110px 96px;
+  gap: 10px;
+  align-items: center;
+}
+.kh-tr__th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 46px;
+  padding: 0 12px;
+  border-radius: 21px 21px 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(30px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 240, 0.75);
+}
+.kh-tr__row {
+  min-height: 50px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.kh-tr__row:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.kh-tr__row[data-on] {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.kh-tr__ck {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 7px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  background: transparent;
+  color: #2a211c;
+}
+.kh-tr__ck[data-on] {
+  border-color: #fbf8f5;
+  background: #fbf8f5;
+}
+.kh-tr__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+}
+.kh-tr__kic {
+  display: flex;
+  transform: scale(0.75);
+  margin: 0 -3px;
+}
+.kh-tr__t {
+  font-size: 14px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-tr__at {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.75);
+  white-space: nowrap;
+}
+.kh-tr__left {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.kh-tr__acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.kh-tr__acts button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fbf8f5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.kh-tr__acts .kh-tr__purge {
+  background: oklch(0.6 0.16 28 / 0.25);
+  color: #ffc9b8;
+}
+.kh-tr__none {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 60px 10px;
+  color: rgba(255, 248, 240, 0.65);
+  text-align: center;
+  font-size: 13px;
+}
+.kh-tr__noneT {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fbf8f5;
+}
