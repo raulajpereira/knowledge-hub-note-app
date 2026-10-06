@@ -40,11 +40,74 @@ export const NewsSource = z.object({
 });
 export type NewsSource = z.infer<typeof NewsSource>;
 
+// Definições › Aparência (prototype AMB, FONTS, accent swatches, ranges).
+export const AMBIENT_NAMES = ['Areia', 'Grafite', 'Crepúsculo'] as const;
+export const FONTS = [
+  'Geist',
+  'Plus Jakarta Sans',
+  'DM Sans',
+  'Manrope',
+  'IBM Plex Sans',
+  'Space Grotesk',
+  'Outfit',
+  'Nunito Sans',
+] as const;
+export const DEFAULT_ACCENT = 'oklch(0.76 0.17 245)';
+export const ACCENT_SWATCHES = [
+  'oklch(0.76 0.17 245)',
+  'oklch(0.78 0.15 200)',
+  'oklch(0.8 0.16 150)',
+  'oklch(0.86 0.15 90)',
+  'oklch(0.78 0.16 55)',
+  'oklch(0.7 0.19 25)',
+  'oklch(0.74 0.17 340)',
+  'oklch(0.72 0.16 300)',
+] as const;
+export const BG_DEFAULTS = { mode: 'Areia' as const, blur: 40, dim: 35 };
+
+const pct = z.number().int().min(0).max(80);
+// Values end up in CSS, so only exact swatches or a #rrggbb colour are accepted.
+const Accent = z.union([z.enum(ACCENT_SWATCHES), z.string().regex(/^#[0-9a-fA-F]{6}$/)]);
+
 export const PREF_SCHEMAS = {
   cols: z.object({ side: col('side'), list: col('list'), insp: col('insp') }).partial(),
   nav: z.array(NavEntry).max(120),
   newsSources: z.array(NewsSource).max(30),
+  bg: z.object({ mode: z.enum([...AMBIENT_NAMES, 'photo']), blur: pct, dim: pct }),
+  font: z.enum(FONTS),
+  fontScale: z.number().min(0.85).max(1.25),
+  uiScale: z.number().min(0.8).max(1.2),
+  glassBlur: z.number().int().min(0).max(80),
+  accent: Accent,
 } satisfies Record<string, z.ZodTypeAny>;
+
+/**
+ * Customisation add-ons (module group "Personalização"): a key may only be
+ * set when the tenant has the module, and is ignored when it doesn't (e.g.
+ * after a downgrade). `bg` is special-cased: only the photo mode needs it.
+ */
+export const PREF_MODULE: Partial<Record<keyof typeof PREF_SCHEMAS, string>> = {
+  nav: 'sidebar',
+  font: 'typeface',
+  glassBlur: 'glass',
+  accent: 'accent',
+};
+
+export function prefAllowed(key: string, value: unknown, modules: ReadonlySet<string>): boolean {
+  if (key === 'bg') return (value as { mode?: string } | null)?.mode !== 'photo' || modules.has('bgphoto');
+  const m = PREF_MODULE[key as keyof typeof PREF_SCHEMAS];
+  return !m || modules.has(m);
+}
+
+/** Prefs as they apply right now: entries the plan no longer covers are dropped. */
+export function effectivePrefs(prefs: Prefs, modules: ReadonlySet<string>): Prefs {
+  const out: Prefs = {};
+  for (const [k, v] of Object.entries(prefs)) {
+    if (prefAllowed(k, v, modules)) out[k] = v;
+    else if (k === 'bg') out[k] = { ...BG_DEFAULTS, ...(v as object), mode: BG_DEFAULTS.mode };
+  }
+  return out;
+}
 
 export type KnownPrefs = { [K in keyof typeof PREF_SCHEMAS]?: z.infer<(typeof PREF_SCHEMAS)[K]> };
 export type Prefs = KnownPrefs & Record<string, unknown>;

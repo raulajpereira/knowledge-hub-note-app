@@ -129,10 +129,60 @@ test('focus mode, about and account (rename, sessions)', async ({ page }) => {
   await page.getByTitle('Conta e Dados').click();
   const dlg = page.getByRole('dialog', { name: 'Conta e Dados' });
   await expect(dlg.getByText('Esta Sessão')).toBeVisible();
-  const name = dlg.locator('input').first();
+  const name = dlg.getByLabel('Nome', { exact: true });
   await name.fill('Shell Renamed');
   await dlg.getByRole('button', { name: 'Guardar' }).click();
   await expect(dlg.getByRole('button', { name: /Guardado/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByTitle('Conta e Dados')).toContainText('Shell Renamed');
+});
+
+test('settings: plan-gated tabs, background preset syncs, profile photo upload', async ({ page }) => {
+  await login(page);
+  await page.getByRole('link', { name: 'Definições' }).click();
+  await expect(page).toHaveURL(/\/app\/settings$/);
+  await expect(page.getByRole('tab', { name: 'Aparência' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Notícias' })).toBeVisible();
+  // PRO has no Personalização add-ons
+  await expect(page.getByRole('tab', { name: 'Marca' })).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: 'Barra lateral' })).toHaveCount(0);
+  await expect(page.getByText('Tipo de Letra')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /^Grafite/ }).click();
+  await expect(page.getByRole('button', { name: /^Grafite/ })).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForTimeout(1200);
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Grafite/ })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: /^Areia/ }).click();
+
+  // Server refuses add-on prefs even if the UI is bypassed.
+  const res = await page.evaluate(async () => {
+    const r = await fetch(`${location.pathname.split('/app')[0]}/api/v1/me/prefs`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ font: 'Outfit' }),
+    });
+    return r.status;
+  });
+  expect(res).toBe(403);
+
+  // Profile photo: the browser re-encodes it; the sidebar shows it.
+  const png = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 120;
+    const x = c.getContext('2d')!;
+    x.fillStyle = '#3a7';
+    x.fillRect(0, 0, 120, 120);
+    return c.toDataURL('image/png').split(',')[1]!;
+  });
+  await page.getByTitle('Conta e Dados').click();
+  await page
+    .getByRole('dialog', { name: 'Conta e Dados' })
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'eu.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+  await expect(page.getByRole('button', { name: 'Remover Foto' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  const img = page.getByTitle('Conta e Dados').locator('img');
+  await expect(img).toBeVisible();
+  expect(await img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(256);
 });

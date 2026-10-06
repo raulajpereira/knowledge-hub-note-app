@@ -10,7 +10,8 @@
 
 .kh-shell {
   position: relative;
-  height: 100vh;
+  /* body is zoomed by "Tamanho dos Elementos"; keep one screen tall. */
+  height: calc(100vh / var(--ui-scale, 1));
   min-width: 1280px;
   overflow: hidden;
   color: var(--text);

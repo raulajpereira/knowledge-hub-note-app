@@ -5,6 +5,7 @@ import { admins, users } from '@/db/schema';
 import { getAuth } from '@/server/auth/request';
 import { getEntitlements } from '@/server/licensing/entitlements';
 import { getPrefs } from '@/server/prefs';
+import { listAssets } from '@/server/assets';
 import { AppShell } from '@/components/shell/AppShell';
 import type { ShellMe } from '@/components/shell/types';
 
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const auth = await getAuth();
   if (!auth) redirect('/login?next=/app');
-  const [ent, admin, prefs, u] = await Promise.all([
+  const [ent, admin, prefs, u, assets] = await Promise.all([
     getEntitlements(auth.tenant.id),
     db()
       .select({ role: admins.role, status: admins.status })
@@ -24,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .limit(1),
     getPrefs(auth.user.id),
     db().select({ createdAt: users.createdAt }).from(users).where(eq(users.id, auth.user.id)).limit(1),
+    listAssets(auth.user.id),
   ]);
   const me: ShellMe = {
     user: {
@@ -41,6 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     },
     modules: ent.modules,
     admin: admin[0]?.status === 'active' ? { role: admin[0].role } : null,
+    assets,
   };
   return (
     <AppShell me={me} prefs={prefs}>

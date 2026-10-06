@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { useI18n } from '@/i18n/client';
 import { hrefOf } from './nav';
+import { assetUrl } from './assetUrl';
 import { Icon } from './icons';
 import { useShell } from './ShellContext';
 
@@ -36,11 +37,22 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
   return (
     <header className="kh-hdr">
       <Link href="/app" className="kh-hdr__brand" aria-label="KnowledgeHub">
-        <Logo size={45} showWordmark={false} />
-        <div className="kh-hdr__word">
-          <span>Knowledge</span>
-          <span style={{ color: 'var(--accent)' }}>Hub</span>
-        </div>
+        {modules.has('brand') && me.assets.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the user's logo, streamed by our API
+          <img
+            src={assetUrl('logo', me.assets.logo)}
+            alt="Logo"
+            style={{ height: 34, maxWidth: 170, objectFit: 'contain', display: 'block' }}
+          />
+        ) : (
+          <>
+            <Logo size={45} showWordmark={false} />
+            <div className="kh-hdr__word">
+              <span>Knowledge</span>
+              <span style={{ color: 'var(--accent)' }}>Hub</span>
+            </div>
+          </>
+        )}
       </Link>
 
       <label className="kh-hdr__search kh-hdr__glass">

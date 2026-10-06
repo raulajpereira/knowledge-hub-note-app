@@ -5,12 +5,22 @@ import { useRouter } from 'next/navigation';
 import { api, isApiFailure } from '@/lib/client/api';
 import { useI18n } from '@/i18n/client';
 import { Icon } from './icons';
-import { initials } from './plan';
+import { AvatarFace } from './Avatar';
 
 // Lock screen (SECURITY.md §2): purely UX — the session stays valid — but
 // unlocking re-checks the password on the server (/auth/reauth, with the
 // server's lockout: 5 tries → 30 s, then backoff).
-export function LockScreen({ name, email, onUnlock }: { name: string; email: string; onUnlock: () => void }) {
+export function LockScreen({
+  name,
+  email,
+  photoV,
+  onUnlock,
+}: {
+  name: string;
+  email: string;
+  photoV?: number;
+  onUnlock: () => void;
+}) {
   const { t } = useI18n();
   const router = useRouter();
   const [pass, setPass] = useState('');
@@ -57,18 +67,13 @@ export function LockScreen({ name, email, onUnlock }: { name: string; email: str
   return (
     <div className="kh-lock" data-kv-dim="1" role="dialog" aria-modal="true" aria-label={t('locked')}>
       <form className="kh-lock__card" onSubmit={submit} style={{ transform: `translateX(${shake}px)` }}>
-        <span
-          className="kh-avatar__face"
-          style={{
-            position: 'relative',
-            width: 88,
-            height: 88,
-            fontSize: 28,
-            boxShadow: '0 0 0 3px rgba(255,255,255,.25)',
-          }}
-        >
-          {initials(name)}
-        </span>
+        <AvatarFace
+          name={name}
+          photoV={photoV}
+          size={88}
+          fontSize={28}
+          ring="0 0 0 3px rgba(255,255,255,.25)"
+        />
         <div
           style={{
             display: 'flex',

@@ -3,4 +3,6 @@ export type ShellMe = {
   tenant: { name: string; planCode: string | null; renewAt: string | null; trialEndsAt: string | null };
   modules: string[];
   admin: { role: string } | null;
+  /** Uploaded images → version (ms) for cache-busting URLs. */
+  assets: Partial<Record<'avatar' | 'background' | 'logo', number>>;
 };

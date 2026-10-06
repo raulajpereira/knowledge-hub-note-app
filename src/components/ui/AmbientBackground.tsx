@@ -25,21 +25,37 @@ export type AmbientName = keyof typeof AMBIENTS;
 
 type Props = {
   ambient?: AmbientName;
-  /** Signed URL of the user's background photo. */
+  /** URL of the user's background photo (streamed by the app). */
   photoUrl?: string | null;
   /** Darkening over the photo, 0–100 %. */
   dim?: number;
+  /** Blur of the photo in px (keeps the glass effect readable). */
+  blur?: number;
 };
 
-export function AmbientBackground({ ambient = 'Areia', photoUrl, dim = 20 }: Props) {
+export function AmbientBackground({ ambient = 'Areia', photoUrl, dim = 20, blur = 0 }: Props) {
   const a = AMBIENTS[ambient];
   return (
     <div className="kh-ambient" style={{ background: a.base }} aria-hidden="true">
       {photoUrl ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- signed, user-provided URL */}
-          <img className="kh-ambient__photo" src={photoUrl} alt="" />
-          <div style={{ position: 'absolute', inset: 0, background: `rgba(20,14,10,${dim / 100})` }} />
+          <img
+            className="kh-ambient__photo"
+            src={photoUrl}
+            alt=""
+            style={
+              blur
+                ? {
+                    inset: -80,
+                    width: 'calc(100% + 160px)',
+                    height: 'calc(100% + 160px)',
+                    filter: `blur(${blur}px) saturate(115%)`,
+                  }
+                : undefined
+            }
+          />
+          <div style={{ position: 'absolute', inset: 0, background: `rgba(22,16,12,${dim / 100})` }} />
         </>
       ) : (
         <>

@@ -9,7 +9,6 @@ import { Placeholder } from '@/components/shell/Placeholder';
 // Every module of a later phase answers with a placeholder, but only when
 // the plan includes it — the gate is enforced here, on the server.
 const EXTRA_VIEWS: Record<string, { module: string | null; label: string; icon: string }> = {
-  settings: { module: null, label: 'settings', icon: 'fn_cfg' },
   trash: { module: 'notes', label: 'nav_trash', icon: 'notes' },
   whiteboard: { module: 'whiteboard', label: 'nav_whiteboard', icon: 'mg_overview' },
   news: { module: 'news', label: 'SAP News', icon: 'notes' },

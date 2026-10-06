@@ -7,7 +7,8 @@ import { useI18n } from '@/i18n/client';
 import type { NavEntry } from '@/lib/prefs';
 import { normalizeNav, sideRows } from './nav';
 import { Crown, Icon, NavIcon } from './icons';
-import { initials, tierGradient, tierOf } from './plan';
+import { tierGradient, tierOf } from './plan';
+import { AvatarFace } from './Avatar';
 import { usePref } from './PrefsProvider';
 import { useShell } from './ShellContext';
 
@@ -15,14 +16,23 @@ export function Sidebar() {
   const { t } = useI18n();
   const path = usePathname();
   const { me, modules, openAccount, openAbout } = useShell();
-  const [saved, setNav] = usePref<NavEntry[] | undefined>('nav', undefined);
-  const layout = useMemo(() => normalizeNav(saved), [saved]);
+  const [saved] = usePref<NavEntry[] | undefined>('nav', undefined);
+  // Open/closed groups are a view state everyone may change; the layout
+  // itself (order, names, groups) needs the "Barra lateral" add-on.
+  const [openMap, setOpenMap] = usePref<Record<string, boolean>>('ui.navOpen', {});
+  const layout = useMemo(
+    () =>
+      normalizeNav(modules.has('sidebar') ? saved : undefined).map((e) =>
+        e.type === 'group' && e.name in openMap ? { ...e, open: openMap[e.name]! } : e,
+      ),
+    [saved, modules, openMap],
+  );
   const rows = useMemo(() => sideRows(layout, modules, t), [layout, modules, t]);
   const tier = tierOf(me.tenant.planCode);
 
   const toggleGroup = (index: number) => {
-    const next = layout.map((e, i) => (i === index && e.type === 'group' ? { ...e, open: !e.open } : e));
-    setNav(next);
+    const g = layout[index];
+    if (g?.type === 'group') setOpenMap({ ...openMap, [g.name]: !g.open });
   };
   const current = (href: string) => (path === href ? 'page' : undefined);
 
@@ -32,6 +42,7 @@ export function Sidebar() {
         {rows.map((r, i) =>
           r.kind === 'item' ? (
             <Link
+              scroll={false}
               key={r.id}
               href={r.href}
               className={`kh-nav__item${r.nested ? ' kh-nav__item--nested' : ''}`}
@@ -73,6 +84,7 @@ export function Sidebar() {
           </div>
           <div className="kh-upgrade__desc">{t('premiumDesc')}</div>
           <Link
+            scroll={false}
             href="/app/pricing"
             className="kh-upgrade__cta"
             style={{
@@ -88,12 +100,17 @@ export function Sidebar() {
       )}
 
       {modules.has('notes') && (
-        <Link href="/app/trash" className="kh-aside__btn" aria-current={current('/app/trash')}>
+        <Link scroll={false} href="/app/trash" className="kh-aside__btn" aria-current={current('/app/trash')}>
           <Icon name="trash" size={16} />
           <span style={{ flex: 1 }}>{t('nav_trash')}</span>
         </Link>
       )}
-      <Link href="/app/settings" className="kh-aside__btn" aria-current={current('/app/settings')}>
+      <Link
+        scroll={false}
+        href="/app/settings"
+        className="kh-aside__btn"
+        aria-current={current('/app/settings')}
+      >
         <Icon name="settings" size={16} />
         {t('settings')}
       </Link>
@@ -103,12 +120,7 @@ export function Sidebar() {
       </button>
       <button type="button" className="kh-acct" title={t('acc_title')} onClick={openAccount}>
         <span className="kh-avatar" style={{ width: 42, height: 42 }}>
-          <span
-            className="kh-avatar__face"
-            style={{ fontSize: 14.5, boxShadow: '0 0 0 2px rgba(255,255,255,.14)' }}
-          >
-            {initials(me.user.name)}
-          </span>
+          <AvatarFace name={me.user.name} photoV={me.assets.avatar} size={42} fontSize={14.5} />
           <span className="kh-avatar__dot" />
         </span>
         <span className="kh-acct__meta">

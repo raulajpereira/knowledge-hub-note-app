@@ -10,7 +10,9 @@ import { api, isApiFailure, type ApiFailure } from '@/lib/client/api';
 import { MIN_PASSWORD } from '@/lib/passwordStrength';
 import { useI18n } from '@/i18n/client';
 import { Icon } from './icons';
-import { LIC_FAMILIES, initials, tierGradient, tierOf } from './plan';
+import { LIC_FAMILIES, tierGradient, tierOf } from './plan';
+import { AvatarFace } from './Avatar';
+import { removeImage, uploadImage } from './uploadImage';
 import { useShell } from './ShellContext';
 import { useReauth } from './useReauth';
 
@@ -83,6 +85,29 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
     setSavedName(v);
     setNameOk(true);
     setTimeout(() => setNameOk(false), 1600);
+    router.refresh();
+  };
+
+  // ── Photo ──
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoMsg, setPhotoMsg] = useState('');
+  const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setPhotoBusy(true);
+    setPhotoMsg('');
+    try {
+      await uploadImage('avatar', f);
+      router.refresh();
+    } catch (x) {
+      setPhotoMsg(isApiFailure(x) && x.code === 'file_too_large' ? t('set_imgTooBig') : t('set_imgBad'));
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+  const removePhoto = async () => {
+    await removeImage('avatar');
     router.refresh();
   };
 
@@ -242,11 +267,67 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* Profile */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-          <span className="kh-avatar" style={{ width: 96, height: 96 }}>
-            <span className="kh-avatar__face" style={{ fontSize: 30 }}>
-              {initials(savedName)}
+          <label
+            title={t('acc_changePhoto')}
+            style={{
+              position: 'relative',
+              width: 96,
+              height: 96,
+              flex: 'none',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              background: 'linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.06))',
+              border: me.assets.avatar ? '0' : '1.5px dashed rgba(255,255,255,.4)',
+              boxSizing: 'border-box',
+            }}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onPhoto}
+              style={{ display: 'none' }}
+              disabled={photoBusy}
+            />
+            {me.assets.avatar ? (
+              <AvatarFace name={savedName} photoV={me.assets.avatar} size={96} fontSize={30} ring="none" />
+            ) : (
+              <span
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  color: 'rgba(255,248,240,.8)',
+                  textAlign: 'center',
+                }}
+              >
+                <Icon name="camera" size={22} sw={1.7} />
+                {t('acc_addPhoto')}
+              </span>
+            )}
+            <span
+              style={{
+                position: 'absolute',
+                right: 4,
+                bottom: 4,
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#fbf8f5',
+                color: '#2a211c',
+                boxShadow: '0 4px 12px rgba(0,0,0,.25)',
+              }}
+            >
+              <Icon name="pencil" size={13} sw={2.2} />
             </span>
-          </span>
+          </label>
           <div style={{ flex: 1, minWidth: 240, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
@@ -256,7 +337,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 maxLength={80}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && saveName()}
-                aria-label={t('acc_title')}
+                aria-label={t('reg_name')}
               />
               <button
                 type="button"
@@ -271,9 +352,32 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             <span style={{ fontSize: 13.5, color: 'rgba(255,248,240,.8)', paddingLeft: 2 }}>
               {me.user.email}
             </span>
-            <span style={{ fontSize: 12, color: 'rgba(255,248,240,.65)' }}>
-              {t('acc_since')} {fmtDate(me.user.createdAt)}
-            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: 'rgba(255,248,240,.65)' }}>
+                {t('acc_since')} {fmtDate(me.user.createdAt)}
+              </span>
+              {me.assets.avatar && (
+                <button
+                  type="button"
+                  onClick={removePhoto}
+                  style={{
+                    height: 26,
+                    padding: '0 10px',
+                    borderRadius: 999,
+                    border: 0,
+                    background: 'transparent',
+                    color: 'rgba(255,248,240,.75)',
+                    font: 'inherit',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {t('acc_removePhoto')}
+                </button>
+              )}
+              {photoMsg && <span style={{ fontSize: 12, color: '#ffc9b8' }}>{photoMsg}</span>}
+            </div>
           </div>
         </div>
 

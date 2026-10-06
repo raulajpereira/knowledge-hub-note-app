@@ -284,3 +284,25 @@ export const userPrefs = pgTable('user_prefs', {
   data: jsonb('data').notNull().default({}),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Images a user uploaded for their own UI (profile photo, background photo,
+// brand logo). Stored in the private MinIO bucket; the app streams them back
+// to their owner only. One per kind — a new upload replaces the old one.
+export const userAssets = pgTable(
+  'user_assets',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['avatar', 'background', 'logo'] }).notNull(),
+    storageKey: text('storage_key').notNull(),
+    contentType: text('content_type').notNull(),
+    bytes: integer('bytes').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.kind] }),
+    check('user_assets_kind_chk', sql`${t.kind} in ('avatar','background','logo')`),
+    check('user_assets_type_chk', sql`${t.contentType} in ('image/png','image/jpeg','image/webp')`),
+  ],
+);

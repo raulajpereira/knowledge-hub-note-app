@@ -3,13 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AmbientBackground } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
-import { COL_DEFAULTS, COL_LIMITS, type Prefs } from '@/lib/prefs';
+import { COL_DEFAULTS, COL_LIMITS, effectivePrefs, type Prefs } from '@/lib/prefs';
+import { appearanceCss, appearanceOf } from './appearance';
+import { assetUrl } from './assetUrl';
+import './fonts';
 import { AboutModal } from './AboutModal';
 import { AccountModal } from './AccountModal';
 import { ActivityModal } from './ActivityModal';
 import { Header } from './Header';
 import { LockScreen } from './LockScreen';
-import { PrefsProvider, usePref } from './PrefsProvider';
+import { PrefsProvider, usePref, usePrefsContext } from './PrefsProvider';
 import { ShellContext, type ShellApi } from './ShellContext';
 import { Sidebar } from './Sidebar';
 import { Ticker } from './Ticker';
@@ -27,6 +30,11 @@ type Cols = { side?: number; list?: number; insp?: number };
 
 function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const { t } = useI18n();
+  const raw = usePrefsContext()!.prefs;
+  const modules = useMemo(() => new Set(me.modules), [me.modules]);
+  const look = useMemo(() => appearanceOf(effectivePrefs(raw, modules)), [raw, modules]);
+  const photo =
+    look.bg.mode === 'photo' && me.assets.background ? assetUrl('background', me.assets.background) : null;
   const [cols, setCols] = usePref<Cols>('cols', {});
   const side = cols.side ?? COL_DEFAULTS.side;
   const [dragW, setDragW] = useState<number | null>(null);
@@ -100,7 +108,7 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const api = useMemo<ShellApi>(
     () => ({
       me,
-      modules: new Set(me.modules),
+      modules,
       focus,
       toggleFocus: () => {
         setFocus((f) => !f);
@@ -110,12 +118,18 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
       openAccount: () => setAccOpen(true),
       openAbout: () => setAboutOpen(true),
     }),
-    [me, focus, lock],
+    [me, modules, focus, lock],
   );
 
   return (
     <ShellContext.Provider value={api}>
-      <AmbientBackground />
+      <style>{appearanceCss(look)}</style>
+      <AmbientBackground
+        ambient={look.bg.mode === 'photo' ? 'Areia' : look.bg.mode}
+        photoUrl={photo}
+        blur={look.bg.blur}
+        dim={look.bg.dim}
+      />
       <div className="kh-shell kh-above" aria-hidden={locked || undefined} inert={locked || undefined}>
         <div className="kh-shell__grid">
           <Header onActivity={() => setActOpen((o) => !o)} activityOpen={actOpen} />
@@ -149,7 +163,9 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
       <AccountModal open={accOpen} onClose={() => setAccOpen(false)} />
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />
-      {locked && <LockScreen name={me.user.name} email={me.user.email} onUnlock={unlock} />}
+      {locked && (
+        <LockScreen name={me.user.name} email={me.user.email} photoV={me.assets.avatar} onUnlock={unlock} />
+      )}
     </ShellContext.Provider>
   );
 }

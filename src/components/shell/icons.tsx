@@ -54,6 +54,8 @@ const D = {
   download: '<path d="M12 4v11"></path><path d="M7 10l5 5 5-5"></path><path d="M5 20h14"></path>',
   logout:
     '<path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4"></path><path d="M16 16l4-4-4-4"></path><path d="M20 12H9"></path>',
+  camera: '<path d="M4 8h3l2-2.5h6L17 8h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle>',
+  pencil: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"></path>',
   dash: '<path d="M7 12h10"></path>',
   laptop:

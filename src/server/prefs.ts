@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { userPrefs } from '@/db/schema';
 import { ApiError } from '@/server/errors';
-import { MAX_PREFS_BYTES, mergePrefs, parsePrefsPatch, type Prefs } from '@/lib/prefs';
+import { MAX_PREFS_BYTES, mergePrefs, parsePrefsPatch, prefAllowed, type Prefs } from '@/lib/prefs';
 
 export async function getPrefs(userId: string): Promise<Prefs> {
   const [row] = await db()
@@ -15,13 +15,21 @@ export async function getPrefs(userId: string): Promise<Prefs> {
 }
 
 /** Merge-patch: only the keys sent change, so two devices editing different settings don't clobber each other. */
-export async function patchPrefs(userId: string, input: unknown): Promise<Prefs> {
+export async function patchPrefs(
+  userId: string,
+  input: unknown,
+  modules: ReadonlySet<string>,
+): Promise<Prefs> {
   let patch: Record<string, unknown>;
   try {
     patch = parsePrefsPatch(input);
   } catch (e) {
     if (e instanceof Error && e.message.startsWith('pref_')) throw new ApiError(400, e.message);
     throw e;
+  }
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== null && !prefAllowed(k, v, modules))
+      throw new ApiError(403, 'module_not_included', undefined, { key: k });
   }
   return db().transaction(async (tx) => {
     await tx.insert(userPrefs).values({ userId, data: {} }).onConflictDoNothing();

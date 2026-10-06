@@ -11,6 +11,7 @@ const adminUrl = process.env.TEST_DATABASE_ADMIN_URL;
 const appUrl = process.env.TEST_DATABASE_URL;
 const enabled = Boolean(adminUrl && appUrl);
 const outbox = process.env.MAIL_OUTBOX_DIR!;
+const NONE = new Set<string>();
 const meta = { ip: '203.0.113.9', userAgent: 'vitest', lang: 'pt' as const };
 
 describe.skipIf(!enabled)('prefs and account', () => {
@@ -21,6 +22,7 @@ describe.skipIf(!enabled)('prefs and account', () => {
   let prefs: typeof import('@/server/prefs');
   let account: typeof import('@/server/account');
   let dbm: typeof import('@/db/client');
+  let assets: typeof import('@/server/assets');
   let admin: postgres.Sql;
 
   beforeAll(async () => {
@@ -29,7 +31,7 @@ describe.skipIf(!enabled)('prefs and account', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, prefs, account, dbm] = await Promise.all([
+    [svc, codesSvc, session, seed, prefs, account, dbm, assets] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
       import('@/server/auth/session'),
@@ -37,12 +39,13 @@ describe.skipIf(!enabled)('prefs and account', () => {
       import('@/server/prefs'),
       import('@/server/account'),
       import('@/db/client'),
+      import('@/server/assets'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -73,16 +76,16 @@ describe.skipIf(!enabled)('prefs and account', () => {
   it('prefs: merge-patch per key, null removes, unknown keys refused, survives a new session', async () => {
     const { auth } = await signedIn('ana@prefs.pt');
     expect(await prefs.getPrefs(auth.user.id)).toEqual({});
-    await prefs.patchPrefs(auth.user.id, { cols: { side: 300 } });
+    await prefs.patchPrefs(auth.user.id, { cols: { side: 300 } }, NONE);
     // A second "device" changes another key: the first one is kept.
-    await prefs.patchPrefs(auth.user.id, { 'ui.issues.cols': { title: 220 } });
+    await prefs.patchPrefs(auth.user.id, { 'ui.issues.cols': { title: 220 } }, NONE);
     expect(await prefs.getPrefs(auth.user.id)).toEqual({
       cols: { side: 300 },
       'ui.issues.cols': { title: 220 },
     });
-    await prefs.patchPrefs(auth.user.id, { 'ui.issues.cols': null });
+    await prefs.patchPrefs(auth.user.id, { 'ui.issues.cols': null }, NONE);
     expect(await prefs.getPrefs(auth.user.id)).toEqual({ cols: { side: 300 } });
-    await expect(prefs.patchPrefs(auth.user.id, { role: 'owner' })).rejects.toMatchObject({
+    await expect(prefs.patchPrefs(auth.user.id, { role: 'owner' }, NONE)).rejects.toMatchObject({
       status: 400,
       code: 'pref_unknown_key',
     });
@@ -140,10 +143,50 @@ describe.skipIf(!enabled)('prefs and account', () => {
     expect(await account.listSessions(a.auth)).toHaveLength(1);
   });
 
+  it('appearance prefs are refused without their add-on module', async () => {
+    const { auth } = await signedIn('ze@look.pt');
+    await expect(prefs.patchPrefs(auth.user.id, { font: 'Manrope' }, NONE)).rejects.toMatchObject({
+      status: 403,
+      code: 'module_not_included',
+    });
+    await prefs.patchPrefs(auth.user.id, { font: 'Manrope', uiScale: 1.1 }, new Set(['typeface']));
+    expect(await prefs.getPrefs(auth.user.id)).toEqual({ font: 'Manrope', uiScale: 1.1 });
+  });
+
+  it('images: stored privately, replaced, gated, deleted', async () => {
+    const { auth } = await signedIn('ana@img.pt');
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    await expect(assets.putAsset(auth, 'logo', png, NONE)).rejects.toMatchObject({
+      code: 'module_not_included',
+    });
+    await expect(
+      assets.putAsset(auth, 'avatar', new TextEncoder().encode('<svg/>'), NONE),
+    ).rejects.toMatchObject({
+      status: 415,
+    });
+    await expect(
+      assets.putAsset(auth, 'avatar', new Uint8Array(2 * 1024 * 1024).fill(0xff), NONE),
+    ).rejects.toMatchObject({
+      status: 413,
+    });
+    const v1 = await assets.putAsset(auth, 'avatar', png, NONE);
+    expect((await assets.listAssets(auth.user.id)).avatar).toBe(v1);
+    const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9, 9]);
+    await assets.putAsset(auth, 'avatar', jpg, NONE);
+    const got = await assets.readAsset(auth.user.id, 'avatar');
+    expect(got?.contentType).toBe('image/jpeg');
+    expect(Array.from(got!.body)).toEqual(Array.from(jpg));
+    // another user can't read it (lookup is by the caller's own id)
+    const other = await signedIn('rui@img.pt');
+    expect(await assets.readAsset(other.auth.user.id, 'avatar')).toBeNull();
+    await assets.deleteAsset(auth, 'avatar');
+    expect(await assets.readAsset(auth.user.id, 'avatar')).toBeNull();
+  });
+
   it('profile name and export', async () => {
     const { auth } = await signedIn('lia@x.pt');
     await account.updateProfile(auth, { name: 'Lia Nova' });
-    await prefs.patchPrefs(auth.user.id, { cols: { side: 250 } });
+    await prefs.patchPrefs(auth.user.id, { cols: { side: 250 } }, NONE);
     const fresh = await session.resolveSession(
       (
         (await svc.login({ email: 'lia@x.pt', password: 'Correct-Horse-9', remember: false }, meta)) as {

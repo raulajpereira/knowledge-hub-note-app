@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/client/api';
 import { useI18n } from '@/i18n/client';
+import { usePrefsContext } from './PrefsProvider';
 
 type Item = { src: string; title: string; link: string };
 
@@ -12,20 +13,26 @@ const REFRESH_MS = 15 * 60 * 1000;
 export function Ticker() {
   const { t } = useI18n();
   const [items, setItems] = useState<Item[] | null>(null);
+  // Reload when Definições › Notícias changes the sources (after the debounced save).
+  const sources = JSON.stringify(usePrefsContext()?.prefs.newsSources ?? null);
+  const first = useRef(true);
 
   useEffect(() => {
     let alive = true;
+    const delay = first.current ? 0 : 900;
+    first.current = false;
     const load = () =>
       api<{ items: Item[] }>('/news/ticker')
         .then((r) => alive && setItems(r.items))
         .catch(() => alive && setItems((cur) => cur ?? []));
-    load();
+    const kick = setTimeout(load, delay);
     const id = setInterval(load, REFRESH_MS);
     return () => {
       alive = false;
+      clearTimeout(kick);
       clearInterval(id);
     };
-  }, []);
+  }, [sources]);
 
   const list = items ?? [];
   const duration = `${Math.max(60, list.length * 6)}s`;

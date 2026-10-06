@@ -8,7 +8,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 0 — Infra + fundações técnicas | ✅ feito |
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
 | 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
-| 3 — Shell, Definições, Dashboard | 🔧 3.1 Estrutura feita · 3.2 Definições · 3.3 Dashboard |
+| 3 — Shell, Definições, Dashboard | 🔧 3.1 Estrutura ✅ · 3.2 Definições ✅ · 3.3 Dashboard |
 | 4 — Notas, Tarefas, Calendário | ⏳ |
 | 5 — Cofre, Emails, Issues | ⏳ |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
@@ -80,16 +80,32 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Testes**: unitários (prefs, barra lateral/gating, RSS/Atom, SSRF, dispositivos) + integração (prefs merge-patch, alterar password termina as outras sessões, sessões só do próprio, exportação sem segredos) + E2E (barra filtrada e gate do servidor, largura sincronizada entre dois browsers, bloqueio/recarregar/desbloqueio, foco/sobre/conta). 92 unitários/integração + 18 E2E.
 - **Screenshots** em `docs/screenshots/fase-3/` + comparações `cmp-*.png`.
 
-## Fase 3.1 — textos novos (a aprovar)
+## Fase 3.1 — textos novos (aprovados pelo utilizador)
 "Em construção — Este módulo chega numa próxima fase do KnowledgeHub 2.0.", "Este módulo não está incluído no seu plano.", "O painel com cartões chega na próxima entrega desta fase.", "Sem notícias de momento.", "Confirme a sua password — Por segurança, indique a password para continuar.", texto dos códigos de recuperação do 2FA, "Código da app de autenticação", "Dispositivo desconhecido", "Notificações" (título do sino) (`src/i18n/dict/ui.*.json`). Os restantes vêm do protótipo.
 
 ## Fase 3.1 — desvios do protótipo
-- Fotografia de perfil (e no ecrã de bloqueio) → 3.2, junto com o upload da foto de fundo (MinIO). Até lá, iniciais.
+- ~~Fotografia de perfil~~ → feita na 3.2.
 - Linha "O seu plano — Mudar de plano, comparar pacotes e faturação · Gerir plano" omitida: não há faturação na app e os pedidos de plano chegam com a página de preços e a consola (Fase 10). O botão "Go PRO →" do FREE abre por agora uma página provisória.
-- Password mínima: o protótipo da conta diz "Mínimo de 10 caracteres"; uso a mesma regra do registo/reset (8, `MIN_PASSWORD`) e a mensagem do registo, para não haver duas regras.
+- Password mínima: o protótipo da conta diz "Mínimo de 10 caracteres"; uso a mesma regra do registo/reset (8, `MIN_PASSWORD`) e a mensagem do registo, para não haver duas regras (o utilizador deixou ao critério do Claude).
 - O botão SAP TCodes abre a página de TCodes (popup com catálogo na Fase 7); o sino não tem ainda notificações (não há eventos até às fases de conteúdo).
 - Selo FREE: o protótipo não tinha cor para FREE (caía na do ULTRA); usa um selo neutro claro.
 - Saudação do Início calculada no fuso de Lisboa no servidor; o painel (3.3) passa a usar a hora do browser.
+
+## Fase 3.2 — Definições (feito)
+- **Página `/app/settings`** igual ao protótipo: coluna de separadores redimensionável (180–520 px, duplo clique repõe), título e cartões de vidro. Separadores conforme o plano: Aparência e Notícias para todos; **Marca** só com o módulo `brand`; **Barra lateral** só com `sidebar`. Passwords, SAP GUI, Partilhas e Management aparecem com os respetivos módulos (Fases 5, 7, 9, 8).
+- **Aparência**: fundos Areia/Grafite/Crepúsculo; **foto de fundo** (módulo `bgphoto`) com desfoque e escurecer; **tipo de letra** (módulo `typeface`) — 8 tipos do protótipo com pré-visualização ao passar o rato, servidos pela própria app (@fontsource, sem pedidos ao Google); **tamanho** do texto (85–125 %) e dos elementos (80–120 %, `zoom` como no protótipo); **Liquid Glass** (módulo `glass`, 0–80 px ou "Original"); **cor de destaque** (módulo `accent`, 8 cores + cor personalizada); **idioma** PT/EN (cookie + `users.lang`).
+- **Marca**: logótipo da empresa no lugar do logótipo KnowledgeHub na barra superior.
+- **Notícias**: fontes RSS do rodapé (ligar/desligar, remover, adicionar por endereço, estado Ativa/Erro/Desligada, atualizar); o ticker recarrega quando as fontes mudam.
+- **Barra lateral**: editor do protótipo — renomear (vazio repõe o nome original), agrupar/desagrupar, esconder, subir/descer, arrastar pela pega, adicionar grupo/espaçador, remover, repor. Abrir/fechar grupos na barra continua disponível para todos os planos (guardado à parte em `ui.navOpen`).
+- **Foto de perfil** em Conta e Dados (barra lateral, ecrã de bloqueio, conta).
+- **Imagens (foto de perfil, fundo, logótipo)**: o browser redimensiona e volta a codificar (perfil 256×256 JPEG, fundo ≤2000 px JPEG, logótipo ≤200 px de altura PNG — SVG também é convertido para PNG); o servidor verifica a assinatura real do ficheiro (só PNG/JPEG/WebP), tamanho (1 MB / 4 MB / 1 MB), módulo e limite de pedidos, guarda no bucket privado (MinIO) e só a devolve ao próprio dono através da app (`/api/v1/me/assets/:kind`), com URL versionado em cache. Tabela nova `user_assets` (migração 0003).
+- **Preferências com plano**: as chaves de personalização (`font`, `accent`, `glassBlur`, `nav`, fundo em modo foto) só são aceites pelo servidor com o módulo correspondente (403 caso contrário) e são ignoradas se o plano deixar de as incluir. Valores que chegam ao CSS são validados (listas fechadas, intervalos, `#rrggbb`).
+- **Testes**: 99 unitários/integração (inclui validação de CSS, gates por módulo, assinaturas de imagem, upload/substituição/remoção) + 19 E2E (separadores conforme o plano, fundo sincronizado após recarregar, o servidor recusa `font` sem módulo, upload da foto de perfil).
+- **Screenshots** `docs/screenshots/fase-3/20-*` a `25b-*` + `cmp-definicoes.png`.
+
+## Fase 3.2 — notas
+- Por omissão (catálogo do protótipo) os planos não incluem os módulos de "Personalização" (são add-ons): um cliente PRO/ULTRA só vê Tipo de Letra, Liquid Glass, Cor de Destaque, Marca, Barra lateral e Foto de fundo se esses módulos lhe forem atribuídos (na consola, Fase 10). O teu tenant tem todos.
+- Textos novos (curtos): "A imagem é demasiado grande.", "Não foi possível ler esta imagem. Use PNG, JPEG ou WebP.", "A carregar…". Os restantes vêm do protótipo.
 
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
@@ -124,4 +140,6 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D23 | Ecrã de bloqueio: estado de cliente (sessionStorage) + desbloqueio por `/auth/reauth`; a sessão continua válida no backend (SECURITY.md §2) | SECURITY.md |
 | D24 | `user_prefs` por merge-patch de chaves de topo validadas (lista fechada + `ui.*`), não um JSON livre | Claude |
 | D25 | RSS do rodapé lido no servidor (sem rss2json/allorigins do protótipo), com proteção SSRF e cache Redis | Claude (SECURITY.md) |
+| D26 | Imagens do utilizador servidas pela app (stream do MinIO, só ao dono), não por URLs assinados: o MinIO não fica exposto à internet | Claude |
+| D27 | Fontes tipográficas servidas pela app (@fontsource), sem Google Fonts | Claude |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |
