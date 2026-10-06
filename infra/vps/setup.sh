@@ -46,7 +46,9 @@ fi
 
 echo "==> Firewall (UFW)"
 # Keep whatever port sshd really listens on, so enabling UFW can't lock us out.
-SSH_PORT="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')"
+# `sshd -T` can fail (e.g. CloudPanel servers): never abort on it.
+SSH_PORT="$( (sshd -T 2>/dev/null || true) | awk '/^port /{print $2; exit}')"
+SSH_PORT="${SSH_PORT:-$(awk 'tolower($1)=="port"{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)}"
 SSH_PORT="${SSH_PORT:-22}"
 ufw allow "${SSH_PORT}/tcp"
 ufw allow 80/tcp
