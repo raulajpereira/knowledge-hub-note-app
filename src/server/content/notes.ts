@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { folders, itemLinks, noteAttachments, notes, tasks } from '@/db/schema';
+import { folders, itemLinks, noteAttachments, notes, tasks, voiceNotes } from '@/db/schema';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
 import { s3 } from '@/lib/storage';
@@ -351,7 +351,7 @@ export async function trashNote(auth: AuthContext, id: string) {
 }
 
 // ── Trash (prototype isTrash) ──────────────────────────────────────────────
-export type TrashKind = 'note' | 'folder' | 'task';
+export type TrashKind = 'note' | 'folder' | 'task' | 'voice';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -374,8 +374,19 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: tasks.id, title: tasks.title, deletedAt: tasks.deletedAt })
       .from(tasks)
       .where(isNotNull(tasks.deletedAt));
+    const vs = await tx
+      .select({ id: voiceNotes.id, title: voiceNotes.title, deletedAt: voiceNotes.deletedAt })
+      .from(voiceNotes)
+      .where(isNotNull(voiceNotes.deletedAt));
     const left = (d: Date) => Math.max(0, TRASH_DAYS - Math.floor((Date.now() - d.getTime()) / 86_400_000));
     return [
+      ...vs.map((x) => ({
+        id: x.id,
+        kind: 'voice' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
       ...ts.map((x) => ({
         id: x.id,
         kind: 'task' as const,
@@ -407,6 +418,8 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     const nIds = items.filter((i) => i.kind === 'note').map((i) => i.id);
     const tIds = items.filter((i) => i.kind === 'task').map((i) => i.id);
     if (tIds.length) await tx.update(tasks).set({ deletedAt: null }).where(inArray(tasks.id, tIds));
+    const vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
+    if (vIds.length) await tx.update(voiceNotes).set({ deletedAt: null }).where(inArray(voiceNotes.id, vIds));
     if (fIds.length) {
       const fs = await tx
         .update(folders)
@@ -463,7 +476,11 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let nIds: string[];
     let fIds: string[];
     let tIds: string[];
+    let vIds: string[];
     if (items === 'all') {
+      vIds = (
+        await tx.select({ id: voiceNotes.id }).from(voiceNotes).where(isNotNull(voiceNotes.deletedAt))
+      ).map((r) => r.id);
       tIds = (await tx.select({ id: tasks.id }).from(tasks).where(isNotNull(tasks.deletedAt))).map(
         (r) => r.id,
       );
@@ -480,6 +497,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       fIds = items.filter((i) => i.kind === 'folder').map((i) => i.id);
       nIds = items.filter((i) => i.kind === 'note').map((i) => i.id);
       tIds = items.filter((i) => i.kind === 'task').map((i) => i.id);
+      vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
       if (fIds.length)
         nIds.push(
           ...(
@@ -494,6 +512,17 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     if (tIds.length) {
       await unlinkAll(tx, 'task', tIds);
       await tx.delete(tasks).where(and(inArray(tasks.id, tIds), isNotNull(tasks.deletedAt)));
+    }
+    if (vIds.length) {
+      await unlinkAll(tx, 'voice', vIds);
+      const gone = await tx
+        .delete(voiceNotes)
+        .where(and(inArray(voiceNotes.id, vIds), isNotNull(voiceNotes.deletedAt)))
+        .returning({ key: voiceNotes.storageKey });
+      for (const g of gone)
+        await s3()
+          .send(new DeleteObjectCommand({ Bucket: env().S3_BUCKET, Key: g.key }))
+          .catch(() => {});
     }
     if (fIds.length)
       await tx.delete(folders).where(and(inArray(folders.id, fIds), isNotNull(folders.deletedAt)));
@@ -648,6 +677,7 @@ export async function unlinkItems(auth: AuthContext, a: ItemRef, b: ItemRef) {
 const LINKABLE = {
   note: { table: notes, title: notes.title },
   task: { table: tasks, title: tasks.title },
+  voice: { table: voiceNotes, title: voiceNotes.title },
 } as const;
 export type LinkType = keyof typeof LINKABLE;
 
@@ -696,14 +726,14 @@ export async function linkCandidates(
   auth: AuthContext,
   ref: ItemRef,
   query: string,
-  types: LinkType[] = ['note', 'task'],
+  types: LinkType[] = ['note', 'task', 'voice'],
 ) {
   const like = `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return asUser(auth, async (tx) => {
     const out: Array<{ type: LinkType; id: string; title: string; sub: string }> = [];
     for (const type of types) {
       const L = LINKABLE[type];
-      const at = type === 'note' ? notes.updatedAt : tasks.createdAt;
+      const at = type === 'note' ? notes.updatedAt : type === 'task' ? tasks.createdAt : voiceNotes.createdAt;
       const rows = await tx
         .select({ id: L.table.id, title: L.title, at })
         .from(L.table)
@@ -729,6 +759,14 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(notes)
         .where(isNull(notes.deletedAt));
+      return r?.n ?? 0;
+    });
+  if (modules.has('voice'))
+    out.voice = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(voiceNotes)
+        .where(isNull(voiceNotes.deletedAt));
       return r?.n ?? 0;
     });
   if (modules.has('tasks'))

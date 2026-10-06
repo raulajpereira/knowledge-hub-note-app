@@ -13,6 +13,7 @@ import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
+import { useDraft } from '@/components/content/useDraft';
 import './tasks.css';
 
 // ZNotes.dc.html `isTasks`: list (search, filters, types, sort) · detail.
@@ -98,39 +99,6 @@ const Plus = ({ size = 16, sw = 2.4 }: { size?: number; sw?: number }) => (
     <line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
-
-/** Small hook: value edited locally, saved after a pause (title, notes, subtask text). */
-function useDraft(value: string, save: (v: string) => void, delay = 500) {
-  const [draft, setDraft] = useState(value);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latest = useRef(save);
-  latest.current = save;
-  // Server echoes don't overwrite what is still being typed.
-  useEffect(() => {
-    if (!timer.current) setDraft(value);
-  }, [value]);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-  const change = (v: string) => {
-    setDraft(v);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      latest.current(v);
-    }, delay);
-  };
-  const flush = () => {
-    if (!timer.current) return;
-    clearTimeout(timer.current);
-    timer.current = null;
-    latest.current(draft);
-  };
-  return [draft, change, flush] as const;
-}
 
 function SubRow({
   s,

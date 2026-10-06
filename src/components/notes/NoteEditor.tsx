@@ -506,7 +506,9 @@ export function InsertBar({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => insertLink(itemHref(c.type, c.id), c.title || t('ne_untitled'))}
             >
-              <span className="kh-ne-ask__k">{t(c.type === 'task' ? 'k_task' : 'k_note')}</span>
+              <span className="kh-ne-ask__k">
+                {t(c.type === 'task' ? 'k_task' : c.type === 'voice' ? 'k_voice' : 'k_note')}
+              </span>
               <span className="kh-ne-ask__t">{c.title || t('ne_untitled')}</span>
             </button>
           ))}

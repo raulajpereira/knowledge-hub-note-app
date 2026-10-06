@@ -200,3 +200,36 @@ test('tasks: create, subtasks, repetition, filters, link to a note, Trash', asyn
   await page.goto('app/trash');
   await expect(page.locator('.kh-tr__row')).toContainText('Tarefa');
 });
+
+test('voice notes: a recording is listed, played back and transcribed by hand', async ({ page }) => {
+  await login(page);
+  // Recording needs a real microphone; the upload is what the recorder sends.
+  const webm = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, ...Array(256).fill(0)]);
+  const res = await page.request.post('api/v1/voice', {
+    multipart: {
+      audio: { name: 'rec.webm', mimeType: 'audio/webm', buffer: webm },
+      meta: JSON.stringify({
+        title: 'Daily · Projeto FI',
+        kind: 'mic',
+        durationMs: 252000,
+        levels: Array(72).fill(0.5),
+      }),
+    },
+  });
+  expect(res.status()).toBe(201);
+  await page.goto('app/voice');
+  await expect(page.locator('.kh-vc-item')).toContainText('Daily · Projeto FI');
+  await expect(page.locator('.kh-vc-item')).toContainText('4:12');
+  await expect(page.getByRole('button', { name: 'Gravar Microfone' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Gravar Áudio do PC' })).toBeVisible();
+  const tr = page.getByLabel('Transcrição');
+  await tr.fill('0:00 Bom dia a todos.');
+  await tr.blur();
+  await page.waitForTimeout(900);
+  await page.reload();
+  await expect(page.getByLabel('Transcrição')).toHaveValue('0:00 Bom dia a todos.');
+  await page.getByPlaceholder('Pesquisar gravações e transcrições…').fill('bom dia');
+  await expect(page.locator('.kh-vc-item')).toHaveCount(1);
+  await page.getByPlaceholder('Pesquisar gravações e transcrições…').fill('nada disto');
+  await expect(page.getByText('Sem gravações.')).toBeVisible();
+});

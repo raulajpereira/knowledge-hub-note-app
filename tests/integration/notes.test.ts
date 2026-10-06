@@ -34,6 +34,7 @@ describe.skipIf(!enabled)('notes', () => {
   let seed: typeof import('@/db/seed/index');
   let notes: typeof import('@/server/content/notes');
   let tasksSvc: typeof import('@/server/content/tasks');
+  let voiceSvc: typeof import('@/server/content/voice');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -43,20 +44,21 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, tasksSvc, dbm] = await Promise.all([
+    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, dbm] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
       import('@/server/auth/session'),
       import('@/db/seed/index'),
       import('@/server/content/notes'),
       import('@/server/content/tasks'),
+      import('@/server/content/voice'),
       import('@/db/client'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE item_links, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -291,5 +293,55 @@ describe.skipIf(!enabled)('notes', () => {
     expect(left).toBe(0);
     expect(await notes.linksOf(ana, { type: 'note', id: n.id })).toEqual([]);
     expect(await notes.contentCounts(ana, new Set(['notes', 'tasks']))).toEqual({ notes: 1, tasks: 1 });
+  });
+
+  it('voice notes: audio checked by its bytes, private, transcript by hand, Trash removes the file', async () => {
+    const ana = await signedIn('ana@voice.pt');
+    const rui = await signedIn('rui@voice.pt');
+    const webm = Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3, ...Array(64).fill(7)]);
+    expect(
+      await codeOf(
+        voiceSvc.createVoice(ana, {
+          title: 'x',
+          kind: 'mic',
+          durationMs: 1,
+          levels: [],
+          data: new TextEncoder().encode('<html>hello there'),
+        }),
+      ),
+    ).toBe('unsupported_audio');
+    const v = await voiceSvc.createVoice(ana, {
+      title: 'Daily · FI',
+      kind: 'pc',
+      durationMs: 252_000,
+      levels: [0.5, 2, -1, 'x', 0.25],
+      data: webm,
+    });
+    expect(v).toMatchObject({
+      kind: 'pc',
+      mime: 'audio/webm',
+      durationMs: 252_000,
+      levels: [0.5, 1, 0, 0, 0.25],
+    });
+    expect((await voiceSvc.readVoiceAudio(ana, v.id))?.body.length).toBe(webm.length);
+    expect(await voiceSvc.readVoiceAudio(rui, v.id)).toBeNull();
+    expect(await voiceSvc.listVoice(rui)).toEqual([]);
+    expect(await codeOf(voiceSvc.updateVoice(rui, v.id, { transcript: 'x' }))).toBe('not_found');
+
+    const u = await voiceSvc.updateVoice(ana, v.id, { transcript: '0:00 Bom dia a todos.', pinned: true });
+    expect(u).toMatchObject({ transcript: '0:00 Bom dia a todos.', pinned: true });
+
+    // Links with a task; Trash; purge removes the recording from storage.
+    const t = await tasksSvc.createTask(ana, { title: 'Validar BAdI' });
+    await notes.linkItems(ana, { type: 'task', id: t.id }, { type: 'voice', id: v.id });
+    expect(await notes.linksOf(ana, { type: 'task', id: t.id })).toEqual([
+      { type: 'voice', id: v.id, title: 'Daily · FI' },
+    ]);
+    await voiceSvc.trashVoice(ana, v.id);
+    expect((await notes.listTrash(ana)).map((x) => x.kind)).toEqual(['voice']);
+    await notes.purgeTrash(ana, 'all');
+    expect(await voiceSvc.readVoiceAudio(ana, v.id)).toBeNull();
+    expect(await notes.linksOf(ana, { type: 'task', id: t.id })).toEqual([]);
+    expect(await notes.contentCounts(ana, new Set(['voice']))).toEqual({ voice: 0 });
   });
 });

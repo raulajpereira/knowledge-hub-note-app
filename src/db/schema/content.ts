@@ -174,3 +174,45 @@ export const taskSubtasks = pgTable(
     check('task_subtasks_title_len', sql`char_length(${t.title}) <= 300`),
   ],
 );
+
+export const VOICE_KINDS = ['mic', 'pc'] as const;
+
+/**
+ * Voice notes (prototype isVoice): the audio lives in the private bucket,
+ * levels is the 72-bar waveform captured while recording, the transcript is
+ * written by hand (no automatic transcription in this release).
+ */
+export const voiceNotes = pgTable(
+  'voice_notes',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    title: text('title').notNull().default(''),
+    kind: text('kind', { enum: VOICE_KINDS }).notNull().default('mic'),
+    storageKey: text('storage_key').notNull(),
+    mime: text('mime').notNull(),
+    size: integer('size').notNull(),
+    durationMs: integer('duration_ms').notNull(),
+    levels: jsonb('levels').$type<number[]>().notNull().default([]),
+    transcript: text('transcript').notNull().default(''),
+    notes: text('notes').notNull().default(''),
+    pinned: boolean('pinned').notNull().default(false),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('voice_notes_owner_idx').on(t.tenantId, t.ownerId, t.createdAt),
+    check('voice_notes_kind_chk', sql`${t.kind} in ('mic','pc')`),
+    check(
+      'voice_notes_mime_chk',
+      sql`${t.mime} in ('audio/webm','audio/ogg','audio/mp4','audio/mpeg','audio/wav')`,
+    ),
+    check('voice_notes_title_len', sql`char_length(${t.title}) <= 300`),
+    check(
+      'voice_notes_text_len',
+      sql`char_length(${t.transcript}) <= 100000 and char_length(${t.notes}) <= 20000`,
+    ),
+  ],
+);

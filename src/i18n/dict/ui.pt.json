@@ -117,5 +117,12 @@
   "tk_limit": "Atingiste o limite de tarefas do plano gratuito.",
   "tk_nextCreated": "Tarefa repetida: próxima criada para {d}.",
   "tk_noDue": "Sem prazo",
-  "tk_removeSub": "Remover subtarefa"
+  "tk_removeSub": "Remover subtarefa",
+  "vc_transPh": "Escreva aqui a transcrição desta gravação…",
+  "vc_limit": "Atingiste o limite de notas de voz do plano gratuito.",
+  "vc_tooBig": "A gravação excede 25 MB.",
+  "vc_noSupport": "Este navegador não permite gravar áudio.",
+  "vc_play": "Reproduzir",
+  "vc_pause": "Pausa",
+  "vc_uploadFail": "Não foi possível guardar a gravação."
 }

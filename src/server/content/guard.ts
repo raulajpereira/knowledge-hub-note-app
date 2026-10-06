@@ -16,8 +16,9 @@ export type IdCtx = { params: Promise<{ id: string }> };
 
 export const copySuffix = z.object({ suffix: z.string().max(24).default(' (cópia)') });
 export const trashItems = z.object({
-  items: z.array(z.object({ kind: z.enum(['note', 'folder', 'task']), id: z.uuid() })).max(500),
+  items: z.array(z.object({ kind: z.enum(['note', 'folder', 'task', 'voice']), id: z.uuid() })).max(500),
 });
-export const itemRef = z.object({ type: z.enum(['note', 'task']), id: z.uuid() });
+export const itemRef = z.object({ type: z.enum(['note', 'task', 'voice']), id: z.uuid() });
 /** Module that owns an item type (links need the module of the item they start from). */
-export const moduleOfType = (type: 'note' | 'task') => (type === 'task' ? 'tasks' : 'notes');
+export const moduleOfType = (type: 'note' | 'task' | 'voice') =>
+  type === 'task' ? 'tasks' : type === 'voice' ? 'voice' : 'notes';

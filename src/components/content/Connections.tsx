@@ -11,14 +11,18 @@ import './content.css';
 // "Ligações" (prototype cx_*): links between notes, tasks… shared by the
 // notes inspector and the task detail. Dots/kinds per type as in the prototype.
 
-export type ItemType = 'note' | 'task';
+export type ItemType = 'note' | 'task' | 'voice';
 type Link = { type: ItemType; id: string; title: string };
 type Candidate = Link & { sub: string };
 
-export const ITEM_DOT: Record<ItemType, string> = { note: 'oklch(0.86 0.1 85)', task: 'oklch(0.8 0.13 30)' };
-const ITEM_KIND: Record<ItemType, string> = { note: 'k_note', task: 'k_task' };
+export const ITEM_DOT: Record<ItemType, string> = {
+  note: 'oklch(0.86 0.1 85)',
+  task: 'oklch(0.8 0.13 30)',
+  voice: 'oklch(0.76 0.12 300)',
+};
+const ITEM_KIND: Record<ItemType, string> = { note: 'k_note', task: 'k_task', voice: 'k_voice' };
 export const itemHref = (type: ItemType, id: string) =>
-  type === 'task' ? `/app/tasks?t=${id}` : `/app/notes?n=${id}`;
+  type === 'task' ? `/app/tasks?t=${id}` : type === 'voice' ? `/app/voice?v=${id}` : `/app/notes?n=${id}`;
 
 export function Connections({
   type,

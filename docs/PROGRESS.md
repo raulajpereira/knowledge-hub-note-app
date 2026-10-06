@@ -9,7 +9,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
 | 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
 | 3 — Shell, Definições, Dashboard | ✅ feito (3.1 Estrutura · 3.2 Definições · 3.3 Início; Personalizar refeito após feedback) |
-| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo ✅ · 4.2 Tarefas feito — a aguardar testes do utilizador · 4.3 Calendário/Etiquetas |
+| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo ✅ · 4.2 Tarefas ✅ · Notas de Voz feito · 4.3 Calendário/Etiquetas |
 | 5 — Cofre, Emails, Issues | ⏳ |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
 | 7 — SAP | ⏳ |
@@ -152,6 +152,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Pastas partilhadas** de tarefas → Fase 9. **Ordens de Transporte** no detalhe → Fase 7.
 - Textos novos: "Funcional / Técnica", "Gestão", "Todos os tipos" (estavam no código do protótipo, não no dicionário), aviso da repetição, limite FREE de tarefas.
 
+## Fase 4 — Notas de Voz (feito; pedido do utilizador: entram na Fase 4)
+- **Dados**: migração `0007_voice` (`voice_notes`, RLS por tenant e dono). O áudio fica no MinIO privado; a forma de onda (72 barras) é guardada ao gravar.
+- **API**: `voice` (GET · POST multipart: gravação + metadados), `voice/:id` (GET · PATCH · DELETE → Lixo), `voice/:id/audio` (só ao dono). O tipo do ficheiro é verificado pelos bytes (WebM, Ogg, MP4/M4A, WAV, MP3), máx. 25 MB, limite FREE (5).
+- **Ecrã** igual ao protótipo: pesquisa (título e transcrição), filtros Todas / Microfone / Áudio do PC, lista com mini forma de onda, **Gravar Microfone** e **Gravar Áudio do PC** (partilha de ecrã com "Partilhar áudio"), contador e barras ao vivo, Parar e Guardar / Cancelar; leitor com forma de onda clicável, −10/+10 s, velocidade 1–2×, descarregar; fixar, eliminar, notas e Ligações (notas, tarefas, notas de voz).
+- **Transcrição manual** (decisão do utilizador): o campo "Transcrição" é um texto livre com Copiar; o botão "Transcrever" do protótipo não existe nesta versão.
+- **Testes**: unitário (verificação do áudio), integração (RLS, transcrição, Lixo apaga o ficheiro, ligações) e E2E. Screenshots `55–57` e `cmp-voz.png`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -191,4 +198,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D29 | Imagens das notas guardadas sempre com a nota (upload ou importadas pelo servidor); o documento só referencia `/api/v1/files/<id>` — sem hot-linking a sites externos | Claude (SECURITY.md) |
 | D30 | Conteúdo das notas em JSON do TipTap, validado no servidor por lista de nós/marcas permitidos (não HTML) | Claude |
 | D31 | Repetição de tarefas: a próxima é criada no momento em que se conclui a atual (sem job agendado); a concluída deixa de repetir | Claude |
+| D32 | Notas de Voz na Fase 4 com transcrição escrita à mão (sem transcrição automática) | utilizador |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

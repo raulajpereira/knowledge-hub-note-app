@@ -117,5 +117,12 @@
   "tk_limit": "You reached the Free plan task limit.",
   "tk_nextCreated": "Repeating task: next one created for {d}.",
   "tk_noDue": "No due date",
-  "tk_removeSub": "Remove subtask"
+  "tk_removeSub": "Remove subtask",
+  "vc_transPh": "Type the transcript of this recording here…",
+  "vc_limit": "You reached the Free plan voice note limit.",
+  "vc_tooBig": "The recording exceeds 25 MB.",
+  "vc_noSupport": "This browser can’t record audio.",
+  "vc_play": "Play",
+  "vc_pause": "Pause",
+  "vc_uploadFail": "Could not save the recording."
 }
