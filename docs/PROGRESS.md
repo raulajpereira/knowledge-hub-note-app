@@ -9,7 +9,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
 | 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
 | 3 — Shell, Definições, Dashboard | ✅ feito (3.1 Estrutura · 3.2 Definições · 3.3 Início; Personalizar refeito após feedback) |
-| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo ✅ · 4.2 Tarefas ✅ · Notas de Voz · 4.3 Calendário + Início com dados — a aguardar testes; Etiquetas por decidir (sem desenho) |
+| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo ✅ · 4.2 Tarefas ✅ · Notas de Voz · 4.3 Calendário + Início com dados + Etiquetas — a aguardar testes |
 | 5 — Cofre, Emails, Issues | ⏳ |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
 | 7 — SAP | ⏳ |
@@ -166,8 +166,9 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - Ícones dos atalhos: quando o servidor não consegue obter o ícone aparece a inicial do site (antes podia aparecer o ícone de imagem partida).
 - **Testes**: 128 unitários/integração (feriados, dados do Início por plano e por utilizador) + 26 E2E. Screenshots `60–62` e `cmp-calendario.png`.
 
-## Etiquetas — por decidir
-- O ecrã "Etiquetas" da barra lateral **não está desenhado** no protótipo (mostra "Esta página ainda não foi desenhada"). As etiquetas já existem nas notas (chips por baixo do título, pesquisa). Pergunta ao utilizador antes de inventar um ecrã.
+## Etiquetas (feito — decisão do utilizador)
+- O ecrã não está desenhado no protótipo; feito com o aspeto do Lixo: lista das etiquetas usadas nas notas com a contagem de notas, pesquisa e **editar o nome** (em todas as notas; se o novo nome já existir, as duas juntam-se). Não mostra as notas (pedido do utilizador).
+- API `GET /api/v1/tags` · `PATCH /api/v1/tags { from, to }` (módulo Notas). Screenshots `65–66`.
 
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.

@@ -373,4 +373,31 @@ describe.skipIf(!enabled)('notes', () => {
     });
     expect(t1.dueOn).toBe('2026-10-20');
   });
+
+  it('tags: listed with counts, renamed in every note, merged when the new name exists', async () => {
+    const ana = await signedIn('ana@tags.pt');
+    const rui = await signedIn('rui@tags.pt');
+    const a = await notes.createNote(ana, { title: 'A' });
+    const b = await notes.createNote(ana, { title: 'B' });
+    await notes.updateNote(ana, a.id, { tags: ['SELECT', 'Performance'] });
+    await notes.updateNote(ana, b.id, { tags: ['Performance', 'perf'] });
+    const r = await notes.createNote(rui, { title: 'R' });
+    await notes.updateNote(rui, r.id, { tags: ['Performance'] });
+
+    expect(await notes.listTags(ana)).toEqual([
+      { name: 'perf', count: 1 },
+      { name: 'Performance', count: 2 },
+      { name: 'SELECT', count: 1 },
+    ]);
+    expect(await notes.renameTag(ana, 'SELECT', 'Select')).toEqual({ renamed: 1 });
+    expect(await notes.renameTag(ana, 'perf', 'Performance')).toEqual({ renamed: 1 }); // merge
+    expect((await notes.getNote(ana, b.id)).tags).toEqual(['Performance']);
+    expect(await notes.listTags(ana)).toEqual([
+      { name: 'Performance', count: 2 },
+      { name: 'Select', count: 1 },
+    ]);
+    expect(await codeOf(notes.renameTag(ana, 'nao-existe', 'x'))).toBe('not_found');
+    // Rui's notes are untouched.
+    expect(await notes.listTags(rui)).toEqual([{ name: 'Performance', count: 1 }]);
+  });
 });

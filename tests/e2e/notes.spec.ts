@@ -260,3 +260,25 @@ test('calendar: a task added on a day shows in the grid, panel and Início', asy
   await page.goto('app');
   await expect(page.locator('.kh-stat', { hasText: 'Tarefas para hoje' })).toContainText('1');
 });
+
+test('tags page: tags with counts, rename', async ({ page }) => {
+  await login(page);
+  await page.goto('app/tags');
+  await expect(page.locator('.kh-tg__title')).toHaveText('Etiquetas');
+  // The Go-live note has no tags yet: add one from the note, then rename it here.
+  await page.goto('app/notes');
+  await page.locator('.kh-nt-card', { hasText: 'Go-live' }).first().click();
+  await page.getByRole('button', { name: '+ Etiqueta' }).click();
+  await page.getByLabel('Nova etiqueta').fill('Go-live');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.kh-nt-tag', { hasText: 'Go-live' })).toBeVisible();
+  await page.waitForTimeout(600);
+  await page.goto('app/tags');
+  const row = page.locator('.kh-tg__row', { hasText: 'Go-live' });
+  await expect(row).toContainText('1 nota');
+  await row.getByRole('button', { name: 'Renomear Go-live' }).click();
+  await page.getByRole('textbox', { name: 'Renomear' }).fill('Arranque');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.kh-tg__row', { hasText: 'Arranque' })).toContainText('1 nota');
+  await expect(page.locator('.kh-tg__row', { hasText: 'Go-live' })).toHaveCount(0);
+});

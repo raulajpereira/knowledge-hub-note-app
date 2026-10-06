@@ -124,5 +124,12 @@
   "vc_noSupport": "This browser can’t record audio.",
   "vc_play": "Play",
   "vc_pause": "Pause",
-  "vc_uploadFail": "Could not save the recording."
+  "vc_uploadFail": "Could not save the recording.",
+  "tg_sub": "The tags used in your notes",
+  "tg_search": "Search tags…",
+  "tg_empty": "No tags yet",
+  "tg_emptyBody": "Add tags to a note, below its title, and they show up here.",
+  "tg_name": "Tag",
+  "tg_count": "Notes",
+  "tg_saved": "Tag updated in {n} notes."
 }

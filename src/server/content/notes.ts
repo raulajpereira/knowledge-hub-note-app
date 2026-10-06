@@ -779,3 +779,31 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
     });
   return out;
 }
+
+// ── Tags (Etiquetas page): the labels used in the caller's notes ───────────
+export async function listTags(auth: AuthContext): Promise<Array<{ name: string; count: number }>> {
+  return asUser(auth, async (tx) => {
+    const rows = await tx.execute<{ name: string; count: number }>(sql`
+      select t as name, count(*)::int as count
+      from ${notes}, unnest(${notes.tags}) as t
+      where ${notes.deletedAt} is null
+      group by t
+      order by lower(t), t`);
+    return [...rows];
+  });
+}
+
+/** Renames a tag in every note (also in the Trash); renaming onto an existing tag merges them. */
+export async function renameTag(auth: AuthContext, from: string, to: string) {
+  const name = to.trim().slice(0, 40);
+  if (!name) throw new ApiError(400, 'invalid_input');
+  return asUser(auth, async (tx) => {
+    const r = await tx.execute(sql`
+      update ${notes}
+      set tags = (select array_agg(distinct x) from unnest(array_replace(${notes.tags}, ${from}, ${name})) as x)
+      where ${from} = any(${notes.tags})
+      returning ${notes.id}`);
+    if (!r.length) throw new ApiError(404, 'not_found');
+    return { renamed: r.length };
+  });
+}

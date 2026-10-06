@@ -124,5 +124,12 @@
   "vc_noSupport": "Este navegador não permite gravar áudio.",
   "vc_play": "Reproduzir",
   "vc_pause": "Pausa",
-  "vc_uploadFail": "Não foi possível guardar a gravação."
+  "vc_uploadFail": "Não foi possível guardar a gravação.",
+  "tg_sub": "As etiquetas usadas nas suas notas",
+  "tg_search": "Procurar etiquetas…",
+  "tg_empty": "Ainda sem etiquetas",
+  "tg_emptyBody": "Adicione etiquetas a uma nota, por baixo do título, e elas aparecem aqui.",
+  "tg_name": "Etiqueta",
+  "tg_count": "Notas",
+  "tg_saved": "Etiqueta atualizada em {n} notas."
 }
