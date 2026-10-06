@@ -62,14 +62,15 @@ Sem `VPS_APP_DIR_V2` o workflow corre CI e publica as imagens, mas não faz depl
 
 ## 4. Nginx: publicar a v2 em `/v2` (até ao corte)
 
-Confirmar onde está o bloco do domínio: `sudo nginx -T | grep -n "server_name\|listen"`.
-Colar o conteúdo de `infra/nginx/knowledgehub-v2.locations.conf` dentro do
-bloco `server { ... }` HTTPS de `knowledge-hub.cloud`, **antes** do `location /`
-existente, e depois:
+A VPS é gerida pelo **CloudPanel**, que é dono da configuração do Nginx: a
+alteração faz-se no painel (`https://IP:8443` › Sites › knowledge-hub.cloud ›
+**Vhost**), não no ficheiro (o painel reescrevê-lo-ia). Colar o conteúdo de
+`infra/nginx/knowledgehub-v2.locations.conf` imediatamente **antes** da linha
+`location / {` (a que faz `proxy_pass` para a v1 na porta 4000) e **Save** — o
+painel valida e recarrega o Nginx.
 
-```bash
-sudo nginx -t && sudo systemctl reload nginx
-```
+Nota: o prefixo é `location /v2` (sem barra final). O Next.js redireciona
+`/v2/` → `/v2`; um redirecionamento inverso no Nginx criaria um ciclo.
 
 Só são acrescentados os caminhos `/v2`; tudo o resto continua a ir para a v1.
 
