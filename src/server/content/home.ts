@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, desc, eq, isNull } from 'drizzle-orm';
-import { folders, notes, tasks } from '@/db/schema';
+import { emails, folders, notes, tasks } from '@/db/schema';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser } from './tenant';
 
@@ -23,6 +23,11 @@ export type HomeData = {
     updatedAt: string;
   }>;
   favNotes?: Array<{ id: string; title: string }>;
+  emails?: {
+    total: number;
+    starred: Array<{ id: string; subject: string; from: string; sentAt: string | null }>;
+    pinned: Array<{ id: string; subject: string }>;
+  };
 };
 
 export async function homeData(auth: AuthContext, modules: ReadonlySet<string>): Promise<HomeData> {
@@ -64,6 +69,35 @@ export async function homeData(auth: AuthContext, modules: ReadonlySet<string>):
         updatedAt: r.updatedAt.toISOString(),
       }));
       out.favNotes = rows.filter((r) => r.favorite).map((r) => ({ id: r.id, title: r.title }));
+    }
+    if (modules.has('emails')) {
+      const rows = await tx
+        .select({
+          id: emails.id,
+          subject: emails.subject,
+          fromName: emails.fromName,
+          fromEmail: emails.fromEmail,
+          sentAt: emails.sentAt,
+          starred: emails.starred,
+          pinned: emails.pinned,
+        })
+        .from(emails)
+        .where(isNull(emails.deletedAt))
+        .orderBy(desc(emails.sentAt))
+        .limit(2000);
+      out.emails = {
+        total: rows.length,
+        starred: rows
+          .filter((r) => r.starred)
+          .slice(0, 20)
+          .map((r) => ({
+            id: r.id,
+            subject: r.subject,
+            from: r.fromName || r.fromEmail,
+            sentAt: r.sentAt?.toISOString() ?? null,
+          })),
+        pinned: rows.filter((r) => r.pinned).map((r) => ({ id: r.id, subject: r.subject })),
+      };
     }
     return out;
   });

@@ -64,6 +64,13 @@
       "when": 1791323419458,
       "tag": "0008_vault",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791325137453,
+      "tag": "0009_emails",
+      "breakpoints": true
     }
   ]
 }

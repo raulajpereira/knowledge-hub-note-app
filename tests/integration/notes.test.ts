@@ -37,6 +37,7 @@ describe.skipIf(!enabled)('notes', () => {
   let voiceSvc: typeof import('@/server/content/voice');
   let homeSvc: typeof import('@/server/content/home');
   let vault: typeof import('@/server/content/vault');
+  let mail: typeof import('@/server/content/emails');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -46,7 +47,7 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault] = await Promise.all([
+    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault, mail] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
       import('@/server/auth/session'),
@@ -57,12 +58,13 @@ describe.skipIf(!enabled)('notes', () => {
       import('@/server/content/home'),
       import('@/db/client'),
       import('@/server/content/vault'),
+      import('@/server/content/emails'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -448,5 +450,76 @@ describe.skipIf(!enabled)('notes', () => {
 
     await vault.wipeVault(a);
     expect(await vault.getVault(a)).toEqual({ keys: null, items: [] });
+  });
+
+  it('emails: .eml and .msg imported on the server, private files, folders, task, Trash', async () => {
+    const { EML } = await import('../fixtures/sample-eml');
+    const a = await signedIn('mail-a@example.pt');
+    const b = await signedIn('mail-b@example.pt');
+    const f = await mail.createEmailFolder(a, 'Cliente Banco SOL');
+    const e1 = await mail.importEmail(a, {
+      fileName: 'cutover.eml',
+      data: new TextEncoder().encode(EML),
+      folderId: f.id,
+    });
+    expect(e1).toMatchObject({
+      subject: 'Plano de cutover — S/4HANA',
+      fromName: 'Ana Silva',
+      folderId: f.id,
+      attachments: 1,
+    });
+    const msg = new Uint8Array(await fs.readFile('tests/fixtures/sample.msg'));
+    const e2 = await mail.importEmail(a, { fileName: 'plano.msg', data: msg });
+    expect(e2.subject).toBe('Plano de cutover — SAP S/4HANA');
+    expect(await codeOf(mail.importEmail(a, { fileName: 'x.eml', data: new Uint8Array([1, 2, 3]) }))).toBe(
+      'unreadable_email',
+    );
+    expect(
+      await codeOf(
+        mail.importEmail(b, { fileName: 'x.eml', data: new TextEncoder().encode(EML), folderId: f.id }),
+      ),
+    ).toBe('folder_not_found');
+
+    const full = await mail.getEmail(a, e1.id);
+    expect(full.html).toContain('data:image/png;base64,');
+    expect(full.files.map((x) => x.name)).toEqual(['plano.pdf']);
+    const att = await mail.readEmailAttachment(a, e1.id, full.files[0]!.id);
+    expect(new TextDecoder().decode(att!.body)).toBe('%PDF-1.4\n');
+    expect((await mail.readEmailOriginal(a, e2.id))!.body.length).toBe(msg.length);
+
+    // another user: nothing visible, nothing readable
+    expect(await mail.listEmails(b)).toEqual([]);
+    expect(await codeOf(mail.getEmail(b, e1.id))).toBe('not_found');
+    expect(await mail.readEmailAttachment(b, e1.id, full.files[0]!.id)).toBeNull();
+    expect(await mail.readEmailOriginal(b, e1.id)).toBeNull();
+
+    const up = await mail.updateEmail(a, e2.id, {
+      starred: true,
+      pinned: true,
+      notes: 'rever',
+      folderId: f.id,
+    });
+    expect(up).toMatchObject({ starred: true, pinned: true, notes: 'rever', folderId: f.id });
+    const task = await mail.emailToTask(a, e2.id, 'pt');
+    expect(task.title).toBe('Plano de cutover — SAP S/4HANA');
+    expect(task.notes).toContain('Email: Ana Silva <ana.silva@cliente.pt>');
+
+    // removing the folder keeps the emails
+    await mail.deleteEmailFolder(a, f.id);
+    expect((await mail.listEmails(a)).map((x) => x.folderId)).toEqual([null, null]);
+
+    // Trash: restore, then purge removes the stored files
+    await mail.trashEmail(a, e1.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual([
+      'email',
+      'Plano de cutover — S/4HANA',
+    ]);
+    await notes.restoreTrash(a, [{ kind: 'email', id: e1.id }]);
+    expect((await mail.listEmails(a)).length).toBe(2);
+    await mail.trashEmail(a, e1.id);
+    await notes.purgeTrash(a, 'all');
+    expect(await codeOf(mail.getEmail(a, e1.id))).toBe('not_found');
+    const counts = await notes.contentCounts(a, new Set(['emails']));
+    expect(counts.emails).toBe(1);
   });
 });

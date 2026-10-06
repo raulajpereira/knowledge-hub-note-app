@@ -257,3 +257,67 @@ export const vaultItems = pgTable(
     check('vault_items_ct_len', sql`char_length(${t.ciphertext}) <= 90000`),
   ],
 );
+
+/**
+ * Imported emails (.msg / .eml, prototype isMail). Parsed on the server; the
+ * HTML body is sanitized before it is stored and is only ever shown inside a
+ * sandboxed iframe. The original file and the attachments live in the private
+ * bucket and are streamed to their owner as downloads.
+ */
+export const emails = pgTable(
+  'emails',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    folderId: uuid('folder_id').references(() => folders.id, { onDelete: 'set null' }),
+    subject: text('subject').notNull().default(''),
+    fromName: text('from_name').notNull().default(''),
+    fromEmail: text('from_email').notNull().default(''),
+    toAddr: text('to_addr').notNull().default(''),
+    cc: text('cc').notNull().default(''),
+    sentAt: ts('sent_at'),
+    bodyText: text('body_text').notNull().default(''),
+    bodyHtml: text('body_html').notNull().default(''),
+    notes: text('notes').notNull().default(''),
+    starred: boolean('starred').notNull().default(false),
+    pinned: boolean('pinned').notNull().default(false),
+    fileKey: text('file_key').notNull(),
+    fileName: text('file_name').notNull(),
+    fileSize: integer('file_size').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('emails_owner_idx').on(t.tenantId, t.ownerId, t.sentAt),
+    check(
+      'emails_len',
+      sql`char_length(${t.subject}) <= 1000 and char_length(${t.fromName}) <= 300 and char_length(${t.fromEmail}) <= 320 and char_length(${t.toAddr}) <= 20000 and char_length(${t.cc}) <= 20000 and char_length(${t.notes}) <= 20000 and char_length(${t.fileName}) <= 300`,
+    ),
+    check(
+      'emails_body_len',
+      sql`char_length(${t.bodyText}) <= 1000000 and char_length(${t.bodyHtml}) <= 8000000`,
+    ),
+  ],
+);
+
+export const emailAttachments = pgTable(
+  'email_attachments',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    emailId: uuid('email_id')
+      .notNull()
+      .references(() => emails.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    mime: text('mime').notNull(),
+    size: integer('size').notNull(),
+    storageKey: text('storage_key').notNull(),
+  },
+  (t) => [
+    index('email_attachments_email_idx').on(t.emailId),
+    check('email_attachments_name_len', sql`char_length(${t.name}) <= 300`),
+  ],
+);

@@ -1,7 +1,17 @@
 import 'server-only';
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { folders, itemLinks, noteAttachments, notes, tasks, vaultItems, voiceNotes } from '@/db/schema';
+import {
+  emails,
+  folders,
+  itemLinks,
+  noteAttachments,
+  notes,
+  tasks,
+  vaultItems,
+  voiceNotes,
+} from '@/db/schema';
+import { purgeEmailsTx } from './emails';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
 import { s3 } from '@/lib/storage';
@@ -351,7 +361,7 @@ export async function trashNote(auth: AuthContext, id: string) {
 }
 
 // ── Trash (prototype isTrash) ──────────────────────────────────────────────
-export type TrashKind = 'note' | 'folder' | 'task' | 'voice';
+export type TrashKind = 'note' | 'folder' | 'task' | 'voice' | 'email';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -378,8 +388,19 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: voiceNotes.id, title: voiceNotes.title, deletedAt: voiceNotes.deletedAt })
       .from(voiceNotes)
       .where(isNotNull(voiceNotes.deletedAt));
+    const es = await tx
+      .select({ id: emails.id, title: emails.subject, deletedAt: emails.deletedAt })
+      .from(emails)
+      .where(isNotNull(emails.deletedAt));
     const left = (d: Date) => Math.max(0, TRASH_DAYS - Math.floor((Date.now() - d.getTime()) / 86_400_000));
     return [
+      ...es.map((x) => ({
+        id: x.id,
+        kind: 'email' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
       ...vs.map((x) => ({
         id: x.id,
         kind: 'voice' as const,
@@ -420,6 +441,9 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     if (tIds.length) await tx.update(tasks).set({ deletedAt: null }).where(inArray(tasks.id, tIds));
     const vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
     if (vIds.length) await tx.update(voiceNotes).set({ deletedAt: null }).where(inArray(voiceNotes.id, vIds));
+    const eIds = items.filter((i) => i.kind === 'email').map((i) => i.id);
+    // an email whose folder was removed meanwhile comes back without a folder (FK set null)
+    if (eIds.length) await tx.update(emails).set({ deletedAt: null }).where(inArray(emails.id, eIds));
     if (fIds.length) {
       const fs = await tx
         .update(folders)
@@ -477,7 +501,11 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let fIds: string[];
     let tIds: string[];
     let vIds: string[];
+    let eIds: string[];
     if (items === 'all') {
+      eIds = (await tx.select({ id: emails.id }).from(emails).where(isNotNull(emails.deletedAt))).map(
+        (r) => r.id,
+      );
       vIds = (
         await tx.select({ id: voiceNotes.id }).from(voiceNotes).where(isNotNull(voiceNotes.deletedAt))
       ).map((r) => r.id);
@@ -498,6 +526,14 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       nIds = items.filter((i) => i.kind === 'note').map((i) => i.id);
       tIds = items.filter((i) => i.kind === 'task').map((i) => i.id);
       vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
+      eIds = items.filter((i) => i.kind === 'email').map((i) => i.id);
+      if (eIds.length)
+        eIds = (
+          await tx
+            .select({ id: emails.id })
+            .from(emails)
+            .where(and(inArray(emails.id, eIds), isNotNull(emails.deletedAt)))
+        ).map((r) => r.id);
       if (fIds.length)
         nIds.push(
           ...(
@@ -509,6 +545,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
         );
     }
     await purgeNotesTx(tx, [...new Set(nIds)]);
+    await purgeEmailsTx(tx, eIds);
     if (tIds.length) {
       await unlinkAll(tx, 'task', tIds);
       await tx.delete(tasks).where(and(inArray(tasks.id, tIds), isNotNull(tasks.deletedAt)));
@@ -775,6 +812,14 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(tasks)
         .where(and(isNull(tasks.deletedAt), isNull(tasks.doneAt)));
+      return r?.n ?? 0;
+    });
+  if (modules.has('emails'))
+    out.emails = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(emails)
+        .where(isNull(emails.deletedAt));
       return r?.n ?? 0;
     });
   if (modules.has('passwords'))

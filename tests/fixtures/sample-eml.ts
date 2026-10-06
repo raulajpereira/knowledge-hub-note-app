@@ -1,0 +1,37 @@
+// A multipart .eml: HTML with an inline image (cid:), hostile markup and a PDF attachment.
+export const PNG_B64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+export const EML = [
+  'From: "Ana Silva" <ana.silva@cliente.pt>',
+  'To: Raul Pereira <raul@example.pt>',
+  'Cc: Equipa SAP <sap@example.pt>',
+  'Subject: =?UTF-8?Q?Plano_de_cutover_=E2=80=94_S/4HANA?=',
+  'Date: Tue, 06 Oct 2026 09:30:00 +0100',
+  'MIME-Version: 1.0',
+  'Content-Type: multipart/mixed; boundary="mix"',
+  '',
+  '--mix',
+  'Content-Type: multipart/related; boundary="rel"',
+  '',
+  '--rel',
+  'Content-Type: text/html; charset=utf-8',
+  '',
+  '<p onclick="x()" style="color:red">Olá <b>Raul</b> <a href="javascript:alert(1)">x</a> <a href="https://example.com">cutover</a></p><img src="cid:logo@kh"><script>alert(1)</script><iframe src="https://evil"></iframe><div style="background:url(https://t.example/p.gif)">y</div>',
+  '--rel',
+  'Content-Type: image/png',
+  'Content-Transfer-Encoding: base64',
+  'Content-ID: <logo@kh>',
+  'Content-Disposition: inline',
+  '',
+  PNG_B64,
+  '--rel--',
+  '--mix',
+  'Content-Type: application/pdf; name="plano.pdf"',
+  'Content-Transfer-Encoding: base64',
+  'Content-Disposition: attachment; filename="plano.pdf"',
+  '',
+  Buffer.from('%PDF-1.4\n').toString('base64'),
+  '--mix--',
+  '',
+].join('\r\n');

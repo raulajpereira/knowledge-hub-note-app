@@ -10,3 +10,5 @@ export function asUser<T>(
 ) {
   return withTenant(db(), { tenantId: auth.tenant.id, userId: auth.user.id }, fn);
 }
+
+export type Tx = Parameters<Parameters<typeof asUser>[1]>[0];

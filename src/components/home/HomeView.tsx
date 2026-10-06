@@ -48,6 +48,11 @@ type HomeData = {
     updatedAt: string;
   }>;
   favNotes?: Array<{ id: string; title: string }>;
+  emails?: {
+    total: number;
+    starred: Array<{ id: string; subject: string; from: string; sentAt: string | null }>;
+    pinned: Array<{ id: string; subject: string }>;
+  };
 };
 // Prototype home: priority dots and the two task groups.
 const H_PRI = {
@@ -351,6 +356,11 @@ export function HomeView() {
     ...active
       .filter((x) => x.pinned)
       .map((x) => ({ kind: t('h_k_task'), title: x.title, href: `/app/tasks?t=${x.id}` })),
+    ...(data.emails?.pinned ?? []).map((m) => ({
+      kind: t('h_k_mail'),
+      title: m.subject || t('m_noSubject'),
+      href: `/app/emails?m=${m.id}`,
+    })),
   ];
   const MON = lang === 'en' ? MON_EN : MON_PT;
   const completeTask = async (id: string) => {
@@ -388,7 +398,8 @@ export function HomeView() {
     {
       m: 'emails',
       label: t('h_st_mail'),
-      sub: `0 ${t('h_st_mailSub')}`,
+      count: data.emails?.starred.length ?? 0,
+      sub: `${data.emails?.total ?? 0} ${t('h_st_mailSub')}`,
       dot: 'oklch(0.86 0.13 85)',
       page: 'emails',
     },
@@ -887,7 +898,27 @@ export function HomeView() {
       case 'qnotes':
         return <div className="kh-card__empty">{t('h_noQnotes')}</div>;
       case 'emails':
-        return <div className="kh-card__empty">{t('h_noEmails')}</div>;
+        if (!data.emails?.starred.length) return <div className="kh-card__empty">{t('h_noEmails')}</div>;
+        return (
+          <div className="kh-hlist">
+            {data.emails.starred.map((m) => (
+              <Link key={m.id} href={`/app/emails?m=${m.id}`} className={rowCls} scroll={false}>
+                <span style={{ color: 'oklch(0.86 0.13 85)', display: 'flex' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" />
+                  </svg>
+                </span>
+                <span className="kh-hrow__col">
+                  <span className="kh-hrow__t">{m.subject || t('m_noSubject')}</span>
+                  <span className="kh-hrow__s">
+                    {m.from || '—'}
+                    {m.sentAt ? ` · ${fmtWhen(m.sentAt)}` : ''}
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        );
     }
   };
   const counts: Partial<Record<HomeType, number>> = {
@@ -901,7 +932,7 @@ export function HomeView() {
     issues: 0,
     systems: 0,
     qnotes: 0,
-    emails: 0,
+    emails: data.emails?.starred.length ?? 0,
   };
   const catalog = HOME_TYPES.filter(
     (k) => widgetAllowed(k, modules) && !home.widgets.some((w) => w.type === k),

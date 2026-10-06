@@ -179,6 +179,14 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Módulo**: Palavras-passe (como Emails e Tarefas de Projeto) não pertence a nenhum plano do protótipo — é um extra por tenant. Até haver Consola de Admin (Fase 10): `node dist/cli.mjs tenants:module --email <email> --add passwords`.
 - **Testes**: unitários (Argon2id/DEK/chave de recuperação, gerador, TOTP RFC 6238), integração (só texto cifrado, RLS, versões, repor) e E2E (criar → chave → entrada cifrada → bloquear/desbloquear → recuperar com a chave). Screenshots `fase-5/70–77` e `cmp-cofre*.png`.
 
+## Fase 5.2 — Emails (feito)
+- **Importar** `.msg` (Outlook) e `.eml` pelo botão ou arrastando os ficheiros para a lista; vários de uma vez, com resumo "N email(s) importado(s)" e os que não foi possível ler. O ficheiro é lido **no servidor** (`mailparser`, `@kenjiuno/msgreader`), até 25 MB; o original e os anexos ficam no armazenamento privado (MinIO) — migração `0009_emails` (`emails`, `email_attachments`, RLS por tenant e dono).
+- **Segurança do corpo**: o HTML é limpo por lista de permissões (sem scripts, formulários, iframes, eventos, `javascript:`, CSS com `url()`); as imagens embebidas (`cid:`) ficam dentro do email. É mostrado num iframe isolado (sandbox sem scripts) com CSP que não deixa carregar nada da rede — **imagens remotas e pixels de rastreio não são carregados**. Anexos e original são sempre descarregados (nunca abertos no browser).
+- **Ecrã** igual ao protótipo: pesquisa, pastas (criar, eliminar — os emails ficam em "Todos", arrastar um email para uma pasta), filtros Todos / Importantes / Com Anexos, lista com fixado, anexo e estrela; leitura com De / Para / Cc / Data, pasta, anexos, "Importado em", vista Tema / Original, notas (gravação automática), Importante, Fixar, **Criar Tarefa** (título = assunto, remetente e data nas notas), Descarregar Original e Eliminar (→ Lixo, 30 dias).
+- **Início**: cartão Emails (importantes), estatística "Emails importantes" e fixados nos Favoritos. Contador na barra lateral.
+- **Testes**: unitários (.eml e .msg reais, limpeza do HTML), integração (privacidade dos ficheiros, pastas, tarefa, Lixo e purga dos ficheiros) e E2E. Screenshots `fase-5/80–82` e `cmp-emails.png`.
+- **Por decidir** (SECURITY.md pede antivírus nos anexos): o ClamAV precisa de ~1 GB de RAM e não cabe no KVM 1 — ver relatório.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -222,4 +230,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D33 | Calendário segue o protótipo: vista das tarefas (e depois problemas) pelo prazo, sem tabela de eventos própria | protótipo |
 | D34 | Entradas do cofre eliminadas definitivamente (sem Lixo); a lista de pastas e a chave de recuperação ficam no `meta` cifrado | Claude |
 | D35 | Palavras-passe/Emails/Tarefas de Projeto são extras por tenant (não estão em nenhum plano do protótipo); comando CLI `tenants:module` até à Consola | protótipo |
+| D36 | Emails: leitura no pedido de importação (não no worker); HTML guardado já limpo na base de dados; imagens remotas bloqueadas pela CSP do iframe | Claude (SECURITY.md) |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |
