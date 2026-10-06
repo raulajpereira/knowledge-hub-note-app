@@ -41,6 +41,8 @@ const svg = (d: string, size = 15, sw = 1.9) => (
   />
 );
 const X = '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>';
+const GRIP =
+  '<circle cx="9" cy="6" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="18" r="1"></circle>';
 const PENCIL = '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path>';
 const todayIso = () => {
   const d = new Date();
@@ -77,6 +79,7 @@ export function HomeView() {
 
   const [editing, setEditing] = useState(false);
   const [drag, setDrag] = useState<string | null>(null);
+  const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null);
   const [quickEdit, setQuickEdit] = useState(false);
   const [scForm, setScForm] = useState<{ id: string | null; title: string; url: string } | null>(null);
   const [live, setLive] = useState<Record<string, number> | null>(null); // fractions while resizing
@@ -111,14 +114,53 @@ export function HomeView() {
   const greeting =
     hour === null ? '' : `${t(hour < 12 ? 'h_morning' : hour < 20 ? 'h_afternoon' : 'h_evening')}, ${first}`;
 
-  const moveW = (from: string, to: string) => {
+  /** Moves card `from` right before (or after) card `to`. */
+  const moveW = (from: string, to: string, after: boolean) => {
+    if (from === to) return;
     const L = home.widgets.slice();
     const i = L.findIndex((w) => w.id === from);
-    const j = L.findIndex((w) => w.id === to);
-    if (i < 0 || j < 0 || i === j) return;
+    if (i < 0) return;
     const [x] = L.splice(i, 1);
-    L.splice(j, 0, x!);
+    const j = L.findIndex((w) => w.id === to);
+    if (j < 0) return;
+    L.splice(after ? j + 1 : j, 0, x!);
     save({ widgets: L });
+  };
+  const moveBy = (id: string, delta: -1 | 1) => {
+    const vis = widgets.map((w) => w.id);
+    const k = vis.indexOf(id);
+    const other = vis[k + delta];
+    if (other) moveW(id, other, delta === 1);
+  };
+  // Pointer-based drag from the ⠿ handle: a bar shows where the card will land.
+  const startDrag = (id: string) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    setDrag(id);
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+    let target: { id: string; after: boolean } | null = null;
+    const mv = (ev: PointerEvent) => {
+      const card = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>('[data-hw]');
+      const tid = card?.dataset.id;
+      if (!card || !tid || tid === id) {
+        target = null;
+      } else {
+        const r = card.getBoundingClientRect();
+        target = { id: tid, after: ev.clientX > r.left + r.width / 2 };
+      }
+      setDrop(target);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', mv);
+      window.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      if (target) moveW(id, target.id, target.after);
+      setDrag(null);
+      setDrop(null);
+    };
+    window.addEventListener('pointermove', mv);
+    window.addEventListener('pointerup', up);
   };
   const addW = (type: HomeType) =>
     save({
@@ -756,24 +798,28 @@ export function HomeView() {
                   data-type={w.type}
                   className="kh-card"
                   data-editing={editing}
-                  draggable={editing}
-                  onDragStart={(e) => {
-                    if (!editing) return;
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', w.id);
-                    setDrag(w.id);
+                  data-id={w.id}
+                  // While editing, card contents don't navigate (links, tiles).
+                  onClickCapture={(e) => {
+                    if (editing && (e.target as HTMLElement).closest('a')) e.preventDefault();
                   }}
-                  onDragOver={(e) => editing && drag && e.preventDefault()}
-                  onDrop={(e) => {
-                    if (!editing || !drag) return;
-                    e.preventDefault();
-                    moveW(drag, w.id);
-                    setDrag(null);
-                  }}
-                  onDragEnd={() => setDrag(null)}
                   style={{ flex: `${(f * 100).toFixed(3)} 1 0`, opacity: drag === w.id ? 0.45 : 1 }}
                 >
+                  {drop?.id === w.id && (
+                    <span className="kh-card__drop" style={drop.after ? { right: -10 } : { left: -10 }} />
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    {editing && (
+                      <button
+                        type="button"
+                        className="kh-card__handle"
+                        title={t('dragT')}
+                        aria-label={`${t('dragT')} ${t(`w_${w.type}`)}`}
+                        onPointerDown={startDrag(w.id)}
+                      >
+                        {svg(GRIP, 16, 2.4)}
+                      </button>
+                    )}
                     <span className="kh-card__icon">{svg(HOME_ICONS[w.type], 15, 1.8)}</span>
                     <span
                       style={{
@@ -802,6 +848,28 @@ export function HomeView() {
                       <>
                         <button
                           type="button"
+                          className="kh-card__x"
+                          style={{ color: 'var(--text)' }}
+                          title={t('upT')}
+                          aria-label={`${t('upT')} ${t(`w_${w.type}`)}`}
+                          disabled={widgets[0]?.id === w.id}
+                          onClick={() => moveBy(w.id, -1)}
+                        >
+                          {svg('<path d="M15 6l-6 6 6 6"></path>', 13, 2.4)}
+                        </button>
+                        <button
+                          type="button"
+                          className="kh-card__x"
+                          style={{ color: 'var(--text)' }}
+                          title={t('downT')}
+                          aria-label={`${t('downT')} ${t(`w_${w.type}`)}`}
+                          disabled={widgets[widgets.length - 1]?.id === w.id}
+                          onClick={() => moveBy(w.id, 1)}
+                        >
+                          {svg('<path d="M9 6l6 6-6 6"></path>', 13, 2.4)}
+                        </button>
+                        <button
+                          type="button"
                           className="kh-card__size"
                           title={t('h_size')}
                           onClick={() => cycleSize(row, w)}
@@ -820,7 +888,7 @@ export function HomeView() {
                       </>
                     )}
                   </div>
-                  {j < n - 1 && (
+                  {editing && j < n - 1 && (
                     <div
                       className="kh-card__grip"
                       style={{ right: -12 }}
@@ -830,7 +898,7 @@ export function HomeView() {
                       <span />
                     </div>
                   )}
-                  {n > 1 && j === n - 1 && (
+                  {editing && n > 1 && j === n - 1 && (
                     <div
                       className="kh-card__grip"
                       style={{ left: -12 }}

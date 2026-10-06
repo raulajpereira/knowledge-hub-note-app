@@ -196,6 +196,13 @@ test('início: weather card, cards customised and kept after reload, focus timer
   await expect(cards.filter({ hasText: 'Ordens em Curso' })).toHaveCount(0); // SAP isn't in PRO
 
   await page.getByRole('button', { name: 'Personalizar' }).click();
+  const order = () => cards.evaluateAll((els) => els.map((e) => e.getAttribute('data-type')));
+  expect((await order()).slice(0, 2)).toEqual(['today', 'capture']);
+  await page.getByRole('button', { name: 'Mover para Baixo Hoje' }).click();
+  expect((await order()).slice(0, 2)).toEqual(['capture', 'today']);
+  // links inside cards don't navigate while editing
+  await cards.filter({ hasText: 'Captura Rápida' }).getByRole('link').first().click();
+  await expect(page).toHaveURL(/\/app$/);
   await page.getByRole('button', { name: 'Eliminar Sessão de Foco' }).click();
   await expect(cards.filter({ hasText: 'Sessão de Foco' })).toHaveCount(0);
   await page.getByRole('button', { name: '+ Adicionar Atalho' }).click();

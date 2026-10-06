@@ -30,6 +30,7 @@
   "auth_verifyOkS": "A sua conta está ativa. Já pode iniciar sessão.",
   "auth_verifyOkT": "Email confirmado",
   "auth_verifySent": "Conta criada. Enviámos um email para confirmar o seu endereço — abra o link para ativar a conta.",
+  "h_editHint": "Arraste um cartão pela pega ⠿ (ou use ← →) para o mudar de lugar. Arraste a barra entre dois cartões para ajustar a largura; S/M/L/XL muda o tamanho.",
   "home_edit": "Editar",
   "home_noItems": "Sem itens por agora.",
   "home_noNotes": "As notas recentes aparecem aqui.",

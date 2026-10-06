@@ -30,6 +30,7 @@
   "auth_verifyOkS": "Your account is active. You can sign in now.",
   "auth_verifyOkT": "Email confirmed",
   "auth_verifySent": "Account created. We sent you an email to confirm your address — open the link to activate your account.",
+  "h_editHint": "Drag a card by its ⠿ handle (or use ← →) to move it. Drag the bar between two cards to adjust the width; S/M/L/XL changes the size.",
   "home_edit": "Edit",
   "home_noItems": "Nothing here yet.",
   "home_noNotes": "Your recent notes appear here.",
