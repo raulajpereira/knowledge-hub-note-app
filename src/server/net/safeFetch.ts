@@ -144,3 +144,116 @@ export async function safeFetchBytes(
   }
   throw new SafeFetchError('too_many_redirects');
 }
+
+// ── API Playground proxy ───────────────────────────────────────────────────
+export type ProxyRequest = {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  url: string;
+  headers: Array<[string, string]>;
+  body?: string;
+};
+export type ProxyResponse = {
+  status: number;
+  statusText: string;
+  headers: Array<[string, string]>;
+  body: string;
+  truncated: boolean;
+  ms: number;
+};
+
+// Headers the browser or the proxy own; a user value would be ignored or unsafe.
+const DROP_REQ = new Set([
+  'host',
+  'connection',
+  'content-length',
+  'transfer-encoding',
+  'upgrade',
+  'te',
+  'trailer',
+  'keep-alive',
+  'proxy-authorization',
+  'proxy-connection',
+  'expect',
+]);
+const DROP_RES = new Set(['set-cookie', 'set-cookie2']);
+
+/** Port policy for user requests: web ports and the unprivileged range (no SMTP/SSH/DB well-known ports). */
+export const allowedPort = (p: string) => !p || p === '80' || p === '443' || Number(p) >= 1024;
+
+/**
+ * One request to a user-supplied URL (API Playground): http/https only, the
+ * address is checked at connect time (no private / loopback / metadata
+ * ranges), redirects are *returned*, not followed, 20 s timeout, at most
+ * `maxBytes` of body kept (the rest is dropped and `truncated` is set).
+ */
+export function safeRequest(req: ProxyRequest, maxBytes = 2 * 1024 * 1024): Promise<ProxyResponse> {
+  let url: URL;
+  try {
+    url = new URL(req.url);
+  } catch {
+    return Promise.reject(new SafeFetchError('bad_url'));
+  }
+  if (!/^https?:$/.test(url.protocol) || url.username || url.password)
+    return Promise.reject(new SafeFetchError('bad_url'));
+  if (!allowedPort(url.port)) return Promise.reject(new SafeFetchError('bad_port'));
+  const host = url.hostname.replace(/^\[|\]$/g, '');
+  if (isIP(host) && isPrivateAddress(host)) return Promise.reject(new SafeFetchError('blocked_address'));
+  const headers: Record<string, string> = { 'user-agent': 'KnowledgeHub-API-Playground/2.0' };
+  for (const [k, v] of req.headers) {
+    const key = k.trim().toLowerCase();
+    if (!key || DROP_REQ.has(key) || !/^[!#$%&'*+.^_`|~0-9a-z-]+$/.test(key) || /[\r\n]/.test(v)) continue;
+    headers[key] = v;
+  }
+  const body = req.method === 'GET' ? undefined : req.body;
+  if (body !== undefined) headers['content-length'] = String(Buffer.byteLength(body));
+  const t0 = performance.now();
+  return new Promise((resolve, reject) => {
+    const mod = url.protocol === 'https:' ? https : http;
+    const r = mod.request(
+      url,
+      { method: req.method, headers, lookup: guardedLookup, timeout: 20_000 },
+      (res) => {
+        let size = 0;
+        let truncated = false;
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => {
+          if (truncated) return;
+          if (size + c.length > maxBytes) {
+            chunks.push(c.subarray(0, maxBytes - size));
+            size = maxBytes;
+            truncated = true;
+            res.destroy();
+            finish();
+            return;
+          }
+          size += c.length;
+          chunks.push(c);
+        });
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          const out: Array<[string, string]> = [];
+          for (let i = 0; i < res.rawHeaders.length; i += 2) {
+            const k = res.rawHeaders[i]!;
+            if (!DROP_RES.has(k.toLowerCase())) out.push([k, res.rawHeaders[i + 1]!]);
+          }
+          resolve({
+            status: res.statusCode ?? 0,
+            statusText: res.statusMessage ?? '',
+            headers: out,
+            body: Buffer.concat(chunks).toString('utf8'),
+            truncated,
+            ms: Math.round(performance.now() - t0),
+          });
+        };
+        res.on('end', finish);
+        res.on('error', (e) => (done ? undefined : reject(e)));
+      },
+    );
+    r.on('timeout', () => r.destroy(new SafeFetchError('timeout')));
+    r.on('error', reject);
+    if (body !== undefined) r.write(body);
+    r.end();
+  });
+}

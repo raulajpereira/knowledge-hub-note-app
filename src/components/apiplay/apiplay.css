@@ -1,0 +1,531 @@
+/* API Playground — ZNotes.dc.html `isApi`, values 1:1 (left column reuses kh-em-*). */
+.kh-ap-new {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 0;
+  background: #fbf8f5;
+  color: #2a211c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.kh-ap-folders {
+  flex: 0 1 auto;
+  max-height: 40%;
+}
+.kh-ap-list {
+  flex: 1 0 200px;
+  min-height: 200px;
+  gap: 6px;
+}
+.kh-ap-item {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.kh-ap-item[data-on] {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.kh-ap-m {
+  width: 52px;
+  flex: none;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+.kh-ap-item > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kh-ap-item > div > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-ap-item > div > span:first-child {
+  font-size: 14px;
+  font-weight: 600;
+}
+.kh-ap-item > div > span:last-child {
+  font-size: 11px;
+  color: rgba(255, 248, 240, 0.55);
+  font-family: 'Geist Mono', monospace;
+}
+.kh-ap-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+}
+
+/* ── Request panel ─────────────────────────────────────────────────────── */
+.kh-ap-read {
+  overflow: auto;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 24px 60px rgba(0, 0, 0, 0.22);
+}
+.kh-ap-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 24px 26px;
+  color: #fbf8f5;
+}
+.kh-ap-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.kh-ap-titles {
+  flex: 1 1 280px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kh-ap-titles > span {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.6);
+}
+.kh-ap-title {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  padding: 0;
+}
+.kh-ap-env {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 6px 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.7);
+}
+.kh-ap-env select,
+.kh-ap-method {
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
+  outline: none;
+  cursor: pointer;
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+}
+.kh-ap-env select {
+  height: 28px;
+  padding: 0 30px 0 10px;
+  border-radius: 999px;
+  border: 0;
+  background-color: #fbf8f5;
+  color: #2a211c;
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232a211c' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+.kh-ap-env option,
+.kh-ap-method option {
+  background-color: #2b2c33;
+  color: #f4f2f0;
+}
+.kh-ap-folder {
+  height: 38px;
+  font-size: 13px;
+  max-width: 200px;
+}
+.kh-ap-curl {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+}
+
+.kh-ap-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(18, 12, 9, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.kh-ap-method {
+  height: 40px;
+  padding: 0 34px 0 14px;
+  border-radius: 999px;
+  border: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  font-family: 'Geist Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+.kh-ap-url {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: #fbf8f5;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  outline: none;
+}
+.kh-ap-send {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  background: #fbf8f5;
+  color: #2a211c;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kh-ap-send:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.kh-ap-resolved {
+  margin-top: -8px;
+  padding: 0 16px;
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.55);
+  font-family: 'Geist Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kh-ap-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  align-self: flex-start;
+}
+.kh-ap-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: transparent;
+  color: rgba(255, 248, 240, 0.75);
+}
+.kh-ap-tabs button[data-on] {
+  background: #fbf8f5;
+  color: #2a211c;
+}
+.kh-ap-tabs button > span {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.kh-ap-tabs button[data-on] > span {
+  background: rgba(42, 33, 28, 0.12);
+}
+
+.kh-ap-kv,
+.kh-ap-body,
+.kh-ap-resp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kh-ap-body,
+.kh-ap-resp {
+  gap: 10px;
+}
+.kh-ap-kvrow {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1.4fr) 30px;
+  gap: 8px;
+  align-items: center;
+}
+.kh-ap-ck {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: #2a211c;
+}
+.kh-ap-ck[data-on] {
+  border-color: #fbf8f5;
+  background: #fbf8f5;
+}
+.kh-ap-kvrow input,
+.kh-ap-field input {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(18, 12, 9, 0.25);
+  color: #fbf8f5;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  min-width: 0;
+}
+.kh-ap-rm {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 248, 240, 0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kh-ap-rm:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fbf8f5;
+}
+.kh-ap-add {
+  align-self: flex-start;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px dashed rgba(255, 255, 255, 0.24);
+  background: transparent;
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.kh-ap-hint {
+  font-size: 13px;
+  color: rgba(255, 248, 240, 0.62);
+  line-height: 1.5;
+}
+.kh-ap-proxy {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.kh-ap-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.kh-ap-btype {
+  height: 36px;
+  font-size: 13px;
+}
+.kh-ap-fmt {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.kh-ap-meta .kh-ap-fmt {
+  height: 32px;
+  font-size: 12px;
+}
+.kh-ap-code {
+  resize: vertical;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(18, 12, 9, 0.3);
+  color: #efe5da;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  outline: none;
+  white-space: pre;
+  min-height: 220px;
+}
+.kh-ap-resp .kh-ap-code {
+  min-height: 260px;
+}
+
+.kh-ap-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.kh-ap-auth > .kh-ap-row {
+  gap: 6px;
+}
+.kh-ap-pill {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fbf8f5;
+}
+.kh-ap-pill[data-on] {
+  border-color: #fbf8f5;
+  background: #fbf8f5;
+  color: #2a211c;
+}
+.kh-ap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kh-ap-field > span {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 240, 0.7);
+}
+.kh-ap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kh-ap-noresp {
+  padding: 30px;
+  border-radius: 18px;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 248, 240, 0.65);
+}
+.kh-ap-meta {
+  font-size: 13px;
+}
+.kh-ap-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+  color: #fbf8f5;
+}
+.kh-ap-status > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.kh-ap-chip {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-family: 'Geist Mono', monospace;
+}
+.kh-ap-at {
+  color: rgba(255, 248, 240, 0.6);
+}
+.kh-ap-error {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: oklch(0.6 0.16 25 / 0.18);
+  border: 1px solid oklch(0.7 0.16 25 / 0.5);
+  font-size: 14px;
+  line-height: 1.55;
+  color: #ffe3da;
+}
+.kh-ap-rh {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.kh-ap-rh > div:first-child {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 240, 0.7);
+  margin-bottom: 6px;
+}
+.kh-ap-rh > div + div {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 12px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  padding: 3px 0;
+}
+.kh-ap-rh > div + div > span:first-child {
+  color: rgba(255, 248, 240, 0.62);
+}
+.kh-ap-rh > div + div > span:last-child {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .kh-ap-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kh-ap-rh > div + div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

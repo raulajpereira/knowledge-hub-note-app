@@ -256,5 +256,17 @@
   "dl_t_template": "Template",
   "dl_t_command": "Comando",
   "dl_fileName": "Nome do ficheiro",
-  "dl_unrel": "Remover relação"
+  "dl_unrel": "Remover relação",
+  "ap_search": "Procurar pedidos…",
+  "ap_new": "Novo Pedido",
+  "ap_empty": "Sem pedidos.",
+  "ap_netError": "Não foi possível contactar o servidor. Detalhe: ",
+  "ap_blocked": "Endereço bloqueado: o API Playground não acede a redes privadas, localhost nem a serviços internos.",
+  "ap_badUrl": "URL inválido (use http:// ou https://, sem credenciais no endereço).",
+  "ap_badPort": "Porta não permitida (use 80, 443 ou acima de 1024).",
+  "ap_timeout": "Sem resposta em 20 segundos.",
+  "ap_truncated": "Resposta cortada aos 2 MB.",
+  "ap_text": "Texto",
+  "ap_proxyHint": "Os pedidos são feitos pelo servidor do KnowledgeHub (sem problemas de CORS); redes privadas e serviços internos estão bloqueados.",
+  "ap_method": "Método"
 }

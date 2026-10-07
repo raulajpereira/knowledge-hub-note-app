@@ -256,5 +256,17 @@
   "dl_t_template": "Template",
   "dl_t_command": "Command",
   "dl_fileName": "File name",
-  "dl_unrel": "Remove link"
+  "dl_unrel": "Remove link",
+  "ap_search": "Search requests…",
+  "ap_new": "New Request",
+  "ap_empty": "No requests.",
+  "ap_netError": "Could not reach the server. Detail: ",
+  "ap_blocked": "Address blocked: the API Playground does not reach private networks, localhost or internal services.",
+  "ap_badUrl": "Invalid URL (use http:// or https://, no credentials in the address).",
+  "ap_badPort": "Port not allowed (use 80, 443 or above 1024).",
+  "ap_timeout": "No response within 20 seconds.",
+  "ap_truncated": "Response cut at 2 MB.",
+  "ap_text": "Text",
+  "ap_proxyHint": "Requests are made by the KnowledgeHub server (no CORS issues); private networks and internal services are blocked.",
+  "ap_method": "Method"
 }

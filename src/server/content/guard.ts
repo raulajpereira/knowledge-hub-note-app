@@ -19,7 +19,7 @@ export const trashItems = z.object({
   items: z
     .array(
       z.object({
-        kind: z.enum(['note', 'folder', 'task', 'voice', 'email', 'issue', 'artifact', 'snippet']),
+        kind: z.enum(['note', 'folder', 'task', 'voice', 'email', 'issue', 'artifact', 'snippet', 'request']),
         id: z.uuid(),
       }),
     )

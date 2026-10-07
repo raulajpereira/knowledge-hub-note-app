@@ -440,3 +440,60 @@ export const snippets = pgTable(
     ),
   ],
 );
+
+/**
+ * API Playground (prototype isApi). Credentials (auth) and environment
+ * variables are encrypted at rest with the server key (SECURITY.md §7).
+ * Requests are sent by the server proxy with SSRF protection.
+ */
+export type KvRow = { k: string; v: string; on: boolean };
+export const apiRequests = pgTable(
+  'api_requests',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    folderId: uuid('folder_id').references(() => folders.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    method: text('method').notNull().default('GET'),
+    url: text('url').notNull().default(''),
+    params: jsonb('params').$type<KvRow[]>().notNull().default([]),
+    headers: jsonb('headers').$type<KvRow[]>().notNull().default([]),
+    bodyType: text('body_type').notNull().default('none'),
+    body: text('body').notNull().default(''),
+    authType: text('auth_type').notNull().default('none'),
+    /** encryptSecret(JSON {token, user, pass}) */
+    authCt: text('auth_ct'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('api_requests_owner_idx').on(t.tenantId, t.ownerId),
+    check('api_requests_method_chk', sql`${t.method} in ('GET','POST','PUT','PATCH','DELETE')`),
+    check('api_requests_body_chk', sql`${t.bodyType} in ('none','json','form','xml','text')`),
+    check('api_requests_auth_chk', sql`${t.authType} in ('none','basic','bearer')`),
+    check(
+      'api_requests_len',
+      sql`char_length(${t.title}) between 1 and 300 and char_length(${t.url}) <= 8000 and char_length(${t.body}) <= 1000000 and pg_column_size(${t.params}) <= 200000 and pg_column_size(${t.headers}) <= 200000`,
+    ),
+  ],
+);
+
+export const apiEnvs = pgTable(
+  'api_envs',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    name: text('name').notNull(),
+    /** encryptSecret(JSON KvRow[]) */
+    varsCt: text('vars_ct').notNull(),
+    sort: integer('sort').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('api_envs_owner_idx').on(t.tenantId, t.ownerId),
+    check('api_envs_name_len', sql`char_length(${t.name}) between 1 and 40`),
+  ],
+);

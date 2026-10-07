@@ -41,6 +41,7 @@ describe.skipIf(!enabled)('notes', () => {
   let iss: typeof import('@/server/content/issues');
   let art: typeof import('@/server/content/artifacts');
   let snip: typeof import('@/server/content/snippets');
+  let apip: typeof import('@/server/content/apiPlayground');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -50,28 +51,44 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault, mail, iss, art, snip] =
-      await Promise.all([
-        import('@/server/auth/service'),
-        import('@/server/licensing/codes'),
-        import('@/server/auth/session'),
-        import('@/db/seed/index'),
-        import('@/server/content/notes'),
-        import('@/server/content/tasks'),
-        import('@/server/content/voice'),
-        import('@/server/content/home'),
-        import('@/db/client'),
-        import('@/server/content/vault'),
-        import('@/server/content/emails'),
-        import('@/server/content/issues'),
-        import('@/server/content/artifacts'),
-        import('@/server/content/snippets'),
-      ]);
+    [
+      svc,
+      codesSvc,
+      session,
+      seed,
+      notes,
+      tasksSvc,
+      voiceSvc,
+      homeSvc,
+      dbm,
+      vault,
+      mail,
+      iss,
+      art,
+      snip,
+      apip,
+    ] = await Promise.all([
+      import('@/server/auth/service'),
+      import('@/server/licensing/codes'),
+      import('@/server/auth/session'),
+      import('@/db/seed/index'),
+      import('@/server/content/notes'),
+      import('@/server/content/tasks'),
+      import('@/server/content/voice'),
+      import('@/server/content/home'),
+      import('@/db/client'),
+      import('@/server/content/vault'),
+      import('@/server/content/emails'),
+      import('@/server/content/issues'),
+      import('@/server/content/artifacts'),
+      import('@/server/content/snippets'),
+      import('@/server/content/apiPlayground'),
+    ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -659,5 +676,59 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.purgeTrash(a, 'all');
     expect((await snip.listSnippets(a)).map((x) => [x.title, x.related])).toEqual([['Função debounce', []]]);
     expect((await notes.contentCounts(a, new Set(['devlib']))).devlib).toBe(1);
+  });
+
+  it('api playground: requests and envs are private, secrets encrypted, proxy refuses private hosts', async () => {
+    const a = await signedIn('api-a@example.pt');
+    const b = await signedIn('api-b@example.pt');
+    const f = await apip.createApiFolder(a, 'SuccessFactors');
+    const r = await apip.createApiRequest(a, { title: 'Ler utilizadores', folderId: f.id });
+    expect(r).toMatchObject({ method: 'GET', url: '{{host}}/', folderId: f.id });
+    expect(r.headers).toEqual([{ k: 'Accept', v: 'application/json', on: true }]);
+
+    const up = await apip.updateApiRequest(a, r.id, {
+      method: 'POST',
+      url: '{{host}}/odata/v2/User',
+      params: [{ k: '$top', v: '5', on: true }],
+      authType: 'bearer',
+      auth: { token: 'segredo-123', user: '', pass: '' },
+    });
+    expect(up.auth.token).toBe('segredo-123');
+    const [raw] = await admin`select auth_ct from api_requests where id = ${r.id}`;
+    expect(String(raw!.auth_ct)).not.toContain('segredo');
+
+    const envs = await apip.listApiEnvs(a);
+    expect(envs.map((e) => e.name)).toEqual(['DEV', 'QAS', 'PRD']);
+    await apip.updateApiEnv(a, envs[0]!.id, [{ k: 'host', v: 'https://api.example.com', on: true }]);
+    expect((await apip.listApiEnvs(a))[0]!.vars[0]!.v).toBe('https://api.example.com');
+    const [rawEnv] = await admin`select vars_ct from api_envs where id = ${envs[0]!.id}`;
+    expect(String(rawEnv!.vars_ct)).not.toContain('example.com');
+
+    expect(await apip.listApiRequests(b)).toEqual([]);
+    expect(await codeOf(apip.updateApiRequest(b, r.id, { title: 'x' }))).toBe('not_found');
+    expect(await codeOf(apip.updateApiEnv(b, envs[0]!.id, []))).toBe('not_found');
+
+    const copy = await apip.duplicateApiRequest(a, r.id, ' (cópia)');
+    expect(copy).toMatchObject({
+      title: 'Ler utilizadores (cópia)',
+      method: 'POST',
+      auth: { token: 'segredo-123' },
+    });
+
+    const sent = await apip.sendApiRequest(a, { method: 'GET', url: 'http://127.0.0.1:3100/', headers: [] });
+    expect(sent).toEqual({ ok: false, reason: 'blocked_address', message: undefined });
+    const [log] = await admin`select details from audit_log where action = 'api.blocked'`;
+    expect(log!.details).toEqual({ host: '127.0.0.1:3100' });
+
+    await apip.deleteApiFolder(a, f.id);
+    expect((await apip.listApiRequests(a)).every((x) => x.folderId === null)).toBe(true);
+    await apip.trashApiRequest(a, copy.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual([
+      'request',
+      'Ler utilizadores (cópia)',
+    ]);
+    expect((await notes.contentCounts(a, new Set(['api']))).api).toBe(1);
+    await notes.purgeTrash(a, 'all');
+    expect((await apip.listApiRequests(a)).map((x) => x.title)).toEqual(['Ler utilizadores']);
   });
 });

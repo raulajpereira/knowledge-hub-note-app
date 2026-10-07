@@ -208,6 +208,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Módulo**: a Biblioteca de Código está nos planos DEVELOPER e ULTRA (no PRO não aparece).
 - **Testes**: unitários (linguagens, realce e escape), integração (ficheiros, relacionados nos dois sentidos, privacidade, Lixo) e E2E. Screenshots `fase-6/95–97` e `cmp-biblioteca.png`.
 
+## Fase 6.3 — API Playground (feito)
+- **Dados**: migração `0013_api_playground` (`api_requests`, `api_envs`, RLS por tenant e dono). Cada pedido guarda método, URL, parâmetros, cabeçalhos, tipo e corpo, autenticação (nenhuma, Basic, Bearer) e pasta. **Token, utilizador e palavra-passe** da autenticação e **todas as variáveis de ambiente** ficam cifrados na base de dados (AES-256-GCM, `ENCRYPTION_KEY`). Ambientes DEV / QAS / PRD criados no primeiro acesso, como no protótipo.
+- **Ecrã** igual ao protótipo (`isApi`): pesquisa, novo pedido (`GET {{host}}/` com `Accept: application/json`), pastas (criar, eliminar — os pedidos passam a "Sem Pasta"), lista com método colorido e ponto de estado; título, ambiente, pasta, copiar cURL, duplicar ("(2)"), eliminar → Lixo; barra método + URL + Enviar, URL resolvido (`→ …`), separadores Parâmetros / Cabeçalhos / Corpo (JSON, form, XML, texto, Formatar) / Autenticação / Variáveis do ambiente / Resposta (estado, tempo, tamanho, corpo JSON formatado, cabeçalhos, copiar). Parâmetros e query string do URL andam sincronizados. Gravação automática.
+- **Execução segura** (SECURITY.md §7): o pedido é feito pelo servidor (sem CORS), que recusa redes privadas, localhost, link-local/metadados (verificado no momento da ligação, também depois da resolução DNS), portas abaixo de 1024 exceto 80/443, URLs com credenciais e esquemas que não sejam http/https; não segue redirecionamentos (mostra o 3xx), 20 s de limite, resposta cortada aos 2 MB, `Set-Cookie` removido, 60 envios/minuto. As tentativas bloqueadas ficam na auditoria (`api.blocked`). A resposta não é guardada (fica em memória até sair do ecrã, como no protótipo).
+- **Módulo**: planos DEVELOPER e ULTRA.
+- **Testes**: unitários (URL, portas, endereços privados, localhost), integração (CRUD, cifra das credenciais e variáveis, privacidade, duplicar, envio bloqueado + auditoria, pastas, Lixo) e E2E (criar, URL ↔ parâmetros, envio bloqueado, variáveis por ambiente, persistência, duplicar, Lixo). Screenshots `fase-6/100–103` e `cmp-api.png`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -253,4 +260,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D35 | Palavras-passe/Emails/Tarefas de Projeto são extras por tenant (não estão em nenhum plano do protótipo); comando CLI `tenants:module` até à Consola | protótipo |
 | D36 | Emails: leitura no pedido de importação (não no worker); HTML guardado já limpo na base de dados; imagens remotas bloqueadas pela CSP do iframe | Claude (SECURITY.md) |
 | D37 | Anexos de email sem antivírus (ClamAV não cabe no KVM 1): servidos sempre como download | utilizador ("avança") |
+| D38 | API Playground: as `{{variáveis}}` e a autenticação são resolvidas no browser e o servidor só faz a chamada, de forma segura; credenciais e variáveis cifradas em repouso com a chave da app (não E2E, para poderem ser usadas no envio) | Claude (SECURITY.md §7) |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

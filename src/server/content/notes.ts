@@ -2,6 +2,7 @@ import 'server-only';
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import {
+  apiRequests,
   artifacts,
   emails,
   folders,
@@ -17,6 +18,7 @@ import {
 import { purgeEmailsTx } from './emails';
 import { purgeArtifactsTx } from './artifacts';
 import { purgeSnippetsTx } from './snippets';
+import { purgeApiRequestsTx } from './apiPlayground';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
 import { s3 } from '@/lib/storage';
@@ -366,7 +368,8 @@ export async function trashNote(auth: AuthContext, id: string) {
 }
 
 // ── Trash (prototype isTrash) ──────────────────────────────────────────────
-export type TrashKind = 'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact' | 'snippet';
+export type TrashKind =
+  'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact' | 'snippet' | 'request';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -393,6 +396,10 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: voiceNotes.id, title: voiceNotes.title, deletedAt: voiceNotes.deletedAt })
       .from(voiceNotes)
       .where(isNotNull(voiceNotes.deletedAt));
+    const rs = await tx
+      .select({ id: apiRequests.id, title: apiRequests.title, deletedAt: apiRequests.deletedAt })
+      .from(apiRequests)
+      .where(isNotNull(apiRequests.deletedAt));
     const ss = await tx
       .select({ id: snippets.id, title: snippets.title, deletedAt: snippets.deletedAt })
       .from(snippets)
@@ -411,6 +418,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .where(isNotNull(emails.deletedAt));
     const left = (d: Date) => Math.max(0, TRASH_DAYS - Math.floor((Date.now() - d.getTime()) / 86_400_000));
     return [
+      ...rs.map((x) => ({
+        id: x.id,
+        kind: 'request' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
       ...ss.map((x) => ({
         id: x.id,
         kind: 'snippet' as const,
@@ -479,6 +493,9 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     if (tIds.length) await tx.update(tasks).set({ deletedAt: null }).where(inArray(tasks.id, tIds));
     const vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
     if (vIds.length) await tx.update(voiceNotes).set({ deletedAt: null }).where(inArray(voiceNotes.id, vIds));
+    const rIds = items.filter((i) => i.kind === 'request').map((i) => i.id);
+    if (rIds.length)
+      await tx.update(apiRequests).set({ deletedAt: null }).where(inArray(apiRequests.id, rIds));
     const sIds = items.filter((i) => i.kind === 'snippet').map((i) => i.id);
     if (sIds.length) await tx.update(snippets).set({ deletedAt: null }).where(inArray(snippets.id, sIds));
     const aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
@@ -549,7 +566,11 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let iIds: string[];
     let aIds: string[];
     let sIds: string[];
+    let rIds: string[];
     if (items === 'all') {
+      rIds = (
+        await tx.select({ id: apiRequests.id }).from(apiRequests).where(isNotNull(apiRequests.deletedAt))
+      ).map((r) => r.id);
       sIds = (await tx.select({ id: snippets.id }).from(snippets).where(isNotNull(snippets.deletedAt))).map(
         (r) => r.id,
       );
@@ -585,6 +606,14 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
       aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
       sIds = items.filter((i) => i.kind === 'snippet').map((i) => i.id);
+      rIds = items.filter((i) => i.kind === 'request').map((i) => i.id);
+      if (rIds.length)
+        rIds = (
+          await tx
+            .select({ id: apiRequests.id })
+            .from(apiRequests)
+            .where(and(inArray(apiRequests.id, rIds), isNotNull(apiRequests.deletedAt)))
+        ).map((r) => r.id);
       if (sIds.length)
         sIds = (
           await tx
@@ -620,6 +649,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     await purgeNotesTx(tx, [...new Set(nIds)]);
     await purgeEmailsTx(tx, eIds);
     await purgeSnippetsTx(tx, sIds);
+    await purgeApiRequestsTx(tx, rIds);
     if (aIds.length) {
       await unlinkAll(tx, 'artifact', aIds);
       await purgeArtifactsTx(tx, aIds);
@@ -905,6 +935,14 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(tasks)
         .where(and(isNull(tasks.deletedAt), isNull(tasks.doneAt)));
+      return r?.n ?? 0;
+    });
+  if (modules.has('api'))
+    out.api = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(apiRequests)
+        .where(isNull(apiRequests.deletedAt));
       return r?.n ?? 0;
     });
   if (modules.has('devlib'))
