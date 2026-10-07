@@ -9,11 +9,12 @@ import { LookTab } from './LookTab';
 import { NavTab } from './NavTab';
 import { NewsTab } from './NewsTab';
 import { SapTab } from './SapTab';
+import { MgSettingsTab } from '@/components/mg/MgSettings';
 import './settings.css';
 
 // Definições (ZNotes `isSettings`). Tabs whose module isn't in the plan are
 // hidden, like the prototype's planFeat(); tabs for later phases (Passwords,
-// Partilhas, Management) arrive with their modules.
+// Partilhas) arrive with their modules; Management shows with any mg_* module.
 const TABS = [
   {
     id: 'look',
@@ -40,6 +41,12 @@ const TABS = [
     module: 'sidebar',
     icon: '<rect x="3" y="4" width="18" height="16" rx="3"></rect><line x1="9" y1="4" x2="9" y2="20"></line>',
   },
+  {
+    id: 'mgmt',
+    label: 'set_tab_mgmt',
+    module: 'mg_*',
+    icon: '<circle cx="9" cy="8" r="3.5"></circle><path d="M3 20a6 6 0 0 1 12 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7"></path><path d="M18 14.5a6 6 0 0 1 3 5.5"></path>',
+  },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -48,7 +55,11 @@ const NAV_W = 230;
 export function SettingsView() {
   const { t } = useI18n();
   const { modules } = useShell();
-  const tabs = TABS.filter((x) => !x.module || modules.has(x.module));
+  const tabs = TABS.filter(
+    (x) =>
+      !x.module ||
+      (x.module === 'mg_*' ? [...modules].some((m) => m.startsWith('mg_')) : modules.has(x.module)),
+  );
   const [saved, setTab] = usePersistentState<TabId>('setTab', 'look');
   const tab = tabs.some((x) => x.id === saved) ? saved : 'look';
   const current = tabs.find((x) => x.id === tab)!;
@@ -138,6 +149,7 @@ export function SettingsView() {
             {tab === 'news' && <NewsTab />}
             {tab === 'sap' && <SapTab />}
             {tab === 'nav' && <NavTab />}
+            {tab === 'mgmt' && <MgSettingsTab />}
           </div>
         </div>
       </div>

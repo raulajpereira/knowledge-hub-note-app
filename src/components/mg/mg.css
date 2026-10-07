@@ -1,0 +1,96 @@
+/* Management.dc.html: the screens are styled inline (css()); hover/focus states live here. */
+.mg-page {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  color: #fbf8f5;
+  line-height: normal;
+}
+.mg-page button,
+.mg-page input,
+.mg-page select,
+.mg-page textarea {
+  font-family: inherit;
+}
+.mg-page input::placeholder,
+.mg-page textarea::placeholder {
+  color: rgba(255, 248, 240, 0.5);
+}
+.mg-round {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fbf8f5;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mg-in:focus {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+.mg-h4:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+.mg-h6:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+.mg-h8:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+.mg-h10:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+.mg-h12:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+.mg-h14:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+.mg-hb:hover {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+.mg-hx:hover {
+  color: #fff !important;
+}
+.mg-hdel:hover {
+  background: rgba(255, 120, 100, 0.16) !important;
+  color: #ffc9b8 !important;
+}
+.mg-hlead:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fbf8f5 !important;
+}
+.mg-card:hover {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  transform: translateY(-2px);
+}
+@media (max-width: 900px) {
+  .mg-split {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+    overflow: auto !important;
+  }
+  .mg-split > .mg-handle {
+    display: none !important;
+  }
+  .mg-split > div:nth-child(3) {
+    max-height: 45vh;
+    border-right: 0 !important;
+  }
+}
+.mg-tcard {
+  background: var(--glow), rgba(255, 255, 255, 0.05);
+}
+.mg-tcard:hover {
+  background: var(--glow), rgba(255, 255, 255, 0.1);
+}
+.mg-skrow:hover {
+  background: rgba(255, 255, 255, 0.04);
+}

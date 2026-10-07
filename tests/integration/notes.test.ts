@@ -103,7 +103,7 @@ describe.skipIf(!enabled)('notes', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -1115,5 +1115,66 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await listSaved(a)).toHaveLength(1);
     await unsaveItem(a, item.link);
     expect(await listSaved(a)).toEqual([]);
+  });
+
+  it('management: sample data, batches of changes, references checked inside the tenant', async () => {
+    const mg = await import('@/server/content/mg');
+    const { mgDiff } = await import('@/lib/mg');
+    const a = await signedIn('mg-a@example.pt');
+    const b = await signedIn('mg-b@example.pt');
+    await mg.resetMgSample(a);
+    const d = await mg.loadMg(a);
+    expect([d.clients.length, d.teams.length, d.people.length, d.projects.length, d.reqs.length]).toEqual([
+      6, 3, 38, 9, 6,
+    ]);
+    expect(d.allocs.length).toBeGreaterThan(20);
+    expect(d.ts.length).toBeGreaterThan(20);
+    expect(d.teams.every((t) => d.people.some((p) => p.id === t.lead))).toBe(true);
+    expect(await mg.loadMg(b)).toMatchObject({ people: [], clients: [], settings: {} });
+
+    // a change made on a copy becomes ops (puts, then deletes)
+    const next = structuredClone(d);
+    const p0 = next.people[0]!;
+    p0.name = 'Rui M.';
+    p0.skills = { ...p0.skills, rap: 2 };
+    next.allocs = next.allocs.filter((x) => x.person !== p0.id);
+    next.settings = { levels: ['', 'Júnior', 'Pleno', 'Sénior', 'Expert', 'Principal'] };
+    const ops = mgDiff(d, next);
+    expect(ops.filter((o) => o.op === 'put').map((o) => o.c)).toEqual(['people', 'settings']);
+    await mg.applyMgOps(a, ops);
+    const d2 = await mg.loadMg(a);
+    expect(d2.people.find((x) => x.id === p0.id)).toMatchObject({ name: 'Rui M.', skills: { rap: 2 } });
+    expect(d2.allocs.some((x) => x.person === p0.id)).toBe(false);
+    expect(d2.settings.levels).toHaveLength(6);
+
+    // invalid data and references to another tenant's rows are refused, nothing is applied
+    expect(await codeOf(mg.applyMgOps(a, [{ op: 'put', c: 'people', v: { ...p0, level: 0 } }]))).toBe(
+      'invalid_input',
+    );
+    await mg.resetMgSample(b);
+    const other = (await mg.loadMg(b)).projects[0]!;
+    const sneaky = {
+      id: crypto.randomUUID(),
+      person: p0.id,
+      project: other.id,
+      from: '2026-10-05',
+      to: '2026-11-02',
+      hours: 8,
+    };
+    expect(await codeOf(mg.applyMgOps(a, [{ op: 'put', c: 'allocs', v: sneaky }]))).toBe('invalid_reference');
+    expect(
+      await codeOf(
+        mg.applyMgOps(a, [
+          { op: 'put', c: 'teams', v: { ...d.teams[0]!, lead: (await mg.loadMg(b)).people[0]!.id } },
+        ]),
+      ),
+    ).toBe('invalid_reference');
+    // another tenant's row can't be deleted
+    await mg.applyMgOps(a, [{ op: 'del', c: 'projects', id: other.id }]);
+    expect((await mg.loadMg(b)).projects.some((x) => x.id === other.id)).toBe(true);
+    // deleting a project removes its allocations (FK)
+    const pj = d2.projects[0]!;
+    await mg.applyMgOps(a, [{ op: 'del', c: 'projects', id: pj.id }]);
+    expect((await mg.loadMg(a)).allocs.some((x) => x.project === pj.id)).toBe(false);
   });
 });

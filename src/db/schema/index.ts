@@ -3,3 +3,4 @@
 export * from './identity';
 export * from './content';
 export * from './sap';
+export * from './mg';

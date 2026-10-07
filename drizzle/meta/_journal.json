@@ -141,6 +141,13 @@
       "when": 1791379444758,
       "tag": "0019_news_saved",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791382005841,
+      "tag": "0020_management",
+      "breakpoints": true
     }
   ]
 }

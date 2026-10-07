@@ -1,0 +1,154 @@
+import { expect, test, type Page } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
+// Phase 8 Management: settings (areas, levels, sample data), clients, teams, people and skills.
+test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 } });
+test.describe.configure({ mode: 'serial' });
+
+const outbox = process.env.MAIL_OUTBOX_DIR;
+test.skip(!outbox, 'MAIL_OUTBOX_DIR is not set');
+
+const email = `mg-${Date.now()}@example.com`;
+const password = 'Mg-Strong-Pass-1';
+
+const cli = (...args: string[]) =>
+  execFileSync('npx', ['tsx', 'src/cli/index.ts', ...args], { encoding: 'utf8' });
+
+async function verifyLink(): Promise<string> {
+  const safe = email.replace(/[^a-z0-9@.]/gi, '_');
+  for (let i = 0; i < 40; i++) {
+    const files = fs.existsSync(outbox!)
+      ? fs.readdirSync(outbox!).filter((f) => f.includes('-verify-') && f.includes(safe))
+      : [];
+    if (files.length) {
+      const msg = JSON.parse(fs.readFileSync(path.join(outbox!, files.sort().at(-1)!), 'utf8')) as {
+        text: string;
+      };
+      const url = new URL(/https?:\/\/\S+token=[A-Za-z0-9_-]+/.exec(msg.text)![0]);
+      const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      return url.pathname.replace(new RegExp(`^${base}/`), '').replace(/^\//, '') + url.search;
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error('no verify email');
+}
+
+async function login(page: Page) {
+  await page.goto('login');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await page.waitForURL(/\/app$/);
+}
+
+test.beforeAll(async ({ browser }) => {
+  const code = /KH-LIC-\d{6}/.exec(cli('codes:create', '--type', 'license', '--plan', 'MANAGEMENT'))![0];
+  // Registration is limited to 10 per hour and IP and the other specs already
+  // use them all; this one registers from its own (documentation) address.
+  const page = await browser.newPage({
+    locale: 'pt-PT',
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.97' },
+  });
+  await page.goto('register');
+  await page.getByLabel('Nome').fill('Mg Tester');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByLabel('Licença').fill(code);
+  await page.getByRole('button', { name: 'Criar conta' }).click();
+  await expect(page.getByText('Conta criada')).toBeVisible();
+  await page.goto(await verifyLink());
+  await expect(page.getByRole('heading', { name: 'Email confirmado' })).toBeVisible();
+  await page.close();
+});
+
+type Mg = {
+  teams: Array<{ id: string; name: string; desc: string }>;
+  people: Array<{ id: string; name: string; team: string; skills: Record<string, number> }>;
+  clients: Array<{ name: string }>;
+  settings: { levels?: string[] };
+};
+const mgData = async (page: Page) => (await (await page.request.get('api/v1/mg')).json()) as Mg;
+
+test('settings: sample data, areas and levels', async ({ page }) => {
+  await login(page);
+  await page.goto('app/settings');
+  await page.getByRole('tab', { name: 'Management' }).click();
+  page.once('dialog', (d) => void d.accept());
+  await page.getByRole('button', { name: 'Repor Dados' }).click();
+  await expect(page.getByText('16 pessoas')).toBeVisible();
+  await page.getByPlaceholder('Novo nível (ex.: Principal)').fill('Principal');
+  await page.getByPlaceholder('Novo nível (ex.: Principal)').press('Enter');
+  await expect(page.getByLabel('Níveis de Senioridade 5')).toHaveValue('Principal');
+  await expect.poll(async () => (await mgData(page)).settings.levels?.at(-1)).toBe('Principal');
+  const d = await mgData(page);
+  expect(d.people).toHaveLength(38);
+  expect(d.teams).toHaveLength(3);
+});
+
+test('teams: edit, add a new member, move a member', async ({ page }) => {
+  await login(page);
+  await page.goto('app/mg-teams');
+  await expect(page.getByRole('heading', { name: 'Equipas' })).toBeVisible();
+  await page.getByText('Pessoas & PMO', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remover Equipa' })).toBeVisible();
+  await page.getByLabel('Descrição').fill('Equipa de pessoas e PMO.');
+  await page.getByRole('button', { name: 'Adicionar Membros' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Adicionar Membros' });
+  await dlg.getByRole('tab', { name: 'Novo Colaborador' }).click();
+  await dlg.getByRole('button', { name: 'Criar e Adicionar' }).click();
+  await expect(dlg.getByRole('alert')).toHaveText('Indique o nome do colaborador.');
+  await dlg.getByLabel('Nome').fill('Zé Novo');
+  await dlg.getByRole('button', { name: 'Criar e Adicionar' }).click();
+  await expect(dlg).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Remover da equipa: Zé Novo' })).toBeVisible();
+  // move someone from another team
+  await page.getByRole('button', { name: 'Adicionar Membros' }).click();
+  await dlg.getByLabel('Pesquisar por nome, função ou área…').fill('Rui Martins');
+  await dlg.getByRole('button', { name: 'Mover para esta equipa: Rui Martins' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Remover da equipa: Rui Martins' })).toBeVisible();
+  await expect
+    .poll(async () => {
+      const d = await mgData(page);
+      const t = d.teams.find((x) => x.name === 'Pessoas & PMO')!;
+      const dev = d.teams.find((x) => x.name.startsWith('Desenvolvimento'))! as {
+        lead?: string;
+      } & Mg['teams'][number];
+      return [
+        t.desc,
+        d.people.find((p) => p.name === 'Zé Novo')?.team === t.id,
+        d.people.find((p) => p.name === 'Rui Martins')?.team === t.id,
+        dev.lead,
+      ];
+    })
+    .toEqual(['Equipa de pessoas e PMO.', true, true, '']);
+});
+
+test('skills, people and clients', async ({ page }) => {
+  await login(page);
+  await page.goto('app/mg-skills');
+  const cell = page.getByRole('button', { name: 'Zé Novo · BTP', exact: true });
+  await cell.click();
+  await expect(page.getByRole('button', { name: 'Zé Novo · BTP · Júnior' })).toBeVisible();
+  await expect
+    .poll(async () => (await mgData(page)).people.find((p) => p.name === 'Zé Novo')?.skills.btp)
+    .toBe(1);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Zé Novo · BTP · Júnior' })).toBeVisible();
+
+  // people: the row opens the profile
+  await page.getByRole('rowheader', { name: /Zé Novo/ }).click();
+  await expect(page).toHaveURL(/mg-people\?p=/);
+  await expect(page.getByLabel('Função', { exact: true })).toHaveValue('Developer ABAP');
+
+  // clients: a new client with a name
+  await page.goto('app/mg-clients');
+  await page.getByRole('button', { name: 'Novo Cliente' }).click();
+  await page.getByLabel('Nome').fill('Cliente E2E');
+  await page.getByLabel('Setor').fill('Testes');
+  await expect
+    .poll(async () => (await mgData(page)).clients.some((c) => c.name === 'Cliente E2E'))
+    .toBe(true);
+});
