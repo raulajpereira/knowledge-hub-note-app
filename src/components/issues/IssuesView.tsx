@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { fmtDue, localDay } from '@/lib/tasks';
@@ -112,6 +113,11 @@ export function IssuesView() {
   const [items, setItems] = useState<Issue[] | null>(null);
   const [q, setQ] = useState('');
   const [project, setProject] = useState('');
+  const { projects } = useMgOptions();
+  const pjLabel = (id: string | null) => {
+    const p = projects.find((x) => x.id === id);
+    return p ? projectLabel(p) : '';
+  };
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<Status | null>(null);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -192,7 +198,7 @@ export function IssuesView() {
       case 'status':
         return SO[x.status];
       case 'project':
-        return '';
+        return pjLabel(x.projectId).toLowerCase();
       case 'due':
         return x.dueOn ?? '9999';
       case 'desc':
@@ -243,8 +249,17 @@ export function IssuesView() {
             <Badge label={t(PRIO[x.priority][0])} color={PRIO[x.priority][1]} />
           </div>
         );
-      case 'project':
-        return <div className="kh-is-td kh-is-td--dim">—</div>;
+      case 'project': {
+        const p = projects.find((y) => y.id === x.projectId);
+        return p ? (
+          <div className="kh-is-td" title={projectLabel(p)}>
+            <span className="kh-is-dot" style={{ background: p.color }} />
+            {projectLabel(p)}
+          </div>
+        ) : (
+          <div className="kh-is-td kh-is-td--dim">—</div>
+        );
+      }
       case 'due': {
         const d = due(x);
         return (
@@ -321,6 +336,11 @@ export function IssuesView() {
             onChange={(e) => setProject(e.target.value)}
           >
             <option value="">{t('i_allProjects')}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {projectLabel(p)}
+              </option>
+            ))}
           </select>
           <button type="button" className="kh-is-new" onClick={() => void create('open')}>
             <svg
@@ -656,9 +676,14 @@ export function IssuesView() {
                 <select
                   className="kh-is-input kh-is-input--sel"
                   value={a.projectId ?? ''}
-                  onChange={() => {}}
+                  onChange={(e) => save(a.id, { projectId: e.target.value || null })}
                 >
                   <option value="">{t('t_noProject')}</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {projectLabel(p)}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="kh-is-field">

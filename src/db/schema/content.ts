@@ -17,6 +17,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { mgProjects } from './mg';
 import { tenants, users } from './identity';
 
 const id = () =>
@@ -125,7 +126,7 @@ export const TASK_TYPES = ['tech', 'mgmt'] as const;
 export const TASK_PRIORITIES = ['low', 'medium', 'high'] as const;
 export const TASK_REPEATS = ['none', 'daily', 'weekly', 'monthly'] as const;
 
-/** Tasks (prototype isTasks). project_id points at mg_projects once Management lands (Phase 8). */
+/** Tasks (prototype isTasks). project_id: a Management project (mg_projects). */
 export const tasks = pgTable(
   'tasks',
   {
@@ -138,7 +139,7 @@ export const tasks = pgTable(
     // A day, not an instant (prototype date picker): no time-zone surprises.
     dueOn: date('due_on'),
     repeat: text('repeat', { enum: TASK_REPEATS }).notNull().default('none'),
-    projectId: uuid('project_id'),
+    projectId: uuid('project_id').references(() => mgProjects.id, { onDelete: 'set null' }),
     notes: text('notes').notNull().default(''),
     pinned: boolean('pinned').notNull().default(false),
     doneAt: ts('done_at'),
@@ -335,8 +336,8 @@ export const issues = pgTable(
     title: text('title').notNull(),
     status: text('status', { enum: ISSUE_STATUSES }).notNull().default('open'),
     priority: text('priority', { enum: ISSUE_PRIORITIES }).notNull().default('medium'),
-    // mg_projects once Management lands (Phase 8), as for tasks
-    projectId: uuid('project_id'),
+    // a Management project, as for tasks
+    projectId: uuid('project_id').references(() => mgProjects.id, { onDelete: 'set null' }),
     dueOn: date('due_on'),
     waiting: text('waiting').notNull().default(''),
     description: text('description').notNull().default(''),

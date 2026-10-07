@@ -5,6 +5,7 @@ import { ApiError } from '@/server/errors';
 import { assertWithinLimit } from '@/server/licensing/entitlements';
 import type { AuthContext } from '@/server/auth/session';
 import { nextDue } from '@/lib/tasks';
+import { checkProject } from './mg';
 import { asUser } from './tenant';
 
 // Tasks (prototype isTasks). Every query runs through asUser(), so Row Level
@@ -161,6 +162,7 @@ export async function updateTask(auth: AuthContext, id: string, patch: TaskPatch
   return asUser(auth, async (tx) => {
     const cur = await loadTask(tx, id);
     const { done, ...fields } = patch;
+    if (fields.projectId !== undefined) fields.projectId = await checkProject(tx, fields.projectId);
     const set: Partial<typeof tasks.$inferInsert> = { ...fields, updatedAt: new Date() };
     let next: Task | null = null;
     if (done !== undefined && done !== !!cur.doneAt) {

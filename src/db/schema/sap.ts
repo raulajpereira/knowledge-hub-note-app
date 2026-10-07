@@ -15,6 +15,7 @@ import {
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { mgProjects } from './mg';
 import { tenants, users } from './identity';
 
 const id = () =>
@@ -145,7 +146,7 @@ export const sapTcodeUsage = pgTable(
 /**
  * Transport requests (prototype `trs`). The route DEV → QAS → PRD is derived
  * from the client's landscape; released/QAS/PRD/junk are the dates of each step.
- * project_id points at Management projects (FK added with them, Phase 8).
+ * project_id: a Management project (mg_projects).
  */
 export const sapTransports = pgTable(
   'sap_transports',
@@ -155,7 +156,7 @@ export const sapTransports = pgTable(
     trkorr: text('trkorr').notNull().default(''),
     description: text('description').notNull().default(''),
     clientId: uuid('client_id').references(() => mgClients.id, { onDelete: 'set null' }),
-    projectId: uuid('project_id'),
+    projectId: uuid('project_id').references(() => mgProjects.id, { onDelete: 'set null' }),
     systemId: uuid('system_id').references(() => sapSystems.id, { onDelete: 'set null' }),
     type: text('type').notNull().default('W'),
     owner: text('owner').notNull().default(''),

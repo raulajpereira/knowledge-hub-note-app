@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { itemLinks, mgClients, sapSystems, sapTransports } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
+import { checkProject } from './mg';
 import { asUser, type Tx } from './tenant';
 
 // Ordens de Transporte (ZNotes.dc.html isTransports): shared by the tenant.
@@ -94,7 +95,10 @@ async function checkClient(tx: Tx, id: string | null | undefined) {
 }
 
 export type TransportPatch = Partial<
-  Pick<Transport, 'trkorr' | 'description' | 'clientId' | 'systemId' | 'type' | 'owner' | 'notes'>
+  Pick<
+    Transport,
+    'trkorr' | 'description' | 'clientId' | 'projectId' | 'systemId' | 'type' | 'owner' | 'notes'
+  >
 > & { steps?: Partial<Record<Step, boolean>> };
 
 /** Prototype oNew: number prefilled from the DEV system (SID + "K9"), client from that system. */
@@ -115,6 +119,7 @@ export async function createTransport(auth: AuthContext, input: TransportPatch):
         description: input.description ?? '',
         systemId: sys?.id ?? null,
         clientId: (await checkClient(tx, input.clientId)) ?? sys?.clientId ?? null,
+        projectId: await checkProject(tx, input.projectId),
         type: input.type ?? 'W',
         owner: (input.owner ?? '').toUpperCase(),
       })
@@ -139,6 +144,7 @@ export async function updateTransport(
     if (rest.trkorr !== undefined) set.trkorr = rest.trkorr.toUpperCase();
     if (rest.owner !== undefined) set.owner = rest.owner.toUpperCase();
     if (rest.clientId !== undefined) set.clientId = await checkClient(tx, rest.clientId);
+    if (rest.projectId !== undefined) set.projectId = await checkProject(tx, rest.projectId);
     if (rest.systemId !== undefined) {
       const sys = await systemOf(tx, rest.systemId);
       set.systemId = sys?.id ?? null;

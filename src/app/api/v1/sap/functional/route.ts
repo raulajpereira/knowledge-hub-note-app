@@ -2,6 +2,7 @@ import { body, handler, json } from '@/server/http';
 import { requireContent } from '@/server/content/guard';
 import { listClients } from '@/server/content/sap';
 import { createRecord, listRecords } from '@/server/content/functional';
+import { mgOptions } from '@/server/content/mg';
 import { FnCreate, FnPageParam } from '../schemas';
 
 /**
@@ -12,8 +13,12 @@ import { FnCreate, FnPageParam } from '../schemas';
 export const GET = handler(async (req) => {
   const page = FnPageParam.parse(new URL(req.url).searchParams.get('page'));
   const auth = await requireContent(page);
-  const [records, clients] = await Promise.all([listRecords(auth, page), listClients(auth)]);
-  return json({ records, clients, projects: [], people: [] });
+  const [records, clients, mg] = await Promise.all([
+    listRecords(auth, page),
+    listClients(auth),
+    mgOptions(auth),
+  ]);
+  return json({ records, clients, projects: mg.projects, people: mg.people });
 });
 
 export const POST = handler(async (req) => {

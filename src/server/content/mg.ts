@@ -335,3 +335,36 @@ export async function resetMgSample(auth: AuthContext) {
     await applyTx(tx, auth.tenant.id, ops);
   });
 }
+
+/** A project id given by another screen (task, issue, transport) must be one of the tenant's projects. */
+export async function checkProject(tx: Tx, id: string | null | undefined): Promise<string | null> {
+  if (!id) return null;
+  const [r] = await tx.select({ id: mgProjects.id }).from(mgProjects).where(eq(mgProjects.id, id));
+  if (!r) throw new ApiError(400, 'invalid_reference', 'unknown project');
+  return r.id;
+}
+
+export type MgOptions = {
+  projects: Array<{ id: string; code: string; name: string; color: string; client: string }>;
+  people: Array<{ id: string; name: string }>;
+};
+
+/** Projects and people for the selects of other screens (tasks, issues, transports, functional). */
+export async function mgOptions(auth: AuthContext): Promise<MgOptions> {
+  return asUser(auth, async (tx) => {
+    const [projects, people] = await Promise.all([
+      tx
+        .select({
+          id: mgProjects.id,
+          code: mgProjects.code,
+          name: mgProjects.name,
+          color: mgProjects.color,
+          client: mgProjects.clientId,
+        })
+        .from(mgProjects)
+        .orderBy(asc(mgProjects.code)),
+      tx.select({ id: mgPeople.id, name: mgPeople.name }).from(mgPeople).orderBy(asc(mgPeople.name)),
+    ]);
+    return { projects: projects.map((p) => ({ ...p, client: n(p.client) })), people };
+  });
+}

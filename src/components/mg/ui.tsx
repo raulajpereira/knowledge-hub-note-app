@@ -41,12 +41,15 @@ export function Split({
   list,
   children,
   tip = 'Arraste para ajustar · duplo clique repõe',
+  bare,
 }: {
   page: string;
   def?: number;
   list: React.ReactNode;
   children: React.ReactNode;
   tip?: string;
+  /** inside another glass section (Timesheets): no glass of its own */
+  bare?: boolean;
 }) {
   const [cols, setCols] = usePersistentState<Record<string, number>>('mg.cols', {});
   const [live, setLive] = useState<number | null>(null);
@@ -81,10 +84,10 @@ export function Split({
       ref={ref}
       className="mg-split"
       style={css(
-        `${GLASS}display:grid;grid-template-rows:minmax(0,1fr);grid-template-columns:min(${cw}px, calc(100% - 360px)) minmax(0,1fr);`,
+        `${bare ? 'position:relative;flex:1;min-height:0;' : GLASS}display:grid;grid-template-rows:minmax(0,1fr);grid-template-columns:min(${cw}px, calc(100% - 360px)) minmax(0,1fr);`,
       )}
     >
-      <div style={BLUR} />
+      <div style={bare ? { display: 'none' } : BLUR} />
       <div
         role="separator"
         aria-orientation="vertical"

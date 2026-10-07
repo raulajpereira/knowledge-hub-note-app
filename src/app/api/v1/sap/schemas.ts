@@ -68,6 +68,7 @@ export const TransportInput = z
       .regex(/^[A-Za-z0-9]*$/),
     description: s(500),
     clientId: z.uuid().nullable(),
+    projectId: z.uuid().nullable(),
     systemId: z.uuid().nullable(),
     type: z.enum(['W', 'C']),
     owner: z

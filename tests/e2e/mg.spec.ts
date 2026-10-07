@@ -79,6 +79,8 @@ type Mg = {
     ovr?: Record<string, number | ''>;
     dov?: Record<string, number>;
   }>;
+  reqs: Array<{ id: string; status: string; assigned: string; skills: Array<{ k: string; l: number }> }>;
+  ts: Array<{ person: string; week: string; status: string; rows: Record<string, number[]> }>;
   teams: Array<{ id: string; name: string; desc: string }>;
   people: Array<{ id: string; name: string; team: string; skills: Record<string, number> }>;
   clients: Array<{ name: string }>;
@@ -245,4 +247,57 @@ test('allocations: new allocation from the panel, weekly override, dashboard and
     .click();
   await expect(page).toHaveURL(/mg-alloc\?mode=heat/);
   await expect(page.getByRole('tab', { name: 'Grelha Semanal' })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('resource finder: new search, profile, assign; timesheets; project on a task', async ({ page }) => {
+  await login(page);
+  await page.goto('app/mg-staff');
+  await page.getByRole('button', { name: 'Nova Pesquisa' }).click();
+  await expect(page).toHaveURL(/mg-staff\?.*r=/);
+  await page.getByLabel('Competências 1').selectOption('btp');
+  await page.getByLabel('Projeto', { exact: true }).selectOption({ label: 'LUS-S4 · Migração S/4HANA' });
+  await page.getByLabel('Horas por semana').fill('4');
+  // Zé Novo has BTP Júnior (skills test): any level matches
+  const assign = page.getByRole('button', { name: 'Alocar: Zé Novo' });
+  await expect(assign).toBeVisible();
+  await assign.click();
+  await expect(page.getByText('✓ Alocado')).toBeVisible();
+  await expect
+    .poll(async () => {
+      const d = await mgData(page);
+      const zid = d.people.find((p) => p.name === 'Zé Novo')!.id;
+      const r = d.reqs.find((x) => x.skills[0]?.k === 'btp' && x.assigned === zid);
+      return r?.status;
+    })
+    .toBe('Preenchido');
+
+  // timesheets: Zé Novo has allocations, logs hours and submits
+  await page.goto('app/mg-time');
+  await page.getByRole('tab', { name: 'Por Pessoa' }).click();
+  await page.getByRole('button', { name: 'Semana Seguinte' }).click(); // this week (Zé Novo is allocated)
+  await page.getByRole('button', { name: /Zé Novo/ }).click();
+  const cell = page.getByLabel(/^E2E-01 · /).first();
+  await cell.fill('3.5');
+  await page.getByRole('button', { name: 'Submeter Semana' }).click();
+  await expect(page.getByRole('button', { name: 'Reabrir' })).toBeVisible();
+  await expect(cell).toBeDisabled();
+  await expect
+    .poll(async () => {
+      const d = await mgData(page);
+      const zid = d.people.find((p) => p.name === 'Zé Novo')!.id;
+      return d.ts
+        .filter((x) => x.person === zid)
+        .map((x) => [x.status, Object.values(x.rows).flat().includes(3.5)]);
+    })
+    .toContainEqual(['Submetido', true]);
+
+  // tasks: the project select lists the Management projects
+  await page.goto('app/tasks');
+  await page
+    .getByRole('button', { name: /Nova Tarefa|Nova tarefa/ })
+    .first()
+    .click();
+  const sel = page.locator('label', { hasText: 'Projeto' }).locator('select');
+  await sel.selectOption({ label: 'E2E-01 · Projeto E2E' });
+  await expect(sel).toHaveValue(/[0-9a-f-]{36}/);
 });

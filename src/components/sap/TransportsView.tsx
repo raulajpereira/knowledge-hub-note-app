@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
 import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
@@ -36,9 +37,12 @@ export type Transport = {
 type Sys = { id: string; name: string; sid: string; env: string; clientId: string | null };
 type Client = { id: string; name: string };
 type Stage = 'mod' | 'rel' | 'qas' | 'prd' | 'junk';
-type FKey = 'sys' | 'client' | 'type';
+type FKey = 'sys' | 'client' | 'proj' | 'type';
 type Patch = Partial<
-  Pick<Transport, 'trkorr' | 'description' | 'clientId' | 'systemId' | 'type' | 'owner' | 'notes'>
+  Pick<
+    Transport,
+    'trkorr' | 'description' | 'clientId' | 'projectId' | 'systemId' | 'type' | 'owner' | 'notes'
+  >
 >;
 
 export const stageOf = (x: Pick<Transport, 'junkAt' | 'releasedAt' | 'prdAt' | 'qasAt'>): Stage =>
@@ -91,6 +95,14 @@ export function TransportsView() {
   const [items, setItems] = useState<Transport[] | null>(null);
   const [systems, setSystems] = useState<Sys[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const { projects } = useMgOptions();
+  const pjOf = (x: Transport) => (projects.some((p) => p.id === x.projectId) ? x.projectId! : '');
+  const pjName = (id: string | null) => {
+    const p = projects.find((y) => y.id === id);
+    return p ? projectLabel(p) : '';
+  };
+  /** prototype projsFor: the projects of a client (all when there is none) */
+  const projsFor = (client: string | null) => projects.filter((p) => !client || p.client === client);
   const [view, setView] = usePersistentState<'list' | 'pipe'>('transports.view', 'list');
   const [stage, setStage] = usePersistentState<'all' | Stage>('transports.stage', 'all');
   const [filters, setFilters] = usePersistentState<Partial<Record<FKey, string[]>>>('transports.f', {});
@@ -195,9 +207,9 @@ export function TransportsView() {
   };
   const fOn = (k: FKey) => (filters[k] ?? []).length > 0;
   const field = (x: Transport, k: FKey) =>
-    k === 'sys' ? (x.systemId ?? '') : k === 'client' ? (x.clientId ?? '') : x.type;
+    k === 'sys' ? (x.systemId ?? '') : k === 'client' ? (x.clientId ?? '') : k === 'proj' ? pjOf(x) : x.type;
   const passes = (x: Transport, skip?: FKey) =>
-    (['sys', 'client', 'type'] as FKey[]).every(
+    (['sys', 'client', 'proj', 'type'] as FKey[]).every(
       (k) => k === skip || !fOn(k) || filters[k]!.includes(field(x, k)),
     );
   const byF = all.filter((x) => passes(x));
@@ -211,6 +223,7 @@ export function TransportsView() {
           x.description,
           x.owner,
           cName(x.clientId),
+          pjName(x.projectId),
           sysById(x.systemId)?.name,
           sysById(x.systemId)?.sid,
           x.notes,
@@ -223,11 +236,13 @@ export function TransportsView() {
         ? SO[stageOf(x)]
         : k === 'client'
           ? cName(x.clientId).toLowerCase()
-          : k === 'system'
-            ? (sysById(x.systemId)?.sid ?? '')
-            : k === 'desc'
-              ? x.description.toLowerCase()
-              : String(x[k as keyof Transport] ?? '').toLowerCase();
+          : k === 'project'
+            ? pjName(x.projectId).toLowerCase()
+            : k === 'system'
+              ? (sysById(x.systemId)?.sid ?? '')
+              : k === 'desc'
+                ? x.description.toLowerCase()
+                : String(x[k as keyof Transport] ?? '').toLowerCase();
   const sorted = sort
     ? list.slice().sort((a, b) => {
         const A = val(a, sort.key),
@@ -239,13 +254,15 @@ export function TransportsView() {
 
   const create = async () => {
     const one = (k: FKey) => (fOn(k) && filters[k]!.length === 1 ? filters[k]![0]! : null);
-    const client = one('client');
+    const proj = projects.find((p) => p.id === one('proj'));
+    const client = one('client') ?? (proj?.client || null);
     const dev = systems.filter((s) => s.env === 'DEV');
     const sys = one('sys') ?? (dev.find((s) => client && s.clientId === client) ?? dev[0])?.id ?? null;
     try {
       const { transport } = await api<{ transport: Transport }>('/sap/transports', {
         systemId: sys,
         clientId: client,
+        ...(proj ? { projectId: proj.id } : {}),
         ...(one('type') ? { type: one('type') } : {}),
       });
       refreshCounts();
@@ -367,6 +384,16 @@ export function TransportsView() {
       [{ v: '', l: en ? 'No client' : 'Sem cliente' }, ...clients.map((c) => ({ v: c.id, l: c.name }))],
     ],
     [
+      'proj',
+      t('c_project'),
+      [
+        { v: '', l: en ? 'No project' : 'Sem projeto' },
+        ...projects
+          .filter((p) => !fOn('client') || filters.client!.includes(p.client))
+          .map((p) => ({ v: p.id, l: projectLabel(p), dot: p.color })),
+      ],
+    ],
+    [
       'type',
       t('s_type'),
       [
@@ -376,7 +403,7 @@ export function TransportsView() {
     ],
   ];
   const setF = (k: FKey, arr: string[]) => setFilters({ ...filters, [k]: arr });
-  const nAct = (['sys', 'client', 'type'] as FKey[]).filter(fOn).length;
+  const nAct = (['sys', 'client', 'proj', 'type'] as FKey[]).filter(fOn).length;
 
   const columns: Array<Column<Transport>> = [
     {
@@ -399,6 +426,13 @@ export function TransportsView() {
       width: 140,
       sortable: true,
       render: (x) => cName(x.clientId) || '—',
+    },
+    {
+      key: 'project',
+      label: t('c_project'),
+      width: 170,
+      sortable: true,
+      render: (x) => pjName(x.projectId) || '—',
     },
     {
       key: 'system',
@@ -797,7 +831,19 @@ export function TransportsView() {
                   className="kh-sap-select"
                   aria-label={t('s_customer')}
                   value={act.clientId ?? ''}
-                  onChange={(e) => upd(act.id, { clientId: e.target.value || null }, 0)}
+                  onChange={(e) => {
+                    const v = e.target.value || null;
+                    // prototype: a project of another client is cleared
+                    const p = projects.find((z) => z.id === act.projectId);
+                    upd(
+                      act.id,
+                      {
+                        clientId: v,
+                        ...(act.projectId && (!p || p.client !== (v ?? '')) ? { projectId: null } : {}),
+                      },
+                      0,
+                    );
+                  }}
                 >
                   <option value="">—</option>
                   {clients.map((c) => (
@@ -809,8 +855,26 @@ export function TransportsView() {
               </label>
               <label className="kh-sap-fld">
                 <span>{t('c_project')}</span>
-                <select className="kh-sap-select" aria-label={t('c_project')} value="" disabled>
+                <select
+                  className="kh-sap-select"
+                  aria-label={t('c_project')}
+                  value={pjOf(act)}
+                  onChange={(e) => {
+                    const p = projects.find((z) => z.id === e.target.value);
+                    // prototype: picking a project sets its client
+                    upd(
+                      act.id,
+                      { projectId: p?.id ?? null, ...(p?.client ? { clientId: p.client } : {}) },
+                      0,
+                    );
+                  }}
+                >
                   <option value="">—</option>
+                  {projsFor(act.clientId).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {projectLabel(p)}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="kh-sap-fld">

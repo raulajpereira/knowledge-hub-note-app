@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
@@ -168,6 +169,7 @@ function Detail({
   onDelete: () => void;
 }) {
   const { t } = useI18n();
+  const { projects } = useMgOptions();
   const when = useWhen();
   const toast = useToast();
   const done = !!task.doneAt;
@@ -336,12 +338,17 @@ function Detail({
         </label>
         <label>
           <span className="kh-tk-lbl">{t('t_project')}</span>
-          {/* Projects come from Management (Phase 8); until then only "Sem Projeto". */}
+          {/* Management projects (shared by the tenant) */}
           <select
             value={task.projectId ?? ''}
             onChange={(e) => onPatch({ projectId: e.target.value || null })}
           >
             <option value="">{t('t_noProject')}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {projectLabel(p)}
+              </option>
+            ))}
           </select>
         </label>
         <label>

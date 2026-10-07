@@ -3,6 +3,7 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { issues, ISSUE_PRIORITIES, ISSUE_STATUSES } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
+import { checkProject } from './mg';
 import { asUser } from './tenant';
 
 // Project issues (prototype isIssues): one table, two views (table / Kanban).
@@ -94,6 +95,8 @@ export type IssuePatch = Partial<{
 
 export async function updateIssue(auth: AuthContext, id: string, patch: IssuePatch): Promise<Issue> {
   return asUser(auth, async (tx) => {
+    if (patch.projectId !== undefined)
+      patch = { ...patch, projectId: await checkProject(tx, patch.projectId) };
     const [r] = await tx
       .update(issues)
       .set({

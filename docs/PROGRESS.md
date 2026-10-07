@@ -275,6 +275,12 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Desvios**: um período de alocação está limitado a 160 semanas (para o mapa diário caber na validação do servidor).
 - **Testes**: E2E (`mg.spec.ts`: novo projeto com novo cliente e fases; alocação pelo painel com dias da semana, ajuste semanal na grelha, filtro do painel, KPI da Visão Geral). Screenshots `fase-8/10–16`.
 
+## Fase 8.3 — Management: Pesquisar Recursos, Folhas de Tempos e integrações (feito)
+- **Pesquisar Recursos** (`/app/mg-staff`): pedidos de recurso (em aberto/preenchidos/todos) com perfil necessário (várias competências com nível ou "qualquer nível", projeto, período, horas/semana, custo/hora máximo); resultados por disponibilidade, custo ou nome, com ocupação no período, horas livres e semanas; "Alocar" cria a alocação e marca o pedido como preenchido. "Pedir Recurso" nos Projetos abre aqui.
+- **Folhas de Tempos** (`/app/mg-time`): por pessoa (semana, horas por dia e por projeto planeado, "+ Adicionar Projeto", Submeter/Reabrir — submetida fica só de leitura) e vistas agrupadas por projeto, cliente, função ou área ("Por Equipa", como no protótipo) com total, planeado, desvio e submetidos, por semana ou 4 semanas; as horas alimentam o "Consumido" dos Projetos e Clientes.
+- **Integrações**: as Tarefas, os Problemas e as Ordens de Transporte passam a escolher um projeto do Management (FK para `mg_projects` com `ON DELETE SET NULL`, migração `0021`; o servidor só aceita projetos do próprio tenant). Ordens: filtro e coluna Projeto, projetos do cliente escolhido, escolher um projeto preenche o cliente (como no protótipo). Problemas: coluna, ordenação e filtro por projeto. Funcional: as opções de Projeto e de pessoas (Responsável/Testador/Coordenador) vêm do Management. Endpoint `GET /mg/options` (projetos e pessoas) para estes ecrãs.
+- **Testes**: integração (projeto de outro tenant recusado em tarefas/problemas/ordens; ao apagar o projeto as ligações ficam vazias) e E2E (pedido de recurso com competência e alocação; folha de tempos submetida e bloqueada; projeto numa tarefa). Screenshots `fase-8/17–20`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -323,4 +329,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D38 | API Playground: as `{{variáveis}}` e a autenticação são resolvidas no browser e o servidor só faz a chamada, de forma segura; credenciais e variáveis cifradas em repouso com a chave da app (não E2E, para poderem ser usadas no envio) | Claude (SECURITY.md §7) |
 | D39 | Quadro implementado a partir do protótipo (SVG próprio), sem tldraw: a licença do tldraw exige chave comercial em produção; documento JSON próprio validado no servidor | utilizador ("ponto 1") |
 | D40 | Dados SAP e Management (clientes, sistemas, transações, ordens, projetos, equipas…) são do tenant (RLS só por tenant, como no DATA_MODEL); favoritos e uso ficam por utilizador. Sem papéis de edição por agora (qualquer membro com o módulo edita) | DATA_MODEL §5 |
+| D41 | Management: o ecrã mantém o conjunto de dados do protótipo em memória e envia as alterações como lotes de operações validadas (`/mg/ops`); os projetos são a referência comum de Tarefas, Problemas, Ordens e Funcional | Claude |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

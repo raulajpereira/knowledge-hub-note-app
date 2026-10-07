@@ -1177,4 +1177,40 @@ describe.skipIf(!enabled)('notes', () => {
     await mg.applyMgOps(a, [{ op: 'del', c: 'projects', id: pj.id }]);
     expect((await mg.loadMg(a)).allocs.some((x) => x.project === pj.id)).toBe(false);
   });
+
+  it('management projects in tasks, issues and transports: own tenant only, cleared when deleted', async () => {
+    const mg = await import('@/server/content/mg');
+    const { createTask, updateTask } = await import('@/server/content/tasks');
+    const { createIssue, updateIssue } = await import('@/server/content/issues');
+    const { createTransport, updateTransport } = await import('@/server/content/transports');
+    const a = await signedIn('mgl-a@example.pt');
+    const b = await signedIn('mgl-b@example.pt');
+    await mg.resetMgSample(a);
+    await mg.resetMgSample(b);
+    const opts = await mg.mgOptions(a);
+    expect(opts.projects).toHaveLength(9);
+    expect(opts.people).toHaveLength(38);
+    const pj = opts.projects.find((p) => p.client)!;
+    const foreign = (await mg.mgOptions(b)).projects[0]!.id;
+
+    const task = await createTask(a, { title: 'Ligada a projeto' });
+    expect((await updateTask(a, task.id, { projectId: pj.id })).task.projectId).toBe(pj.id);
+    expect(await codeOf(updateTask(a, task.id, { projectId: foreign }))).toBe('invalid_reference');
+    const issue = await createIssue(a, { title: 'Problema' });
+    expect((await updateIssue(a, issue.id, { projectId: pj.id })).projectId).toBe(pj.id);
+    expect(await codeOf(updateIssue(a, issue.id, { projectId: foreign }))).toBe('invalid_reference');
+    const tr = await createTransport(a, { projectId: pj.id, description: 'Ordem' });
+    expect(tr.projectId).toBe(pj.id);
+    expect(await codeOf(updateTransport(a, tr.id, { projectId: foreign }))).toBe('invalid_reference');
+    expect(await codeOf(createTransport(a, { projectId: foreign }))).toBe('invalid_reference');
+
+    // deleting the project in Management clears the links
+    await mg.applyMgOps(a, [{ op: 'del', c: 'projects', id: pj.id }]);
+    const { listTasks } = await import('@/server/content/tasks');
+    const { listIssues } = await import('@/server/content/issues');
+    const { listTransports } = await import('@/server/content/transports');
+    expect((await listTasks(a)).find((x) => x.id === task.id)?.projectId).toBeNull();
+    expect((await listIssues(a)).find((x) => x.id === issue.id)?.projectId).toBeNull();
+    expect((await listTransports(a)).find((x) => x.id === tr.id)?.projectId).toBeNull();
+  });
 });
