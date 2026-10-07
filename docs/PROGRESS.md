@@ -296,6 +296,11 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Regras no servidor**: um membro com Edição altera o item (título, conteúdo, etiquetas, subtarefas, versões), mas onde ele vive (caderno, pasta partilhada, projeto) e favoritos/afixar ficam do dono; completar uma tarefa repetida de outro não cria a próxima ocorrência. A lista normal de cada um continua só com o que é seu (âmbito de partilha só na lista da pasta). Migração `0023` corrige a política do dono em `share_members` (a coluna `folder_id` estava ambígua na 0022).
 - **Testes**: integração (membro de outro tenant: leitura, sem escrita em Leitura, edição sem mexer no local/favorito, itens do membro na pasta, pausa do membro/pessoa/pasta, caderno partilhado, tarefas e artefactos, "Remover tudo", eliminar pasta) e E2E (nova pasta partilhada → convite → Edição → criar nota com confirmação → Definições › Partilhas → pausar).
 
+## Fase 9.3 — Partilha: convites por email (feito)
+- **Convite a quem não tem conta**: o email do convite leva a `/register?invite=1&email=…`; aí o registo não pede licença (mensagem "Foi convidado para uma pasta partilhada…") e cria uma **conta FREE individual** (código KH-INV FREE criado internamente, de uso único, auditado com `via: share_invite`). Sem convite pendente para esse email, o servidor recusa sem código como antes e o formulário volta a mostrar o campo Licença.
+- **Ligação ao confirmar o email**: os convites ficam pendentes até o email ser confirmado; nesse momento (`verifyEmail`) todas as pastas a que esse email foi convidado ficam ativas para a nova conta (`kh_share_bind`). Vale também para quem se regista com uma licença no mesmo email. Screenshot `fase-9/20`.
+- **Testes**: integração (sem código e sem convite → recusado; com convite → FREE individual; membro só ativo depois de confirmar; vê a nota partilhada; email repetido continua `email_taken`) e E2E (o convidado regista-se sem licença, confirma, entra e encontra a pasta "Partilhada por …").
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).

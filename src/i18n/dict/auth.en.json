@@ -71,5 +71,8 @@
   "reset_sub": "Choose a new password for",
   "reset_submit": "Save New Password",
   "reset_title": "Set a new password",
-  "reset_toLogin": "Sign In"
+  "reset_toLogin": "Sign In",
+  "reg_sharedInvite": "You were invited to a shared folder: no license needed. The account is FREE and you can change plan later.",
+  "reg_eInvShared": "There is no pending invite for this email. Enter a license.",
+  "reg_subShared": "Create your free account to see what was shared with you."
 }

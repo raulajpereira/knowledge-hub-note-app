@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { authTokens, codeRedemptions, codes, recoveryCodes, tenants, users } from '@/db/schema';
 import { decryptSecret, encryptSecret, randomToken, safeEqual, sha256 } from '@/lib/crypto';
@@ -9,7 +9,7 @@ import { ApiError } from '@/server/errors';
 import { audit } from '@/server/audit';
 import { renderMail } from '@/server/mail/templates';
 import { sendMail } from '@/server/mail/send';
-import { redeemCode } from '@/server/licensing/codes';
+import { createCode, redeemCode } from '@/server/licensing/codes';
 import { codeType, normalizeCode } from '@/server/licensing/codeFormat';
 import { burnPasswordCheck, checkPasswordPolicy, hashPassword, verifyPassword } from './password';
 import { Lockout, allow } from './rateLimit';
@@ -82,24 +82,30 @@ export async function sendSetupLink(userId: string, email: string, lang: Lang) {
 
 // ── Register ────────────────────────────────────────────────────────────────
 export async function register(
-  input: { name: string; email: string; password: string; code: string },
+  input: { name: string; email: string; password: string; code?: string },
   meta: RequestMeta,
 ): Promise<{ userId: string }> {
   if (!meta.ip || !(await allow(`register:${meta.ip}`, 10, 3600)))
     throw new ApiError(429, 'too_many_requests');
-  const code = normalizeCode(input.code);
-  if (!codeType(code)) throw new ApiError(400, 'code_invalid');
   const email = input.email.trim().toLowerCase();
+  // Someone invited to a shared folder (Partilha) signs up without a code: a
+  // FREE individual account (decision of the user, Fase 9). The memberships
+  // only become active once the email is confirmed (verifyEmail).
+  const invited = !input.code?.trim();
+  const code = invited ? '' : normalizeCode(input.code!);
+  if (!invited && !codeType(code)) throw new ApiError(400, 'code_invalid');
   const problem = await checkPasswordPolicy(input.password);
   if (problem) throw new ApiError(400, `password_${problem}`);
 
   const [existing] = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (existing) throw new ApiError(409, 'email_taken');
+  if (invited && !(await shareInvited(email))) throw new ApiError(400, 'code_invalid');
 
   const passwordHash = await hashPassword(input.password);
+  const useCode = invited ? (await createCode({ type: 'invite', planCode: 'FREE' })).code : code;
   const { userId, tenantId } = await db()
     .transaction(async (tx) => {
-      const r = await redeemCode(tx, code, { name: input.name.trim() });
+      const r = await redeemCode(tx, useCode, { name: input.name.trim() });
       const [u] = await tx
         .insert(users)
         .values({
@@ -129,10 +135,18 @@ export async function register(
     actorUserId: userId,
     tenantId,
     targetType: 'code',
-    targetId: code,
+    targetId: useCode,
+    details: invited ? { via: 'share_invite' } : undefined,
     ip: meta.ip,
   });
   return { userId };
+}
+
+/** A pending shared-folder invitation for this email (no account yet). */
+async function shareInvited(email: string) {
+  const r = (await db().execute(sql`select kh_share_invited(${email}::citext) as ok`)) as unknown as
+    { rows: Array<{ ok: boolean }> } | Array<{ ok: boolean }>;
+  return !!(Array.isArray(r) ? r : r.rows)[0]?.ok;
 }
 
 // ── Login (+ 2FA) ───────────────────────────────────────────────────────────
@@ -261,6 +275,8 @@ export async function verifyEmail(token: string): Promise<boolean> {
       .set({ usedAt: new Date() })
       .where(eq(authTokens.tokenHash, sha256(token)));
     await tx.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, t.userId));
+    // shared folders this email was invited to are now theirs
+    await tx.execute(sql`select kh_share_bind(${t.userId}::uuid, ${t.email}::citext)`);
   });
   await audit({ action: 'user.email_verified', actorUserId: t.userId });
   return true;

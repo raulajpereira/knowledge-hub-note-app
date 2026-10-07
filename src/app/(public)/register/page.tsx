@@ -12,5 +12,7 @@ export default async function RegisterPage({
 }) {
   if (await getAuth()) redirect('/app');
   const sp = await searchParams;
-  return <RegisterForm initialCode={sp.code} />;
+  // the email of a shared-folder invitation (Partilha): /register?invite=1&email=
+  const invitedEmail = sp.invite === '1' && sp.email ? sp.email.slice(0, 254) : undefined;
+  return <RegisterForm initialCode={sp.code} invitedEmail={invitedEmail} />;
 }

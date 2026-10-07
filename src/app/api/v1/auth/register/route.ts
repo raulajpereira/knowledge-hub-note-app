@@ -8,7 +8,8 @@ const Body = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.email().max(254),
   password: z.string().min(1).max(MAX_PASSWORD),
-  code: z.string().trim().min(1).max(20),
+  // empty for someone invited to a shared folder (FREE account, Fase 9)
+  code: z.string().trim().max(20).optional(),
   lang: z.enum(['pt', 'en']).optional(),
 });
 

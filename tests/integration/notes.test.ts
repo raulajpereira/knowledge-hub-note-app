@@ -1334,6 +1334,52 @@ describe.skipIf(!enabled)('notes', () => {
     expect((await notes.getNote(b, bn.id)).sharedFolderId).toBeNull();
   });
 
+  it('shared-folder invites: FREE sign-up without a code, memberships bound once the email is confirmed', async () => {
+    const sh = await import('@/server/share/folders');
+    const a = await signedIn('inv-a@example.pt');
+    const sf = await sh.createSharedFolder(a, { kind: 'notes', name: 'Convite' });
+    const n = await notes.createNote(a, { title: 'Para o convidado', sharedFolderId: sf });
+    expect((await sh.addMember(a, sf, 'novo@example.pt', { lang: 'pt', invite: true })).status).toBe(
+      'invited',
+    );
+    // the invite email links to the sign-up page with the email
+    const files = await fs.readdir(outbox);
+    const inv = files.find((f) => f.includes('-shareInvite-') && f.includes('novo@example.pt'))!;
+    const text = (JSON.parse(await fs.readFile(path.join(outbox, inv), 'utf8')) as { text: string }).text;
+    expect(text).toContain('/register?invite=1&email=novo%40example.pt');
+    // no code and no invite: refused; with an invite: a FREE individual account
+    const reg = { name: 'Novo Convidado', password: 'Correct-Horse-9' };
+    expect(await codeOf(svc.register({ ...reg, email: 'outro@example.pt', code: '' }, meta))).toBe(
+      'code_invalid',
+    );
+    await svc.register({ ...reg, email: 'NOVO@example.pt' }, meta);
+    const [u] = await admin.unsafe(
+      "select u.id, p.code as plan, t.kind from users u join tenants t on t.id = u.tenant_id join plans p on p.id = t.plan_id where u.email = 'novo@example.pt'",
+    );
+    expect(u).toMatchObject({ plan: 'FREE', kind: 'individual' });
+    // not bound until the email is confirmed
+    const [m0] = await admin.unsafe(
+      "select user_id, status from share_members where email = 'novo@example.pt'",
+    );
+    expect(m0).toMatchObject({ user_id: null, status: 'invited' });
+    const vf = (await fs.readdir(outbox)).filter(
+      (f) => f.includes('-verify-') && f.includes('novo@example.pt'),
+    );
+    const vm = JSON.parse(await fs.readFile(path.join(outbox, vf.at(-1)!), 'utf8')) as { text: string };
+    await svc.verifyEmail(/token=([A-Za-z0-9_-]+)/.exec(vm.text)![1]!);
+    const [m1] = await admin.unsafe(
+      "select user_id, status from share_members where email = 'novo@example.pt'",
+    );
+    expect(m1).toMatchObject({ user_id: u!.id, status: 'active' });
+    const lg = await svc.login({ email: 'novo@example.pt', password: reg.password, remember: true }, meta);
+    if (!('token' in lg)) throw new Error('2FA not expected');
+    const nu = (await session.resolveSession(lg.token))!;
+    expect((await notes.getNote(nu, n.id)).title).toBe('Para o convidado');
+    expect((await sh.listSharedFolders(nu)).map((f) => [f.name, f.mine])).toEqual([['Convite', false]]);
+    // a second sign-up with the same email is still refused
+    expect(await codeOf(svc.register({ ...reg, email: 'novo@example.pt' }, meta))).toBe('email_taken');
+  });
+
   it('management projects in tasks, issues and transports: own tenant only, cleared when deleted', async () => {
     const mg = await import('@/server/content/mg');
     const { createTask, updateTask } = await import('@/server/content/tasks');

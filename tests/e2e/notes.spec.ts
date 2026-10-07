@@ -12,10 +12,12 @@ const outbox = process.env.MAIL_OUTBOX_DIR;
 test.skip(!outbox, 'MAIL_OUTBOX_DIR is not set');
 
 const email = `notes-${Date.now()}@example.com`;
+/** invited to a shared folder by the test user (no account yet) */
+const who = `convidado-${Date.now()}@example.com`;
 const password = 'Notes-Strong-Pass-1';
 
-async function verifyLink(): Promise<string> {
-  const safe = email.replace(/[^a-z0-9@.]/gi, '_');
+async function verifyLink(to = email): Promise<string> {
+  const safe = to.replace(/[^a-z0-9@.]/gi, '_');
   for (let i = 0; i < 40; i++) {
     const files = fs.existsSync(outbox!)
       ? fs.readdirSync(outbox!).filter((f) => f.includes('-verify-') && f.includes(safe))
@@ -308,7 +310,6 @@ test('shared folders: new shared folder, invite by email, create in it, Definiç
   await dlg.getByLabel('Nome da pasta').fill('Equipa SF');
   await dlg.getByRole('button', { name: 'Criar' }).click();
   // an email without an account asks before sending an invite
-  const who = `convidado-${Date.now()}@example.com`;
   const fd = page.getByRole('dialog', { name: 'Partilhar pasta' });
   await fd.getByLabel('Email da pessoa…').fill(who);
   await fd.getByRole('button', { name: 'Partilhar', exact: true }).click();
@@ -332,4 +333,28 @@ test('shared folders: new shared folder, invite by email, create in it, Definiç
   await expect(page.getByText(`${who} · 1 pasta`)).toBeVisible();
   await page.getByRole('button', { name: 'Pausar' }).last().click();
   await expect(page.getByRole('button', { name: 'Retomar' }).last()).toBeVisible();
+  await page.getByRole('button', { name: 'Retomar' }).last().click();
+  await expect(page.getByRole('button', { name: 'Retomar' })).toHaveCount(0);
+});
+
+test('the invited person signs up without a license (FREE) and finds the shared folder', async ({ page }) => {
+  await page.goto(`register?invite=1&email=${encodeURIComponent(who)}`);
+  await expect(page.getByText('não precisa de licença')).toBeVisible();
+  await expect(page.getByLabel('Licença')).toHaveCount(0);
+  await expect(page.getByLabel('Email')).toHaveValue(who);
+  await page.getByLabel('Nome').fill('Convidado Teste');
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Criar conta' }).click();
+  await expect(page.getByText('Conta criada')).toBeVisible();
+  await page.goto(await verifyLink(who));
+  await expect(page.getByRole('heading', { name: 'Email confirmado' })).toBeVisible();
+  await page.goto('login');
+  await page.getByLabel('Email').fill(who);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await page.waitForURL(/\/app$/);
+  await page.goto('app/notes');
+  await page.locator('.kh-nt-folder', { hasText: 'Equipa SF' }).click();
+  await expect(page.locator('.kh-nt-card')).toHaveCount(1);
+  await expect(page.getByText('Partilhada por Notes Tester')).toBeVisible();
 });

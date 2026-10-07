@@ -12,9 +12,16 @@ import { useI18n } from '@/i18n/client';
 
 type Errs = Partial<Record<'name' | 'email' | 'password' | 'invite', string>>;
 
-export function RegisterForm({ initialCode }: { initialCode?: string }) {
+export function RegisterForm({ initialCode, invitedEmail }: { initialCode?: string; invitedEmail?: string }) {
   const { lang, t } = useI18n();
-  const [v, setV] = useState({ name: '', email: '', password: '', invite: initialCode ?? '' });
+  const [v, setV] = useState({
+    name: '',
+    email: invitedEmail ?? '',
+    password: '',
+    invite: initialCode ?? '',
+  });
+  // invited to a shared folder: no code needed (a FREE account); falls back to the code if the server says no
+  const [shared, setShared] = useState(!!invitedEmail && !initialCode);
   const [er, setEr] = useState<Errs>({});
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,7 +40,7 @@ export function RegisterForm({ initialCode }: { initialCode?: string }) {
     if (!v.name.trim()) errs.name = t('reg_eName');
     if (!EMAIL_RE.test(v.email.trim())) errs.email = t('reg_eEmail');
     if (v.password.length < MIN_PASSWORD) errs.password = t('reg_ePw');
-    if (!v.invite.trim()) errs.invite = t('reg_eInv');
+    if (!shared && !v.invite.trim()) errs.invite = t('reg_eInv');
     setEr(errs);
     if (Object.keys(errs).length) return;
     setBusy(true);
@@ -43,14 +50,18 @@ export function RegisterForm({ initialCode }: { initialCode?: string }) {
         name: v.name.trim(),
         email: v.email.trim(),
         password: v.password,
-        code: v.invite.trim(),
+        code: shared ? undefined : v.invite.trim(),
         lang,
       });
       setDone(true);
       setMsg({ text: t('auth_verifySent'), ok: true });
     } catch (err) {
-      if (isApiFailure(err) && err.code.startsWith('code_')) setEr({ invite: authErrorMessage(err, t) });
-      else if (isApiFailure(err) && err.code === 'email_taken') setEr({ email: authErrorMessage(err, t) });
+      if (isApiFailure(err) && err.code.startsWith('code_')) {
+        if (shared) {
+          setShared(false);
+          setEr({ invite: t('reg_eInvShared') });
+        } else setEr({ invite: authErrorMessage(err, t) });
+      } else if (isApiFailure(err) && err.code === 'email_taken') setEr({ email: authErrorMessage(err, t) });
       else if (isApiFailure(err) && err.code.startsWith('password_'))
         setEr({ password: authErrorMessage(err, t) });
       else setMsg({ text: isApiFailure(err) ? authErrorMessage(err, t) : t('auth_generic'), ok: false });
@@ -61,7 +72,7 @@ export function RegisterForm({ initialCode }: { initialCode?: string }) {
 
   return (
     <AuthCard onSubmit={onSubmit} busy={busy}>
-      <AuthHeading title={t('reg_title')} sub={t('reg_sub')} />
+      <AuthHeading title={t('reg_title')} sub={t(shared ? 'reg_subShared' : 'reg_sub')} />
       <Field label={t('reg_name')} error={er.name}>
         {({ id, describedBy, invalid }) => (
           <Input
@@ -107,22 +118,26 @@ export function RegisterForm({ initialCode }: { initialCode?: string }) {
         )}
       </Field>
       <StrengthMeter password={v.password} />
-      <Field label={t('reg_invite')} error={er.invite}>
-        {({ id, describedBy, invalid }) => (
-          <Input
-            id={id}
-            value={v.invite}
-            onChange={set('invite')}
-            placeholder="KH-INV-000000"
-            spellCheck={false}
-            autoComplete="off"
-            aria-describedby={describedBy}
-            invalid={invalid}
-            disabled={done}
-            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '.06em', textTransform: 'uppercase' }}
-          />
-        )}
-      </Field>
+      {shared ? (
+        <Message tone="ok">{t('reg_sharedInvite')}</Message>
+      ) : (
+        <Field label={t('reg_invite')} error={er.invite}>
+          {({ id, describedBy, invalid }) => (
+            <Input
+              id={id}
+              value={v.invite}
+              onChange={set('invite')}
+              placeholder="KH-INV-000000"
+              spellCheck={false}
+              autoComplete="off"
+              aria-describedby={describedBy}
+              invalid={invalid}
+              disabled={done}
+              style={{ fontFamily: 'var(--font-mono)', letterSpacing: '.06em', textTransform: 'uppercase' }}
+            />
+          )}
+        </Field>
+      )}
       {msg && <Message tone={msg.ok ? 'ok' : 'error'}>{msg.text}</Message>}
       {!done && (
         <Button type="submit" variant="primary" size="lg" block loading={busy}>

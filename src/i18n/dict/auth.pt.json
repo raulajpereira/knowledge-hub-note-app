@@ -71,5 +71,8 @@
   "reset_sub": "Escolha uma nova password para",
   "reset_submit": "Guardar nova password",
   "reset_title": "Definir nova password",
-  "reset_toLogin": "Iniciar sessão"
+  "reset_toLogin": "Iniciar sessão",
+  "reg_sharedInvite": "Foi convidado para uma pasta partilhada: não precisa de licença. A conta é FREE e pode mudar de plano depois.",
+  "reg_eInvShared": "Não há convite pendente para este email. Indique uma licença.",
+  "reg_subShared": "Crie a sua conta gratuita para ver o que foi partilhado consigo."
 }
