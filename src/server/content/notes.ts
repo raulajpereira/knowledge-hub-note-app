@@ -39,7 +39,10 @@ import { audit } from '@/server/audit';
 import { assertWithinLimit } from '@/server/licensing/entitlements';
 import { sniffImage } from '@/server/assets';
 import type { AuthContext } from '@/server/auth/session';
-import { asUser } from './tenant';
+import { asSharer, asUser } from './tenant';
+import { folderError } from './folderError';
+
+export { folderError };
 import { safeFetchBytes } from '@/server/net/safeFetch';
 import { docChecklist, docFileIds, docText, FILE_SRC, validateDoc, type PMNode } from './doc';
 
@@ -66,6 +69,10 @@ export type NoteListItem = {
   summary: string;
   tags: string[];
   folderId: string | null;
+  /** the shared folder the note was put in (Partilha), if any */
+  sharedFolderId: string | null;
+  /** false for a note of someone else seen through a shared folder */
+  mine: boolean;
   favorite: boolean;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +84,8 @@ const listCols = {
   contentText: notes.contentText,
   tags: notes.tags,
   folderId: notes.folderId,
+  sharedFolderId: notes.sharedFolderId,
+  ownerId: notes.ownerId,
   favorite: notes.favorite,
   createdAt: notes.createdAt,
   updatedAt: notes.updatedAt,
@@ -84,12 +93,14 @@ const listCols = {
 type ListRow = {
   [K in keyof typeof listCols]: (typeof notes.$inferSelect)[K extends 'contentText' ? 'contentText' : K];
 };
-const toItem = (r: ListRow): NoteListItem => ({
+const toItem = (r: ListRow, me: string): NoteListItem => ({
   id: r.id,
   title: r.title,
   summary: summaryOf(r.contentText),
   tags: r.tags,
   folderId: r.folderId,
+  sharedFolderId: r.sharedFolderId,
+  mine: r.ownerId === me,
   favorite: r.favorite,
   createdAt: r.createdAt.toISOString(),
   updatedAt: r.updatedAt.toISOString(),
@@ -215,17 +226,21 @@ export async function duplicateFolder(auth: AuthContext, id: string, copySuffix:
   });
 }
 
-/** Drizzle wraps the driver error; the kh_note_folder_owner trigger raises 23503 for a foreign notebook. */
-function folderError(e: { code?: string; cause?: { code?: string } }): never {
-  if ((e.code ?? e.cause?.code) === '23503') throw new ApiError(400, 'folder_not_found');
-  throw e;
-}
-
 // ── Notes ──────────────────────────────────────────────────────────────────
-export async function listNotes(auth: AuthContext, q: { folder?: string; fav?: boolean; search?: string }) {
-  return asUser(auth, async (tx) => {
+export async function listNotes(
+  auth: AuthContext,
+  q: { folder?: string; fav?: boolean; search?: string; shared?: { id: string; folderId: string | null } },
+) {
+  // a shared folder's list runs with the share scope (the notes of every member)
+  return (q.shared ? asSharer : asUser)(auth, async (tx) => {
     const conds = [isNull(notes.deletedAt)];
     if (q.folder) conds.push(eq(notes.folderId, q.folder));
+    if (q.shared)
+      conds.push(
+        q.shared.folderId
+          ? or(eq(notes.sharedFolderId, q.shared.id), eq(notes.folderId, q.shared.folderId))!
+          : eq(notes.sharedFolderId, q.shared.id),
+      );
     if (q.fav) conds.push(eq(notes.favorite, true));
     if (q.search) {
       const like = `%${q.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -243,12 +258,12 @@ export async function listNotes(auth: AuthContext, q: { folder?: string; fav?: b
       .where(and(...conds))
       .orderBy(desc(notes.updatedAt))
       .limit(500);
-    return rows.map((r) => toItem(r as ListRow));
+    return rows.map((r) => toItem(r as ListRow, auth.user.id));
   });
 }
 
 export async function getNote(auth: AuthContext, id: string) {
-  return asUser(auth, async (tx) => {
+  return asSharer(auth, async (tx) => {
     const [n] = await tx
       .select()
       .from(notes)
@@ -260,6 +275,8 @@ export async function getNote(auth: AuthContext, id: string) {
       content: n.content,
       tags: n.tags,
       folderId: n.folderId,
+      sharedFolderId: n.sharedFolderId,
+      mine: n.ownerId === auth.user.id,
       favorite: n.favorite,
       createdAt: n.createdAt.toISOString(),
       updatedAt: n.updatedAt.toISOString(),
@@ -267,7 +284,10 @@ export async function getNote(auth: AuthContext, id: string) {
   });
 }
 
-export async function createNote(auth: AuthContext, input: { folderId?: string | null; title?: string }) {
+export async function createNote(
+  auth: AuthContext,
+  input: { folderId?: string | null; title?: string; sharedFolderId?: string | null },
+) {
   return asUser(auth, async (tx) => {
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
@@ -280,18 +300,26 @@ export async function createNote(auth: AuthContext, input: { folderId?: string |
         tenantId: auth.tenant.id,
         ownerId: auth.user.id,
         folderId: input.folderId ?? null,
+        sharedFolderId: input.sharedFolderId ?? null,
         title: input.title ?? '',
       })
       .returning(listCols)
       .catch(folderError);
-    return toItem(row as ListRow);
+    return toItem(row as ListRow, auth.user.id);
   });
 }
 
 export async function updateNote(
   auth: AuthContext,
   id: string,
-  input: { title?: string; content?: unknown; tags?: string[]; favorite?: boolean; folderId?: string | null },
+  input: {
+    title?: string;
+    content?: unknown;
+    tags?: string[];
+    favorite?: boolean;
+    folderId?: string | null;
+    sharedFolderId?: string | null;
+  },
 ) {
   const set: Partial<typeof notes.$inferInsert> = { updatedAt: new Date() };
   let fileIds: string[] | null = null;
@@ -300,6 +328,7 @@ export async function updateNote(
     set.tags = [...new Set(input.tags.map((t) => t.trim()).filter(Boolean))].slice(0, 30);
   if (input.favorite !== undefined) set.favorite = input.favorite;
   if (input.folderId !== undefined) set.folderId = input.folderId;
+  if (input.sharedFolderId !== undefined) set.sharedFolderId = input.sharedFolderId;
   if (input.content !== undefined) {
     const d = validateDoc(input.content);
     set.content = d;
@@ -309,11 +338,21 @@ export async function updateNote(
   // Favourite toggles and moves don't count as edits for "Atualizada".
   if (input.title === undefined && input.content === undefined && input.tags === undefined)
     delete set.updatedAt;
-  return asUser(auth, async (tx) => {
+  // a member of a shared folder edits the note itself; where it lives and the
+  // favourite stay the owner's
+  const ownerOnly =
+    input.favorite !== undefined || input.folderId !== undefined || input.sharedFolderId !== undefined;
+  return asSharer(auth, async (tx) => {
     const r = await tx
       .update(notes)
       .set(set)
-      .where(and(eq(notes.id, id), isNull(notes.deletedAt)))
+      .where(
+        and(
+          eq(notes.id, id),
+          isNull(notes.deletedAt),
+          ownerOnly ? eq(notes.ownerId, auth.user.id) : undefined,
+        ),
+      )
       .returning(listCols)
       .catch(folderError);
     if (!r.length) throw new ApiError(404, 'not_found');
@@ -333,7 +372,7 @@ export async function updateNote(
           .send(new DeleteObjectCommand({ Bucket: env().S3_BUCKET, Key: g.key }))
           .catch(() => {});
     }
-    return toItem(r[0] as ListRow);
+    return toItem(r[0] as ListRow, auth.user.id);
   });
 }
 
@@ -364,12 +403,12 @@ export async function duplicateNote(auth: AuthContext, id: string, copySuffix: s
       .returning(listCols);
     const content = await cloneImages(tx, auth, src.id, row!.id, src.content);
     if (content !== src.content) await tx.update(notes).set({ content }).where(eq(notes.id, row!.id));
-    return toItem(row as ListRow);
+    return toItem(row as ListRow, auth.user.id);
   });
 }
 
 export async function trashNote(auth: AuthContext, id: string) {
-  await asUser(auth, async (tx) => {
+  await asSharer(auth, async (tx) => {
     const r = await tx
       .update(notes)
       .set({ deletedAt: new Date() })
@@ -889,11 +928,13 @@ export async function addNoteImage(auth: AuthContext, noteId: string, data: Uint
   const gif = data.length >= 6 && String.fromCharCode(...data.subarray(0, 4)) === 'GIF8';
   const mime = sniffImage(data) ?? (gif ? 'image/gif' : null);
   if (!mime) throw new ApiError(415, 'unsupported_image');
-  return asUser(auth, async (tx) => {
+  return asSharer(auth, async (tx) => {
+    // a no-op update: only the owner or an "edit" member of its shared folder passes RLS
     const [n] = await tx
-      .select({ id: notes.id })
-      .from(notes)
-      .where(and(eq(notes.id, noteId), isNull(notes.deletedAt)));
+      .update(notes)
+      .set({ updatedAt: sql`${notes.updatedAt}` })
+      .where(and(eq(notes.id, noteId), isNull(notes.deletedAt)))
+      .returning({ id: notes.id });
     if (!n) throw new ApiError(404, 'not_found');
     const key = `tenants/${auth.tenant.id}/notes/${noteId}/${randomToken(12)}`;
     await s3().send(
@@ -973,7 +1014,7 @@ async function cloneImages(
 }
 
 export async function readFile(auth: AuthContext, id: string) {
-  const row = await asUser(auth, async (tx) => {
+  const row = await asSharer(auth, async (tx) => {
     const [a] = await tx.select().from(noteAttachments).where(eq(noteAttachments.id, id));
     return a;
   });

@@ -12,6 +12,10 @@ export type NoteItem = {
   summary: string;
   tags: string[];
   folderId: string | null;
+  /** the shared folder the note was put in, if any */
+  sharedFolderId: string | null;
+  /** false for someone else's note seen through a shared folder */
+  mine: boolean;
   favorite: boolean;
   createdAt: string;
   updatedAt: string;
@@ -28,17 +32,21 @@ export const notesApi = {
   duplicateFolder: (id: string, suffix: string) =>
     api<{ folder: Folder }>(`/folders/${id}/duplicate`, { suffix }),
 
-  list: (q: { folder?: string; fav?: boolean; q?: string }) => {
+  list: (q: { folder?: string; shared?: string; fav?: boolean; q?: string }) => {
     const sp = new URLSearchParams();
     if (q.folder) sp.set('folder', q.folder);
+    if (q.shared) sp.set('shared', q.shared);
     if (q.fav) sp.set('fav', '1');
     if (q.q) sp.set('q', q.q);
     return api<{ notes: NoteItem[] }>(`/notes?${sp}`);
   },
   get: (id: string) => api<{ note: Note }>(`/notes/${id}`),
-  create: (folderId: string | null) => api<{ note: NoteItem }>('/notes', { folderId }),
-  update: (id: string, patch: Partial<Pick<Note, 'title' | 'content' | 'tags' | 'favorite' | 'folderId'>>) =>
-    api<{ note: NoteItem }>(`/notes/${id}`, patch, 'PATCH'),
+  create: (folderId: string | null, sharedFolderId?: string) =>
+    api<{ note: NoteItem }>('/notes', { folderId, sharedFolderId }),
+  update: (
+    id: string,
+    patch: Partial<Pick<Note, 'title' | 'content' | 'tags' | 'favorite' | 'folderId' | 'sharedFolderId'>>,
+  ) => api<{ note: NoteItem }>(`/notes/${id}`, patch, 'PATCH'),
   move: (id: string, folderId: string | null) => api<{ note: NoteItem }>(`/notes/${id}/move`, { folderId }),
   duplicate: (id: string, suffix: string) => api<{ note: NoteItem }>(`/notes/${id}/duplicate`, { suffix }),
   trash: (id: string) => api(`/notes/${id}`, undefined, 'DELETE'),

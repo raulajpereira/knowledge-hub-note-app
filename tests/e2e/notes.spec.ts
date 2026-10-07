@@ -69,7 +69,7 @@ const tool = (page: Page, name: string) =>
 test('notebook + note written with the toolbar only, saved and reloaded', async ({ page }) => {
   await login(page);
   await page.goto('app/notes');
-  await page.getByRole('button', { name: 'Nova Pasta' }).click();
+  await page.getByRole('button', { name: 'Nova Pasta', exact: true }).click();
   await page.getByLabel('Nome da pasta').fill('Ferramentas & debug');
   await page.keyboard.press('Enter');
   await expect(page.locator('.kh-nt-list__title')).toContainText('Ferramentas & debug');
@@ -296,4 +296,40 @@ test('tags page: tags with counts, rename', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.locator('.kh-tg__row', { hasText: 'Arranque' })).toContainText('1 nota');
   await expect(page.locator('.kh-tg__row', { hasText: 'Go-live' })).toHaveCount(0);
+});
+
+test('shared folders: new shared folder, invite by email, create in it, Definições › Partilhas', async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto('app/notes');
+  await page.getByRole('button', { name: 'Nova pasta partilhada' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Nova pasta partilhada' });
+  await dlg.getByLabel('Nome da pasta').fill('Equipa SF');
+  await dlg.getByRole('button', { name: 'Criar' }).click();
+  // an email without an account asks before sending an invite
+  const who = `convidado-${Date.now()}@example.com`;
+  const fd = page.getByRole('dialog', { name: 'Partilhar pasta' });
+  await fd.getByLabel('Email da pessoa…').fill(who);
+  await fd.getByRole('button', { name: 'Partilhar', exact: true }).click();
+  await expect(fd.getByText('não tem conta no KnowledgeHub')).toBeVisible();
+  await fd.getByRole('button', { name: 'Enviar convite' }).click();
+  await expect(fd.getByText('Convite enviado')).toBeVisible();
+  await expect(fd.getByText('Equipa SF · 1 membro')).toBeVisible();
+  await fd.getByRole('combobox').selectOption('edit');
+  await fd.getByRole('button', { name: 'Concluído' }).click();
+  // the folder is selected; a new note asks first
+  await expect(page.locator('.kh-nt-list__title')).toContainText('Equipa SF');
+  await page.locator('.kh-nt-list__new').click();
+  await expect(page.getByText('Criar numa pasta partilhada?')).toBeVisible();
+  await expect(page.getByText('partilhado com 1 pessoa')).toBeVisible();
+  await page.getByRole('button', { name: 'Criar', exact: true }).click();
+  await expect(page.locator('.kh-nt-list__count')).toContainText('1');
+  // Definições › Partilhas lists the folder, the person and their folders
+  await page.goto('app/settings');
+  await page.getByRole('tab', { name: 'Partilhas' }).click();
+  await expect(page.getByText('Equipa SF')).toBeVisible();
+  await expect(page.getByText(`${who} · 1 pasta`)).toBeVisible();
+  await page.getByRole('button', { name: 'Pausar' }).last().click();
+  await expect(page.getByRole('button', { name: 'Retomar' }).last()).toBeVisible();
 });

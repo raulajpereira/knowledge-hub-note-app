@@ -1173,3 +1173,42 @@
     padding: 24px 20px 40px;
   }
 }
+/* "Nova pasta" + the round "Nova pasta partilhada" next to it (prototype nbNewShared) */
+.kh-nt-newrow {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.kh-nt-newrow .kh-nt-newfolder {
+  flex: 1;
+  margin-top: 0;
+}
+.kh-nt-newshared {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid oklch(0.8 0.13 150 / 0.5);
+  background: oklch(0.8 0.13 150 / 0.14);
+  color: oklch(0.86 0.13 150);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kh-nt-newshared:hover {
+  background: oklch(0.8 0.13 150 / 0.26);
+}
+.kh-nt-ro {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}

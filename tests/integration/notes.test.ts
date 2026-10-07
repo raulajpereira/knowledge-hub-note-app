@@ -1233,6 +1233,107 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await links.publicItem((await links.findLink(l2.url.split('/p/')[1]!))!, false)).toBeNull();
   });
 
+  it('shared folders: members of any tenant, read/edit, pause, share scope only where asked', async () => {
+    const sh = await import('@/server/share/folders');
+    const a = await signedIn('sf-a@example.pt');
+    const b = await signedIn('sf-b@example.pt');
+    const c = await signedIn('sf-c@example.pt');
+    expect(a.tenant.id).not.toBe(b.tenant.id);
+    const sf = await sh.createSharedFolder(a, { kind: 'notes', name: 'Projeto X' });
+    // someone with an account is added at once; an unknown email needs an invite first
+    expect((await sh.addMember(a, sf, 'SF-B@example.pt', { lang: 'pt' })).status).toBe('added');
+    expect((await sh.addMember(a, sf, 'sf-b@example.pt', { lang: 'pt' })).status).toBe('exists');
+    expect((await sh.addMember(a, sf, 'novo@example.pt', { lang: 'pt' })).status).toBe('needs_invite');
+    expect((await sh.addMember(a, sf, 'novo@example.pt', { lang: 'pt', invite: true })).status).toBe(
+      'invited',
+    );
+    expect(await codeOf(sh.addMember(a, sf, 'sf-a@example.pt', { lang: 'pt' }))).toBe('share_self');
+    // only the owner manages the folder
+    expect(await codeOf(sh.addMember(b, sf, 'sf-c@example.pt', { lang: 'pt' }))).toBe('not_found');
+    expect(await codeOf(sh.updateSharedFolder(b, sf, { name: 'x' }))).toBe('not_found');
+
+    const n = await notes.createNote(a, { title: 'Plano', sharedFolderId: sf });
+    const shared = await sh.reachableFolder(b, sf);
+    expect(await codeOf(sh.reachableFolder(c, sf))).toBe('not_found');
+    // b sees the folder (read) and its notes only in the folder's own list
+    const inc = (await sh.listSharedFolders(b)).find((f) => f.id === sf)!;
+    expect(inc).toMatchObject({ mine: false, perm: 'read', owner: { name: 'Ana Teste' }, members: [] });
+    expect(await notes.listNotes(b, {})).toEqual([]);
+    expect((await notes.listNotes(b, { shared })).map((x) => [x.title, x.mine])).toEqual([['Plano', false]]);
+    expect((await notes.getNote(b, n.id)).title).toBe('Plano');
+    expect(await codeOf(notes.getNote(c, n.id))).toBe('not_found');
+    // read-only: can't write
+    expect(await codeOf(notes.updateNote(b, n.id, { title: 'b' }))).toBe('not_found');
+    expect(await codeOf(notes.createNote(b, { title: 'b', sharedFolderId: sf }))).toBe('forbidden');
+    expect(await codeOf(notes.createNote(c, { title: 'c', sharedFolderId: sf }))).toBe('forbidden');
+    // edit: the note itself, not where it lives
+    const mb = (await sh.listSharedFolders(a))
+      .find((f) => f.id === sf)!
+      .members.find((m) => m.email === 'sf-b@example.pt')!;
+    await sh.updateMember(a, mb.id, { perm: 'edit' });
+    expect((await notes.updateNote(b, n.id, { title: 'Plano v2' })).title).toBe('Plano v2');
+    expect(await codeOf(notes.updateNote(b, n.id, { favorite: true }))).toBe('not_found');
+    expect(await codeOf(notes.updateNote(b, n.id, { sharedFolderId: null }))).toBe('not_found');
+    const bn = await notes.createNote(b, { title: 'Da Bia', sharedFolderId: sf });
+    expect(
+      (await notes.listNotes(a, { shared: await sh.reachableFolder(a, sf) })).map((x) => x.title).sort(),
+    ).toEqual(['Da Bia', 'Plano v2']);
+    expect((await notes.getNote(a, bn.id)).mine).toBe(false);
+    // pausing the member, the person or the folder stops access; resuming gives it back
+    await sh.updateMember(a, mb.id, { paused: true });
+    expect(await codeOf(notes.getNote(b, n.id))).toBe('not_found');
+    await sh.updateMember(a, mb.id, { paused: false });
+    await sh.pausePerson(a, 'sf-b@example.pt', true);
+    expect(await codeOf(notes.getNote(b, n.id))).toBe('not_found');
+    expect((await sh.listPeople(a)).find((p) => p.email === 'sf-b@example.pt')).toMatchObject({
+      paused: true,
+      folders: 1,
+    });
+    await sh.pausePerson(a, 'sf-b@example.pt', false);
+    await sh.updateSharedFolder(a, sf, { paused: true });
+    expect(await codeOf(notes.getNote(b, n.id))).toBe('not_found');
+    await sh.updateSharedFolder(a, sf, { paused: false });
+    expect((await notes.getNote(b, n.id)).title).toBe('Plano v2');
+
+    // sharing an existing notebook shares its notes; doing it twice gives the same folder
+    const nb = await notes.createFolder(a, 'Caderno');
+    const inNb = await notes.createNote(a, { folderId: nb.id, title: 'No caderno' });
+    const sf2 = await sh.createSharedFolder(a, { kind: 'notes', name: 'Caderno', folderId: nb.id });
+    expect(await sh.createSharedFolder(a, { kind: 'notes', name: 'Caderno', folderId: nb.id })).toBe(sf2);
+    await sh.addMember(a, sf2, 'sf-c@example.pt', { lang: 'pt' });
+    expect((await notes.listNotes(c, { shared: await sh.reachableFolder(c, sf2) })).map((x) => x.id)).toEqual(
+      [inNb.id],
+    );
+    expect(await codeOf(notes.getNote(c, n.id))).toBe('not_found');
+
+    // tasks and artifacts folders work the same way
+    const tf = await sh.createSharedFolder(a, { kind: 'tasks', name: 'Tarefas X' });
+    await sh.addMember(a, tf, 'sf-b@example.pt', { lang: 'pt' });
+    const tk = await tasksSvc.createTask(a, { title: 'Rever', sharedFolderId: tf });
+    expect((await tasksSvc.listTasks(b)).length).toBe(0);
+    expect((await tasksSvc.listTasks(b, tf)).map((x) => [x.title, x.mine])).toEqual([['Rever', false]]);
+    expect(await codeOf(tasksSvc.updateTask(b, tk.id, { title: 'b' }))).toBe('forbidden');
+    const tm = (await sh.listSharedFolders(a, 'tasks'))[0]!.members[0]!;
+    await sh.updateMember(a, tm.id, { perm: 'edit' });
+    expect((await tasksSvc.updateTask(b, tk.id, { title: 'Rever já' })).task.title).toBe('Rever já');
+    expect(await codeOf(tasksSvc.updateTask(b, tk.id, { pinned: true }))).toBe('forbidden');
+    const af = await sh.createSharedFolder(a, { kind: 'artifacts', name: 'Artefactos X' });
+    await sh.addMember(a, af, 'sf-b@example.pt', { lang: 'pt' });
+    const ar = await art.createArtifact(a, { title: 'Página', sharedFolderId: af });
+    expect((await art.listArtifacts(b, { id: af, folderId: null })).map((x) => [x.id, x.mine])).toEqual([
+      [ar.id, false],
+    ]);
+    expect((await art.listArtifacts(b)).length).toBe(0);
+
+    // "Remover tudo" takes b out of every folder of a; deleting a folder ends its sharing
+    await sh.removePerson(a, 'sf-b@example.pt');
+    expect(await codeOf(notes.getNote(b, n.id))).toBe('not_found');
+    expect((await sh.listSharedFolders(b)).length).toBe(0);
+    await sh.deleteSharedFolder(a, sf);
+    expect((await notes.getNote(a, n.id)).sharedFolderId).toBeNull();
+    expect((await notes.getNote(b, bn.id)).sharedFolderId).toBeNull();
+  });
+
   it('management projects in tasks, issues and transports: own tenant only, cleared when deleted', async () => {
     const mg = await import('@/server/content/mg');
     const { createTask, updateTask } = await import('@/server/content/tasks');

@@ -1,9 +1,10 @@
 import 'server-only';
-import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { artifacts, artifactVersions, folders } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
-import { asUser, type Tx } from './tenant';
+import { asSharer, asUser, type Tx } from './tenant';
+import { folderError } from './folderError';
 
 // Artifacts (prototype isArtifacts): HTML pages with a version per save.
 // The server stores the HTML as-is: it is user code and only ever runs in a
@@ -15,6 +16,10 @@ const KEEP_VERSIONS = 50;
 export type ArtifactSummary = {
   id: string;
   folderId: string | null;
+  /** the shared folder it was put in (Partilha), if any */
+  sharedFolderId: string | null;
+  /** false for someone else's artifact seen through a shared folder */
+  mine: boolean;
   title: string;
   description: string;
   tags: string[];
@@ -30,6 +35,8 @@ export type ArtifactFull = ArtifactSummary & {
 const sumCols = {
   id: artifacts.id,
   folderId: artifacts.folderId,
+  sharedFolderId: artifacts.sharedFolderId,
+  ownerId: artifacts.ownerId,
   title: artifacts.title,
   description: artifacts.description,
   tags: artifacts.tags,
@@ -37,9 +44,14 @@ const sumCols = {
   createdAt: artifacts.createdAt,
   updatedAt: artifacts.updatedAt,
 };
-type SumRow = Omit<ArtifactSummary, 'createdAt' | 'updatedAt'> & { createdAt: Date; updatedAt: Date };
-const toSummary = (r: SumRow): ArtifactSummary => ({
+type SumRow = Omit<ArtifactSummary, 'createdAt' | 'updatedAt' | 'mine'> & {
+  ownerId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+const toSummary = ({ ownerId, ...r }: SumRow, me: string): ArtifactSummary => ({
   ...r,
+  mine: ownerId === me,
   createdAt: r.createdAt.toISOString(),
   updatedAt: r.updatedAt.toISOString(),
 });
@@ -47,19 +59,28 @@ const toSummary = (r: SumRow): ArtifactSummary => ({
 export const blankArtifact = (title: string) =>
   `<!doctype html>\n<html lang="pt">\n<head>\n<meta charset="utf-8">\n<style>body{margin:0;padding:40px;background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.04));min-height:100vh;box-sizing:border-box;color:#efe7df;font:16px/1.6 system-ui,sans-serif}</style>\n</head>\n<body>\n<h1>${title.replace(/[<>&"]/g, (c) => `&#${c.charCodeAt(0)};`)}</h1>\n</body>\n</html>`;
 
-export async function listArtifacts(auth: AuthContext): Promise<ArtifactSummary[]> {
-  return asUser(auth, async (tx) => {
+/** The caller's artifacts; with `shared`, the artifacts of that shared folder (every member's). */
+export async function listArtifacts(
+  auth: AuthContext,
+  shared?: { id: string; folderId: string | null },
+): Promise<ArtifactSummary[]> {
+  return (shared ? asSharer : asUser)(auth, async (tx) => {
+    const inShared = shared
+      ? shared.folderId
+        ? or(eq(artifacts.sharedFolderId, shared.id), eq(artifacts.folderId, shared.folderId))
+        : eq(artifacts.sharedFolderId, shared.id)
+      : undefined;
     const rows = await tx
       .select(sumCols)
       .from(artifacts)
-      .where(isNull(artifacts.deletedAt))
+      .where(and(isNull(artifacts.deletedAt), inShared))
       .orderBy(desc(artifacts.pinned), desc(artifacts.updatedAt))
       .limit(2000);
-    return rows.map(toSummary);
+    return rows.map((r) => toSummary(r, auth.user.id));
   });
 }
 
-async function load(tx: Tx, id: string): Promise<ArtifactFull> {
+async function load(tx: Tx, id: string, me: string): Promise<ArtifactFull> {
   const [r] = await tx
     .select({ ...sumCols, html: artifacts.html })
     .from(artifacts)
@@ -72,7 +93,7 @@ async function load(tx: Tx, id: string): Promise<ArtifactFull> {
     .orderBy(asc(artifactVersions.createdAt), asc(artifactVersions.id));
   const { html, ...sum } = r;
   return {
-    ...toSummary(sum),
+    ...toSummary(sum, me),
     html,
     // the newest version is always the current HTML (every save/restore adds one)
     versions: vs.map((v, i) => ({
@@ -84,12 +105,12 @@ async function load(tx: Tx, id: string): Promise<ArtifactFull> {
 }
 
 export async function getArtifact(auth: AuthContext, id: string) {
-  return asUser(auth, (tx) => load(tx, id));
+  return asSharer(auth, (tx) => load(tx, id, auth.user.id));
 }
 
 /** Only the HTML, for the sandboxed viewer. */
 export async function artifactHtml(auth: AuthContext, id: string) {
-  return asUser(auth, async (tx) => {
+  return asSharer(auth, async (tx) => {
     const [r] = await tx
       .select({ html: artifacts.html, title: artifacts.title })
       .from(artifacts)
@@ -126,7 +147,7 @@ async function addVersion(tx: Tx, auth: AuthContext, artifactId: string, html: s
 
 export async function createArtifact(
   auth: AuthContext,
-  input: { title: string; html?: string; folderId?: string | null },
+  input: { title: string; html?: string; folderId?: string | null; sharedFolderId?: string | null },
 ): Promise<ArtifactFull> {
   const html = input.html ?? blankArtifact(input.title);
   if (html.length > MAX_HTML) throw new ApiError(413, 'file_too_large', undefined, { max: MAX_HTML });
@@ -139,10 +160,18 @@ export async function createArtifact(
     const folderId = await checkFolder(tx, input.folderId);
     const [r] = await tx
       .insert(artifacts)
-      .values({ tenantId: auth.tenant.id, ownerId: auth.user.id, folderId, title: input.title, html })
-      .returning({ id: artifacts.id });
+      .values({
+        tenantId: auth.tenant.id,
+        ownerId: auth.user.id,
+        folderId,
+        sharedFolderId: input.sharedFolderId ?? null,
+        title: input.title,
+        html,
+      })
+      .returning({ id: artifacts.id })
+      .catch(folderError);
     await addVersion(tx, auth, r!.id, html);
-    return load(tx, r!.id);
+    return load(tx, r!.id, auth.user.id);
   });
 }
 
@@ -155,10 +184,16 @@ export async function updateArtifact(
     tags: string[];
     pinned: boolean;
     folderId: string | null;
+    sharedFolderId: string | null;
   }>,
 ): Promise<ArtifactSummary> {
-  return asUser(auth, async (tx) => {
-    if (patch.folderId !== undefined) patch.folderId = await checkFolder(tx, patch.folderId);
+  return asSharer(auth, async (tx) => {
+    if (patch.folderId !== undefined) {
+      // only the owner files an artifact in one of their own folders
+      const [o] = await tx.select({ ownerId: artifacts.ownerId }).from(artifacts).where(eq(artifacts.id, id));
+      if (o && o.ownerId !== auth.user.id) throw new ApiError(403, 'forbidden');
+      patch.folderId = await checkFolder(tx, patch.folderId);
+    }
     const [r] = await tx
       .update(artifacts)
       .set({
@@ -169,16 +204,17 @@ export async function updateArtifact(
           : {}),
       })
       .where(and(eq(artifacts.id, id), isNull(artifacts.deletedAt)))
-      .returning(sumCols);
+      .returning(sumCols)
+      .catch(folderError);
     if (!r) throw new ApiError(404, 'not_found');
-    return toSummary(r);
+    return toSummary(r, auth.user.id);
   });
 }
 
 /** "Guardar Versão": the new HTML becomes current and a version is added. */
 export async function saveArtifactHtml(auth: AuthContext, id: string, html: string): Promise<ArtifactFull> {
   if (html.length > MAX_HTML) throw new ApiError(413, 'file_too_large', undefined, { max: MAX_HTML });
-  return asUser(auth, async (tx) => {
+  return asSharer(auth, async (tx) => {
     const r = await tx
       .update(artifacts)
       .set({ html, updatedAt: new Date() })
@@ -186,13 +222,13 @@ export async function saveArtifactHtml(auth: AuthContext, id: string, html: stri
       .returning({ id: artifacts.id });
     if (!r.length) throw new ApiError(404, 'not_found');
     await addVersion(tx, auth, id, html);
-    return load(tx, id);
+    return load(tx, id, auth.user.id);
   });
 }
 
 /** "Repor": an older version becomes current — as a new version, history is kept. */
 export async function restoreArtifactVersion(auth: AuthContext, id: string, versionId: string) {
-  const v = await asUser(auth, async (tx) => {
+  const v = await asSharer(auth, async (tx) => {
     const [r] = await tx
       .select({ html: artifactVersions.html })
       .from(artifactVersions)
@@ -204,7 +240,7 @@ export async function restoreArtifactVersion(auth: AuthContext, id: string, vers
 }
 
 export async function trashArtifact(auth: AuthContext, id: string) {
-  await asUser(auth, async (tx) => {
+  await asSharer(auth, async (tx) => {
     const r = await tx
       .update(artifacts)
       .set({ deletedAt: new Date() })

@@ -6,7 +6,8 @@ import { assertWithinLimit } from '@/server/licensing/entitlements';
 import type { AuthContext } from '@/server/auth/session';
 import { nextDue } from '@/lib/tasks';
 import { checkProject } from './mg';
-import { asUser } from './tenant';
+import { asSharer, asUser } from './tenant';
+import { folderError } from './folderError';
 
 // Tasks (prototype isTasks). Every query runs through asUser(), so Row Level
 // Security limits it to the caller's own rows.
@@ -29,6 +30,10 @@ export type TaskItem = {
   doneAt: string | null;
   createdAt: string;
   subs: { done: number; total: number };
+  /** the shared folder it was put in (Partilha), if any */
+  sharedFolderId: string | null;
+  /** false for someone else's task seen through a shared folder */
+  mine: boolean;
 };
 export type Subtask = { id: string; title: string; done: boolean };
 export type Task = TaskItem & { subtasks: Subtask[] };
@@ -45,6 +50,8 @@ const cols = {
   pinned: tasks.pinned,
   doneAt: tasks.doneAt,
   createdAt: tasks.createdAt,
+  sharedFolderId: tasks.sharedFolderId,
+  ownerId: tasks.ownerId,
 };
 type Row = {
   id: string;
@@ -58,12 +65,15 @@ type Row = {
   pinned: boolean;
   doneAt: Date | null;
   createdAt: Date;
+  sharedFolderId: string | null;
+  ownerId: string;
 };
-const toItem = (r: Row, subs: { done: number; total: number }): TaskItem => ({
+const toItem = ({ ownerId, ...r }: Row, subs: { done: number; total: number }, me: string): TaskItem => ({
   ...r,
   doneAt: r.doneAt?.toISOString() ?? null,
   createdAt: r.createdAt.toISOString(),
   subs,
+  mine: ownerId === me,
 });
 
 async function subCounts(tx: Tx, ids: string[]) {
@@ -81,24 +91,27 @@ async function subCounts(tx: Tx, ids: string[]) {
 }
 const NO_SUBS = { done: 0, total: 0 };
 
-/** All the caller's tasks; filters, search and sorting happen in the view (prototype). */
-export async function listTasks(auth: AuthContext): Promise<TaskItem[]> {
-  return asUser(auth, async (tx) => {
+/**
+ * All the caller's tasks; filters, search and sorting happen in the view
+ * (prototype). With `shared`: the tasks of that shared folder (every member's).
+ */
+export async function listTasks(auth: AuthContext, shared?: string): Promise<TaskItem[]> {
+  return (shared ? asSharer : asUser)(auth, async (tx) => {
     const rows = (await tx
       .select(cols)
       .from(tasks)
-      .where(isNull(tasks.deletedAt))
+      .where(and(isNull(tasks.deletedAt), shared ? eq(tasks.sharedFolderId, shared) : undefined))
       .orderBy(sql`${tasks.createdAt} desc`)
       .limit(2000)) as Row[];
     const subs = await subCounts(
       tx,
       rows.map((r) => r.id),
     );
-    return rows.map((r) => toItem(r, subs.get(r.id) ?? NO_SUBS));
+    return rows.map((r) => toItem(r, subs.get(r.id) ?? NO_SUBS, auth.user.id));
   });
 }
 
-async function loadTask(tx: Tx, id: string): Promise<Task> {
+async function loadTask(tx: Tx, id: string, me: string): Promise<Task> {
   const [r] = (await tx
     .select(cols)
     .from(tasks)
@@ -110,16 +123,17 @@ async function loadTask(tx: Tx, id: string): Promise<Task> {
     .where(eq(taskSubtasks.taskId, id))
     .orderBy(asc(taskSubtasks.sort), asc(taskSubtasks.id));
   return {
-    ...toItem(r, { done: subtasks.filter((s) => s.done).length, total: subtasks.length }),
+    ...toItem(r, { done: subtasks.filter((s) => s.done).length, total: subtasks.length }, me),
     subtasks,
   };
 }
 
-export const getTask = (auth: AuthContext, id: string) => asUser(auth, (tx) => loadTask(tx, id));
+export const getTask = (auth: AuthContext, id: string) =>
+  asSharer(auth, (tx) => loadTask(tx, id, auth.user.id));
 
 export async function createTask(
   auth: AuthContext,
-  input: { title: string; type?: TaskType; dueOn?: string | null },
+  input: { title: string; type?: TaskType; dueOn?: string | null; sharedFolderId?: string | null },
 ) {
   return asUser(auth, async (tx) => {
     const [{ n }] = (await tx
@@ -135,9 +149,11 @@ export async function createTask(
         title: input.title,
         type: input.type ?? 'tech',
         dueOn: input.dueOn ?? null,
+        sharedFolderId: input.sharedFolderId ?? null,
       })
-      .returning({ id: tasks.id });
-    return loadTask(tx, row!.id);
+      .returning({ id: tasks.id })
+      .catch(folderError);
+    return loadTask(tx, row!.id, auth.user.id);
   });
 }
 
@@ -147,6 +163,7 @@ export type TaskPatch = Partial<{
   priority: TaskPriority;
   dueOn: string | null;
   repeat: TaskRepeat;
+  sharedFolderId: string | null;
   projectId: string | null;
   notes: string;
   pinned: boolean;
@@ -159,16 +176,23 @@ export type TaskPatch = Partial<{
  * returns it as `next`.
  */
 export async function updateTask(auth: AuthContext, id: string, patch: TaskPatch) {
-  return asUser(auth, async (tx) => {
-    const cur = await loadTask(tx, id);
+  return asSharer(auth, async (tx) => {
+    const cur = await loadTask(tx, id, auth.user.id);
     const { done, ...fields } = patch;
+    // a member edits the task itself; its project, shared folder and pin stay the owner's
+    if (
+      !cur.mine &&
+      (fields.projectId !== undefined || fields.sharedFolderId !== undefined || fields.pinned !== undefined)
+    )
+      throw new ApiError(403, 'forbidden');
     if (fields.projectId !== undefined) fields.projectId = await checkProject(tx, fields.projectId);
     const set: Partial<typeof tasks.$inferInsert> = { ...fields, updatedAt: new Date() };
     let next: Task | null = null;
     if (done !== undefined && done !== !!cur.doneAt) {
       set.doneAt = done ? new Date() : null;
       const repeat = fields.repeat ?? cur.repeat;
-      if (done && repeat !== 'none') {
+      // the next occurrence belongs to the owner: only their completion schedules it
+      if (done && repeat !== 'none' && cur.mine) {
         const due = fields.dueOn !== undefined ? fields.dueOn : cur.dueOn;
         const [n] = await tx
           .insert(tasks)
@@ -183,8 +207,10 @@ export async function updateTask(auth: AuthContext, id: string, patch: TaskPatch
             projectId: fields.projectId !== undefined ? fields.projectId : cur.projectId,
             notes: fields.notes ?? cur.notes,
             pinned: fields.pinned ?? cur.pinned,
+            sharedFolderId: fields.sharedFolderId !== undefined ? fields.sharedFolderId : cur.sharedFolderId,
           })
-          .returning({ id: tasks.id });
+          .returning({ id: tasks.id })
+          .catch(folderError);
         if (cur.subtasks.length)
           await tx.insert(taskSubtasks).values(
             cur.subtasks.map((s, i) => ({
@@ -197,16 +223,23 @@ export async function updateTask(auth: AuthContext, id: string, patch: TaskPatch
           );
         // The completed occurrence stops repeating (reopening it won't spawn another).
         set.repeat = 'none';
-        next = await loadTask(tx, n!.id);
+        next = await loadTask(tx, n!.id, auth.user.id);
       }
     }
-    await tx.update(tasks).set(set).where(eq(tasks.id, id));
-    return { task: await loadTask(tx, id), next };
+    // a read-only member of the task's shared folder can't write it (RLS: no row)
+    const ok = await tx
+      .update(tasks)
+      .set(set)
+      .where(eq(tasks.id, id))
+      .returning({ id: tasks.id })
+      .catch(folderError);
+    if (!ok.length) throw new ApiError(403, 'forbidden');
+    return { task: await loadTask(tx, id, auth.user.id), next };
   });
 }
 
 export async function trashTask(auth: AuthContext, id: string) {
-  await asUser(auth, async (tx) => {
+  await asSharer(auth, async (tx) => {
     const r = await tx
       .update(tasks)
       .set({ deletedAt: new Date() })
@@ -218,8 +251,14 @@ export async function trashTask(auth: AuthContext, id: string) {
 
 // ── Subtasks ───────────────────────────────────────────────────────────────
 export async function addSubtask(auth: AuthContext, taskId: string, title: string) {
-  return asUser(auth, async (tx) => {
-    await loadTask(tx, taskId); // owner check (RLS) before writing the child row
+  return asSharer(auth, async (tx) => {
+    // the owner or an "edit" member of its shared folder (RLS on the no-op update)
+    const ok = await tx
+      .update(tasks)
+      .set({ updatedAt: sql`${tasks.updatedAt}` })
+      .where(and(eq(tasks.id, taskId), isNull(tasks.deletedAt)))
+      .returning({ id: tasks.id });
+    if (!ok.length) throw new ApiError(404, 'not_found');
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(taskSubtasks)
@@ -228,7 +267,7 @@ export async function addSubtask(auth: AuthContext, taskId: string, title: strin
     await tx
       .insert(taskSubtasks)
       .values({ tenantId: auth.tenant.id, ownerId: auth.user.id, taskId, title, sort: n });
-    return loadTask(tx, taskId);
+    return loadTask(tx, taskId, auth.user.id);
   });
 }
 
@@ -238,24 +277,24 @@ export async function updateSubtask(
   subId: string,
   patch: { title?: string; done?: boolean },
 ) {
-  return asUser(auth, async (tx) => {
+  return asSharer(auth, async (tx) => {
     const r = await tx
       .update(taskSubtasks)
       .set(patch)
       .where(and(eq(taskSubtasks.id, subId), eq(taskSubtasks.taskId, taskId)))
       .returning({ id: taskSubtasks.id });
     if (!r.length) throw new ApiError(404, 'not_found');
-    return loadTask(tx, taskId);
+    return loadTask(tx, taskId, auth.user.id);
   });
 }
 
 export async function deleteSubtask(auth: AuthContext, taskId: string, subId: string) {
-  return asUser(auth, async (tx) => {
+  return asSharer(auth, async (tx) => {
     const r = await tx
       .delete(taskSubtasks)
       .where(and(eq(taskSubtasks.id, subId), eq(taskSubtasks.taskId, taskId)))
       .returning({ id: taskSubtasks.id });
     if (!r.length) throw new ApiError(404, 'not_found');
-    return loadTask(tx, taskId);
+    return loadTask(tx, taskId, auth.user.id);
   });
 }

@@ -7,6 +7,38 @@ export type MailMessage = { to: string; subject: string; text: string; html: str
 type Copy = { subject: string; title: string; body: string; cta?: string; foot: string };
 
 const COPY: Record<string, Record<Lang, Copy>> = {
+  shared: {
+    pt: {
+      subject: '{who} partilhou "{folder}" consigo · KnowledgeHub',
+      title: 'Nova pasta partilhada',
+      body: '{who} partilhou a pasta "{folder}" ({kind}) consigo. Já a encontra na página respetiva do KnowledgeHub.',
+      cta: 'Abrir o KnowledgeHub',
+      foot: 'Se não conhece quem partilhou, pode ignorar este email.',
+    },
+    en: {
+      subject: '{who} shared "{folder}" with you · KnowledgeHub',
+      title: 'New shared folder',
+      body: '{who} shared the folder "{folder}" ({kind}) with you. You will find it in its page in KnowledgeHub.',
+      cta: 'Open KnowledgeHub',
+      foot: "If you don't know who shared it, you can ignore this email.",
+    },
+  },
+  shareInvite: {
+    pt: {
+      subject: '{who} convidou-o para o KnowledgeHub',
+      title: 'Convite para uma pasta partilhada',
+      body: '{who} quer partilhar a pasta "{folder}" ({kind}) consigo no KnowledgeHub. Crie a sua conta gratuita com este email para a ver.',
+      cta: 'Criar conta gratuita',
+      foot: 'Se não esperava este convite, ignore este email.',
+    },
+    en: {
+      subject: '{who} invited you to KnowledgeHub',
+      title: 'Invitation to a shared folder',
+      body: '{who} wants to share the folder "{folder}" ({kind}) with you on KnowledgeHub. Create your free account with this email to see it.',
+      cta: 'Create Free Account',
+      foot: "If you weren't expecting this invitation, ignore this email.",
+    },
+  },
   verify: {
     pt: {
       subject: 'Confirme o seu email · KnowledgeHub',
@@ -73,8 +105,16 @@ const COPY: Record<string, Record<Lang, Copy>> = {
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-export function renderMail(kind: keyof typeof COPY, lang: Lang, to: string, link?: string): MailMessage {
-  const c = COPY[kind]![lang];
+export function renderMail(
+  kind: keyof typeof COPY,
+  lang: Lang,
+  to: string,
+  link?: string,
+  vars: Record<string, string> = {},
+): MailMessage {
+  const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_m, k: string) => vars[k] ?? '');
+  const c0 = COPY[kind]![lang];
+  const c = { ...c0, subject: fill(c0.subject), title: fill(c0.title), body: fill(c0.body) };
   const text = [c.title, '', c.body, link ? `\n${c.cta}: ${link}` : '', '', c.foot].join('\n');
   const button =
     link && c.cta

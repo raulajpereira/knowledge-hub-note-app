@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ShareButton } from '@/components/share/ShareButton';
+import { FolderShareDialog } from '@/components/share/FolderShareDialog';
+import { sharedConfirm, useSharedFolders, type SharedFolder } from '@/components/share/useSharedFolders';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
@@ -26,6 +28,10 @@ import './artifacts.css';
 type Summary = {
   id: string;
   folderId: string | null;
+  /** the shared folder the artifact was put in, if any */
+  sharedFolderId: string | null;
+  /** false for someone else's artifact seen through a shared folder */
+  mine: boolean;
   title: string;
   description: string;
   tags: string[];
@@ -67,7 +73,11 @@ const I = {
   down: '<path d="M12 4v12"></path><path d="M7 11l5 5 5-5"></path><path d="M4 20h16"></path>',
   hist: '<path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path><path d="M12 8v4l3 2"></path>',
   trash: '<path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path>',
+  share:
+    '<circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="M8.2 10.8l7.6-4.4"></path><path d="M8.2 13.2l7.6 4.4"></path>',
 };
+/** filter value of a standalone shared folder */
+const SH = 'sh:';
 
 export function ArtifactsView() {
   const { t, lang } = useI18n();
@@ -80,7 +90,7 @@ export function ArtifactsView() {
   const when = useWhen();
   const [cols, setCols] = usePref<Cols>('cols', {});
   const [liveList, setLiveList] = useState<number | null>(null);
-  const [folder, setFolder] = usePersistentState<string>('artifacts.folder', 'all');
+  const [folder0, setFolder] = usePersistentState<string>('artifacts.folder', 'all');
   const [mode, setMode] = usePersistentState<'preview' | 'code'>('artifacts.mode', 'preview');
   const [items, setItems] = useState<Summary[] | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -94,6 +104,14 @@ export function ArtifactsView() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const activeId = sp.get('a');
+  const sh = useSharedFolders('artifacts');
+  const [fs, setFs] = useState<{ folderId?: string; sharedId?: string; title?: string } | null>(null);
+  const [shItems, setShItems] = useState<Summary[] | null>(null);
+  // a shared folder that is gone (deleted, access removed) falls back to "Todos"
+  const gone = folder0.startsWith(SH) && sh.loaded && !sh.folders.some((x) => SH + x.id === folder0);
+  const folder = gone ? 'all' : folder0;
+  const shId = folder.startsWith(SH) ? folder.slice(SH.length) : undefined;
+  const curShared = shId ? sh.folders.find((x) => x.id === shId) : undefined;
 
   const open = useCallback(
     (id: string | null) => {
@@ -114,6 +132,19 @@ export function ArtifactsView() {
       .catch(() => setItems([]));
   }, []);
 
+  // a standalone shared folder lists every member's artifacts in it
+  useEffect(() => {
+    setShItems(null);
+    if (!shId) return;
+    let live = true;
+    api<{ artifacts: Summary[] }>(`/artifacts?shared=${shId}`)
+      .then((r) => live && setShItems(r.artifacts))
+      .catch(() => live && setShItems([]));
+    return () => {
+      live = false;
+    };
+  }, [shId]);
+
   useEffect(() => {
     setDraft(null);
     setHistOpen(false);
@@ -131,11 +162,12 @@ export function ArtifactsView() {
   const fail = () => toast({ message: t('ne_saveFail'), tone: 'error' });
   const syncSummary = (s: Partial<Summary> & { id: string }) => {
     setItems((cur) => cur && cur.map((x) => (x.id === s.id ? { ...x, ...s } : x)));
+    setShItems((cur) => cur && cur.map((x) => (x.id === s.id ? { ...x, ...s } : x)));
     setFull((cur) => (cur && cur.id === s.id ? { ...cur, ...s } : cur));
   };
   const patch = async (
     id: string,
-    p: Partial<Pick<Summary, 'title' | 'description' | 'tags' | 'pinned' | 'folderId'>>,
+    p: Partial<Pick<Summary, 'title' | 'description' | 'tags' | 'pinned' | 'folderId' | 'sharedFolderId'>>,
   ) => {
     syncSummary({ id, ...p });
     try {
@@ -164,13 +196,16 @@ export function ArtifactsView() {
   };
 
   const create = async (title: string, html?: string) => {
+    if (curShared && !(await confirm(sharedConfirm(t, curShared, false)))) return;
     try {
       const { artifact } = await api<{ artifact: Full }>('/artifacts', {
         title: title.slice(0, 300) || t('a_newTitle'),
         html,
         folderId: folder !== 'all' && folders.some((f) => f.id === folder) ? folder : null,
+        sharedFolderId: curShared?.id,
       });
       setItems((cur) => [artifact, ...(cur ?? [])]);
+      if (curShared) setShItems((cur) => [artifact, ...(cur ?? [])]);
       setMode('preview');
       open(artifact.id);
       refreshCounts();
@@ -226,6 +261,7 @@ export function ArtifactsView() {
     const idx = list.findIndex((x) => x.id === full.id);
     const rest = list.filter((x) => x.id !== full.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== full.id));
+    setShItems((cur) => cur && cur.filter((x) => x.id !== full.id));
     open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
   };
@@ -247,6 +283,22 @@ export function ArtifactsView() {
     setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: null } : x)));
     if (folder === f.id) setFolder('all');
   };
+  /** drag onto a folder: a shared one asks first and puts the artifact in it; a normal one takes it out */
+  const dropOn = async (id: string, target: string) => {
+    const a = [...all, ...(shItems ?? [])].find((x) => x.id === id);
+    if (a && !a.mine) return;
+    const toShared = target.startsWith(SH) ? sh.folders.find((x) => SH + x.id === target) : undefined;
+    if (toShared) {
+      if (a?.sharedFolderId === toShared.id) return;
+      if (!(await confirm(sharedConfirm(t, toShared, true)))) return;
+      await patch(id, { sharedFolderId: toShared.id });
+    } else
+      await patch(id, {
+        folderId: target === 'all' ? null : target,
+        ...(a?.sharedFolderId ? { sharedFolderId: null } : {}),
+      });
+    if (shId && target !== folder) setShItems((cur) => cur && cur.filter((x) => x.id !== id));
+  };
   const download = () => {
     if (!full) return;
     // A download never runs the HTML, so a blob link is safe here.
@@ -261,9 +313,9 @@ export function ArtifactsView() {
   // ── Derived ───────────────────────────────────────────────────────────────
   const all = useMemo(() => items ?? [], [items]);
   const query = q.trim().toLowerCase();
-  const list = all.filter(
+  const list = (shId ? (shItems ?? []) : all).filter(
     (a) =>
-      (folder === 'all' || a.folderId === folder) &&
+      (folder === 'all' || shId || a.folderId === folder) &&
       (!query || [a.title, a.description, ...a.tags].some((v) => v.toLowerCase().includes(query))),
   );
   const fmtStamp = (iso: string) =>
@@ -274,6 +326,15 @@ export function ArtifactsView() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  const linkedOf = (folderId: string) => sh.folders.find((x) => x.mine && x.folderId === folderId);
+  const isShared = (a: Summary) => {
+    const l = a.folderId ? linkedOf(a.folderId) : undefined;
+    return !!a.sharedFolderId || (!!l && l.members.length > 0 && !l.paused);
+  };
+  // someone else's artifact: its shared folder says who shared it and whether it can be edited
+  const fullShared =
+    full && !full.mine ? (sh.folders.find((x) => x.id === full.sharedFolderId) ?? curShared) : undefined;
+  const ro = !!full && !full.mine && fullShared?.perm === 'read';
   const code = full ? (draft ?? full.html) : '';
   const dirty = !!full && draft !== null && draft !== full.html;
   const listW = liveList ?? cols.list ?? COL_DEFAULTS.list;
@@ -330,9 +391,28 @@ export function ArtifactsView() {
             </button>
           </div>
           <div className="kh-em-folders kh-ar-folders">
-            {[{ id: 'all', name: t('a_all'), top: true }, ...folders].map((f) => {
-              const top = 'top' in f;
-              const n = top ? all.length : all.filter((a) => a.folderId === f.id).length;
+            {(
+              [
+                { id: 'all', name: t('a_all'), top: true },
+                ...folders,
+                ...sh.folders
+                  .filter((x) => !x.folderId)
+                  .map((x) => ({ id: SH + x.id, name: x.name, shared: x })),
+              ] as Array<Folder & { top?: true; shared?: SharedFolder }>
+            ).map((f) => {
+              const top = !!f.top;
+              const shf = f.shared;
+              const linked = !top && !shf ? linkedOf(f.id) : undefined;
+              const marked = !!shf || (!!linked && linked.members.length > 0 && !linked.paused);
+              const n = top
+                ? all.length
+                : shf
+                  ? shId === shf.id && shItems
+                    ? shItems.length
+                    : all.filter((a) => a.sharedFolderId === shf.id).length
+                  : all.filter((a) => a.folderId === f.id).length;
+              const tip =
+                shf && !shf.mine ? t('sh_sharedBy').replace('{who}', shf.owner?.name ?? '') : t('sh_shared');
               return (
                 <div
                   key={f.id}
@@ -347,13 +427,32 @@ export function ArtifactsView() {
                   onDrop={(e) => {
                     if (!dragId) return;
                     e.preventDefault();
-                    void patch(dragId, { folderId: top ? null : f.id });
+                    if (!shf || shf.mine || shf.perm === 'edit') void dropOn(dragId, f.id);
                     setDragId(null);
                   }}
                 >
                   <Svg d={I.folder} s={17} />
+                  {marked && (
+                    <span className="kh-sh-mark" title={tip} aria-label={tip}>
+                      <Svg d={I.share} s={13} />
+                    </span>
+                  )}
                   <span>{f.name}</span>
-                  {!top && (
+                  {!top && sh.canShare && (!shf || shf.mine) && (
+                    <button
+                      type="button"
+                      title={t('sh_fpTitle')}
+                      aria-label={`${t('sh_fpTitle')} ${f.name}`}
+                      style={marked || shf ? { color: 'oklch(0.86 0.13 150)' } : undefined}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFs(shf ? { sharedId: shf.id } : { folderId: f.id, title: f.name });
+                      }}
+                    >
+                      <Svg d={I.share} s={14} />
+                    </button>
+                  )}
+                  {!top && !shf && (
                     <button
                       type="button"
                       title={t('del')}
@@ -382,6 +481,17 @@ export function ArtifactsView() {
               <button type="button" onClick={() => void addFolder()}>
                 + {t('newFolder')}
               </button>
+              {sh.canShare && (
+                <button
+                  type="button"
+                  className="kh-ar-newshared"
+                  title={t('sh_newSharedTip')}
+                  aria-label={t('sh_newSharedTip')}
+                  onClick={() => setFs({})}
+                >
+                  <Svg d={I.share} s={16} />
+                </button>
+              )}
             </div>
           </div>
           <section className="kh-em-list kh-ar-list" aria-label={t('nav_artifacts')}>
@@ -406,6 +516,11 @@ export function ArtifactsView() {
                 <div className="kh-ar-item__top">
                   {a.pinned && <Svg d={I.pin} s={12} fill="#fbf8f5" />}
                   <span>{a.title}</span>
+                  {isShared(a) && (
+                    <span className="kh-sh-mark" title={t('sh_shared')}>
+                      <Svg d={I.share} s={12} />
+                    </span>
+                  )}
                 </div>
                 <div className="kh-ar-item__desc">{a.description || '—'}</div>
                 {a.tags.length > 0 && (
@@ -435,6 +550,7 @@ export function ArtifactsView() {
                 <input
                   className="kh-ar-title"
                   value={full.title}
+                  readOnly={ro}
                   maxLength={300}
                   aria-label={t('c_title')}
                   onChange={(e) => typed({ title: e.target.value })}
@@ -442,6 +558,7 @@ export function ArtifactsView() {
                 <input
                   className="kh-ar-desc"
                   value={full.description}
+                  readOnly={ro}
                   maxLength={2000}
                   placeholder={t('a_descPh')}
                   aria-label={t('c_desc')}
@@ -467,13 +584,21 @@ export function ArtifactsView() {
                   </button>
                 ))}
               </div>
-              <ShareButton
-                itemType="artifact"
-                itemId={full.id}
-                title={full.title}
-                variant="round"
-                className="kh-em-act"
-              />
+              {!full.mine && (
+                <span className="kh-ar-by">
+                  {t('sh_sharedBy').replace('{who}', fullShared?.owner?.name ?? '')}
+                  {ro && ` · ${t('sh_readOnly')}`}
+                </span>
+              )}
+              {full.mine && (
+                <ShareButton
+                  itemType="artifact"
+                  itemId={full.id}
+                  title={full.title}
+                  variant="round"
+                  className="kh-em-act"
+                />
+              )}
               <button
                 type="button"
                 className="kh-em-act"
@@ -506,17 +631,19 @@ export function ArtifactsView() {
               >
                 <Svg d={I.down} />
               </button>
-              <button
-                type="button"
-                className="kh-em-act"
-                title={full.pinned ? t('v_unpin') : t('v_pin')}
-                aria-label={full.pinned ? t('v_unpin') : t('v_pin')}
-                aria-pressed={full.pinned}
-                data-on={full.pinned || undefined}
-                onClick={() => void patch(full.id, { pinned: !full.pinned })}
-              >
-                <Svg d={I.pin} fill={full.pinned ? 'currentColor' : 'none'} />
-              </button>
+              {full.mine && (
+                <button
+                  type="button"
+                  className="kh-em-act"
+                  title={full.pinned ? t('v_unpin') : t('v_pin')}
+                  aria-label={full.pinned ? t('v_unpin') : t('v_pin')}
+                  aria-pressed={full.pinned}
+                  data-on={full.pinned || undefined}
+                  onClick={() => void patch(full.id, { pinned: !full.pinned })}
+                >
+                  <Svg d={I.pin} fill={full.pinned ? 'currentColor' : 'none'} />
+                </button>
+              )}
               <div className="kh-ar-histwrap">
                 <button
                   type="button"
@@ -541,7 +668,7 @@ export function ArtifactsView() {
                           <span>{fmtStamp(v.createdAt)}</span>
                           {v.current ? (
                             <span className="kh-ar-hist__cur">{t('a_current')}</span>
-                          ) : (
+                          ) : ro ? null : (
                             <button type="button" onClick={() => void restore(v.id)}>
                               {t('a_restore')}
                             </button>
@@ -551,54 +678,62 @@ export function ArtifactsView() {
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                className="kh-em-act kh-em-act--del"
-                title={t('del')}
-                aria-label={t('del')}
-                onClick={() => void remove()}
-              >
-                <Svg d={I.trash} />
-              </button>
+              {!ro && (
+                <button
+                  type="button"
+                  className="kh-em-act kh-em-act--del"
+                  title={t('del')}
+                  aria-label={t('del')}
+                  onClick={() => void remove()}
+                >
+                  <Svg d={I.trash} />
+                </button>
+              )}
             </div>
 
             <div className="kh-ar-meta">
               {full.tags.map((x) => (
                 <span key={x} className="kh-ar-tag" style={{ background: tagTint(x) }}>
                   {x}
-                  <button
-                    type="button"
-                    aria-label={`${t('del')} ${x}`}
-                    onClick={() => void patch(full.id, { tags: full.tags.filter((y) => y !== x) })}
-                  >
-                    <Svg d={I.x} s={10} />
-                  </button>
+                  {!ro && (
+                    <button
+                      type="button"
+                      aria-label={`${t('del')} ${x}`}
+                      onClick={() => void patch(full.id, { tags: full.tags.filter((y) => y !== x) })}
+                    >
+                      <Svg d={I.x} s={10} />
+                    </button>
+                  )}
                 </span>
               ))}
-              <input
-                className="kh-ar-newtag"
-                value={newTag}
-                maxLength={40}
-                placeholder={`+ ${t('a_tag')}`}
-                aria-label={t('a_tag')}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter') return;
-                  const v = newTag.trim();
-                  setNewTag('');
-                  if (v && !full.tags.includes(v) && full.tags.length < 30)
-                    void patch(full.id, { tags: [...full.tags, v] });
-                }}
-              />
+              {!ro && (
+                <input
+                  className="kh-ar-newtag"
+                  value={newTag}
+                  maxLength={40}
+                  placeholder={`+ ${t('a_tag')}`}
+                  aria-label={t('a_tag')}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return;
+                    const v = newTag.trim();
+                    setNewTag('');
+                    if (v && !full.tags.includes(v) && full.tags.length < 30)
+                      void patch(full.id, { tags: [...full.tags, v] });
+                  }}
+                />
+              )}
               <div style={{ flex: 1 }} />
               <span className="kh-ar-stamp">
                 {t('createdAt')} {fmtStamp(full.createdAt)} · {t('dUpdated')} {when(full.updatedAt)}
               </span>
             </div>
 
-            <div className="kh-ar-cx">
-              <Connections type="artifact" id={full.id} variant="section" />
-            </div>
+            {full.mine && (
+              <div className="kh-ar-cx">
+                <Connections type="artifact" id={full.id} variant="section" />
+              </div>
+            )}
 
             <div className="kh-ar-stage">
               {mode === 'preview' ? (
@@ -637,6 +772,7 @@ export function ArtifactsView() {
                   <textarea
                     className="kh-ar-code"
                     value={code}
+                    readOnly={ro}
                     spellCheck={false}
                     aria-label={t('a_code')}
                     maxLength={MAX_HTML}
@@ -656,6 +792,18 @@ export function ArtifactsView() {
           <div className="kh-em-none">{t('a_noActive')}</div>
         )}
       </section>
+      {fs && (
+        <FolderShareDialog
+          kind="artifacts"
+          folderId={fs.folderId}
+          sharedId={fs.sharedId}
+          title={fs.title}
+          onClose={() => setFs(null)}
+          onCreated={(id) => {
+            if (!fs.folderId) setFolder(SH + id);
+          }}
+        />
+      )}
     </div>
   );
 }

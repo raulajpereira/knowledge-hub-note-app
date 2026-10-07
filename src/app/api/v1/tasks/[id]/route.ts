@@ -23,6 +23,7 @@ export const PATCH = handler(async (req, ctx: IdCtx) => {
       dueOn: day.nullable().optional(),
       repeat: z.enum(TASK_REPEATS).optional(),
       projectId: z.uuid().nullable().optional(),
+      sharedFolderId: z.uuid().nullable().optional(),
       notes: z.string().max(20_000).optional(),
       pinned: z.boolean().optional(),
       done: z.boolean().optional(),

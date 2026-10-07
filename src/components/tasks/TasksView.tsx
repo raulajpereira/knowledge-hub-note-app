@@ -15,6 +15,7 @@ import { ColHandle } from '@/components/content/ColHandle';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
 import { useDraft } from '@/components/content/useDraft';
+import { sharedConfirm, useSharedFolders, type SharedFolder } from '@/components/share/useSharedFolders';
 import './tasks.css';
 
 // ZNotes.dc.html `isTasks`: list (search, filters, types, sort) · detail.
@@ -34,11 +35,18 @@ type TaskItem = {
   pinned: boolean;
   doneAt: string | null;
   createdAt: string;
+  /** the shared folder the task is in, if any */
+  sharedFolderId: string | null;
+  /** false for someone else's task seen through a shared folder */
+  mine: boolean;
   subs: { done: number; total: number };
 };
 type Task = TaskItem & { subtasks: Array<{ id: string; title: string; done: boolean }> };
 type Patch = Partial<
-  Pick<Task, 'title' | 'type' | 'priority' | 'dueOn' | 'repeat' | 'projectId' | 'notes' | 'pinned'>
+  Pick<
+    Task,
+    'title' | 'type' | 'priority' | 'dueOn' | 'repeat' | 'projectId' | 'notes' | 'pinned' | 'sharedFolderId'
+  >
 > & {
   done?: boolean;
 };
@@ -83,6 +91,26 @@ const Pin = ({ size, fill, sw }: { size: number; fill: string; sw?: number }) =>
     aria-hidden="true"
   >
     <path d="M15 3l6 6-3 1-4 4 1 5-2 2-4-4-5 5-1-1 5-5-4-4 2-2 5 1 4-4z" />
+  </svg>
+);
+const ShareIc = ({ size = 13 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    style={{ flex: 'none' }}
+  >
+    <circle cx="18" cy="5" r="2.5" />
+    <circle cx="6" cy="12" r="2.5" />
+    <circle cx="18" cy="19" r="2.5" />
+    <path d="M8.2 10.8l7.6-4.4" />
+    <path d="M8.2 13.2l7.6 4.4" />
   </svg>
 );
 const Plus = ({ size = 16, sw = 2.4 }: { size?: number; sw?: number }) => (
@@ -162,11 +190,17 @@ function Detail({
   onPatch,
   onSubs,
   onDelete,
+  shared,
+  onShare,
 }: {
   task: Task;
   onPatch: (p: Patch) => void;
   onSubs: (t: Task) => void;
   onDelete: () => void;
+  /** shared task folders (owned and incoming) */
+  shared: SharedFolder[];
+  /** moves the task in/out of a shared folder (asks first) */
+  onShare: (folderId: string | null) => void;
 }) {
   const { t } = useI18n();
   const { projects } = useMgOptions();
@@ -191,9 +225,13 @@ function Detail({
     }
   };
   const subPct = task.subs.total ? Math.round((task.subs.done / task.subs.total) * 100) : 0;
+  const inShared = shared.find((f) => f.id === task.sharedFolderId);
+  // someone else's task in a folder shared read-only with the caller
+  const readOnly = !task.mine && inShared?.perm === 'read';
+  const targets = shared.filter((f) => f.mine || f.perm === 'edit');
 
   return (
-    <div className="kh-tk-detail">
+    <fieldset className="kh-tk-detail" disabled={readOnly}>
       <div className="kh-tk-detail__top">
         <div className="kh-tk-detail__head">
           <input
@@ -224,7 +262,29 @@ function Detail({
               );
             })}
           </div>
+          {task.mine && targets.length > 0 && (
+            <select
+              className="kh-tk-shsel"
+              value={task.sharedFolderId ?? ''}
+              aria-label={t('sh_inFolder')}
+              onChange={(e) => onShare(e.target.value || null)}
+            >
+              <option value="">{t('sh_noSharedFolder')}</option>
+              {targets.map((f) => (
+                <option key={f.id} value={f.id}>
+                  ⇄ {f.name}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="kh-tk-chips">
+            {!task.mine && (
+              <span className="kh-tk-chip">
+                <ShareIc />
+                {t('sh_sharedBy').replace('{who}', inShared?.owner?.name ?? '')}
+                {readOnly && ` · ${t('sh_readOnly')}`}
+              </span>
+            )}
             <span className="kh-tk-chip">
               <svg
                 width="13"
@@ -248,17 +308,19 @@ function Detail({
             )}
           </div>
         </div>
-        <button
-          type="button"
-          className="kh-tk-round"
-          title={task.pinned ? t('v_unpin') : t('v_pin')}
-          aria-label={task.pinned ? t('v_unpin') : t('v_pin')}
-          aria-pressed={task.pinned}
-          style={{ background: task.pinned ? 'rgba(255,255,255,.24)' : undefined }}
-          onClick={() => onPatch({ pinned: !task.pinned })}
-        >
-          <Pin size={16} sw={1.8} fill={task.pinned ? 'currentColor' : 'none'} />
-        </button>
+        {task.mine && (
+          <button
+            type="button"
+            className="kh-tk-round"
+            title={task.pinned ? t('v_unpin') : t('v_pin')}
+            aria-label={task.pinned ? t('v_unpin') : t('v_pin')}
+            aria-pressed={task.pinned}
+            style={{ background: task.pinned ? 'rgba(255,255,255,.24)' : undefined }}
+            onClick={() => onPatch({ pinned: !task.pinned })}
+          >
+            <Pin size={16} sw={1.8} fill={task.pinned ? 'currentColor' : 'none'} />
+          </button>
+        )}
         <button
           type="button"
           className="kh-tk-round"
@@ -336,21 +398,23 @@ function Detail({
             onChange={(e) => onPatch({ dueOn: e.target.value || null })}
           />
         </label>
-        <label>
-          <span className="kh-tk-lbl">{t('t_project')}</span>
-          {/* Management projects (shared by the tenant) */}
-          <select
-            value={task.projectId ?? ''}
-            onChange={(e) => onPatch({ projectId: e.target.value || null })}
-          >
-            <option value="">{t('t_noProject')}</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {projectLabel(p)}
-              </option>
-            ))}
-          </select>
-        </label>
+        {task.mine && (
+          <label>
+            <span className="kh-tk-lbl">{t('t_project')}</span>
+            {/* Management projects (shared by the tenant) */}
+            <select
+              value={task.projectId ?? ''}
+              onChange={(e) => onPatch({ projectId: e.target.value || null })}
+            >
+              <option value="">{t('t_noProject')}</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {projectLabel(p)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           <span className="kh-tk-lbl">{t('t_repeat')}</span>
           <select value={task.repeat} onChange={(e) => onPatch({ repeat: e.target.value as Repeat })}>
@@ -414,8 +478,10 @@ function Detail({
         />
       </div>
 
-      <Connections type="task" id={task.id} variant="section" placeholder={t('t_linkPh')} transports />
-    </div>
+      {task.mine && (
+        <Connections type="task" id={task.id} variant="section" placeholder={t('t_linkPh')} transports />
+      )}
+    </fieldset>
   );
 }
 
@@ -436,6 +502,11 @@ export function TasksView() {
   const [items, setItems] = useState<TaskItem[] | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const activeId = sp.get('t');
+  // prototype tShF: the tasks of one shared folder (every member's)
+  const sh = useSharedFolders('tasks');
+  const [shF0, setShF] = usePersistentState<string>('tasks.shf', '');
+  const shF = shF0 && (!sh.loaded || sh.folders.some((f) => f.id === shF0)) ? shF0 : '';
+  const curShared = sh.folders.find((f) => f.id === shF);
 
   const open = useCallback(
     (id: string | null) => {
@@ -448,10 +519,14 @@ export function TasksView() {
   );
 
   useEffect(() => {
-    api<{ tasks: TaskItem[] }>('/tasks')
-      .then((r) => setItems(r.tasks))
-      .catch(() => setItems([]));
-  }, []);
+    let live = true;
+    api<{ tasks: TaskItem[] }>(shF ? `/tasks?shared=${shF}` : '/tasks')
+      .then((r) => live && setItems(r.tasks))
+      .catch(() => live && setItems([]));
+    return () => {
+      live = false;
+    };
+  }, [shF]);
 
   useEffect(() => {
     if (!activeId) {
@@ -529,10 +604,12 @@ export function TasksView() {
   };
 
   const create = async () => {
+    if (curShared && !(await confirm(sharedConfirm(t, curShared, false)))) return;
     try {
       const { task: n } = await api<{ task: Task }>('/tasks', {
         title: t('t_newTitle'),
         type: typeF === 'all' ? undefined : typeF,
+        sharedFolderId: curShared?.id,
       });
       upsert(toItem(n));
       setTask(n);
@@ -546,6 +623,14 @@ export function TasksView() {
         tone: 'error',
       });
     }
+  };
+
+  const moveShared = async (folderId: string | null) => {
+    if (!task) return;
+    const f = sh.folders.find((x) => x.id === folderId);
+    if (f && !(await confirm(sharedConfirm(t, f, true)))) return;
+    await patch(task.id, { sharedFolderId: folderId });
+    if (shF && folderId !== shF) setItems((cur) => cur && cur.filter((x) => x.id !== task.id));
   };
 
   const remove = async () => {
@@ -662,6 +747,21 @@ export function TasksView() {
                 <span>{all.filter((x) => !x.doneAt && (id === 'all' || x.type === id)).length}</span>
               </button>
             ))}
+            {sh.folders.length > 0 && <span className="kh-tk-sep" />}
+            {sh.folders.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className="kh-tk-fchip"
+                {...chip(shF === f.id)}
+                aria-pressed={shF === f.id}
+                title={f.mine ? t('sh_shared') : t('sh_sharedBy').replace('{who}', f.owner?.name ?? '')}
+                onClick={() => setShF(shF === f.id ? '' : f.id)}
+              >
+                <ShareIc />
+                {f.name}
+              </button>
+            ))}
             <div style={{ flex: 1 }} />
             <select
               className="kh-tk-sort"
@@ -698,6 +798,7 @@ export function TasksView() {
                   />
                   <button
                     type="button"
+                    disabled={!x.mine && sh.folders.find((f) => f.id === x.sharedFolderId)?.perm === 'read'}
                     className="kh-tk-ck"
                     data-on={done || undefined}
                     aria-label={x.title}
@@ -712,6 +813,17 @@ export function TasksView() {
                   <div className="kh-tk-item__body">
                     <div className="kh-tk-item__title" data-done={done || undefined}>
                       {x.pinned && <Pin size={12} fill="#fbf8f5" />}
+                      {x.sharedFolderId && (
+                        <span
+                          className="kh-tk-shmark"
+                          title={t('sh_sharedItem').replace(
+                            '{name}',
+                            sh.folders.find((f) => f.id === x.sharedFolderId)?.name ?? '',
+                          )}
+                        >
+                          <ShareIc size={12} />
+                        </span>
+                      )}
                       <span>{x.title || t('t_newTitle')}</span>
                     </div>
                     <div className="kh-tk-item__meta">
@@ -764,6 +876,8 @@ export function TasksView() {
               upsert(toItem(n));
             }}
             onDelete={() => void remove()}
+            shared={sh.folders}
+            onShare={(f) => void moveShared(f)}
           />
         ) : (
           <div className="kh-tk-none">{items ? t('t_noActive') : ''}</div>

@@ -19,6 +19,7 @@ export const PATCH = handler(async (req, ctx: IdCtx) => {
       tags: z.array(z.string().max(40)).max(30).optional(),
       favorite: z.boolean().optional(),
       folderId: z.uuid().nullable().optional(),
+      sharedFolderId: z.uuid().nullable().optional(),
     }),
   );
   return json({ note: await updateNote(auth, await idParam(ctx), input) });

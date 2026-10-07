@@ -348,3 +348,34 @@
   white-space: pre;
   box-sizing: border-box;
 }
+/* prototype aNewShared: round "Nova pasta partilhada" next to "+ Nova pasta" */
+.kh-em-newfolder .kh-ar-newshared {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid oklch(0.8 0.13 150 / 0.5);
+  background: oklch(0.8 0.13 150 / 0.14);
+  color: oklch(0.86 0.13 150);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kh-ar-by {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.75);
+  white-space: nowrap;
+}
+/* a shared folder's mark sits before the name (the name keeps the free space) */
+.kh-em-folder > span.kh-sh-mark {
+  flex: none;
+  min-width: 0;
+}
+.kh-em-folder > span.kh-sh-mark + span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

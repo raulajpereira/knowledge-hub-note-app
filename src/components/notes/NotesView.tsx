@@ -9,6 +9,8 @@ import { isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { ShareButton } from '@/components/share/ShareButton';
+import { FolderShareDialog } from '@/components/share/FolderShareDialog';
+import { sharedConfirm, useSharedFolders, type SharedFolder } from '@/components/share/useSharedFolders';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
@@ -31,7 +33,14 @@ const P = {
   trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   x: '<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+  share:
+    '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4"/><path d="M8.2 13.2l7.6 4.4"/>',
 };
+/** filter value of a shared folder row */
+const SH = 'sh:';
+/** a folder of the caller's that is shared with someone (prototype shLinked) */
+const linkedOf = (shared: SharedFolder[], folderId: string) =>
+  shared.find((x) => x.mine && x.folderId === folderId);
 function Svg({ d, size = 14, sw = 1.9 }: { d: string; size?: number; sw?: number }) {
   return (
     <svg
@@ -60,7 +69,15 @@ function FoldersPanel({
   onDuplicate,
   onDelete,
   onDropNote,
+  shared,
+  canShare,
+  onShare,
+  onNewShared,
 }: {
+  shared: SharedFolder[];
+  canShare: boolean;
+  onShare: (target: { folder?: Folder; shared?: SharedFolder }) => void;
+  onNewShared: () => void;
   data: FolderList | null;
   filter: string;
   setFilter: (f: string) => void;
@@ -92,17 +109,33 @@ function FoldersPanel({
     }
   };
 
-  const rows: Array<{ id: string; name: string; color: string; count: number; top?: boolean; f?: Folder }> = [
+  const rows: Array<{
+    id: string;
+    name: string;
+    color: string;
+    count: number | null;
+    top?: boolean;
+    f?: Folder;
+    sh?: SharedFolder;
+  }> = [
     { id: 'all', name: t('all'), color: 'transparent', count: data?.total ?? 0, top: true },
     { id: 'fav', name: t('fav'), color: 'oklch(0.85 0.13 85)', count: data?.favorites ?? 0, top: true },
     ...(data?.folders ?? []).map((f) => ({ id: f.id, name: f.name, color: f.color, count: f.count, f })),
+    // standalone shared folders (own "Nova pasta partilhada" and the ones shared with the caller)
+    ...shared
+      .filter((x) => !x.folderId)
+      .map((x) => ({ id: SH + x.id, name: x.name, color: 'oklch(0.78 0.13 150)', count: null, sh: x })),
   ];
 
   return (
     <div className="kh-nt-folders kh-nt-glass">
       {rows.map((r) => {
         const on = filter === r.id;
-        const dropOk = r.id !== 'all';
+        const linked = r.f ? linkedOf(shared, r.f.id) : undefined;
+        const marked = !!r.sh || (!!linked && linked.members.length > 0 && !linked.paused);
+        const dropOk = r.id !== 'all' && (!r.sh || r.sh.mine || r.sh.perm === 'edit');
+        const shTip =
+          r.sh && !r.sh.mine ? t('sh_sharedBy').replace('{who}', r.sh.owner?.name ?? '') : t('sh_shared');
         return (
           <div
             key={r.id}
@@ -134,6 +167,11 @@ function FoldersPanel({
           >
             <Svg d={P.folder} size={17} sw={1.8} />
             <span className="kh-nt-folder__dot" style={{ background: r.color }} />
+            {marked && (
+              <span className="kh-sh-mark" title={shTip} aria-label={shTip}>
+                <Svg d={P.share} size={13} sw={2} />
+              </span>
+            )}
             {editing === r.id && r.f ? (
               <input
                 className="kh-nt-folder__edit"
@@ -179,6 +217,20 @@ function FoldersPanel({
                 >
                   <Svg d={P.plus} />
                 </button>
+                {canShare && (
+                  <button
+                    type="button"
+                    title={t('sh_fpTitle')}
+                    aria-label={t('sh_fpTitle')}
+                    style={linked ? { color: 'oklch(0.86 0.13 150)' } : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShare({ folder: r.f });
+                    }}
+                  >
+                    <Svg d={P.share} />
+                  </button>
+                )}
                 <button
                   type="button"
                   title={t('duplicate')}
@@ -203,7 +255,23 @@ function FoldersPanel({
                 </button>
               </div>
             )}
-            <span className="kh-nt-folder__n">{r.count}</span>
+            {r.sh?.mine && canShare && (
+              <div className="kh-nt-folder__acts">
+                <button
+                  type="button"
+                  title={t('sh_fpTitle')}
+                  aria-label={t('sh_fpTitle')}
+                  style={{ color: 'oklch(0.86 0.13 150)' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShare({ shared: r.sh });
+                  }}
+                >
+                  <Svg d={P.share} />
+                </button>
+              </div>
+            )}
+            <span className="kh-nt-folder__n">{r.count ?? ''}</span>
           </div>
         );
       })}
@@ -231,10 +299,23 @@ function FoldersPanel({
           </button>
         </div>
       )}
-      <button type="button" className="kh-nt-newfolder" onClick={() => setAdding(true)}>
-        <Svg d={P.plus} size={15} sw={2.4} />
-        {t('newFolder')}
-      </button>
+      <div className="kh-nt-newrow">
+        <button type="button" className="kh-nt-newfolder" onClick={() => setAdding(true)}>
+          <Svg d={P.plus} size={15} sw={2.4} />
+          {t('newFolder')}
+        </button>
+        {canShare && (
+          <button
+            type="button"
+            className="kh-nt-newshared"
+            title={t('sh_newSharedTip')}
+            aria-label={t('sh_newSharedTip')}
+            onClick={onNewShared}
+          >
+            <Svg d={P.share} size={16} sw={2} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -244,6 +325,7 @@ function NoteList({
   title,
   items,
   folders,
+  shared,
   activeId,
   loading,
   onOpen,
@@ -252,6 +334,8 @@ function NoteList({
   title: string;
   items: NoteItem[];
   folders: Map<string, Folder>;
+  /** shared folder names by id */
+  shared: Map<string, string>;
   activeId: string | null;
   loading: boolean;
   onOpen: (id: string) => void;
@@ -282,7 +366,10 @@ function NoteList({
       </div>
       <div className="kh-nt-list__items">
         {items.map((n) => {
-          const f = (n.folderId && folders.get(n.folderId)) || NO_FOLDER;
+          const sf = n.sharedFolderId ? shared.get(n.sharedFolderId) : undefined;
+          const f =
+            (n.mine && n.folderId && folders.get(n.folderId)) ||
+            (sf ? { name: sf, color: 'oklch(0.78 0.13 150)' } : NO_FOLDER);
           const on = n.id === activeId;
           return (
             <button
@@ -304,7 +391,12 @@ function NoteList({
                 <span className="kh-nt-card__dot" style={{ background: f.color }} />
                 <span>{f.name || t('ne_noFolder')}</span>
                 <span style={{ flex: 1 }} />
-                {n.favorite && <span className="kh-nt-card__star">★</span>}
+                {n.sharedFolderId && (
+                  <span className="kh-sh-mark" title={t('sh_shared')}>
+                    <Svg d={P.share} size={12} sw={2} />
+                  </span>
+                )}
+                {n.favorite && n.mine && <span className="kh-nt-card__star">★</span>}
                 <span>{when(n.updatedAt)}</span>
               </div>
               <div className="kh-nt-card__title">{n.title || t('ne_untitled')}</div>
@@ -387,16 +479,27 @@ function EditorCard({
   folder,
   onPatch,
   onDelete,
+  readOnly,
+  sharedBy,
 }: {
   note: Note;
   folder: { name: string; color: string };
+  /** a note of a shared folder the caller can only read */
+  readOnly: boolean;
+  /** owner of someone else's note */
+  sharedBy: string | null;
   onPatch: (patch: Partial<Pick<Note, 'title' | 'content' | 'tags' | 'favorite'>>) => void;
   onDelete: () => void;
 }) {
   const { t } = useI18n();
   const [title, setTitle] = useState(note.title);
   const [ask, setAsk] = useState<'link' | 'img' | null>(null);
-  const onChange = useCallback((doc: JSONContent) => onPatch({ content: doc }), [onPatch]);
+  const onChange = useCallback(
+    (doc: JSONContent) => {
+      if (!readOnly) onPatch({ content: doc });
+    },
+    [onPatch, readOnly],
+  );
   // The title wraps like the prototype's h1 (auto-height textarea).
   const titleRef = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
@@ -406,40 +509,58 @@ function EditorCard({
     el.style.height = `${el.scrollHeight}px`;
   }, [title]);
   const { editor, uploadFiles } = useNoteEditor({ noteId: note.id, content: note.content, onChange });
+  useEffect(() => {
+    // no update event: a read-only note must never try to save
+    if (editor && editor.isEditable === readOnly) editor.setEditable(!readOnly, false);
+  }, [editor, readOnly]);
 
   return (
     <article className="kh-nt-editor">
       <div className="kh-nt-editor__bar">
         <div className="kh-nt-crumb">
           <span className="kh-nt-card__dot" style={{ background: folder.color }} />
-          <span>{folder.name || t('ne_noFolder')}</span>
+          <span>
+            {sharedBy !== null
+              ? t('sh_sharedBy').replace('{who}', sharedBy)
+              : folder.name || t('ne_noFolder')}
+          </span>
           <span>/</span>
           <span className="kh-nt-crumb__cur">{title || t('ne_untitled')}</span>
         </div>
         <div style={{ flex: 1 }} />
-        <EditorToolbar editor={editor} onAsk={setAsk} />
-        <button
-          type="button"
-          className="kh-nt-round"
-          style={{ color: note.favorite ? 'oklch(0.85 0.13 85)' : 'rgba(255,248,240,.6)', fontSize: 17 }}
-          title={note.favorite ? t('ne_unfav') : t('ne_addFav')}
-          aria-label={note.favorite ? t('ne_unfav') : t('ne_addFav')}
-          aria-pressed={note.favorite}
-          onClick={() => onPatch({ favorite: !note.favorite })}
-        >
-          ★
-        </button>
-        <button
-          type="button"
-          className="kh-nt-round"
-          style={{ color: '#ffc9b8' }}
-          title={t('del')}
-          aria-label={t('del')}
-          onClick={onDelete}
-        >
-          <Svg d={P.trash} size={15} />
-        </button>
-        <ShareButton itemType="note" itemId={note.id} title={title || t('ne_untitled')} variant="pill" />
+        {readOnly ? (
+          <span className="kh-nt-ro">{t('sh_readOnly')}</span>
+        ) : (
+          <EditorToolbar editor={editor} onAsk={setAsk} />
+        )}
+        {note.mine && (
+          <button
+            type="button"
+            className="kh-nt-round"
+            style={{ color: note.favorite ? 'oklch(0.85 0.13 85)' : 'rgba(255,248,240,.6)', fontSize: 17 }}
+            title={note.favorite ? t('ne_unfav') : t('ne_addFav')}
+            aria-label={note.favorite ? t('ne_unfav') : t('ne_addFav')}
+            aria-pressed={note.favorite}
+            onClick={() => onPatch({ favorite: !note.favorite })}
+          >
+            ★
+          </button>
+        )}
+        {!readOnly && (
+          <button
+            type="button"
+            className="kh-nt-round"
+            style={{ color: '#ffc9b8' }}
+            title={t('del')}
+            aria-label={t('del')}
+            onClick={onDelete}
+          >
+            <Svg d={P.trash} size={15} />
+          </button>
+        )}
+        {note.mine && (
+          <ShareButton itemType="note" itemId={note.id} title={title || t('ne_untitled')} variant="pill" />
+        )}
       </div>
       <div className="kh-nt-editor__scroll">
         <div className="kh-nt-editor__body">
@@ -449,6 +570,7 @@ function EditorCard({
               rows={1}
               className="kh-nt-title"
               value={title}
+              readOnly={readOnly}
               placeholder={t('ne_untitled')}
               aria-label={t('ne_untitled')}
               maxLength={300}
@@ -465,7 +587,17 @@ function EditorCard({
                 }
               }}
             />
-            <TagsRow tags={note.tags} onChange={(tags) => onPatch({ tags })} />
+            {readOnly ? (
+              note.tags.length > 0 && (
+                <div className="kh-nt-card__tags">
+                  {note.tags.map((tg) => (
+                    <span key={tg}>{tg}</span>
+                  ))}
+                </div>
+              )
+            ) : (
+              <TagsRow tags={note.tags} onChange={(tags) => onPatch({ tags })} />
+            )}
           </div>
           <div className="kh-nt-doc">
             {ask && editor && (
@@ -531,9 +663,25 @@ export function NotesView() {
   const [note, setNote] = useState<Note | null>(null);
   const activeId = sp.get('n');
 
+  const sh = useSharedFolders('notes');
+  const [fs, setFs] = useState<{ folderId?: string; sharedId?: string; title?: string } | null>(null);
   const folderMap = useMemo(() => new Map((folders?.folders ?? []).map((f) => [f.id, f])), [folders]);
   const validFilter =
-    filter === 'all' || filter === 'fav' || folderMap.has(filter) || !folders ? filter : 'all';
+    filter === 'all' ||
+    filter === 'fav' ||
+    folderMap.has(filter) ||
+    !folders ||
+    (filter.startsWith(SH) && (!sh.loaded || sh.folders.some((x) => SH + x.id === filter)))
+      ? filter
+      : 'all';
+  const shId = validFilter.startsWith(SH) ? validFilter.slice(SH.length) : undefined;
+  const curShared = shId ? sh.folders.find((x) => x.id === shId) : undefined;
+  const listQuery = () => ({
+    folder: !shId && validFilter !== 'all' && validFilter !== 'fav' ? validFilter : undefined,
+    shared: shId,
+    fav: validFilter === 'fav',
+    q: query.trim() || undefined,
+  });
 
   const open = useCallback(
     (id: string | null) => {
@@ -564,11 +712,7 @@ export function NotesView() {
     const h = setTimeout(
       () => {
         notesApi
-          .list({
-            folder: validFilter !== 'all' && validFilter !== 'fav' ? validFilter : undefined,
-            fav: validFilter === 'fav',
-            q: query.trim() || undefined,
-          })
+          .list(listQuery())
           .then((r) => {
             if (!live) return;
             setItems(r.notes);
@@ -676,9 +820,14 @@ export function NotesView() {
     });
 
   const newNote = async (folderId: string | null) => {
+    // in a shared folder: "Criar numa pasta partilhada?" first
+    if (curShared && !(await confirm(sharedConfirm(t, curShared, false)))) return;
     try {
-      const { note: item } = await notesApi.create(folderId);
-      if (validFilter === 'fav' || (folderId && validFilter !== 'all' && validFilter !== folderId))
+      const { note: item } = await notesApi.create(curShared ? null : folderId, curShared?.id);
+      if (
+        !curShared &&
+        (validFilter === 'fav' || (folderId && validFilter !== 'all' && validFilter !== folderId))
+      )
         setFilter(folderId ?? 'all');
       setItems((all) => [item, ...all]);
       setNote({ ...item, content: null });
@@ -710,16 +859,32 @@ export function NotesView() {
   };
 
   const dropNote = async (id: string, target: string) => {
+    const item = items.find((x) => x.id === id);
+    if (item && !item.mine) return; // where someone else's note lives is theirs to decide
+    const toShared = target.startsWith(SH) ? sh.folders.find((x) => SH + x.id === target) : undefined;
     try {
-      if (target === 'fav') await notesApi.update(id, { favorite: true });
+      if (toShared) {
+        if (item?.sharedFolderId === toShared.id) return;
+        if (!(await confirm(sharedConfirm(t, toShared, true)))) return;
+        await notesApi.update(id, { sharedFolderId: toShared.id });
+      } else if (target === 'fav') await notesApi.update(id, { favorite: true });
+      // a normal notebook takes the note out of its shared folder (prototype: delete n.shf)
+      else if (item?.sharedFolderId) await notesApi.update(id, { folderId: target, sharedFolderId: null });
       else await notesApi.move(id, target);
       if (note?.id === id)
-        setNote((n) => (n ? { ...n, ...(target === 'fav' ? { favorite: true } : { folderId: target }) } : n));
-      const r = await notesApi.list({
-        folder: validFilter !== 'all' && validFilter !== 'fav' ? validFilter : undefined,
-        fav: validFilter === 'fav',
-        q: query.trim() || undefined,
-      });
+        setNote((n) =>
+          n
+            ? {
+                ...n,
+                ...(toShared
+                  ? { sharedFolderId: toShared.id }
+                  : target === 'fav'
+                    ? { favorite: true }
+                    : { folderId: target, sharedFolderId: null }),
+              }
+            : n,
+        );
+      const r = await notesApi.list(listQuery());
       setItems(r.notes);
       void loadFolders();
     } catch (e) {
@@ -730,13 +895,21 @@ export function NotesView() {
   const listW = liveList ?? cols.list ?? COL_DEFAULTS.list;
   const inspW = liveInsp ?? cols.insp ?? COL_DEFAULTS.insp;
   const showInsp = !focus && !!note;
-  const curFolder = (note?.folderId && folderMap.get(note.folderId)) || NO_FOLDER;
+  const curFolder = (note?.mine && note.folderId && folderMap.get(note.folderId)) || NO_FOLDER;
   const listTitle =
     validFilter === 'all'
       ? t('all')
       : validFilter === 'fav'
         ? t('fav')
-        : (folderMap.get(validFilter)?.name ?? '');
+        : shId
+          ? (curShared?.name ?? '')
+          : (folderMap.get(validFilter)?.name ?? '');
+  // someone else's note: its shared folder says who shared it and whether it can be edited
+  const noteShared =
+    note && !note.mine
+      ? (sh.folders.find((x) => !x.mine && x.id === note.sharedFolderId) ?? curShared)
+      : undefined;
+  const readOnly = !!note && !note.mine && noteShared?.perm === 'read';
 
   return (
     <div
@@ -795,11 +968,18 @@ export function NotesView() {
             await loadFolders();
           }}
           onDropNote={(id, target) => void dropNote(id, target)}
+          shared={sh.folders}
+          canShare={sh.canShare}
+          onShare={({ folder, shared }) =>
+            setFs(folder ? { folderId: folder.id, title: folder.name } : { sharedId: shared!.id })
+          }
+          onNewShared={() => setFs({})}
         />
         <NoteList
           title={listTitle}
           items={items}
           folders={folderMap}
+          shared={new Map(sh.folders.map((x) => [x.id, x.name]))}
           activeId={activeId}
           loading={loading}
           onOpen={open}
@@ -813,6 +993,8 @@ export function NotesView() {
           folder={curFolder}
           onPatch={patch}
           onDelete={() => void trashNote()}
+          readOnly={readOnly}
+          sharedBy={note.mine ? null : (noteShared?.owner?.name ?? '')}
         />
       ) : (
         <article className="kh-nt-editor kh-nt-editor--empty">
@@ -830,8 +1012,24 @@ export function NotesView() {
             onDone={(w) => setCols({ ...cols, insp: w })}
             onReset={() => setCols({ ...cols, insp: COL_DEFAULTS.insp })}
           />
-          <Inspector note={note} folderName={curFolder.name} author={me.user.name} />
+          <Inspector
+            note={note}
+            folderName={note.mine ? curFolder.name : (noteShared?.name ?? '')}
+            author={note.mine ? me.user.name : (noteShared?.owner?.name ?? '')}
+          />
         </>
+      )}
+      {fs && (
+        <FolderShareDialog
+          kind="notes"
+          folderId={fs.folderId}
+          sharedId={fs.sharedId}
+          title={fs.title}
+          onClose={() => setFs(null)}
+          onCreated={(id) => {
+            if (!fs.folderId) setFilter(SH + id);
+          }}
+        />
       )}
     </div>
   );

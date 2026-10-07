@@ -10,11 +10,11 @@ import { NavTab } from './NavTab';
 import { NewsTab } from './NewsTab';
 import { SapTab } from './SapTab';
 import { MgSettingsTab } from '@/components/mg/MgSettings';
+import { SharingTab } from '@/components/share/SharingTab';
 import './settings.css';
 
 // Definições (ZNotes `isSettings`). Tabs whose module isn't in the plan are
-// hidden, like the prototype's planFeat(); tabs for later phases (Passwords,
-// Partilhas) arrive with their modules; Management shows with any mg_* module.
+// hidden, like the prototype's planFeat(); Partilhas needs the `share` module; Management shows with any mg_* module.
 const TABS = [
   {
     id: 'look',
@@ -34,6 +34,12 @@ const TABS = [
     label: 'set_tab_sap',
     module: 'systems',
     icon: '<rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M7 10l3 2.5L7 15"></path><line x1="12.5" y1="15" x2="17" y2="15"></line>',
+  },
+  {
+    id: 'share',
+    label: 'set_tab_share',
+    module: 'share',
+    icon: '<circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="M8.2 10.8l7.6-4.4"></path><path d="M8.2 13.2l7.6 4.4"></path>',
   },
   {
     id: 'nav',
@@ -148,6 +154,7 @@ export function SettingsView() {
             {tab === 'brand' && <BrandTab />}
             {tab === 'news' && <NewsTab />}
             {tab === 'sap' && <SapTab />}
+            {tab === 'share' && <SharingTab />}
             {tab === 'nav' && <NavTab />}
             {tab === 'mgmt' && <MgSettingsTab />}
           </div>

@@ -18,6 +18,7 @@ export const PATCH = handler(async (req, ctx: IdCtx) => {
       tags: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
       pinned: z.boolean().optional(),
       folderId: z.uuid().nullable().optional(),
+      sharedFolderId: z.uuid().nullable().optional(),
     }),
   );
   return json({ artifact: await updateArtifact(auth, await idParam(ctx), patch) });
