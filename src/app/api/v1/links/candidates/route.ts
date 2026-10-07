@@ -9,6 +9,8 @@ export const GET = handler(async (req) => {
   const auth = await requireContent(moduleOfType(ref.type));
   // Only item types whose module is in the plan can be offered.
   const { modules } = await getEntitlements(auth.tenant.id);
-  const types = (['note', 'task', 'voice'] as LinkType[]).filter((t) => modules.includes(moduleOfType(t)));
+  const types = (['note', 'task', 'voice', 'issue'] as LinkType[]).filter((t) =>
+    modules.includes(moduleOfType(t)),
+  );
   return json({ items: await linkCandidates(auth, ref, sp.get('q')?.trim().slice(0, 100) ?? '', types) });
 });

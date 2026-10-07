@@ -16,7 +16,19 @@ import './calendar.css';
 
 type Prio = 'low' | 'medium' | 'high';
 type Task = { id: string; title: string; priority: Prio; dueOn: string | null; doneAt: string | null };
-type Item = { kind: 'task'; id: string; due: string; title: string; done: boolean; c: string; prio: Prio };
+type IssueStatus = 'open' | 'progress' | 'waiting' | 'done';
+type Issue = { id: string; title: string; status: IssueStatus; dueOn: string | null };
+type Item = {
+  kind: 'task' | 'issue';
+  id: string;
+  due: string;
+  title: string;
+  done: boolean;
+  c: string;
+  /** priority (tasks) or status (issues) label key */
+  meta: string;
+};
+const IC = 'oklch(0.76 0.12 245)';
 
 const PRI: Record<Prio, string> = {
   high: 'oklch(0.78 0.14 45)',
@@ -50,12 +62,14 @@ export function CalendarView() {
   const router = useRouter();
   const { modules } = useShell();
   const hasTasks = modules.has('tasks');
+  const hasIssues = modules.has('issues');
   const loc = lang === 'en' ? 'en-GB' : 'pt-PT';
   const en = lang === 'en';
   const today = isoD(new Date());
 
   const [mode, setMode] = usePersistentState<'month' | 'week'>('cal.mode', 'month');
   const [showT, setShowT] = usePersistentState('cal.tasks', true);
+  const [showI, setShowI] = usePersistentState('cal.issues', true);
   const [showDone, setShowDone] = usePersistentState('cal.done', false);
   const [panelW, setPanelW] = usePersistentState('cal.panel', 340);
   const [livePanel, setLivePanel] = useState<number | null>(null);
@@ -65,14 +79,19 @@ export function CalendarView() {
   const [narrow, setNarrow] = useState(false);
   const [draft, setDraft] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
   const gridRO = useRef<ResizeObserver | null>(null);
 
   const load = useCallback(() => {
-    if (!hasTasks) return;
-    api<{ tasks: Task[] }>('/tasks')
-      .then((r) => setTasks(r.tasks))
-      .catch(() => {});
-  }, [hasTasks]);
+    if (hasTasks)
+      api<{ tasks: Task[] }>('/tasks')
+        .then((r) => setTasks(r.tasks))
+        .catch(() => {});
+    if (hasIssues)
+      api<{ issues: Issue[] }>('/issues')
+        .then((r) => setIssues(r.issues))
+        .catch(() => {});
+  }, [hasTasks, hasIssues]);
   useEffect(load, [load]);
 
   // Grid → dots instead of chips when the calendar gets narrow (prototype cNarrow).
@@ -108,8 +127,8 @@ export function CalendarView() {
   );
 
   const items: Item[] = useMemo(
-    () =>
-      showT
+    () => [
+      ...(showT
         ? tasks
             .filter((x) => x.dueOn && (!x.doneAt || showDone))
             .map((x) => ({
@@ -119,10 +138,24 @@ export function CalendarView() {
               title: x.title,
               done: !!x.doneAt,
               c: PRI[x.priority],
-              prio: x.priority,
+              meta: PRI_L[x.priority],
             }))
-        : [],
-    [tasks, showT, showDone],
+        : []),
+      ...(showI
+        ? issues
+            .filter((x) => x.dueOn && (x.status !== 'done' || showDone))
+            .map((x) => ({
+              kind: 'issue' as const,
+              id: x.id,
+              due: x.dueOn!,
+              title: x.title,
+              done: x.status === 'done',
+              c: IC,
+              meta: `s_${x.status}`,
+            }))
+        : []),
+    ],
+    [tasks, issues, showT, showI, showDone],
   );
   const byDay = useMemo(() => {
     const m: Record<string, Item[]> = {};
@@ -151,6 +184,22 @@ export function CalendarView() {
       toast({ message: t('ne_saveFail'), tone: 'error' });
       load();
     }
+  };
+
+  const moveIssue = async (id: string, dueOn: string) => {
+    setIssues((cur) => cur.map((x) => (x.id === id ? { ...x, dueOn } : x)));
+    try {
+      await api(`/issues/${id}`, { dueOn }, 'PATCH');
+    } catch {
+      toast({ message: t('ne_saveFail'), tone: 'error' });
+      load();
+    }
+  };
+  const move = (ref: string, due: string) => {
+    const [kind, id] = ref.split(':');
+    if (!id) return;
+    if (kind === 'issue') void moveIssue(id, due);
+    else void patchTask(id, { dueOn: due });
   };
 
   const add = async () => {
@@ -195,7 +244,8 @@ export function CalendarView() {
   const selDate = at12(sel);
   const dd = Math.round((+new Date(`${sel}T00:00:00`) - +new Date(`${today}T00:00:00`)) / 86_400_000);
   const selItems = byDay[sel] ?? [];
-  const open = (x: Item) => router.push(`/app/tasks?t=${x.id}`);
+  const open = (x: Item) =>
+    router.push(x.kind === 'issue' ? `/app/issues?i=${x.id}` : `/app/tasks?t=${x.id}`);
   const colorOf = (x: Item) => (!x.done && x.due < today ? LATE : x.c);
   const pw = livePanel ?? panelW;
 
@@ -277,6 +327,19 @@ export function CalendarView() {
               <span className="kh-cal__n">{tasks.filter((x) => x.dueOn && !x.doneAt).length}</span>
             </button>
           )}
+          {hasIssues && (
+            <button
+              type="button"
+              className="kh-cal__chip"
+              data-on={showI || undefined}
+              aria-pressed={showI}
+              onClick={() => setShowI(!showI)}
+            >
+              <span style={{ background: IC }} />
+              {t('c_issues')}
+              <span className="kh-cal__n">{issues.filter((x) => x.dueOn && x.status !== 'done').length}</span>
+            </button>
+          )}
           <button
             type="button"
             className="kh-cal__chip"
@@ -330,10 +393,10 @@ export function CalendarView() {
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  const id = e.dataTransfer.getData('application/x-kh-due');
+                  const ref = e.dataTransfer.getData('application/x-kh-due');
                   setDropOn(null);
                   setSel(k);
-                  if (id) void patchTask(id, { dueOn: k });
+                  if (ref) move(ref, k);
                 }}
               >
                 <div className="kh-cal__dayhead">
@@ -360,7 +423,7 @@ export function CalendarView() {
                     key={x.id}
                     className="kh-cal__item"
                     draggable
-                    title={`${t('c_task')} · ${x.title}`}
+                    title={`${t(x.kind === 'issue' ? 'c_issue' : 'c_task')} · ${x.title}`}
                     style={{
                       background: tint(colorOf(x), 0.2),
                       borderLeftColor: colorOf(x),
@@ -369,7 +432,7 @@ export function CalendarView() {
                     onDragStart={(e) => {
                       e.stopPropagation();
                       e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setData('application/x-kh-due', x.id);
+                      e.dataTransfer.setData('application/x-kh-due', `${x.kind}:${x.id}`);
                     }}
                     onDragEnd={() => setDropOn(null)}
                     onClick={(e) => {
@@ -459,33 +522,51 @@ export function CalendarView() {
                 onClick={() => open(x)}
                 onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && open(x)}
               >
-                <button
-                  type="button"
-                  className="kh-cal__ck"
-                  data-on={x.done || undefined}
-                  aria-label={x.title}
-                  aria-pressed={x.done}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void patchTask(x.id, { done: !x.done });
-                  }}
-                >
-                  {x.done && (
+                {x.kind === 'task' ? (
+                  <button
+                    type="button"
+                    className="kh-cal__ck"
+                    data-on={x.done || undefined}
+                    aria-label={x.title}
+                    aria-pressed={x.done}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void patchTask(x.id, { done: !x.done });
+                    }}
+                  >
+                    {x.done && (
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 12.5l4.5 4.5L19 7.5" />
+                      </svg>
+                    )}
+                  </button>
+                ) : (
+                  <span className="kh-cal__issue" aria-hidden="true">
                     <svg
                       width="12"
                       height="12"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="3.2"
+                      strokeWidth="2.2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      aria-hidden="true"
                     >
-                      <path d="M5 12.5l4.5 4.5L19 7.5" />
+                      <rect x="4" y="4" width="16" height="5" rx="1.5" />
+                      <path d="M5 9v10h14V9" />
                     </svg>
-                  )}
-                </button>
+                  </span>
+                )}
                 <div className="kh-cal__selbody">
                   <span
                     style={{ textDecoration: x.done ? 'line-through' : 'none', opacity: x.done ? 0.6 : 1 }}
@@ -494,10 +575,10 @@ export function CalendarView() {
                   </span>
                   <span className="kh-cal__selmeta">
                     <span style={{ background: tint(c, 0.3) }}>
-                      {t('c_task')}
+                      {t(x.kind === 'issue' ? 'c_issue' : 'c_task')}
                       {late ? ` · ${t('c_late')}` : ''}
                     </span>
-                    {t(PRI_L[x.prio])}
+                    {t(x.meta)}
                   </span>
                 </div>
               </div>
@@ -510,8 +591,18 @@ export function CalendarView() {
           <div>
             {hasTasks && (
               <div>
-                <span style={{ color: PRI.high }}>{inRange.filter((x) => !x.done).length}</span>
+                <span style={{ color: PRI.high }}>
+                  {inRange.filter((x) => x.kind === 'task' && !x.done).length}
+                </span>
                 <span>{t('c_sumTasks')}</span>
+              </div>
+            )}
+            {hasIssues && (
+              <div>
+                <span style={{ color: IC }}>
+                  {inRange.filter((x) => x.kind === 'issue' && !x.done).length}
+                </span>
+                <span>{t('c_sumIssues')}</span>
               </div>
             )}
             <div>

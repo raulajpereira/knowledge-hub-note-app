@@ -187,6 +187,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Testes**: unitários (.eml e .msg reais, limpeza do HTML), integração (privacidade dos ficheiros, pastas, tarefa, Lixo e purga dos ficheiros) e E2E. Screenshots `fase-5/80–82` e `cmp-emails.png`.
 - **Por decidir** (SECURITY.md pede antivírus nos anexos): o ClamAV precisa de ~1 GB de RAM e não cabe no KVM 1 — ver relatório.
 
+## Fase 5.3 — Tarefas de Projeto (Problemas) (feito)
+- **Dados**: migração `0010_issues` (`issues`, RLS por tenant e dono): título, estado (Aberto, Em Curso, Em espera, Concluído), prioridade (Baixa, Média, Alta, Crítica), prazo, "À espera de", descrição, notas, data de conclusão (guardada enquanto fica concluído, limpa ao reabrir).
+- **Ecrã** igual ao protótipo: contagem "por resolver · total", **Tabela** (colunas com largura ajustável — duplo clique repõe — e ordenação por qualquer coluna) e **Kanban** (arrastar um cartão para outra coluna muda o estado, "+" cria nessa coluna, colunas com largura ajustável), filtros por estado com contagens, pesquisa, painel de detalhe (estado, prioridade, prazo, à espera de, descrição, notas, **Ligações** com notas/tarefas/notas de voz, eliminar → Lixo). Larguras, vista, filtro e ordenação ficam nas preferências.
+- **Projetos**: vêm da Gestão (Fase 8); até lá o seletor mostra só "Sem Projeto" (como nas Tarefas).
+- **Calendário**: problemas pelo prazo (filtro "Problemas", arrastar para mudar o prazo, painel do dia, resumo do período). **Início**: estatística "Problemas por resolver" (críticos/altos), cartão com barra por estado e os mais prioritários, problemas nos Próximos Prazos. Contador na barra lateral.
+- **Testes**: integração (privacidade, data de conclusão, ligações, Lixo, Início, contagem) e E2E (criar, editar, Kanban, Calendário, Lixo). Screenshots `fase-5/85–89` e `cmp-problemas*.png`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).

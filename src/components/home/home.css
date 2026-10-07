@@ -671,3 +671,30 @@
   text-transform: uppercase;
   color: rgba(255, 248, 240, 0.6);
 }
+/* Tarefas de Projeto card: status bar + legend (prototype hIssueBar) */
+.kh-hbar {
+  display: flex;
+  height: 10px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+.kh-hbar__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.75);
+}
+.kh-hbar__legend > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.kh-hbar__legend > span > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}

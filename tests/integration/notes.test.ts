@@ -38,6 +38,7 @@ describe.skipIf(!enabled)('notes', () => {
   let homeSvc: typeof import('@/server/content/home');
   let vault: typeof import('@/server/content/vault');
   let mail: typeof import('@/server/content/emails');
+  let iss: typeof import('@/server/content/issues');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -47,24 +48,26 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault, mail] = await Promise.all([
-      import('@/server/auth/service'),
-      import('@/server/licensing/codes'),
-      import('@/server/auth/session'),
-      import('@/db/seed/index'),
-      import('@/server/content/notes'),
-      import('@/server/content/tasks'),
-      import('@/server/content/voice'),
-      import('@/server/content/home'),
-      import('@/db/client'),
-      import('@/server/content/vault'),
-      import('@/server/content/emails'),
-    ]);
+    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault, mail, iss] =
+      await Promise.all([
+        import('@/server/auth/service'),
+        import('@/server/licensing/codes'),
+        import('@/server/auth/session'),
+        import('@/db/seed/index'),
+        import('@/server/content/notes'),
+        import('@/server/content/tasks'),
+        import('@/server/content/voice'),
+        import('@/server/content/home'),
+        import('@/db/client'),
+        import('@/server/content/vault'),
+        import('@/server/content/emails'),
+        import('@/server/content/issues'),
+      ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -521,5 +524,52 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await codeOf(mail.getEmail(a, e1.id))).toBe('not_found');
     const counts = await notes.contentCounts(a, new Set(['emails']));
     expect(counts.emails).toBe(1);
+  });
+
+  it('issues: private, status keeps the completion date, links, Trash, Início and counts', async () => {
+    const a = await signedIn('issues-a@example.pt');
+    const b = await signedIn('issues-b@example.pt');
+    const i1 = await iss.createIssue(a, { title: 'IDoc ORDERS05 em erro 51', dueOn: '2026-10-20' });
+    expect(i1).toMatchObject({ status: 'open', priority: 'medium', doneAt: null, dueOn: '2026-10-20' });
+    const i2 = await iss.createIssue(a, { title: 'Autorizações F110', status: 'waiting' });
+
+    expect(await iss.listIssues(b)).toEqual([]);
+    expect(await codeOf(iss.updateIssue(b, i1.id, { status: 'done' }))).toBe('not_found');
+
+    const up = await iss.updateIssue(a, i1.id, {
+      priority: 'critical',
+      waiting: 'Equipa Basis',
+      description: 'x',
+    });
+    expect(up).toMatchObject({ priority: 'critical', waiting: 'Equipa Basis' });
+    const done = await iss.updateIssue(a, i1.id, { status: 'done' });
+    expect(done.doneAt).not.toBeNull();
+    const still = await iss.updateIssue(a, i1.id, { status: 'done', notes: 'fechado' });
+    expect(still.doneAt).toBe(done.doneAt);
+    expect((await iss.updateIssue(a, i1.id, { status: 'progress' })).doneAt).toBeNull();
+
+    const t = await tasksSvc.createTask(a, { title: 'Reprocessar IDocs' });
+    await notes.linkItems(a, { type: 'issue', id: i1.id }, { type: 'task', id: t.id });
+    expect((await notes.linksOf(a, { type: 'task', id: t.id })).map((x) => [x.type, x.title])).toEqual([
+      ['issue', 'IDoc ORDERS05 em erro 51'],
+    ]);
+    const counts = await notes.contentCounts(a, new Set(['issues']));
+    expect(counts.issues).toBe(2);
+    const home = await homeSvc.homeData(a, new Set(['issues']));
+    expect(home.issues?.map((x) => x.title).sort()).toEqual([
+      'Autorizações F110',
+      'IDoc ORDERS05 em erro 51',
+    ]);
+
+    await iss.trashIssue(a, i2.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual([
+      'issue',
+      'Autorizações F110',
+    ]);
+    await notes.restoreTrash(a, [{ kind: 'issue', id: i2.id }]);
+    await iss.trashIssue(a, i1.id);
+    await notes.purgeTrash(a, [{ kind: 'issue', id: i1.id }]);
+    expect((await iss.listIssues(a)).map((x) => x.title)).toEqual(['Autorizações F110']);
+    expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
   });
 });

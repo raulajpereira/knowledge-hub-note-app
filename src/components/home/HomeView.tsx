@@ -48,6 +48,13 @@ type HomeData = {
     updatedAt: string;
   }>;
   favNotes?: Array<{ id: string; title: string }>;
+  issues?: Array<{
+    id: string;
+    title: string;
+    status: 'open' | 'progress' | 'waiting';
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    dueOn: string | null;
+  }>;
   emails?: {
     total: number;
     starred: Array<{ id: string; subject: string; from: string; sentAt: string | null }>;
@@ -343,9 +350,29 @@ export function HomeView() {
       return Math.min(da, 1) - Math.min(db, 1) || po[a.priority] - po[b.priority] || da - db;
     })
     .slice(0, 6);
-  const dueItems = active
-    .filter((x) => x.dueOn && dayDiff(x.dueOn) <= 14)
-    .sort((a, b) => (a.dueOn! < b.dueOn! ? -1 : 1))
+  const openIssues = data.issues ?? [];
+  const dueItems = [
+    ...active
+      .filter((x) => x.dueOn)
+      .map((x) => ({
+        id: x.id,
+        title: x.title,
+        dueOn: x.dueOn!,
+        kind: 'h_k_task',
+        href: `/app/tasks?t=${x.id}`,
+      })),
+    ...openIssues
+      .filter((x) => x.dueOn)
+      .map((x) => ({
+        id: x.id,
+        title: x.title,
+        dueOn: x.dueOn!,
+        kind: 'h_k_issue',
+        href: `/app/issues?i=${x.id}`,
+      })),
+  ]
+    .filter((x) => dayDiff(x.dueOn) <= 14)
+    .sort((a, b) => (a.dueOn < b.dueOn ? -1 : 1))
     .slice(0, 6);
   const favItems = [
     ...(data.favNotes ?? []).map((n) => ({
@@ -384,7 +411,8 @@ export function HomeView() {
     {
       m: 'issues',
       label: t('h_st_issues'),
-      sub: `0 ${t('h_st_critical')}`,
+      count: openIssues.length,
+      sub: `${openIssues.filter((x) => x.priority === 'critical' || x.priority === 'high').length} ${t('h_st_critical')}`,
       dot: 'oklch(0.78 0.11 240)',
       page: 'issues',
     },
@@ -757,8 +785,59 @@ export function HomeView() {
             </span>
           </div>
         );
+      case 'issues': {
+        if (!openIssues.length) return <div className="kh-card__empty">{t('home_noItems')}</div>;
+        const ST = [
+          ['open', 's_open', 'oklch(0.78 0.11 240)'],
+          ['progress', 's_progress', 'oklch(0.76 0.12 300)'],
+          ['waiting', 's_waiting', 'oklch(0.85 0.12 75)'],
+        ] as const;
+        const IPRI = { critical: 'oklch(0.7 0.19 25)', ...H_PRI };
+        const ipo = { critical: 0, high: 1, medium: 2, low: 3 };
+        return (
+          <>
+            <div className="kh-hbar">
+              {ST.map(([k, l, c]) => {
+                const n = openIssues.filter((x) => x.status === k).length;
+                return (
+                  <div
+                    key={k}
+                    title={t(l)}
+                    style={{ width: `${(n / openIssues.length) * 100}%`, background: c }}
+                  />
+                );
+              })}
+            </div>
+            <div className="kh-hbar__legend">
+              {ST.map(([k, l, c]) => (
+                <span key={k}>
+                  <span style={{ background: c }} />
+                  {t(l)} {openIssues.filter((x) => x.status === k).length}
+                </span>
+              ))}
+            </div>
+            <div className="kh-hlist">
+              {openIssues
+                .slice()
+                .sort((a, b) => ipo[a.priority] - ipo[b.priority])
+                .slice(0, 4)
+                .map((x) => (
+                  <Link key={x.id} href={`/app/issues?i=${x.id}`} className={rowCls} scroll={false}>
+                    <span
+                      className="kh-hdot"
+                      style={{ background: IPRI[x.priority], boxShadow: `0 0 8px ${IPRI[x.priority]}` }}
+                    />
+                    <span className="kh-hrow__t" style={{ flex: 1 }}>
+                      {x.title}
+                    </span>
+                    <span className="kh-hrow__s">{t(`s_${x.status}`)}</span>
+                  </Link>
+                ))}
+            </div>
+          </>
+        );
+      }
       case 'transports':
-      case 'issues':
         return <div className="kh-card__empty">{t('home_noItems')}</div>;
       case 'tasks': {
         const groups = H_GROUPS.map(([k, label, color]) => ({
@@ -835,7 +914,7 @@ export function HomeView() {
               const d = dayDiff(x.dueOn!);
               const dt = new Date(`${x.dueOn}T00:00:00`);
               return (
-                <Link key={x.id} href={`/app/tasks?t=${x.id}`} className={rowCls} scroll={false}>
+                <Link key={x.id} href={x.href} className={rowCls} scroll={false}>
                   <span
                     className="kh-hdate"
                     style={{
@@ -853,8 +932,7 @@ export function HomeView() {
                   <span className="kh-hrow__col">
                     <span className="kh-hrow__t">{x.title}</span>
                     <span className="kh-hrow__s">
-                      {t('h_k_task')} ·{' '}
-                      <span style={{ color: relColor(d), fontWeight: 600 }}>{relOf(d)}</span>
+                      {t(x.kind)} · <span style={{ color: relColor(d), fontWeight: 600 }}>{relOf(d)}</span>
                     </span>
                   </span>
                 </Link>
@@ -929,7 +1007,7 @@ export function HomeView() {
     notes: data.recentNotes?.length ?? 0,
     favs: favItems.length,
     transports: 0,
-    issues: 0,
+    issues: openIssues.length,
     systems: 0,
     qnotes: 0,
     emails: data.emails?.starred.length ?? 0,

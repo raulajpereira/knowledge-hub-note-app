@@ -321,3 +321,37 @@ export const emailAttachments = pgTable(
     check('email_attachments_name_len', sql`char_length(${t.name}) <= 300`),
   ],
 );
+
+/** Project issues ("Tarefas de Projeto", prototype isIssues): table + Kanban by status. */
+export const ISSUE_STATUSES = ['open', 'progress', 'waiting', 'done'] as const;
+export const ISSUE_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
+export const issues = pgTable(
+  'issues',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    title: text('title').notNull(),
+    status: text('status', { enum: ISSUE_STATUSES }).notNull().default('open'),
+    priority: text('priority', { enum: ISSUE_PRIORITIES }).notNull().default('medium'),
+    // mg_projects once Management lands (Phase 8), as for tasks
+    projectId: uuid('project_id'),
+    dueOn: date('due_on'),
+    waiting: text('waiting').notNull().default(''),
+    description: text('description').notNull().default(''),
+    notes: text('notes').notNull().default(''),
+    doneAt: ts('done_at'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('issues_owner_idx').on(t.tenantId, t.ownerId, t.status),
+    check('issues_status_chk', sql`${t.status} in ('open','progress','waiting','done')`),
+    check('issues_priority_chk', sql`${t.priority} in ('low','medium','high','critical')`),
+    check(
+      'issues_len',
+      sql`char_length(${t.title}) between 1 and 300 and char_length(${t.waiting}) <= 300 and char_length(${t.description}) <= 20000 and char_length(${t.notes}) <= 20000`,
+    ),
+  ],
+);

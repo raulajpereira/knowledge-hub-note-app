@@ -490,3 +490,15 @@
     border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
 }
+.kh-cal__issue {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-top: 1px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(0.78 0.11 240 / 0.3);
+  color: #dbe8ff;
+}

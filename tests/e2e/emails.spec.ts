@@ -97,6 +97,7 @@ test('import .eml and .msg, read the sanitized body, star, folder, task, Trash',
   await expect(page.locator('.kh-em-item')).toHaveCount(1);
   await page.reload();
   await expect(page.locator('.kh-em-folder', { hasText: 'Banco SOL' })).toContainText('1');
+  await page.locator('.kh-em-folder', { hasText: 'Todos os Emails' }).click();
   await page.locator('.kh-em-filters button').first().click();
 
   await page.locator('.kh-em-item', { hasText: 'SAP S/4HANA' }).click();

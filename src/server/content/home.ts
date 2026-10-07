@@ -1,6 +1,6 @@
 import 'server-only';
-import { and, desc, eq, isNull } from 'drizzle-orm';
-import { emails, folders, notes, tasks } from '@/db/schema';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { emails, folders, issues, notes, tasks } from '@/db/schema';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser } from './tenant';
 
@@ -23,6 +23,13 @@ export type HomeData = {
     updatedAt: string;
   }>;
   favNotes?: Array<{ id: string; title: string }>;
+  issues?: Array<{
+    id: string;
+    title: string;
+    status: 'open' | 'progress' | 'waiting';
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    dueOn: string | null;
+  }>;
   emails?: {
     total: number;
     starred: Array<{ id: string; subject: string; from: string; sentAt: string | null }>;
@@ -70,6 +77,18 @@ export async function homeData(auth: AuthContext, modules: ReadonlySet<string>):
       }));
       out.favNotes = rows.filter((r) => r.favorite).map((r) => ({ id: r.id, title: r.title }));
     }
+    if (modules.has('issues'))
+      out.issues = (await tx
+        .select({
+          id: issues.id,
+          title: issues.title,
+          status: issues.status,
+          priority: issues.priority,
+          dueOn: issues.dueOn,
+        })
+        .from(issues)
+        .where(and(isNull(issues.deletedAt), sql`${issues.status} <> 'done'`))
+        .limit(2000)) as NonNullable<HomeData['issues']>;
     if (modules.has('emails')) {
       const rows = await tx
         .select({
