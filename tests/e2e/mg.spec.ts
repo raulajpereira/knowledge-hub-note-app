@@ -64,6 +64,21 @@ test.beforeAll(async ({ browser }) => {
 });
 
 type Mg = {
+  projects: Array<{
+    id: string;
+    code: string;
+    name: string;
+    client: string;
+    phases: Array<{ name: string }>;
+  }>;
+  allocs: Array<{
+    id: string;
+    person: string;
+    project: string;
+    hours: number;
+    ovr?: Record<string, number | ''>;
+    dov?: Record<string, number>;
+  }>;
   teams: Array<{ id: string; name: string; desc: string }>;
   people: Array<{ id: string; name: string; team: string; skills: Record<string, number> }>;
   clients: Array<{ name: string }>;
@@ -151,4 +166,83 @@ test('skills, people and clients', async ({ page }) => {
   await expect
     .poll(async () => (await mgData(page)).clients.some((c) => c.name === 'Cliente E2E'))
     .toBe(true);
+});
+
+test('projects: new project with a new client, phases', async ({ page }) => {
+  await login(page);
+  await page.goto('app/mg-projects');
+  await page.getByRole('button', { name: 'Novo Projeto' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Novo Projeto' });
+  await dlg.getByRole('button', { name: 'Criar Projeto' }).click();
+  await expect(dlg.getByRole('alert')).toHaveText('Indique o nome do projeto.');
+  await dlg.getByLabel('Código').fill('e2e-01');
+  await expect(dlg.getByLabel('Código')).toHaveValue('E2E-01');
+  await dlg.getByLabel('Nome', { exact: true }).fill('Projeto E2E');
+  await dlg.getByRole('tab', { name: 'Novo Cliente' }).click();
+  await dlg.getByLabel('Nome do cliente').fill('Cliente Projeto E2E');
+  await dlg.getByRole('button', { name: 'Criar Projeto' }).click();
+  await expect(dlg).toBeHidden();
+  await expect(page).toHaveURL(/mg-projects\?pj=/);
+  await expect(page.getByRole('button', { name: 'Cliente Projeto E2E →' })).toBeVisible();
+  await page.getByRole('button', { name: '+ Fase' }).click();
+  await expect(page.getByLabel('Fases 3')).toHaveValue('Nova Fase');
+  await expect
+    .poll(async () => {
+      const d = await mgData(page);
+      const p = d.projects.find((x) => x.code === 'E2E-01');
+      return [p?.name, d.clients.some((c) => c.name === 'Cliente Projeto E2E'), p?.phases.length];
+    })
+    .toEqual(['Projeto E2E', true, 3]);
+});
+
+test('allocations: new allocation from the panel, weekly override, dashboard and overview', async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto('app/mg-alloc');
+  await page.getByRole('tab', { name: 'Timeline' }).click();
+  await page.getByRole('button', { name: '+ Alocação' }).click();
+  const panel = page.getByRole('complementary', { name: 'Nova Alocação' });
+  await panel.getByLabel('Recurso').selectOption({ label: 'Zé Novo · Pleno ABAP' });
+  await panel.getByLabel('Projeto').selectOption({ label: 'E2E-01 · Projeto E2E' });
+  await panel.getByLabel('Horas por dia').fill('4');
+  await panel.getByLabel('Número de dias úteis').fill('10');
+  await panel.getByRole('button', { name: 'Sex' }).click();
+  await expect(panel.getByText('16h', { exact: true })).toBeVisible(); // per week: 4 days × 4h
+  await panel.getByRole('button', { name: 'Guardar' }).click();
+  await expect(panel).toBeHidden();
+  const alloc = async () => {
+    const d = await mgData(page);
+    const pid = d.people.find((p) => p.name === 'Zé Novo')!.id;
+    const pj = d.projects.find((p) => p.code === 'E2E-01')!.id;
+    return d.allocs.find((a) => a.person === pid && a.project === pj);
+  };
+  await expect.poll(async () => (await alloc())?.hours).toBe(16);
+  expect(Object.values((await alloc())!.dov!).filter((h) => h === 4)).toHaveLength(10);
+
+  // weekly grid: override one week from the cell popover
+  await page.getByRole('tab', { name: 'Grelha Semanal' }).click();
+  await page.getByLabel('Filtrar pessoas…').fill('Zé Novo');
+  const cell = page.getByRole('button', { name: /^Zé Novo · .* · 16h$/ }).first();
+  await cell.click();
+  const pop = page.getByRole('dialog', { name: 'Zé Novo' });
+  await pop.getByLabel(/E2E-01/).fill('8');
+  await expect.poll(async () => Object.values((await alloc())!.ovr ?? {})).toContain(8);
+  await page.mouse.click(5, 5);
+
+  // dashboard: the band card filters; overview: KPI opens the weekly grid
+  await page.goto('app/mg-dash');
+  await page.getByRole('button', { name: /Acima da Alocação/ }).click();
+  await expect(page.getByRole('button', { name: /Acima da Alocação/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('button', { name: 'Limpar filtros' })).toBeVisible();
+  await page.goto('app/mg-overview');
+  await page
+    .getByRole('button', { name: /Sobre-alocados/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/mg-alloc\?mode=heat/);
+  await expect(page.getByRole('tab', { name: 'Grelha Semanal' })).toHaveAttribute('aria-selected', 'true');
 });

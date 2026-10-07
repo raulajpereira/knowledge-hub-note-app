@@ -97,6 +97,8 @@ export const MG_EX: Record<string, string> = {
   'Função por omissão para esta área': 'Default role for this area',
   'Nome do novo nível de senioridade (ex.: Principal)': 'Name of the new seniority level (e.g. Principal)',
   'Não foi possível repor os dados.': 'Couldn’t reset the data.',
+  Ordenar: 'Sort',
+  Agrupar: 'Group',
   Dias: 'Days',
   'h/dia': 'h/day',
   'h/sem': 'h/wk',

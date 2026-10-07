@@ -94,3 +94,16 @@
 .mg-skrow:hover {
   background: rgba(255, 255, 255, 0.04);
 }
+.mg-alrow:hover {
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+.mg-alname:hover {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.08)) !important;
+}
+.mg-albar:hover {
+  filter: brightness(1.08);
+}
+.mg-dtile:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}

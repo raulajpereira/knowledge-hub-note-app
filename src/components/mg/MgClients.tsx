@@ -5,6 +5,7 @@ import { MG_PST, mgIni, mgK, wLblY, type MgClient } from '@/lib/mg';
 import { mgL } from '@/lib/mgText';
 import { css } from './css';
 import { Av, Fields, Split, Trash, uid } from './ui';
+import { mgNewProject } from './MgProjects';
 import type { Mg } from './store';
 
 // Clientes (prototype isClients): shared with SAP systems and transports.
@@ -209,27 +210,9 @@ export function MgClients({ mg }: { mg: Mg }) {
             <button
               type="button"
               onClick={() => {
-                const id = uid();
-                mg.upd(
-                  (d) =>
-                    void d.projects.unshift({
-                      id,
-                      team: '',
-                      code: 'NOVO-01',
-                      name: tr('Novo Projeto'),
-                      client: sel.id,
-                      budget: 50000,
-                      from: mg.wk(0),
-                      to: mg.wk(12),
-                      color: `oklch(0.8 0.1 ${Math.floor(Math.random() * 360)})`,
-                      status: 'Planeado',
-                      manager: '',
-                      phases: [
-                        { name: tr('Preparação'), from: mg.wk(0), to: mg.wk(2) },
-                        { name: tr('Execução'), from: mg.wk(3), to: mg.wk(12) },
-                      ],
-                    }),
-                );
+                const pr = mgNewProject(mg, { client: sel.id });
+                mg.upd((d) => void d.projects.unshift(pr));
+                const id = pr.id;
                 mg.nav('mg_projects', { pj: id });
               }}
               style={css(

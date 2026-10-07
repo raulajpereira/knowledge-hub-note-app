@@ -112,6 +112,20 @@ describe('management labels', () => {
       'Repor todos os dados do Management (pessoas, projetos, alocações, timesheets) para os dados de exemplo?',
     ])
       expect(en(s), s).not.toBe(s);
+    for (const s of [
+      'Painel de Alocação',
+      'Grelha Semanal',
+      'Previsão final',
+      'Criar Projeto',
+      'Cliente Existente',
+      'Ordenar',
+      'Agrupar',
+      'Agrupar por equipa',
+      'Sobre-alocados',
+      'Limpar filtros',
+    ])
+      expect(en(s), s).not.toBe(s);
+    expect(en('38 pessoas · 8 projetos ativos · semana de 05/10/2026')).not.toContain('pessoas');
     expect(en('3 equipas · 38 pessoas')).toBe('3 teams · 38 people');
     expect(en('17 colaboradores')).toBe('17 members');
     expect(en('1 colaborador')).toBe('1 member');

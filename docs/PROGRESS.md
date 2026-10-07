@@ -268,6 +268,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Decisões / desvios**: "Repor Dados" apaga só os dados do Management e reaproveita os clientes existentes com o mesmo nome (os clientes são partilhados com o SAP). Os ids passam a uuid. As caixas de diálogo usam o desfoque num elemento irmão (o desfoque aninhado do protótipo não funciona no Chrome).
 - **Testes**: unitários (`mg.test.ts`: semanas, dados de exemplo válidos, esquemas estritos, ordem das operações, traduções), integração (exemplo, lotes, referências de outro tenant recusadas) e E2E (`mg.spec.ts`: Definições, Equipas com novo colaborador e mover membro, Competências, Recursos, Clientes). Screenshots `fase-8/01–08`.
 
+## Fase 8.2 — Management: Projetos, Alocações, Painel de Alocação, Visão Geral (feito)
+- **Projetos** (`/app/mg-projects`): lista com pesquisa, filtro por estado e % do orçamento consumido; ficha com código, nome, ligação ao cliente, KPIs (orçamento, consumido pelas timesheets, previsão final pelas alocações, desvio), barra consumido/previsão, campos (cliente, estado, gestor — pessoas com Gestão de projeto ≥ Pleno —, orçamento, início, fim), fases numa linha de tempo com o "hoje", equipa alocada e pedidos de recurso. Diálogo "Novo Projeto" com cliente existente ou novo cliente.
+- **Alocações** (`/app/mg-alloc`): Timeline de 20 semanas (barras por projeto em faixas, arrastar as pontas muda início/fim), Grelha Semanal e Dias (mapa de calor pela capacidade; clicar numa célula abre o ajuste dessa semana/dia por alocação, com "Repor"), média das próximas 8 semanas; painel lateral redimensionável para criar/editar uma alocação por data de início, horas por dia, n.º de dias úteis e dias da semana, com resumo (fim, total, por semana, pico semanal) e aviso de sobre-alocação. Modo de vista guardado.
+- **Painel de Alocação** (`/app/mg-dash`) e **Visão Geral** (`/app/mg-overview`) iguais ao protótipo: períodos, cartões abaixo/dentro/acima (filtram), filtros (equipa, área, nível, projeto, cliente, localização), ordenação e agrupamento guardados, mosaicos por pessoa com resumo em diálogo; KPIs, capacidade de 12 semanas, sobre-alocados, disponíveis e orçamento dos projetos ativos.
+- **Desvios**: um período de alocação está limitado a 160 semanas (para o mapa diário caber na validação do servidor).
+- **Testes**: E2E (`mg.spec.ts`: novo projeto com novo cliente e fases; alocação pelo painel com dias da semana, ajuste semanal na grelha, filtro do painel, KPI da Visão Geral). Screenshots `fase-8/10–16`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
