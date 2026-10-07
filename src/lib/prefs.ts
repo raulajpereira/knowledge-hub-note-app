@@ -104,6 +104,18 @@ const Shortcut = z.object({
     .max(500)
     .regex(/^https?:\/\/[^\s]+$/i),
 });
+/** SAP News sources (SapNews.dc.html NW_SRC): like the ticker's, plus the chip colour. */
+export const SapNewsSource = z.object({
+  id: z.string().regex(/^[\w-]{1,40}$/),
+  name: z.string().trim().min(1).max(60),
+  url: z
+    .string()
+    .max(500)
+    .regex(/^https?:\/\/[^\s]+$/i),
+  color: z.string().regex(/^oklch\([\d. ]{5,40}\)$/),
+  on: z.boolean(),
+});
+export type SapNewsSource = z.infer<typeof SapNewsSource>;
 export const HomePrefs = z.object({
   widgets: z.array(Widget).max(40),
   showWx: z.boolean().optional(),
@@ -131,6 +143,7 @@ export const PREF_SCHEMAS = {
   cols: z.object({ side: col('side'), list: col('list'), insp: col('insp') }).partial(),
   nav: z.array(NavEntry).max(120),
   newsSources: z.array(NewsSource).max(30),
+  sapNewsSources: z.array(SapNewsSource).max(20),
   bg: z.object({ mode: z.enum([...AMBIENT_NAMES, 'photo']), blur: pct, dim: pct }),
   font: z.enum(FONTS),
   fontScale: z.number().min(0.85).max(1.25),

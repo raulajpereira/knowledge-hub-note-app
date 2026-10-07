@@ -213,7 +213,14 @@ test('code library SAP: new class, method, generated pool, include reference, Re
   await expect(page.locator('.kh-ab-hl')).toContainText('CLASS zcl_hr_mailer IMPLEMENTATION.');
 
   // saved on the server
-  await page.waitForTimeout(900);
+  await expect
+    .poll(async () => {
+      const r = (await (await page.request.get('api/v1/sap/objects')).json()) as {
+        objects: Array<{ name: string; nodes: Array<{ g: string; label: string }> }>;
+      };
+      return r.objects.find((o) => o.name === 'ZCL_HR_MAILER')?.nodes.find((n) => n.g === 'meth')?.label;
+    })
+    .toBe('SEND_MAIL');
   await page.reload();
   await expect(page.locator('.kh-cl-item').filter({ hasText: 'ZCL_HR_MAILER' })).toContainText('1 met');
 
@@ -275,7 +282,16 @@ test('functional SAP: a test case with steps, progress, filters and Trash', asyn
   await expect(page.getByText('50% concluído')).toBeVisible();
   await page.getByLabel('Estado', { exact: true }).selectOption('run');
 
-  await page.waitForTimeout(800);
+  // saved on the server before reloading
+  await expect
+    .poll(async () => {
+      const r = (await (await page.request.get('api/v1/sap/functional?page=fn_test')).json()) as {
+        records: Array<{ code: string; st: string; rows: Array<{ st?: string }> }>;
+      };
+      const x = r.records[0];
+      return x ? [x.code, x.st, x.rows[0]?.st] : null;
+    })
+    .toEqual(['UAT-SD-014', 'run', 'pass']);
   await page.reload();
   const item = page.locator('.kh-fn-item').filter({ hasText: 'Venda nacional com desconto' });
   await expect(item).toContainText('Em execução');

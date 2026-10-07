@@ -12,7 +12,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 4 — Notas, Tarefas, Calendário | ✅ feito |
 | 5 — Cofre, Emails, Issues | ✅ feito |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ✅ feito |
-| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ · 7.2 Ordens de Transporte ✅ · 7.3 Biblioteca de Código SAP ✅ · 7.4 Funcional SAP ✅ |
+| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ · 7.2 Ordens de Transporte ✅ · 7.3 Biblioteca de Código SAP ✅ · 7.4 Funcional SAP ✅ · 7.5 SAP News ✅ |
 | 8 — Management | ⏳ |
 | 9 — Partilha | ⏳ |
 | 10 — Admin Console + pedidos de plano | ⏳ |
@@ -254,6 +254,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Ecrã** igual ao protótipo (uma página por módulo: `/app/fn-proc`, `/app/fn-test`, `/app/fn-mig`, `/app/fn-cut`): lista agrupada por módulo (Cutover: por projeto), pesquisa em tudo, filtros de módulo/cliente/projeto, chips por estado com contagens, barra de progresso nos Testes e no Cutover, coluna redimensionável; detalhe com código, título, estado colorido, campos (selects, datas, números, textos), progresso por resultado, tabela de linhas com resultado/estado por linha, "+ Linha", remover linha, eliminar → Lixo. Contagens na barra lateral.
 - **Depende da Fase 8**: os campos **Projeto** e **Responsável/Testador/Coordenador** guardam o id, mas as opções (projetos e pessoas do Management) só aparecem quando o Management existir; o endpoint já devolve as listas (vazias por agora).
 - **Testes**: unitários (páginas, progresso, validação por página), integração (partilha e isolamento, esquema, cliente inexistente, conflito, id de outra página, Lixo, contagens) e E2E (caso de teste com passos e progresso, gravação, filtros, páginas separadas, Lixo). Screenshots `fase-7/30–34`, `cmp-fn-*.png`.
+
+## Fase 7.5 — SAP News (feito)
+- **Notícias lidas no servidor** (como o ticker do rodapé): as fontes do utilizador (preferência sincronizada `sapNewsSources`; por omissão as 3 do protótipo — SAP News Center, ERP Today, SAP Tech Bytes) são lidas pelo servidor com o fetch protegido contra SSRF, sem os proxies de terceiros do protótipo (rss2json/allorigins), guardadas 30 min no Redis, juntas da mais recente para a mais antiga (máx. 120, uma por link). O HTML do artigo é **sanitizado no servidor** (lista branca de etiquetas, só links/imagens http(s), links relativos resolvidos, abre noutro separador sem referrer).
+- **Ecrã** igual ao protótipo (`/app/news`, botão no topo): cartões com imagem (ou o nome da fonte), fonte, data, título, resumo, Ler e Guardar; chips por fonte com contagens, pesquisa, atualizar (ignora a cache), leitor com o artigo, "Ver original", Guardar; **Guardadas para mais tarde** (por utilizador, tabela `news_saved` com uma cópia do artigo — migração `0019`), "Marcar como lida"; **Fontes** (ligar/desligar, remover, adicionar por URL). O botão SAP News do topo mostra o número de guardadas.
+- **Gravação robusta (Biblioteca de Código, Funcional)**: os pedidos de gravação de um registo passam a ser enviados um de cada vez (dois em voo davam conflito consigo próprios — encontrado pelos testes) e com `keepalive`, e o que ainda espera o debounce é enviado ao sair/recarregar a página.
+- **Desvios**: as imagens dos artigos continuam a vir do site da fonte (como no protótipo), com `referrerpolicy=no-referrer`. Neste ambiente de desenvolvimento não há acesso à internet, por isso os testes e screenshots usam artigos de exemplo colocados na cache do servidor (`tests/fixtures/sapnews.ts`).
+- **Testes**: unitários (RSS/Atom, sanitização, preferências), integração (guardadas: privadas, sanitizadas de novo, contagem) e E2E (`news.spec.ts`: cartões, filtro, pesquisa, leitor, guardar com o contador do topo, marcar como lida, desligar uma fonte). Screenshots `fase-7/35–38`.
 
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.

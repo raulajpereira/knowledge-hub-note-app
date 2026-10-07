@@ -12,13 +12,21 @@ export async function api<T = unknown>(
   method = body === undefined ? 'GET' : 'POST',
 ): Promise<T> {
   let res: Response;
+  const payload = body === undefined ? undefined : JSON.stringify(body);
+  const init: RequestInit = {
+    method,
+    headers: payload === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: payload,
+    credentials: 'same-origin',
+  };
+  const url = `${BASE}/api/v1${path}`;
+  // a save still in flight when the page is left or reloaded is not cancelled;
+  // keepalive bodies share a 64 KB budget, so when it's full send it normally
+  const keep = method !== 'GET' && payload !== undefined && payload.length < 60_000;
   try {
-    res = await fetch(`${BASE}/api/v1${path}`, {
-      method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
-      credentials: 'same-origin',
-    });
+    res = keep
+      ? await fetch(url, { ...init, keepalive: true }).catch(() => fetch(url, init))
+      : await fetch(url, init);
   } catch {
     throw { code: 'network', status: 0 } satisfies ApiFailure;
   }

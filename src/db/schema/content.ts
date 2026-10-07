@@ -14,6 +14,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { tenants, users } from './identity';
@@ -541,5 +542,23 @@ export const whiteboardImages = pgTable(
       'whiteboard_images_mime_chk',
       sql`${t.mime} in ('image/png','image/jpeg','image/webp','image/gif')`,
     ),
+  ],
+);
+
+/** SAP News "Guardadas para mais tarde": a snapshot of the article (sanitised HTML), per user. */
+export const newsSaved = pgTable(
+  'news_saved',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    link: text('link').notNull(),
+    item: jsonb('item').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('news_saved_owner_idx').on(t.ownerId, t.createdAt),
+    uniqueIndex('news_saved_owner_link_uq').on(t.ownerId, t.link),
+    check('news_saved_len', sql`char_length(${t.link}) <= 2000 and pg_column_size(${t.item}) <= 400000`),
   ],
 );

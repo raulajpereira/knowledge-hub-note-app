@@ -8,6 +8,7 @@ import { useI18n } from '@/i18n/client';
 import { assetUrl } from './assetUrl';
 import { Icon } from './icons';
 import { useShell } from './ShellContext';
+import { useCounts } from './counts';
 import { TcodesPopup } from '@/components/sap/TcodesPopup';
 
 function useClock(lang: string) {
@@ -30,6 +31,7 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
   const { t, lang } = useI18n();
   const [tcOpen, setTcOpen] = useState(false);
   const { modules, me, focus, toggleFocus, lock, query, setQuery } = useShell();
+  const counts = useCounts();
   const path = usePathname();
   const { clock, date } = useClock(lang);
   const isOwner = me.admin?.role === 'owner';
@@ -83,6 +85,7 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
       {modules.has('news') && (
         <Link href="/app/news" title="SAP News" className="kh-hdr__btn kh-hdr__glass" aria-label="SAP News">
           <Icon name="news" size={18} />
+          {(counts.newsSaved ?? 0) > 0 && <span className="kh-hdr__badge">{counts.newsSaved}</span>}
         </Link>
       )}
 

@@ -134,6 +134,13 @@
       "when": 1791378168954,
       "tag": "0018_sap_fn_records",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791379444758,
+      "tag": "0019_news_saved",
+      "breakpoints": true
     }
   ]
 }

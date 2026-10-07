@@ -103,7 +103,7 @@ describe.skipIf(!enabled)('notes', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -1088,5 +1088,32 @@ describe.skipIf(!enabled)('notes', () => {
     await fn.trashRecord(a, 'fn_test', t.id);
     await notes.purgeTrash(a, 'all');
     expect(await fn.listRecords(a, 'fn_test')).toEqual([]);
+  });
+
+  it('SAP News saved for later: private, sanitised again on the server, counted', async () => {
+    const { saveItem, listSaved, unsaveItem } = await import('@/server/news/saved');
+    const a = await signedIn('nw-a@example.pt');
+    const b = await signedIn('nw-b@example.pt');
+    const item = {
+      title: 'Novidades do SAP S/4HANA Cloud',
+      link: 'https://news.sap.com/2026/10/s4/',
+      src: 'sapnews',
+      date: '2026-10-06T09:30:00.000Z',
+      author: 'SAP',
+      img: '',
+      excerpt: 'Resumo',
+      html: '<p onclick="x()">Texto</p><script>alert(1)</script><img src="javascript:alert(1)">',
+    };
+    await saveItem(a, item);
+    await saveItem(a, item); // same link once
+    const list = await listSaved(a);
+    expect(list).toHaveLength(1);
+    expect(list[0]!.html).toBe('<p>Texto</p>');
+    expect(await listSaved(b)).toEqual([]);
+    expect((await notes.contentCounts(a, new Set(['news']))).newsSaved).toBe(1);
+    await unsaveItem(b, item.link); // someone else's: nothing happens
+    expect(await listSaved(a)).toHaveLength(1);
+    await unsaveItem(a, item.link);
+    expect(await listSaved(a)).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import type { NewsSource } from './prefs';
+import type { NewsSource, SapNewsSource } from './prefs';
 
 // Prototype defaults (kv.footer.src).
 export const DEFAULT_NEWS_SOURCES: NewsSource[] = [
@@ -13,4 +13,36 @@ export const DEFAULT_NEWS_SOURCES: NewsSource[] = [
   { id: 'guardian', name: 'The Guardian', url: 'https://www.theguardian.com/world/rss', on: true },
   { id: 'cnn', name: 'CNN International', url: 'http://rss.cnn.com/rss/edition_world.rss', on: true },
   { id: 'aljazeera', name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml', on: true },
+];
+
+/** SAP News page defaults (SapNews.dc.html NW_SRC). */
+export const DEFAULT_SAP_NEWS_SOURCES: SapNewsSource[] = [
+  {
+    id: 'sapnews',
+    name: 'SAP News Center',
+    url: 'https://news.sap.com/feed/',
+    color: 'oklch(0.76 0.15 245)',
+    on: true,
+  },
+  {
+    id: 'erptoday',
+    name: 'ERP Today',
+    url: 'https://erp.today/feed/',
+    color: 'oklch(0.78 0.14 150)',
+    on: true,
+  },
+  {
+    id: 'saptech',
+    name: 'SAP Tech Bytes (Developers)',
+    url: 'https://community.sap.com/khhcw49343/rss/board?board.id=technology-blog-sap',
+    color: 'oklch(0.75 0.14 305)',
+    on: true,
+  },
+];
+/** Colours given to sources the user adds (prototype onAdd). */
+export const SAP_NEWS_COLORS = [
+  'oklch(0.8 0.13 20)',
+  'oklch(0.82 0.12 190)',
+  'oklch(0.84 0.12 100)',
+  'oklch(0.74 0.14 280)',
 ];

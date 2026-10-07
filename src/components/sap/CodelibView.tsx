@@ -233,20 +233,36 @@ export function CodelibView() {
     },
     [t, toast],
   );
+  // one save at a time per record: the next one waits and carries the updatedAt
+  // the previous one returned (two in flight would conflict with each other)
+  const inflight = useRef(new Map<string, Promise<void>>());
   const flush = useCallback(
-    async (id: string) => {
-      const p = pending.current.get(id);
-      if (!p || conflictRef.current === id) return;
-      clearTimeout(p.tm);
-      pending.current.delete(id);
-      await send(id, p.patch);
+    (id: string) => {
+      const run = (inflight.current.get(id) ?? Promise.resolve()).then(async () => {
+        const p = pending.current.get(id);
+        if (!p || conflictRef.current === id) return;
+        clearTimeout(p.tm);
+        pending.current.delete(id);
+        await send(id, p.patch);
+      });
+      inflight.current.set(id, run);
+      void run.finally(() => {
+        if (inflight.current.get(id) === run) inflight.current.delete(id);
+      });
+      return run;
     },
     [send],
   );
   useEffect(() => {
     const map = pending.current;
-    return () => {
+    // leaving or reloading the page sends what is still waiting for the debounce
+    const hide = () => {
       for (const id of [...map.keys()]) void flush(id);
+    };
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      hide();
     };
   }, [flush]);
   const upd = (id: string, p: Patch, delay = 600) => {

@@ -29,6 +29,7 @@ import { purgeSystemsTx, purgeTcodesTx } from './sap';
 import { purgeTransportsTx } from './transports';
 import { purgeObjectsTx } from './codelib';
 import { countRecords, purgeRecordsTx } from './functional';
+import { countSaved } from '@/server/news/saved';
 import { purgeApiRequestsTx } from './apiPlayground';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
@@ -1253,6 +1254,7 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
     const fn = await countRecords(auth);
     for (const [k, n] of Object.entries(fn)) if (modules.has(k)) out[k] = n;
   }
+  if (modules.has('news')) out.newsSaved = await countSaved(auth);
   if (modules.has('artifacts'))
     out.artifacts = await asUser(auth, async (tx) => {
       const [r] = await tx
