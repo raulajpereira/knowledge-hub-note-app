@@ -11,6 +11,7 @@ import {
   noteAttachments,
   notes,
   snippets,
+  whiteboards,
   tasks,
   vaultItems,
   voiceNotes,
@@ -18,6 +19,7 @@ import {
 import { purgeEmailsTx } from './emails';
 import { purgeArtifactsTx } from './artifacts';
 import { purgeSnippetsTx } from './snippets';
+import { purgeBoardsTx } from './whiteboards';
 import { purgeApiRequestsTx } from './apiPlayground';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
@@ -369,7 +371,7 @@ export async function trashNote(auth: AuthContext, id: string) {
 
 // ── Trash (prototype isTrash) ──────────────────────────────────────────────
 export type TrashKind =
-  'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact' | 'snippet' | 'request';
+  'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact' | 'snippet' | 'request' | 'board';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -400,6 +402,10 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: apiRequests.id, title: apiRequests.title, deletedAt: apiRequests.deletedAt })
       .from(apiRequests)
       .where(isNotNull(apiRequests.deletedAt));
+    const bs = await tx
+      .select({ id: whiteboards.id, title: whiteboards.name, deletedAt: whiteboards.deletedAt })
+      .from(whiteboards)
+      .where(isNotNull(whiteboards.deletedAt));
     const ss = await tx
       .select({ id: snippets.id, title: snippets.title, deletedAt: snippets.deletedAt })
       .from(snippets)
@@ -421,6 +427,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...rs.map((x) => ({
         id: x.id,
         kind: 'request' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...bs.map((x) => ({
+        id: x.id,
+        kind: 'board' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -498,6 +511,9 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
       await tx.update(apiRequests).set({ deletedAt: null }).where(inArray(apiRequests.id, rIds));
     const sIds = items.filter((i) => i.kind === 'snippet').map((i) => i.id);
     if (sIds.length) await tx.update(snippets).set({ deletedAt: null }).where(inArray(snippets.id, sIds));
+    const bIds = items.filter((i) => i.kind === 'board').map((i) => i.id);
+    if (bIds.length)
+      await tx.update(whiteboards).set({ deletedAt: null }).where(inArray(whiteboards.id, bIds));
     const aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
     if (aIds.length) await tx.update(artifacts).set({ deletedAt: null }).where(inArray(artifacts.id, aIds));
     const iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
@@ -566,10 +582,14 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let iIds: string[];
     let aIds: string[];
     let sIds: string[];
+    let bIds: string[];
     let rIds: string[];
     if (items === 'all') {
       rIds = (
         await tx.select({ id: apiRequests.id }).from(apiRequests).where(isNotNull(apiRequests.deletedAt))
+      ).map((r) => r.id);
+      bIds = (
+        await tx.select({ id: whiteboards.id }).from(whiteboards).where(isNotNull(whiteboards.deletedAt))
       ).map((r) => r.id);
       sIds = (await tx.select({ id: snippets.id }).from(snippets).where(isNotNull(snippets.deletedAt))).map(
         (r) => r.id,
@@ -606,6 +626,14 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
       aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
       sIds = items.filter((i) => i.kind === 'snippet').map((i) => i.id);
+      bIds = items.filter((i) => i.kind === 'board').map((i) => i.id);
+      if (bIds.length)
+        bIds = (
+          await tx
+            .select({ id: whiteboards.id })
+            .from(whiteboards)
+            .where(and(inArray(whiteboards.id, bIds), isNotNull(whiteboards.deletedAt)))
+        ).map((r) => r.id);
       rIds = items.filter((i) => i.kind === 'request').map((i) => i.id);
       if (rIds.length)
         rIds = (
@@ -649,6 +677,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     await purgeNotesTx(tx, [...new Set(nIds)]);
     await purgeEmailsTx(tx, eIds);
     await purgeSnippetsTx(tx, sIds);
+    await purgeBoardsTx(tx, bIds);
     await purgeApiRequestsTx(tx, rIds);
     if (aIds.length) {
       await unlinkAll(tx, 'artifact', aIds);

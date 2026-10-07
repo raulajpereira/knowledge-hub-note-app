@@ -10,7 +10,6 @@ import { Placeholder } from '@/components/shell/Placeholder';
 // the plan includes it — the gate is enforced here, on the server.
 const EXTRA_VIEWS: Record<string, { module: string | null; label: string; icon: string }> = {
   trash: { module: 'notes', label: 'nav_trash', icon: 'notes' },
-  whiteboard: { module: 'whiteboard', label: 'nav_whiteboard', icon: 'mg_overview' },
   news: { module: 'news', label: 'SAP News', icon: 'notes' },
   pricing: { module: null, label: 'shell_upTitle', icon: 'mg_dash' },
 };

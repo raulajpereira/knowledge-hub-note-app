@@ -497,3 +497,49 @@ export const apiEnvs = pgTable(
     check('api_envs_name_len', sql`char_length(${t.name}) between 1 and 40`),
   ],
 );
+
+// ── Whiteboard (Whiteboard.dc.html) ─────────────────────────────────────────
+/** Board document: the prototype's element list (see src/lib/whiteboard.ts). */
+export type WhiteboardDoc = { els: unknown[] };
+
+export const whiteboards = pgTable(
+  'whiteboards',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    name: text('name').notNull(),
+    doc: jsonb('doc').$type<WhiteboardDoc>().notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('whiteboards_owner_idx').on(t.tenantId, t.ownerId),
+    check('whiteboards_len', sql`char_length(${t.name}) <= 200 and pg_column_size(${t.doc}) <= 3000000`),
+  ],
+);
+
+/** Images placed on a board: stored in the private bucket, streamed back to the owner. */
+export const whiteboardImages = pgTable(
+  'whiteboard_images',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    boardId: uuid('board_id')
+      .notNull()
+      .references(() => whiteboards.id, { onDelete: 'cascade' }),
+    storageKey: text('storage_key').notNull(),
+    mime: text('mime').notNull(),
+    size: integer('size').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('whiteboard_images_board_idx').on(t.boardId),
+    check(
+      'whiteboard_images_mime_chk',
+      sql`${t.mime} in ('image/png','image/jpeg','image/webp','image/gif')`,
+    ),
+  ],
+);

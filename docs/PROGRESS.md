@@ -215,6 +215,15 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Módulo**: planos DEVELOPER e ULTRA.
 - **Testes**: unitários (URL, portas, endereços privados, localhost), integração (CRUD, cifra das credenciais e variáveis, privacidade, duplicar, envio bloqueado + auditoria, pastas, Lixo) e E2E (criar, URL ↔ parâmetros, envio bloqueado, variáveis por ambiente, persistência, duplicar, Lixo). Screenshots `fase-6/100–103` e `cmp-api.png`.
 
+## Fase 6.4 — Quadro (feito; sem tldraw, decisão do utilizador)
+- **Porquê sem tldraw**: a licença do tldraw não permite produção sem chave comercial paga; o protótipo `Whiteboard.dc.html` já é um quadro próprio em SVG, por isso foi implementado diretamente (sem bibliotecas, sem custos de licença).
+- **Dados**: migração `0014_whiteboards` (`whiteboards` com o documento em JSON, `whiteboard_images`; RLS por tenant e dono). O documento é validado no servidor elemento a elemento (tipos do protótipo, cores `#rrggbb`, limites de coordenadas e de texto, até 5000 elementos, ids únicos; sem URLs nem HTML). Imagens guardadas no bucket privado (reduzidas a 1400 px no browser, até 5 MB, PNG/JPEG/WebP/GIF verificados pelo conteúdo) e servidas só ao dono.
+- **Gravação**: automática (600 ms) e por quadro, "o último a gravar vence" com **aviso de conflito** por `updated_at` (DECISIONS: sem tempo real) — se o quadro mudou noutra janela/dispositivo aparece "Carregar a versão guardada" / "Manter a minha". A vista (posição e zoom) e o quadro ativo ficam por dispositivo.
+- **Ecrã** igual ao protótipo: ferramentas Selecionar, Mover a vista, Caneta, Marcador, Borracha, Retângulo, Elipse, Losango, Linha, Seta (presa às formas), Texto, Post-it, Elemento da app, Imagem e "manter a ferramenta ativa"; barra de estilo (cor, preenchimento, cor do post-it, espessura, traço, tamanho do texto, frente/trás, duplicar, eliminar); seleção por área, redimensionar, mover, duplo clique para escrever, colar texto/imagens/seleções, arrastar imagens, anular/refazer, zoom, ajustar ao conteúdo, atalhos de teclado e painel de atalhos; vários quadros (lista com pré-visualização, pesquisa, novo, duplicar — copia as imagens —, eliminar → Lixo), nome editável, exportar SVG (com as imagens embutidas).
+- **Elementos da app** (notas, tarefas, notas de voz, problemas, artefactos e código, conforme o plano) abrem num **popup sem sair do quadro** (campos, subtarefas e texto — sempre texto simples) com "Abrir página ↗". Elementos removidos aparecem como "Elemento removido".
+- **Desvios do protótipo**: eliminar um quadro vai para o Lixo (o protótipo apagava logo); as imagens deixam de ir dentro do documento (data URL) para o armazenamento; a vista inicial de um quadro novo neste dispositivo ajusta-se ao conteúdo.
+- **Testes**: unitários (geometria e validação do documento), integração (privacidade, conflito, imagens privadas e copiadas ao duplicar, elementos da app, popup, Lixo e purga com imagens) e E2E (desenhar, escrever, post-it, anular/refazer, elemento da app + popup, gravar e recarregar, conflito, vários quadros, imagem, Lixo). Screenshots `fase-6/110–116`, `cmp-quadro.png` e `cmp-quadro-lista.png`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -261,4 +270,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D36 | Emails: leitura no pedido de importação (não no worker); HTML guardado já limpo na base de dados; imagens remotas bloqueadas pela CSP do iframe | Claude (SECURITY.md) |
 | D37 | Anexos de email sem antivírus (ClamAV não cabe no KVM 1): servidos sempre como download | utilizador ("avança") |
 | D38 | API Playground: as `{{variáveis}}` e a autenticação são resolvidas no browser e o servidor só faz a chamada, de forma segura; credenciais e variáveis cifradas em repouso com a chave da app (não E2E, para poderem ser usadas no envio) | Claude (SECURITY.md §7) |
+| D39 | Quadro implementado a partir do protótipo (SVG próprio), sem tldraw: a licença do tldraw exige chave comercial em produção; documento JSON próprio validado no servidor | utilizador ("ponto 1") |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

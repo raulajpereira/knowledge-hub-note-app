@@ -42,6 +42,7 @@ describe.skipIf(!enabled)('notes', () => {
   let art: typeof import('@/server/content/artifacts');
   let snip: typeof import('@/server/content/snippets');
   let apip: typeof import('@/server/content/apiPlayground');
+  let wb: typeof import('@/server/content/whiteboards');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -67,6 +68,7 @@ describe.skipIf(!enabled)('notes', () => {
       art,
       snip,
       apip,
+      wb,
     ] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
@@ -83,12 +85,13 @@ describe.skipIf(!enabled)('notes', () => {
       import('@/server/content/artifacts'),
       import('@/server/content/snippets'),
       import('@/server/content/apiPlayground'),
+      import('@/server/content/whiteboards'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -730,5 +733,87 @@ describe.skipIf(!enabled)('notes', () => {
     expect((await notes.contentCounts(a, new Set(['api']))).api).toBe(1);
     await notes.purgeTrash(a, 'all');
     expect((await apip.listApiRequests(a)).map((x) => x.title)).toEqual(['Ler utilizadores']);
+  });
+
+  it('whiteboard: boards are private, conflict on stale saves, images copied on duplicate, items and Trash', async () => {
+    const a = await signedIn('wb-a@example.pt');
+    const b = await signedIn('wb-b@example.pt');
+    const note = await notes.createNote(a, { title: 'Go-live SF' });
+    const task = await tasksSvc.createTask(a, { title: 'Transportar a ordem' });
+    await tasksSvc.addSubtask(a, task.id, 'Criar destination');
+    const board = await wb.createBoard(a, 'Brainstorm');
+    const img = await wb.addBoardImage(a, board.id, PNG);
+    expect(await codeOf(wb.addBoardImage(b, board.id, PNG))).toBe('not_found');
+    expect(await codeOf(wb.addBoardImage(a, board.id, new TextEncoder().encode('<svg/>')))).toBe(
+      'unsupported_image',
+    );
+    const els = [
+      {
+        id: 'r1',
+        t: 'rect',
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 50,
+        stroke: '#fbf8f5',
+        fill: 'none',
+        sw: 4,
+        dash: 'solid',
+        fs: 18,
+        text: 'Análise',
+      },
+      { id: 'k1', t: 'link', x: 200, y: 0, w: 270, h: 78, ref: `note:${note.id}` },
+      { id: 'k2', t: 'link', x: 200, y: 100, w: 270, h: 78, ref: `task:${task.id}` },
+      { id: 'i1', t: 'image', x: 0, y: 100, w: 100, h: 100, file: img },
+    ] as never[];
+    const s1 = await wb.updateBoard(a, board.id, { els, base: board.updatedAt });
+    expect(s1.updatedAt > board.updatedAt).toBe(true);
+
+    // a second tab still holding the old updated_at is refused, unless it insists
+    expect(await codeOf(wb.updateBoard(a, board.id, { name: 'Outro', base: board.updatedAt }))).toBe(
+      'conflict',
+    );
+    const s2 = await wb.updateBoard(a, board.id, { name: 'Outro', base: board.updatedAt, force: true });
+    await wb.updateBoard(a, board.id, { name: 'Brainstorm', base: s2.updatedAt });
+
+    const types = ['note', 'task', 'voice', 'issue', 'artifact', 'snippet'] as const;
+    const list = await wb.listBoards(a, [...types]);
+    expect(list.boards.map((x) => [x.name, x.els.length])).toEqual([['Brainstorm', 4]]);
+    expect(
+      Object.values(list.items)
+        .map((x) => x.title)
+        .sort(),
+    ).toEqual(['Go-live SF', 'Transportar a ordem']);
+    expect((await wb.listBoards(a, ['task'])).items).not.toHaveProperty(`note:${note.id}`);
+    expect((await wb.listBoards(b, [...types])).boards).toEqual([]);
+    expect(await codeOf(wb.updateBoard(b, board.id, { name: 'x' }))).toBe('not_found');
+    expect(await wb.readBoardImage(b, img)).toBeNull();
+    expect((await wb.readBoardImage(a, img))?.mime).toBe('image/png');
+
+    expect((await wb.boardItems(a, 'go-live', [...types])).map((x) => x.k)).toEqual([`note:${note.id}`]);
+    expect(await wb.boardItems(b, '', [...types])).toEqual([]);
+    const peek = await wb.peekItem(a, 'task', task.id);
+    expect(peek).toMatchObject({
+      title: 'Transportar a ordem',
+      subs: [{ t: 'Criar destination', done: false }],
+      code: false,
+    });
+    expect(await codeOf(wb.peekItem(b, 'task', task.id))).toBe('not_found');
+
+    const copy = await wb.duplicateBoard(a, board.id, ' (cópia)');
+    const copyImg = copy.els.find((e) => e.t === 'image') as { file: string };
+    expect(copy.name).toBe('Brainstorm (cópia)');
+    expect(copyImg.file).not.toBe(img);
+    expect((await wb.readBoardImage(a, copyImg.file))?.mime).toBe('image/png');
+
+    await wb.trashBoard(a, board.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual(['board', 'Brainstorm']);
+    await notes.restoreTrash(a, [{ kind: 'board', id: board.id }]);
+    expect((await wb.listBoards(a, [])).boards).toHaveLength(2);
+    await wb.trashBoard(a, board.id);
+    await notes.purgeTrash(a, 'all');
+    expect(await wb.readBoardImage(a, img)).toBeNull();
+    expect((await wb.readBoardImage(a, copyImg.file))?.mime).toBe('image/png');
+    expect((await wb.listBoards(a, [])).boards.map((x) => x.name)).toEqual(['Brainstorm (cópia)']);
   });
 });

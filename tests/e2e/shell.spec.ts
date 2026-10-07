@@ -78,7 +78,7 @@ test('sidebar shows only the plan’s modules; the server gates the rest', async
   await nav.getByRole('link', { name: 'Artefactos' }).click();
   await expect(page).toHaveURL(/\/app\/artifacts$/);
   await page.goto('app/whiteboard');
-  await expect(page.getByText('chega numa próxima fase')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Quadros' })).toBeVisible();
 
   await page.goto('app/mg-overview');
   await expect(page.getByText('não está incluído no seu plano')).toBeVisible();
