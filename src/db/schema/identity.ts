@@ -25,7 +25,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-const citext = customType<{ data: string }>({ dataType: () => 'citext' });
+export const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 const id = () =>

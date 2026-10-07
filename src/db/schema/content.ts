@@ -1,7 +1,7 @@
 // Tenant content (DATA_MODEL.md §4). Every table carries tenant_id and is
 // protected by Row Level Security (migration 0005): the app role only sees
 // rows of the tenant/user set by withTenant(). Personal content also has an
-// owner; shared folders (Phase 9) will widen the policies via share_members.
+// owner; shared folders widen notes/tasks/artifacts to their members (0022).
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -18,6 +18,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { mgProjects } from './mg';
+import { sharedFolders } from './share';
 import { tenants, users } from './identity';
 
 const id = () =>
@@ -62,6 +63,7 @@ export const notes = pgTable(
     tenantId: tenantId(),
     ownerId: ownerId(),
     folderId: uuid('folder_id').references(() => folders.id, { onDelete: 'set null' }),
+    sharedFolderId: uuid('shared_folder_id').references(() => sharedFolders.id, { onDelete: 'set null' }),
     title: text('title').notNull().default(''),
     // TipTap JSON document; content_text is derived on the server (search, summary).
     content: jsonb('content').notNull().default({ type: 'doc', content: [] }),
@@ -139,6 +141,7 @@ export const tasks = pgTable(
     // A day, not an instant (prototype date picker): no time-zone surprises.
     dueOn: date('due_on'),
     repeat: text('repeat', { enum: TASK_REPEATS }).notNull().default('none'),
+    sharedFolderId: uuid('shared_folder_id').references(() => sharedFolders.id, { onDelete: 'set null' }),
     projectId: uuid('project_id').references(() => mgProjects.id, { onDelete: 'set null' }),
     notes: text('notes').notNull().default(''),
     pinned: boolean('pinned').notNull().default(false),
@@ -370,6 +373,7 @@ export const artifacts = pgTable(
     tenantId: tenantId(),
     ownerId: ownerId(),
     folderId: uuid('folder_id').references(() => folders.id, { onDelete: 'set null' }),
+    sharedFolderId: uuid('shared_folder_id').references(() => sharedFolders.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     description: text('description').notNull().default(''),
     tags: text('tags')

@@ -8,6 +8,7 @@ import { useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { usePref } from '@/components/shell/PrefsProvider';
+import { ShareButton } from '@/components/share/ShareButton';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
@@ -438,6 +439,7 @@ function EditorCard({
         >
           <Svg d={P.trash} size={15} />
         </button>
+        <ShareButton itemType="note" itemId={note.id} title={title || t('ne_untitled')} variant="pill" />
       </div>
       <div className="kh-nt-editor__scroll">
         <div className="kh-nt-editor__body">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ShareButton } from '@/components/share/ShareButton';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
@@ -466,6 +467,13 @@ export function ArtifactsView() {
                   </button>
                 ))}
               </div>
+              <ShareButton
+                itemType="artifact"
+                itemId={full.id}
+                title={full.title}
+                variant="round"
+                className="kh-em-act"
+              />
               <button
                 type="button"
                 className="kh-em-act"

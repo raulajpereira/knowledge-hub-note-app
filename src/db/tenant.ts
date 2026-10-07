@@ -1,7 +1,12 @@
 import { sql } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 
-export type TenantContext = { tenantId: string; userId?: string | null };
+export type TenantContext = {
+  tenantId: string;
+  userId?: string | null;
+  /** widen notes/tasks/artifacts to the shared folders the user can access (migration 0022) */
+  share?: boolean;
+};
 
 // Every tenant-scoped query runs inside this: a transaction whose
 // app.tenant_id / app.user_id settings (transaction-local, so they can never
@@ -14,7 +19,7 @@ export async function withTenant<TDb extends PgDatabase<PgQueryResultHKT, Record
   if (!/^[0-9a-f-]{36}$/i.test(ctx.tenantId)) throw new Error('withTenant: invalid tenantId');
   return database.transaction(async (tx) => {
     await tx.execute(
-      sql`select set_config('app.tenant_id', ${ctx.tenantId}, true), set_config('app.user_id', ${ctx.userId ?? ''}, true)`,
+      sql`select set_config('app.tenant_id', ${ctx.tenantId}, true), set_config('app.user_id', ${ctx.userId ?? ''}, true), set_config('app.share', ${ctx.share ? 'on' : ''}, true)`,
     );
     return fn(tx as Parameters<Parameters<TDb['transaction']>[0]>[0]);
   });

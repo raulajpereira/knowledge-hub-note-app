@@ -103,7 +103,7 @@ describe.skipIf(!enabled)('notes', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -1176,6 +1176,59 @@ describe.skipIf(!enabled)('notes', () => {
     const pj = d2.projects[0]!;
     await mg.applyMgOps(a, [{ op: 'del', c: 'projects', id: pj.id }]);
     expect((await mg.loadMg(a)).allocs.some((x) => x.project === pj.id)).toBe(false);
+  });
+
+  it('public links: owner only, token hashed, password, expiry, revoke, read as the owner', async () => {
+    const links = await import('@/server/share/links');
+    const a = await signedIn('pl-a@example.pt');
+    const b = await signedIn('pl-b@example.pt');
+    const n = await notes.createNote(a, { title: 'Pública' });
+    await notes.updateNote(a, n.id, {
+      content: {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Olá <b>mundo</b>' }] }],
+      },
+    });
+    // someone else can't link another user's note
+    expect(await codeOf(links.createLink(b, 'note', n.id))).toBe('not_found');
+    const l = await links.createLink(a, 'note', n.id);
+    expect(await links.createLink(a, 'note', n.id)).toMatchObject({ id: l.id }); // idempotent
+    const token = l.url.split('/p/')[1]!;
+    expect(token.length).toBeGreaterThanOrEqual(32);
+    // stored only hashed (and encrypted), never in clear
+    const raw = await admin.unsafe('select token_hash, token_ct from public_links');
+    expect(JSON.stringify(raw)).not.toContain(token);
+    // the public side reads it without a session, as the owner
+    const f = (await links.findLink(token))!;
+    expect(f.item_id).toBe(n.id);
+    const item = await links.publicItem(f, true);
+    expect(item).toMatchObject({ type: 'note', title: 'Pública' });
+    const { docHtml } = await import('@/server/share/render');
+    expect(docHtml((item as { doc: never }).doc, () => '')).toBe('<p>Olá &lt;b&gt;mundo&lt;/b&gt;</p>');
+    expect((await links.linkFor(a, 'note', n.id))!.views).toBe(1);
+    expect(await links.listLinks(b)).toEqual([]);
+    // password: locked until the proof cookie; changing it invalidates old proofs
+    await links.updateLink(a, l.id, { password: 'segredo-1' });
+    const f2 = (await links.findLink(token))!;
+    expect(links.isUnlocked(f2, undefined)).toBe(false);
+    expect(await links.checkPassword(f2, 'errada')).toBe(false);
+    expect(await links.checkPassword(f2, 'segredo-1')).toBe(true);
+    const proof = links.unlockProof(f2);
+    expect(links.isUnlocked(f2, proof)).toBe(true);
+    await links.updateLink(a, l.id, { password: 'segredo-2' });
+    expect(links.isUnlocked((await links.findLink(token))!, proof)).toBe(false);
+    // expiry and revoke
+    await links.updateLink(a, l.id, { expiresOn: '2020-01-01' });
+    expect(await links.findLink(token)).toBeNull();
+    await links.updateLink(a, l.id, { expiresOn: null });
+    expect(await links.findLink(token)).not.toBeNull();
+    await links.revokeLink(a, l.id);
+    expect(await links.findLink(token)).toBeNull();
+    expect(await links.findLink('not-a-token')).toBeNull();
+    // a deleted note is gone from its link
+    const l2 = await links.createLink(a, 'note', n.id);
+    await notes.trashNote(a, n.id);
+    expect(await links.publicItem((await links.findLink(l2.url.split('/p/')[1]!))!, false)).toBeNull();
   });
 
   it('management projects in tasks, issues and transports: own tenant only, cleared when deleted', async () => {
