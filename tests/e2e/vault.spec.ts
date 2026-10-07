@@ -48,7 +48,12 @@ async function login(page: Page) {
 
 test.beforeAll(async ({ browser }) => {
   const code = /KH-LIC-\d{6}/.exec(cli('codes:create', '--type', 'license', '--plan', 'PRO'))![0];
-  const page = await browser.newPage({ locale: 'pt-PT' });
+  // own (documentation) address: registration is limited to 10 per hour and IP,
+  // and a retried spec elsewhere must not use up this one's
+  const page = await browser.newPage({
+    locale: 'pt-PT',
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.83' },
+  });
   await page.goto('register');
   await page.getByLabel('Nome').fill('Vault Tester');
   await page.getByLabel('Email').fill(email);

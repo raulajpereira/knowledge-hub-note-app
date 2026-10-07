@@ -80,7 +80,22 @@ test('notebook + note written with the toolbar only, saved and reloaded', async 
   await page.keyboard.press('Enter');
   const ed = page.locator('.kh-ne');
   await page.keyboard.type('Documentação no SAP Help Portal');
-  for (let i = 0; i < 15; i++) await page.keyboard.press('Shift+ArrowLeft');
+  // select "SAP Help Portal" on the text node itself (15 × Shift+ArrowLeft lost a key now and then)
+  await expect(ed).toContainText('Documentação no SAP Help Portal');
+  await ed.evaluate((root) => {
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const i = n.textContent!.indexOf('SAP Help Portal');
+      if (i < 0) continue;
+      const r = document.createRange();
+      r.setStart(n, i);
+      r.setEnd(n, i + 'SAP Help Portal'.length);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(r);
+      return;
+    }
+  });
+  await expect.poll(() => page.evaluate(() => getSelection()!.toString())).toBe('SAP Help Portal');
   await tool(page, 'Ligação').click();
   await page.getByLabel('Endereço do link ou nome de uma nota').fill('help.sap.com');
   await page.getByRole('button', { name: 'Inserir' }).click();
