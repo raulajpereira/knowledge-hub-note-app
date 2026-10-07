@@ -16,6 +16,7 @@ import {
   sapTcodes,
   sapTransports,
   sapObjects,
+  sapFnRecords,
   tasks,
   vaultItems,
   voiceNotes,
@@ -27,6 +28,7 @@ import { purgeBoardsTx } from './whiteboards';
 import { purgeSystemsTx, purgeTcodesTx } from './sap';
 import { purgeTransportsTx } from './transports';
 import { purgeObjectsTx } from './codelib';
+import { countRecords, purgeRecordsTx } from './functional';
 import { purgeApiRequestsTx } from './apiPlayground';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
@@ -391,7 +393,8 @@ export type TrashKind =
   | 'system'
   | 'tcode'
   | 'transport'
-  | 'code';
+  | 'code'
+  | 'fn';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -430,6 +433,14 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       })
       .from(sapTransports)
       .where(isNotNull(sapTransports.deletedAt));
+    const fns = await tx
+      .select({
+        id: sapFnRecords.id,
+        title: sql<string>`trim(${sapFnRecords.code} || ' · ' || ${sapFnRecords.title}, ' ·')`,
+        deletedAt: sapFnRecords.deletedAt,
+      })
+      .from(sapFnRecords)
+      .where(isNotNull(sapFnRecords.deletedAt));
     const cls = await tx
       .select({ id: sapObjects.id, title: sapObjects.name, deletedAt: sapObjects.deletedAt })
       .from(sapObjects)
@@ -478,6 +489,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...trs.map((x) => ({
         id: x.id,
         kind: 'transport' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...fns.map((x) => ({
+        id: x.id,
+        kind: 'fn' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -594,6 +612,9 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     const otIds = items.filter((i) => i.kind === 'transport').map((i) => i.id);
     if (otIds.length)
       await tx.update(sapTransports).set({ deletedAt: null }).where(inArray(sapTransports.id, otIds));
+    const fnIds = items.filter((i) => i.kind === 'fn').map((i) => i.id);
+    if (fnIds.length)
+      await tx.update(sapFnRecords).set({ deletedAt: null }).where(inArray(sapFnRecords.id, fnIds));
     const clIds = items.filter((i) => i.kind === 'code').map((i) => i.id);
     if (clIds.length)
       await tx.update(sapObjects).set({ deletedAt: null }).where(inArray(sapObjects.id, clIds));
@@ -670,6 +691,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let xIds: string[];
     let otIds: string[];
     let clIds: string[];
+    let fnIds: string[];
     let rIds: string[];
     if (items === 'all') {
       rIds = (
@@ -692,6 +714,9 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       ).map((r) => r.id);
       clIds = (
         await tx.select({ id: sapObjects.id }).from(sapObjects).where(isNotNull(sapObjects.deletedAt))
+      ).map((r) => r.id);
+      fnIds = (
+        await tx.select({ id: sapFnRecords.id }).from(sapFnRecords).where(isNotNull(sapFnRecords.deletedAt))
       ).map((r) => r.id);
       sIds = (await tx.select({ id: snippets.id }).from(snippets).where(isNotNull(snippets.deletedAt))).map(
         (r) => r.id,
@@ -751,6 +776,14 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
             .select({ id: sapTransports.id })
             .from(sapTransports)
             .where(and(inArray(sapTransports.id, otIds), isNotNull(sapTransports.deletedAt)))
+        ).map((r) => r.id);
+      fnIds = items.filter((i) => i.kind === 'fn').map((i) => i.id);
+      if (fnIds.length)
+        fnIds = (
+          await tx
+            .select({ id: sapFnRecords.id })
+            .from(sapFnRecords)
+            .where(and(inArray(sapFnRecords.id, fnIds), isNotNull(sapFnRecords.deletedAt)))
         ).map((r) => r.id);
       clIds = items.filter((i) => i.kind === 'code').map((i) => i.id);
       if (clIds.length)
@@ -816,6 +849,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     await purgeTcodesTx(tx, xIds);
     await purgeTransportsTx(tx, otIds);
     await purgeObjectsTx(tx, clIds);
+    await purgeRecordsTx(tx, fnIds);
     await purgeApiRequestsTx(tx, rIds);
     if (aIds.length) {
       await unlinkAll(tx, 'artifact', aIds);
@@ -1215,6 +1249,10 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         );
       return r?.n ?? 0;
     });
+  if (['fn_proc', 'fn_test', 'fn_mig', 'fn_cut'].some((m) => modules.has(m))) {
+    const fn = await countRecords(auth);
+    for (const [k, n] of Object.entries(fn)) if (modules.has(k)) out[k] = n;
+  }
   if (modules.has('artifacts'))
     out.artifacts = await asUser(auth, async (tx) => {
       const [r] = await tx

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { SAP_ENVS, TX_MOD_IDS, TX_TYPES } from '@/lib/sap';
 import { CL_TYPE_IDS, ClNodesSchema, type ClType } from '@/lib/codelib';
+import { FN_PAGES } from '@/lib/functional';
 
 const s = (max: number) => z.string().trim().max(max);
 export const SystemInput = z
@@ -110,6 +111,34 @@ export const ObjectPatch = z.strictObject({
     .optional(),
   tags: z.array(tag).max(30).optional(),
   nodes: ClNodesSchema.optional(),
+  base: z.iso.datetime().optional(),
+  force: z.boolean().optional(),
+});
+
+export const FnPageParam = z.enum(FN_PAGES);
+export const FnCreate = z.strictObject({
+  page: FnPageParam,
+  title: z
+    .string()
+    .max(300)
+    .regex(/^[^\r\n]*$/),
+  f: z.record(z.string(), z.unknown()).optional(),
+});
+export const FnPatchInput = z.strictObject({
+  title: z
+    .string()
+    .max(300)
+    .regex(/^[^\r\n]*$/)
+    .optional(),
+  code: z
+    .string()
+    .max(120)
+    .regex(/^[^\r\n]*$/)
+    .optional(),
+  st: z.string().max(20).optional(),
+  // checked against the page's schema by the service
+  f: z.record(z.string(), z.unknown()).optional(),
+  rows: z.array(z.record(z.string(), z.unknown())).max(500).optional(),
   base: z.iso.datetime().optional(),
   force: z.boolean().optional(),
 });

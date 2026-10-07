@@ -46,6 +46,7 @@ describe.skipIf(!enabled)('notes', () => {
   let sapSvc: typeof import('@/server/content/sap');
   let otSvc: typeof import('@/server/content/transports');
   let cl: typeof import('@/server/content/codelib');
+  let fn: typeof import('@/server/content/functional');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -75,6 +76,7 @@ describe.skipIf(!enabled)('notes', () => {
       sapSvc,
       otSvc,
       cl,
+      fn,
     ] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
@@ -95,12 +97,13 @@ describe.skipIf(!enabled)('notes', () => {
       import('@/server/content/sap'),
       import('@/server/content/transports'),
       import('@/server/content/codelib'),
+      import('@/server/content/functional'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -1025,5 +1028,65 @@ describe.skipIf(!enabled)('notes', () => {
       'ALV rápido (2)',
       'ZHR_PT_RECIBOS_COPY',
     ]);
+  });
+
+  it('functional: records per page shared by the tenant, schema checks, conflict, Trash and counts', async () => {
+    const a = await signedIn('fn-a@example.pt');
+    const b = await signedIn('fn-b@example.pt');
+    const [c] =
+      await admin`insert into mg_clients (tenant_id, name) values (${a.tenant.id}, 'Banco SOL') returning id`;
+    const t = await fn.createRecord(a, 'fn_test', {
+      title: 'Venda nacional',
+      f: { module: 'SD', client: c!.id },
+    });
+    expect(t).toMatchObject({ page: 'fn_test', st: 'todo', code: '', rows: [], f: { module: 'SD' } });
+    const up = await fn.updateRecord(a, 'fn_test', t.id, {
+      code: 'UAT-SD-014',
+      st: 'run',
+      f: { module: 'SD', kind: 'UAT', date: '2026-10-05' },
+      rows: [{ step: 'Criar encomenda', expected: 'Desconto', st: 'pass' }, { step: 'Faturar' }],
+      base: t.updatedAt,
+    });
+    expect(up.rows).toHaveLength(2);
+    // schema of the page
+    expect(await codeOf(fn.updateRecord(a, 'fn_test', t.id, { st: 'tobe' }))).toBe('invalid_input');
+    expect(await codeOf(fn.updateRecord(a, 'fn_test', t.id, { f: { golive: '2026-01-01' } }))).toBe(
+      'invalid_input',
+    );
+    expect(await codeOf(fn.updateRecord(a, 'fn_test', t.id, { rows: [{ st: 'skip' }] }))).toBe(
+      'invalid_input',
+    );
+    expect(
+      await codeOf(
+        fn.updateRecord(a, 'fn_test', t.id, { f: { client: '01900000-0000-7000-8000-000000000000' } }),
+      ),
+    ).toBe('client_not_found');
+    // stale edit → conflict; another page's id → 404
+    expect(await codeOf(fn.updateRecord(a, 'fn_test', t.id, { title: 'x', base: t.updatedAt }))).toBe(
+      'conflict',
+    );
+    expect(await codeOf(fn.updateRecord(a, 'fn_cut', t.id, { title: 'x' }))).toBe('not_found');
+    // tenant isolation
+    expect(await fn.listRecords(b, 'fn_test')).toEqual([]);
+    expect(await codeOf(fn.updateRecord(b, 'fn_test', t.id, { title: 'x' }))).toBe('not_found');
+    expect(await codeOf(fn.createRecord(b, 'fn_test', { title: 'x', f: { client: c!.id } }))).toBe(
+      'client_not_found',
+    );
+
+    await fn.createRecord(a, 'fn_cut', { title: 'Go-live' });
+    expect(await notes.contentCounts(a, new Set(['fn_test', 'fn_cut', 'fn_mig']))).toMatchObject({
+      fn_test: 1,
+      fn_cut: 1,
+    });
+    await fn.trashRecord(a, 'fn_test', t.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual([
+      'fn',
+      'UAT-SD-014 · Venda nacional',
+    ]);
+    await notes.restoreTrash(a, [{ kind: 'fn', id: t.id }]);
+    expect((await fn.listRecords(a, 'fn_test')).map((r) => r.code)).toEqual(['UAT-SD-014']);
+    await fn.trashRecord(a, 'fn_test', t.id);
+    await notes.purgeTrash(a, 'all');
+    expect(await fn.listRecords(a, 'fn_test')).toEqual([]);
   });
 });

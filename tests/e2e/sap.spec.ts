@@ -258,3 +258,46 @@ test('code library SAP: new class, method, generated pool, include reference, Re
   await page.goto('app/trash');
   await expect(page.getByText('ZNEW_PROGRAM', { exact: true })).toBeVisible();
 });
+
+test('functional SAP: a test case with steps, progress, filters and Trash', async ({ page }) => {
+  await login(page);
+  await page.goto('app/fn-test');
+  await expect(page.getByText('Selecione ou crie um registo.')).toBeVisible();
+  await page.getByRole('button', { name: 'Novo registo' }).click();
+  await page.getByLabel('ID do teste').fill('UAT-SD-014');
+  await page.getByLabel('Título').fill('Venda nacional com desconto');
+  await page.getByLabel('Módulo', { exact: true }).selectOption('SD');
+  await page.getByLabel('Tipo de teste').selectOption('UAT');
+  await page.getByRole('button', { name: '+ Linha' }).click();
+  await page.getByRole('button', { name: '+ Linha' }).click();
+  await page.getByLabel('Passo 1').fill('Criar encomenda ZOR');
+  await page.getByLabel('Resultado 1').selectOption('pass');
+  await expect(page.getByText('50% concluído')).toBeVisible();
+  await page.getByLabel('Estado', { exact: true }).selectOption('run');
+
+  await page.waitForTimeout(800);
+  await page.reload();
+  const item = page.locator('.kh-fn-item').filter({ hasText: 'Venda nacional com desconto' });
+  await expect(item).toContainText('Em execução');
+  await expect(item).toContainText('UAT-SD-014');
+  await expect(page.getByLabel('Passo 1')).toHaveValue('Criar encomenda ZOR');
+  await expect(page.getByText('50% concluído')).toBeVisible();
+
+  // filters: by status and by module
+  await page.getByRole('button', { name: /^Falhou/ }).click();
+  await expect(page.getByText('Sem registos.')).toBeVisible();
+  await page.getByRole('button', { name: /^Todos/ }).click();
+  await page.getByLabel('Todos os módulos').selectOption('SD');
+  await expect(item).toBeVisible();
+
+  // pages are separate: Cutover is empty
+  await page.goto('app/fn-cut');
+  await expect(page.getByText('Selecione ou crie um registo.')).toBeVisible();
+
+  await page.goto('app/fn-test');
+  await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Mover para o Lixo' }).click();
+  await expect(page.getByText('Sem registos.')).toBeVisible();
+  await page.goto('app/trash');
+  await expect(page.getByText('UAT-SD-014 · Venda nacional com desconto')).toBeVisible();
+});

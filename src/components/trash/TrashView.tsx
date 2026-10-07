@@ -27,7 +27,8 @@ type Item = {
     | 'system'
     | 'tcode'
     | 'transport'
-    | 'code';
+    | 'code'
+    | 'fn';
   title: string;
   deletedAt: string;
   daysLeft: number;
@@ -47,6 +48,7 @@ const KINDS: Record<Item['kind'], { label: string; icon: string }> = {
   tcode: { label: 'x_code', icon: 'tcodes' },
   transport: { label: 'k_tr', icon: 'transports' },
   code: { label: 'k_code', icon: 'codelib' },
+  fn: { label: 'fn_kind', icon: 'fn_proc' },
 };
 
 function Check({ on }: { on: boolean }) {

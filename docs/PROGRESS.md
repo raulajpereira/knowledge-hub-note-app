@@ -12,7 +12,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 4 — Notas, Tarefas, Calendário | ✅ feito |
 | 5 — Cofre, Emails, Issues | ✅ feito |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ✅ feito |
-| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ · 7.2 Ordens de Transporte ✅ · 7.3 Biblioteca de Código SAP ✅ |
+| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ · 7.2 Ordens de Transporte ✅ · 7.3 Biblioteca de Código SAP ✅ · 7.4 Funcional SAP ✅ |
 | 8 — Management | ⏳ |
 | 9 — Partilha | ⏳ |
 | 10 — Admin Console + pedidos de plano | ⏳ |
@@ -248,6 +248,12 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Barra lateral**: contagens de Biblioteca de Código SAP, Transações, Sistemas e Ordens em curso (como no protótipo; faltavam desde a 7.1).
 - **Desvios**: no protótipo um clique simples num nome sublinhado abre-o (impedindo pôr o cursor nesse nome); aqui é Ctrl/⌘ + clique, como diz a própria dica do protótipo (no código gerado, só de leitura, basta clicar). O primeiro include novo de um programa chama-se `_F02`, tal como no protótipo (o programa principal conta). As ligações continuam a ser de cada utilizador; ao apagar definitivamente um objeto partilhado desaparecem as ligações de quem o apaga e as dos outros deixam de aparecer.
 - **Testes**: unitários (nós iniciais válidos, modelos, validação, cabeçalho do FM, classe/interface/DDL gerados, realce e referências), integração (partilha por tenant, conflito e forçar, duplicar, isolamento, ligações a notas e ordens com estado, candidatos, contagens, Lixo com restauro e purga) e E2E (classe com método → pool gerado, gravação, programa com include e Ctrl + clique → "Voltar", pesquisa no código, filtro SE38, Relações, Lixo). Screenshots `fase-7/15–29`, `cmp-codelib-*.png`.
+
+## Fase 7.4 — Funcional SAP (feito)
+- **Dados**: migração `0018_sap_fn_records` (partilhada pelo tenant, D40): um registo por página — **Processos**, **Testes**, **Migração de Dados** e **Cutover** (o `fn-schema.js` do protótipo só mantém estas quatro; Customizing, Requisitos, Base de Conhecimento e Glossário foram retirados no próprio protótipo) — com título, código, estado, os campos da página e a tabela de linhas (passos, passos de teste, mapeamento de campos, atividades). Campos, estados e linhas validados no servidor contra o esquema da página (`src/lib/functional.ts`); o cliente tem de existir no tenant. Gravação automática com aviso de conflito por `updated_at`.
+- **Ecrã** igual ao protótipo (uma página por módulo: `/app/fn-proc`, `/app/fn-test`, `/app/fn-mig`, `/app/fn-cut`): lista agrupada por módulo (Cutover: por projeto), pesquisa em tudo, filtros de módulo/cliente/projeto, chips por estado com contagens, barra de progresso nos Testes e no Cutover, coluna redimensionável; detalhe com código, título, estado colorido, campos (selects, datas, números, textos), progresso por resultado, tabela de linhas com resultado/estado por linha, "+ Linha", remover linha, eliminar → Lixo. Contagens na barra lateral.
+- **Depende da Fase 8**: os campos **Projeto** e **Responsável/Testador/Coordenador** guardam o id, mas as opções (projetos e pessoas do Management) só aparecem quando o Management existir; o endpoint já devolve as listas (vazias por agora).
+- **Testes**: unitários (páginas, progresso, validação por página), integração (partilha e isolamento, esquema, cliente inexistente, conflito, id de outra página, Lixo, contagens) e E2E (caso de teste com passos e progresso, gravação, filtros, páginas separadas, Lixo). Screenshots `fase-7/30–34`, `cmp-fn-*.png`.
 
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.

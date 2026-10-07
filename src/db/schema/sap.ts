@@ -212,3 +212,34 @@ export const sapObjects = pgTable(
     ),
   ],
 );
+
+/** Funcional SAP (SapFunctional.dc.html): processes, tests, migration objects and cutover plans. */
+export const sapFnRecords = pgTable(
+  'sap_fn_records',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    page: text('page').notNull(),
+    title: text('title').notNull().default(''),
+    code: text('code').notNull().default(''),
+    st: text('st').notNull(),
+    f: jsonb('f')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    rows: jsonb('rows')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdBy: userRef('created_by'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('sap_fn_records_tenant_idx').on(t.tenantId, t.page),
+    check('sap_fn_records_page_chk', sql`${t.page} in ('fn_proc','fn_test','fn_mig','fn_cut')`),
+    check(
+      'sap_fn_records_len',
+      sql`char_length(${t.title}) <= 300 and char_length(${t.code}) <= 120 and pg_column_size(${t.f}) + pg_column_size(${t.rows}) <= 2000000`,
+    ),
+  ],
+);
