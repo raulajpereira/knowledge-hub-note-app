@@ -85,6 +85,13 @@
       "when": 1791356645607,
       "tag": "0011_artifacts",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791357693057,
+      "tag": "0012_snippets",
+      "breakpoints": true
     }
   ]
 }

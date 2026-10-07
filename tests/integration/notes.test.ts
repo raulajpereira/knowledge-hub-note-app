@@ -40,6 +40,7 @@ describe.skipIf(!enabled)('notes', () => {
   let mail: typeof import('@/server/content/emails');
   let iss: typeof import('@/server/content/issues');
   let art: typeof import('@/server/content/artifacts');
+  let snip: typeof import('@/server/content/snippets');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -49,7 +50,7 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault, mail, iss, art] =
+    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault, mail, iss, art, snip] =
       await Promise.all([
         import('@/server/auth/service'),
         import('@/server/licensing/codes'),
@@ -64,12 +65,13 @@ describe.skipIf(!enabled)('notes', () => {
         import('@/server/content/emails'),
         import('@/server/content/issues'),
         import('@/server/content/artifacts'),
+        import('@/server/content/snippets'),
       ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -617,5 +619,45 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.purgeTrash(a, 'all');
     expect(await codeOf(art.getArtifact(a, a1.id))).toBe('not_found');
     expect(await notes.linksOf(a, { type: 'note', id: n.id })).toEqual([]);
+  });
+
+  it('code library: snippets with files, related both ways, private, Trash purge drops references', async () => {
+    const a = await signedIn('dev-a@example.pt');
+    const b = await signedIn('dev-b@example.pt');
+    const s1 = await snip.createSnippet(a, {
+      title: 'Função debounce',
+      type: 'function',
+      lang: 'javascript',
+    });
+    expect(s1.files).toEqual([{ id: 'f1', name: 'funcao-debounce.js', lang: 'javascript', code: '' }]);
+    const s2 = await snip.createSnippet(a, { title: 'Imagem', type: 'config', lang: 'dockerfile' });
+    expect(s2.files[0]!.name).toBe('Dockerfile');
+    const other = await snip.createSnippet(b, { title: 'Alheio', type: 'snippet', lang: 'plain' });
+
+    const up = await snip.updateSnippet(a, s1.id, {
+      files: [
+        { id: 'f1', name: 'debounce.js', lang: 'javascript', code: 'export const x = 1;' },
+        { id: 'f2', name: 'debounce.test.js', lang: 'javascript', code: '' },
+      ],
+      tags: ['utils'],
+      fav: true,
+      related: [s2.id, other.id, s1.id], // another user's snippet and itself are ignored
+    });
+    expect(up.related).toEqual([s2.id]);
+    expect(up.files).toHaveLength(2);
+    const list = await snip.listSnippets(a);
+    expect(list.find((x) => x.id === s2.id)!.related).toEqual([s1.id]);
+    expect(await snip.listSnippets(b)).toHaveLength(1);
+    expect(await codeOf(snip.updateSnippet(b, s1.id, { fav: false }))).toBe('not_found');
+
+    await snip.updateSnippet(a, s1.id, { related: [] });
+    expect((await snip.listSnippets(a)).find((x) => x.id === s2.id)!.related).toEqual([]);
+    await snip.updateSnippet(a, s1.id, { related: [s2.id] });
+
+    await snip.trashSnippet(a, s2.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual(['snippet', 'Imagem']);
+    await notes.purgeTrash(a, 'all');
+    expect((await snip.listSnippets(a)).map((x) => [x.title, x.related])).toEqual([['Função debounce', []]]);
+    expect((await notes.contentCounts(a, new Set(['devlib']))).devlib).toBe(1);
   });
 });

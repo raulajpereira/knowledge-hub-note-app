@@ -13,7 +13,7 @@ import './trash.css';
 
 type Item = {
   id: string;
-  kind: 'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact';
+  kind: 'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact' | 'snippet';
   title: string;
   deletedAt: string;
   daysLeft: number;
@@ -26,6 +26,7 @@ const KINDS: Record<Item['kind'], { label: string; icon: string }> = {
   email: { label: 'h_k_mail', icon: 'emails' },
   issue: { label: 'k_issue', icon: 'issues' },
   artifact: { label: 'k_art', icon: 'artifacts' },
+  snippet: { label: 'tr_k_snip', icon: 'devlib' },
 };
 
 function Check({ on }: { on: boolean }) {

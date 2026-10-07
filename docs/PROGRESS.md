@@ -201,6 +201,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Partilha** (botão do protótipo e link público): Fase 9.
 - **Testes**: integração (versões, repor, privacidade, pastas, ligações, Lixo) e E2E (criar, código, versão, isolamento do script, histórico, cabeçalho do novo separador, Lixo). Screenshots `fase-6/90–92` e `cmp-artefactos.png`.
 
+## Fase 6.2 — Biblioteca de Código (feito)
+- **Dados**: migração `0012_snippets` (`snippets`, RLS por tenant e dono): título, tipo (Snippet, Função, Classe, Componente, Hook, Script, Query, Regex, Configuração, Template, Comando), etiquetas, favorito, descrição, **ficheiros** (até 20, cada um com nome, linguagem e código até 200 KB) e **relacionados** (sempre nos dois sentidos, como no protótipo).
+- **Ecrã** igual ao protótipo `DevLibrary.dc.html`: lista agrupada pela linguagem do primeiro ficheiro (grupos recolhíveis, guardados nas preferências), pesquisa no título/etiquetas/código, filtros por linguagem e tipo, Todos / Favoritos, coluna ajustável; editor com separadores de ficheiros, adicionar/remover ficheiro, nome e linguagem do ficheiro (a extensão acompanha a linguagem), contagem de linhas e caracteres, numeração de linhas, **realce de sintaxe** das 30 linguagens do `devlib-langs.js` (o realçador do protótipo — mais leve que Shiki/Prism), Tab insere 2 espaços, copiar, descarregar; relacionados com **"Voltar a …"**; novo snippet (título, linguagem, tipo); gravação automática.
+- Eliminar → Lixo (o protótipo apagava logo; segue o padrão do resto da app). Ao apagar de vez, as referências nos relacionados também saem.
+- **Módulo**: a Biblioteca de Código está nos planos DEVELOPER e ULTRA (no PRO não aparece).
+- **Testes**: unitários (linguagens, realce e escape), integração (ficheiros, relacionados nos dois sentidos, privacidade, Lixo) e E2E. Screenshots `fase-6/95–97` e `cmp-biblioteca.png`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).

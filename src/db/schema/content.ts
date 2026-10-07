@@ -406,3 +406,37 @@ export const artifactVersions = pgTable(
     check('artifact_versions_len', sql`char_length(${t.html}) <= 2000000`),
   ],
 );
+
+/** Code Library snippets (DevLibrary.dc.html): several files each, related snippets both ways. */
+export type SnippetFile = { id: string; name: string; lang: string; code: string };
+export const snippets = pgTable(
+  'snippets',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    title: text('title').notNull(),
+    type: text('type').notNull().default('snippet'),
+    tags: text('tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    fav: boolean('fav').notNull().default(false),
+    description: text('description').notNull().default(''),
+    files: jsonb('files').$type<SnippetFile[]>().notNull(),
+    related: uuid('related')
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('snippets_owner_idx').on(t.tenantId, t.ownerId),
+    check(
+      'snippets_len',
+      sql`char_length(${t.title}) between 1 and 300 and char_length(${t.description}) <= 20000 and cardinality(${t.tags}) <= 30 and cardinality(${t.related}) <= 100 and pg_column_size(${t.files}) <= 2000000`,
+    ),
+  ],
+);
