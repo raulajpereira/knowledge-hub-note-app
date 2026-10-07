@@ -8,6 +8,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -174,6 +175,40 @@ export const sapTransports = pgTable(
     check(
       'sap_transports_len',
       sql`char_length(${t.trkorr}) <= 20 and char_length(${t.description}) <= 500 and char_length(${t.owner}) <= 40 and char_length(${t.notes}) <= 20000`,
+    ),
+  ],
+);
+
+/** Code Library SAP (ZNotes.dc.html isCodelib): an ABAP object with its tree of nodes. */
+export const sapObjects = pgTable(
+  'sap_objects',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    type: text('type').notNull(),
+    name: text('name').notNull().default(''),
+    description: text('description').notNull().default(''),
+    tags: text('tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    nodes: jsonb('nodes')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdBy: userRef('created_by'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('sap_objects_tenant_idx').on(t.tenantId, t.type),
+    check(
+      'sap_objects_type_chk',
+      sql`${t.type} in ('PROG','FUGR','CLAS','INTF','TABL','STRU','DTEL','DOMA','SNIP')`,
+    ),
+    check(
+      'sap_objects_len',
+      sql`char_length(${t.name}) <= 120 and char_length(${t.description}) <= 500 and cardinality(${t.tags}) <= 30 and pg_column_size(${t.nodes}) <= 2000000`,
     ),
   ],
 );

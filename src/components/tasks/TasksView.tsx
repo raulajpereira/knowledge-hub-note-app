@@ -407,7 +407,7 @@ function Detail({
         />
       </div>
 
-      <Connections type="task" id={task.id} variant="section" placeholder={t('t_linkPh')} />
+      <Connections type="task" id={task.id} variant="section" placeholder={t('t_linkPh')} transports />
     </div>
   );
 }

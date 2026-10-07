@@ -15,6 +15,7 @@ import {
   sapSystems,
   sapTcodes,
   sapTransports,
+  sapObjects,
   tasks,
   vaultItems,
   voiceNotes,
@@ -25,6 +26,7 @@ import { purgeSnippetsTx } from './snippets';
 import { purgeBoardsTx } from './whiteboards';
 import { purgeSystemsTx, purgeTcodesTx } from './sap';
 import { purgeTransportsTx } from './transports';
+import { purgeObjectsTx } from './codelib';
 import { purgeApiRequestsTx } from './apiPlayground';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
@@ -388,7 +390,8 @@ export type TrashKind =
   | 'board'
   | 'system'
   | 'tcode'
-  | 'transport';
+  | 'transport'
+  | 'code';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -427,6 +430,10 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       })
       .from(sapTransports)
       .where(isNotNull(sapTransports.deletedAt));
+    const cls = await tx
+      .select({ id: sapObjects.id, title: sapObjects.name, deletedAt: sapObjects.deletedAt })
+      .from(sapObjects)
+      .where(isNotNull(sapObjects.deletedAt));
     const sys = await tx
       .select({ id: sapSystems.id, title: sapSystems.name, deletedAt: sapSystems.deletedAt })
       .from(sapSystems)
@@ -471,6 +478,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...trs.map((x) => ({
         id: x.id,
         kind: 'transport' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...cls.map((x) => ({
+        id: x.id,
+        kind: 'code' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -580,6 +594,9 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     const otIds = items.filter((i) => i.kind === 'transport').map((i) => i.id);
     if (otIds.length)
       await tx.update(sapTransports).set({ deletedAt: null }).where(inArray(sapTransports.id, otIds));
+    const clIds = items.filter((i) => i.kind === 'code').map((i) => i.id);
+    if (clIds.length)
+      await tx.update(sapObjects).set({ deletedAt: null }).where(inArray(sapObjects.id, clIds));
     const aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
     if (aIds.length) await tx.update(artifacts).set({ deletedAt: null }).where(inArray(artifacts.id, aIds));
     const iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
@@ -652,6 +669,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let syIds: string[];
     let xIds: string[];
     let otIds: string[];
+    let clIds: string[];
     let rIds: string[];
     if (items === 'all') {
       rIds = (
@@ -671,6 +689,9 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       ).map((r) => r.id);
       xIds = (
         await tx.select({ id: sapTcodes.id }).from(sapTcodes).where(isNotNull(sapTcodes.deletedAt))
+      ).map((r) => r.id);
+      clIds = (
+        await tx.select({ id: sapObjects.id }).from(sapObjects).where(isNotNull(sapObjects.deletedAt))
       ).map((r) => r.id);
       sIds = (await tx.select({ id: snippets.id }).from(snippets).where(isNotNull(snippets.deletedAt))).map(
         (r) => r.id,
@@ -731,6 +752,14 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
             .from(sapTransports)
             .where(and(inArray(sapTransports.id, otIds), isNotNull(sapTransports.deletedAt)))
         ).map((r) => r.id);
+      clIds = items.filter((i) => i.kind === 'code').map((i) => i.id);
+      if (clIds.length)
+        clIds = (
+          await tx
+            .select({ id: sapObjects.id })
+            .from(sapObjects)
+            .where(and(inArray(sapObjects.id, clIds), isNotNull(sapObjects.deletedAt)))
+        ).map((r) => r.id);
       xIds = items.filter((i) => i.kind === 'tcode').map((i) => i.id);
       if (xIds.length)
         xIds = (
@@ -786,6 +815,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     await purgeSystemsTx(tx, syIds);
     await purgeTcodesTx(tx, xIds);
     await purgeTransportsTx(tx, otIds);
+    await purgeObjectsTx(tx, clIds);
     await purgeApiRequestsTx(tx, rIds);
     if (aIds.length) {
       await unlinkAll(tx, 'artifact', aIds);
@@ -959,15 +989,18 @@ export async function unlinkItems(auth: AuthContext, a: ItemRef, b: ItemRef) {
   );
 }
 
-/** Item types that can be linked today; issues, voice notes… join as their modules arrive. */
+/** Item types that can be linked ("Ligações" and "Ordens de Transporte"). */
 const LINKABLE = {
-  note: { table: notes, title: notes.title },
-  task: { table: tasks, title: tasks.title },
-  voice: { table: voiceNotes, title: voiceNotes.title },
-  issue: { table: issues, title: issues.title },
-  artifact: { table: artifacts, title: artifacts.title },
+  note: { table: notes, title: notes.title, at: notes.updatedAt },
+  task: { table: tasks, title: tasks.title, at: tasks.createdAt },
+  voice: { table: voiceNotes, title: voiceNotes.title, at: voiceNotes.createdAt },
+  issue: { table: issues, title: issues.title, at: issues.createdAt },
+  artifact: { table: artifacts, title: artifacts.title, at: artifacts.updatedAt },
+  code: { table: sapObjects, title: sapObjects.name, at: sapObjects.updatedAt },
+  transport: { table: sapTransports, title: sapTransports.trkorr, at: sapTransports.createdAt },
 } as const;
 export type LinkType = keyof typeof LINKABLE;
+export type LinkStage = 'mod' | 'rel' | 'qas' | 'prd' | 'junk';
 
 async function assertOwned(tx: Tx, ref: ItemRef) {
   const L = LINKABLE[ref.type as LinkType];
@@ -977,6 +1010,39 @@ async function assertOwned(tx: Tx, ref: ItemRef) {
     .from(L.table)
     .where(and(eq(L.table.id, ref.id), isNull(L.table.deletedAt)));
   if (!r) throw new ApiError(404, 'not_found');
+}
+
+/** Extra text per linked item: SAP object type, or the transport description and stage. */
+async function linkDetails(tx: Tx, type: LinkType, ids: string[]) {
+  const out = new Map<string, { sub: string; stage?: LinkStage }>();
+  if (!ids.length) return out;
+  if (type === 'code') {
+    const rs = await tx
+      .select({ id: sapObjects.id, type: sapObjects.type, desc: sapObjects.description })
+      .from(sapObjects)
+      .where(inArray(sapObjects.id, ids));
+    for (const r of rs)
+      out.set(r.id, { sub: r.type === 'SNIP' ? r.desc : `${r.type}${r.desc ? ` · ${r.desc}` : ''}` });
+  }
+  if (type === 'transport') {
+    const rs = await tx
+      .select({
+        id: sapTransports.id,
+        desc: sapTransports.description,
+        rel: sapTransports.releasedAt,
+        qas: sapTransports.qasAt,
+        prd: sapTransports.prdAt,
+        junk: sapTransports.junkAt,
+      })
+      .from(sapTransports)
+      .where(inArray(sapTransports.id, ids));
+    for (const r of rs)
+      out.set(r.id, {
+        sub: r.desc,
+        stage: r.junk ? 'junk' : r.prd ? 'prd' : r.qas ? 'qas' : r.rel ? 'rel' : 'mod',
+      });
+  }
+  return out;
 }
 
 export async function linksOf(auth: AuthContext, ref: ItemRef) {
@@ -993,23 +1059,24 @@ export async function linksOf(auth: AuthContext, ref: ItemRef) {
     const others = rows.map((r) =>
       r.aType === ref.type && r.aId === ref.id ? { type: r.bType, id: r.bId } : { type: r.aType, id: r.aId },
     );
-    const titles = new Map<string, string>();
+    const found = new Map<string, { title: string; sub?: string; stage?: LinkStage }>();
     for (const [type, L] of Object.entries(LINKABLE)) {
       const ids = others.filter((o) => o.type === type).map((o) => o.id);
       if (!ids.length) continue;
-      const found = await tx
+      const rs = await tx
         .select({ id: L.table.id, title: L.title })
         .from(L.table)
         .where(and(inArray(L.table.id, ids), isNull(L.table.deletedAt)));
-      for (const f of found) titles.set(`${type}:${f.id}`, f.title);
+      const more = await linkDetails(tx, type as LinkType, ids);
+      for (const f of rs) found.set(`${type}:${f.id}`, { title: f.title, ...more.get(f.id) });
     }
     return others
-      .filter((o) => titles.has(`${o.type}:${o.id}`))
-      .map((o) => ({ ...o, title: titles.get(`${o.type}:${o.id}`) ?? '' }));
+      .filter((o) => found.has(`${o.type}:${o.id}`))
+      .map((o) => ({ ...o, ...found.get(`${o.type}:${o.id}`)! }));
   });
 }
 
-/** Items the user can link to (search box in "Ligações"): notes and tasks. */
+/** Items the user can link to (search box in "Ligações" / "Ordens de Transporte"). */
 export async function linkCandidates(
   auth: AuthContext,
   ref: ItemRef,
@@ -1018,30 +1085,53 @@ export async function linkCandidates(
 ) {
   const like = `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return asUser(auth, async (tx) => {
-    const out: Array<{ type: LinkType; id: string; title: string; sub: string }> = [];
+    const out: Array<{
+      type: LinkType;
+      id: string;
+      title: string;
+      sub: string;
+      at: string;
+      stage?: LinkStage;
+    }> = [];
     for (const type of types) {
       const L = LINKABLE[type];
-      const at =
-        type === 'note'
-          ? notes.updatedAt
-          : type === 'task'
-            ? tasks.createdAt
-            : type === 'issue'
-              ? issues.createdAt
-              : type === 'artifact'
-                ? artifacts.updatedAt
-                : voiceNotes.createdAt;
+      const match =
+        type === 'transport'
+          ? or(
+              ilike(sapTransports.trkorr, like),
+              ilike(sapTransports.description, like),
+              ilike(sapTransports.owner, like),
+            )
+          : type === 'code'
+            ? or(
+                ilike(sapObjects.name, like),
+                ilike(sapObjects.description, like),
+                ilike(sapObjects.type, like),
+              )
+            : ilike(L.title, like);
       const rows = await tx
-        .select({ id: L.table.id, title: L.title, at })
+        .select({ id: L.table.id, title: L.title, at: L.at })
         .from(L.table)
-        .where(and(isNull(L.table.deletedAt), query ? ilike(L.title, like) : sql`true`))
-        .orderBy(desc(at))
+        .where(and(isNull(L.table.deletedAt), query ? match : sql`true`))
+        .orderBy(desc(L.at))
         .limit(8);
+      const more = await linkDetails(
+        tx,
+        type,
+        rows.map((r) => r.id),
+      );
       for (const r of rows)
         if (!(r.id === ref.id && type === ref.type))
-          out.push({ type, id: r.id, title: r.title, sub: r.at.toISOString() });
+          out.push({
+            type,
+            id: r.id,
+            title: r.title,
+            at: r.at.toISOString(),
+            ...more.get(r.id),
+            sub: more.get(r.id)?.sub ?? '',
+          });
     }
-    return out.sort((a, b) => b.sub.localeCompare(a.sub)).slice(0, 8);
+    return out.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
   });
 }
 
@@ -1088,6 +1178,41 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(snippets)
         .where(isNull(snippets.deletedAt));
+      return r?.n ?? 0;
+    });
+  // SAP (prototype navCounts): objects, transactions, systems, open transports
+  if (modules.has('codelib'))
+    out.codelib = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(sapObjects)
+        .where(isNull(sapObjects.deletedAt));
+      return r?.n ?? 0;
+    });
+  if (modules.has('tcodes'))
+    out.tcodes = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(sapTcodes)
+        .where(isNull(sapTcodes.deletedAt));
+      return r?.n ?? 0;
+    });
+  if (modules.has('systems'))
+    out.systems = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(sapSystems)
+        .where(isNull(sapSystems.deletedAt));
+      return r?.n ?? 0;
+    });
+  if (modules.has('transports'))
+    out.transports = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(sapTransports)
+        .where(
+          and(isNull(sapTransports.deletedAt), isNull(sapTransports.prdAt), isNull(sapTransports.junkAt)),
+        );
       return r?.n ?? 0;
     });
   if (modules.has('artifacts'))

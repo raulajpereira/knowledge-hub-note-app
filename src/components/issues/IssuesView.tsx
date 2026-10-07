@@ -704,7 +704,7 @@ export function IssuesView() {
                 {t('s_done')} · {fmtStamp(a.doneAt)}
               </div>
             )}
-            <Connections type="issue" id={a.id} variant="section" />
+            <Connections type="issue" id={a.id} variant="section" transports />
           </div>
         </aside>
       )}

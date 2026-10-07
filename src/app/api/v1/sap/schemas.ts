@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SAP_ENVS, TX_MOD_IDS, TX_TYPES } from '@/lib/sap';
+import { CL_TYPE_IDS, ClNodesSchema, type ClType } from '@/lib/codelib';
 
 const s = (max: number) => z.string().trim().max(max);
 export const SystemInput = z
@@ -81,3 +82,34 @@ export const TransportInput = z
   })
   .partial()
   .strict();
+
+const tag = z
+  .string()
+  .trim()
+  .min(1)
+  .max(40)
+  .regex(/^[^\r\n,]*$/);
+export const ObjectCreate = z.strictObject({
+  type: z.enum(CL_TYPE_IDS as [ClType, ...ClType[]]),
+  name: z
+    .string()
+    .max(120)
+    .regex(/^[^\r\n]*$/)
+    .optional(),
+});
+export const ObjectPatch = z.strictObject({
+  name: z
+    .string()
+    .max(120)
+    .regex(/^[^\r\n]*$/)
+    .optional(),
+  description: z
+    .string()
+    .max(500)
+    .regex(/^[^\r\n]*$/)
+    .optional(),
+  tags: z.array(tag).max(30).optional(),
+  nodes: ClNodesSchema.optional(),
+  base: z.iso.datetime().optional(),
+  force: z.boolean().optional(),
+});

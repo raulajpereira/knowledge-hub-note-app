@@ -33,24 +33,26 @@ export const trashItems = z.object({
           'system',
           'tcode',
           'transport',
+          'code',
         ]),
         id: z.uuid(),
       }),
     )
     .max(500),
 });
+export const LINK_TYPES = ['note', 'task', 'voice', 'issue', 'artifact', 'code', 'transport'] as const;
 export const itemRef = z.object({
-  type: z.enum(['note', 'task', 'voice', 'issue', 'artifact']),
+  type: z.enum(LINK_TYPES),
   id: z.uuid(),
 });
 /** Module that owns an item type (links need the module of the item they start from). */
-export const moduleOfType = (type: 'note' | 'task' | 'voice' | 'issue' | 'artifact') =>
-  type === 'task'
-    ? 'tasks'
-    : type === 'voice'
-      ? 'voice'
-      : type === 'issue'
-        ? 'issues'
-        : type === 'artifact'
-          ? 'artifacts'
-          : 'notes';
+export const moduleOfType = (type: (typeof LINK_TYPES)[number]) =>
+  ({
+    note: 'notes',
+    task: 'tasks',
+    voice: 'voice',
+    issue: 'issues',
+    artifact: 'artifacts',
+    code: 'codelib',
+    transport: 'transports',
+  })[type];

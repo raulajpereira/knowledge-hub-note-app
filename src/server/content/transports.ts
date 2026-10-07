@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { mgClients, sapSystems, sapTransports } from '@/db/schema';
+import { itemLinks, mgClients, sapSystems, sapTransports } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser, type Tx } from './tenant';
@@ -165,5 +165,11 @@ export async function trashTransport(auth: AuthContext, id: string) {
 }
 
 export async function purgeTransportsTx(tx: Tx, ids: string[]) {
-  if (ids.length) await tx.delete(sapTransports).where(inArray(sapTransports.id, ids));
+  if (!ids.length) return;
+  await tx
+    .delete(itemLinks)
+    .where(
+      sql`(${itemLinks.aType} = 'transport' and ${inArray(itemLinks.aId, ids)}) or (${itemLinks.bType} = 'transport' and ${inArray(itemLinks.bId, ids)})`,
+    );
+  await tx.delete(sapTransports).where(inArray(sapTransports.id, ids));
 }

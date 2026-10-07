@@ -45,6 +45,7 @@ describe.skipIf(!enabled)('notes', () => {
   let wb: typeof import('@/server/content/whiteboards');
   let sapSvc: typeof import('@/server/content/sap');
   let otSvc: typeof import('@/server/content/transports');
+  let cl: typeof import('@/server/content/codelib');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -73,6 +74,7 @@ describe.skipIf(!enabled)('notes', () => {
       wb,
       sapSvc,
       otSvc,
+      cl,
     ] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
@@ -92,12 +94,13 @@ describe.skipIf(!enabled)('notes', () => {
       import('@/server/content/whiteboards'),
       import('@/server/content/sap'),
       import('@/server/content/transports'),
+      import('@/server/content/codelib'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -924,5 +927,103 @@ describe.skipIf(!enabled)('notes', () => {
     ]);
     await notes.purgeTrash(a, 'all');
     expect(await otSvc.listTransports(a)).toEqual([]);
+  });
+
+  it('codelib: shared by the tenant, conflict by updatedAt, duplicate, links to notes and transports, Trash', async () => {
+    const a = await signedIn('cl-a@example.pt');
+    const b = await signedIn('cl-b@example.pt');
+    const prog = await cl.createObject(a, { type: 'PROG', name: 'zhr pt recibos' });
+    expect(prog).toMatchObject({ type: 'PROG', name: 'ZHR_PT_RECIBOS', tags: [] });
+    expect(prog.nodes.map((n) => n.id)).toEqual(['main', 'attr', 'sym', 'selt', 'var']);
+    const snip = await cl.createObject(a, { type: 'SNIP', name: '  ALV rápido ' });
+    expect(snip.name).toBe('ALV rápido');
+
+    const nodes = prog.nodes.map((n) =>
+      n.id === 'main'
+        ? { ...n, tabs: [{ k: 'code' as const, view: 'code' as const, code: 'REPORT zhr_pt_recibos.' }] }
+        : n,
+    );
+    const up = await cl.updateObject(a, prog.id, {
+      description: 'Envio de recibos',
+      tags: ['HCM', ' HCM ', 'Recibos'],
+      nodes,
+      base: prog.updatedAt,
+    });
+    expect(up.tags).toEqual(['HCM', 'Recibos']);
+    // a second editor still holding the old version gets a conflict, unless forced
+    expect(await codeOf(cl.updateObject(a, prog.id, { description: 'x', base: prog.updatedAt }))).toBe(
+      'conflict',
+    );
+    const forced = await cl.updateObject(a, prog.id, {
+      description: 'Forçado',
+      base: prog.updatedAt,
+      force: true,
+    });
+    expect(forced.description).toBe('Forçado');
+    expect(forced.updatedAt > up.updatedAt).toBe(true);
+
+    const dup = await cl.duplicateObject(a, prog.id);
+    expect(dup).toMatchObject({
+      name: 'ZHR_PT_RECIBOS_COPY',
+      description: 'Forçado',
+      tags: ['HCM', 'Recibos'],
+    });
+    expect((dup.nodes[0]!.tabs[0] as { code: string }).code).toBe('REPORT zhr_pt_recibos.');
+    expect((await cl.duplicateObject(a, snip.id)).name).toBe('ALV rápido (2)');
+
+    // other tenants see nothing
+    expect(await cl.listObjects(b)).toEqual([]);
+    expect(await codeOf(cl.updateObject(b, prog.id, { description: 'x' }))).toBe('not_found');
+    expect(await codeOf(cl.trashObject(b, prog.id))).toBe('not_found');
+
+    // links: "Ligações" and "Ordens de Transporte" of the object
+    const n = await notes.createNote(a, { title: 'Recibos — notas de go-live' });
+    const sys = await sapSvc.createSystem(a, { name: 'ECP - DEV', sid: 'JOG', env: 'DEV' });
+    const tr = await otSvc.createTransport(a, { systemId: sys.id });
+    await otSvc.updateTransport(a, tr.id, {
+      trkorr: 'JOGK900710',
+      description: 'Recibos',
+      steps: { released: true },
+    });
+    await notes.linkItems(a, { type: 'code', id: prog.id }, { type: 'note', id: n.id });
+    await notes.linkItems(a, { type: 'code', id: prog.id }, { type: 'transport', id: tr.id });
+    expect(
+      (await notes.linksOf(a, { type: 'code', id: prog.id })).map((l) => [l.type, l.title, l.stage ?? null]),
+    ).toEqual(
+      expect.arrayContaining([
+        ['note', 'Recibos — notas de go-live', null],
+        ['transport', 'JOGK900710', 'rel'],
+      ]),
+    );
+    expect((await notes.linksOf(a, { type: 'note', id: n.id })).map((l) => [l.type, l.title, l.sub])).toEqual(
+      [['code', 'ZHR_PT_RECIBOS', 'PROG · Forçado']],
+    );
+    const cands = await notes.linkCandidates(a, { type: 'note', id: n.id }, 'jogk', ['transport']);
+    expect(cands.map((c) => [c.type, c.title, c.stage])).toEqual([['transport', 'JOGK900710', 'rel']]);
+    expect((await notes.linkCandidates(a, { type: 'note', id: n.id }, 'recibos', ['code'])).length).toBe(2);
+
+    // sidebar counts
+    const counts = await notes.contentCounts(a, new Set(['codelib', 'transports', 'systems']));
+    expect(counts).toMatchObject({ codelib: 4, transports: 1, systems: 1 });
+
+    // Trash: restore, then purge (links go too)
+    await cl.trashObject(a, prog.id);
+    expect((await notes.linksOf(a, { type: 'note', id: n.id })).length).toBe(0);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual([
+      'code',
+      'ZHR_PT_RECIBOS',
+    ]);
+    await notes.restoreTrash(a, [{ kind: 'code', id: prog.id }]);
+    expect((await cl.listObjects(a)).map((o) => o.name)).toContain('ZHR_PT_RECIBOS');
+    await cl.trashObject(a, prog.id);
+    await notes.purgeTrash(a, [{ kind: 'code', id: prog.id }]);
+    const [row] =
+      await admin`select count(*)::int as n from item_links where a_id = ${prog.id} or b_id = ${prog.id}`;
+    expect(row!.n).toBe(0);
+    expect((await cl.listObjects(a)).map((o) => o.name).sort()).toEqual([
+      'ALV rápido',
+      'ALV rápido (2)',
+      'ZHR_PT_RECIBOS_COPY',
+    ]);
   });
 });

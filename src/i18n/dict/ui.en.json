@@ -369,5 +369,15 @@
   "sg_tx": "Start transaction",
   "sg_tipTitle": "Open SAP GUI with one click",
   "sg_tip": "On the first .sap download in Chrome or Edge, open the download menu and choose \"Always open files of this type\". From then on, each click on the SAP GUI button opens SAP GUI right away.",
-  "set_tab_sap": "SAP GUI"
+  "set_tab_sap": "SAP GUI",
+  "cl_conflict": "This object was changed by someone else or in another window.",
+  "cl_refTip": "Ctrl/⌘ + click an underlined name to open it",
+  "cl_open": "Open ",
+  "cl_back": "Back to {x}",
+  "cl_modeList": "List",
+  "cl_modeTable": "Table",
+  "cl_tagRemove": "Remove tag",
+  "cl_resize": "Drag to resize · double-click resets",
+  "cl_nodeName": "Component name",
+  "cl_filter": "Filter by transaction"
 }

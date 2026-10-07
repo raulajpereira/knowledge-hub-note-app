@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
+import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
 import { connectionText, envColor, sapShortcut, SAP_ENVS, type SapEnv } from '@/lib/sap';
 import { ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
@@ -138,6 +139,7 @@ export function SystemsView() {
         name: t('s_newName'),
         clientId: clientF !== 'all' && clients.some((c) => c.id === clientF) ? clientF : null,
       });
+      refreshCounts();
       setItems((cur) => [system, ...(cur ?? [])]);
       open(system.id);
     } catch {
@@ -172,6 +174,7 @@ export function SystemsView() {
     timers.current.delete(x.id);
     try {
       await api(`/sap/systems/${x.id}`, undefined, 'DELETE');
+      refreshCounts();
       setItems((cur) => cur && cur.filter((y) => y.id !== x.id));
       open(null);
     } catch {

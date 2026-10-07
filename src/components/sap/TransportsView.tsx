@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
+import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
 import { envColor } from '@/lib/sap';
 import { ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
@@ -174,6 +175,7 @@ export function TransportsView() {
         'PATCH',
       );
       replace(r.transport);
+      if (s === 'prd' || s === 'junk') refreshCounts();
     } catch {
       fail();
     }
@@ -246,6 +248,7 @@ export function TransportsView() {
         clientId: client,
         ...(one('type') ? { type: one('type') } : {}),
       });
+      refreshCounts();
       setItems((cur) => [transport, ...(cur ?? [])]);
       setStage('all');
       open(transport.id);
@@ -265,6 +268,7 @@ export function TransportsView() {
     timers.current.delete(x.id);
     try {
       await api(`/sap/transports/${x.id}`, undefined, 'DELETE');
+      refreshCounts();
       setItems((cur) => cur && cur.filter((y) => y.id !== x.id));
       open(null);
     } catch {

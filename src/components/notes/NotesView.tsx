@@ -490,7 +490,7 @@ function Inspector({ note, folderName, author }: { note: Note; folderName: strin
   const when = useWhen();
   return (
     <aside className="kh-nt-insp">
-      <Connections type="note" id={note.id} />
+      <Connections type="note" id={note.id} transports />
       <div className="kh-nt-insp__card kh-nt-insp__card--details">
         <div className="kh-nt-insp__h">{t('details')}</div>
         {[

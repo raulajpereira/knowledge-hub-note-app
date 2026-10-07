@@ -3,7 +3,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Phase 7.1 SAP: systems (list, cards, SAP GUI shortcut), transactions, header popup, settings.
+// Phase 7 SAP: systems (list, cards, SAP GUI shortcut), transactions, header popup, settings,
+// transport requests and the Code Library SAP.
 test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 } });
 test.describe.configure({ mode: 'serial' });
 
@@ -186,4 +187,74 @@ test('transport requests: new, steps, route, filters, Trash', async ({ page }) =
   await page.getByRole('dialog').getByRole('button', { name: 'Mover para o Lixo' }).click();
   await page.goto('app/trash');
   await expect(page.getByText('BSQK900123 · Config. Regime SS')).toBeVisible();
+});
+
+test('code library SAP: new class, method, generated pool, include reference, Relações, Trash', async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto('app/codelib');
+  await expect(page.getByText('Selecione um objeto.')).toBeVisible();
+
+  // a class with one method: the generated class pool follows the configuration
+  await page.getByRole('button', { name: 'Novo Objeto' }).click();
+  await page.getByRole('menuitem', { name: /Classes/ }).click();
+  const name = page.getByLabel('Objeto de Código');
+  await expect(name).toHaveValue('ZCL_NEW_CLASS');
+  await name.fill('zcl hr mailer');
+  await expect(name).toHaveValue('ZCL_HR_MAILER');
+  await page.getByRole('button', { name: 'Novo Método' }).click();
+  await page.getByLabel('Nome do componente').fill('send mail');
+  await expect(page.getByLabel('Nome do componente')).toHaveValue('SEND_MAIL');
+  await page.getByRole('tab', { name: 'Código' }).click();
+  await expect(page.getByRole('textbox', { name: 'SEND_MAIL' })).toHaveValue(/METHOD send_mail\./);
+  await page.getByRole('button', { name: /Pool de Classe/ }).click();
+  await expect(page.locator('.kh-ab-hl')).toContainText('METHODS send_mail');
+  await expect(page.locator('.kh-ab-hl')).toContainText('CLASS zcl_hr_mailer IMPLEMENTATION.');
+
+  // saved on the server
+  await page.waitForTimeout(900);
+  await page.reload();
+  await expect(page.locator('.kh-cl-item').filter({ hasText: 'ZCL_HR_MAILER' })).toContainText('1 met');
+
+  // a program with an include: Ctrl/⌘ + click on the name opens it, then "Voltar"
+  await page.getByRole('button', { name: 'Novo Objeto' }).click();
+  await page.getByRole('menuitem', { name: /Programas/ }).click();
+  await page.getByRole('button', { name: 'Novo Include' }).click();
+  await expect(page.getByLabel('Nome do componente')).toHaveValue('ZNEW_PROGRAM_F02');
+  await page.getByRole('button', { name: /^ZNEW_PROGRAM\b.*Main program/ }).click();
+  const main = page.getByRole('textbox', { name: 'ZNEW_PROGRAM' });
+  await main.fill('REPORT znew_program.\n\nINCLUDE znew_program_f02.\n');
+  const ref = page.locator('.kh-ab-ref', { hasText: 'znew_program_f02' });
+  await expect(ref).toBeVisible();
+  const box = (await ref.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.keyboard.down('Control');
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await page.keyboard.up('Control');
+  await expect(page.getByLabel('Nome do componente')).toHaveValue('ZNEW_PROGRAM_F02');
+  await page.getByRole('button', { name: 'Voltar a ZNEW_PROGRAM' }).click();
+  await expect(main).toBeVisible();
+
+  // search covers the code; filters by transaction
+  await page.getByLabel('Pesquisar objetos, código, tags…').fill('send_mail');
+  await expect(page.locator('.kh-cl-item')).toHaveCount(1);
+  await page.getByLabel('Pesquisar objetos, código, tags…').fill('');
+  await page.getByRole('button', { name: /^SE38/ }).click();
+  await expect(page.locator('.kh-cl-item')).toHaveCount(1);
+  await page.getByRole('button', { name: /^Todas/ }).click();
+
+  // Relações: links and transport requests
+  await page.getByRole('button', { name: /Ligações.*Notas, tarefas e ordens/ }).click();
+  await expect(page.getByRole('group', { name: 'Ligações' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Ordens de Transporte' })).toContainText(
+    'Nenhuma ordem associada.',
+  );
+
+  // Trash
+  await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Mover para o Lixo' }).click();
+  await expect(page.locator('.kh-cl-item')).toHaveCount(1);
+  await page.goto('app/trash');
+  await expect(page.getByText('ZNEW_PROGRAM', { exact: true })).toBeVisible();
 });

@@ -369,5 +369,15 @@
   "sg_tx": "Transação inicial",
   "sg_tipTitle": "Abrir o SAP GUI com um clique",
   "sg_tip": "Na primeira transferência .sap no Chrome ou no Edge, abra o menu da transferência e escolha \"Abrir sempre ficheiros deste tipo\". A partir daí, cada clique no botão SAP GUI abre logo o SAP GUI.",
-  "set_tab_sap": "SAP GUI"
+  "set_tab_sap": "SAP GUI",
+  "cl_conflict": "Este objeto foi alterado por outra pessoa ou noutra janela.",
+  "cl_refTip": "Ctrl/⌘ + clique num nome sublinhado para o abrir",
+  "cl_open": "Abrir ",
+  "cl_back": "Voltar a {x}",
+  "cl_modeList": "Lista",
+  "cl_modeTable": "Tabela",
+  "cl_tagRemove": "Remover etiqueta",
+  "cl_resize": "Arrastar para redimensionar · duplo clique repõe",
+  "cl_nodeName": "Nome do componente",
+  "cl_filter": "Filtrar por transação"
 }

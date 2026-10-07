@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
+import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
 import { modColor, TX_MOD_IDS, TX_MODS, TX_TYPES, type TxType } from '@/lib/sap';
 import { ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
@@ -124,6 +125,7 @@ export function TcodesView() {
       const { tcode } = await api<{ tcode: Tcode }>('/sap/tcodes', {
         module: mod !== 'all' && mod !== 'fav' ? mod : 'BC',
       });
+      refreshCounts();
       setItems((cur) => [tcode, ...(cur ?? [])]);
       setQ('');
       open(tcode.id);
@@ -143,6 +145,7 @@ export function TcodesView() {
     timers.current.delete(x.id);
     try {
       await api(`/sap/tcodes/${x.id}`, undefined, 'DELETE');
+      refreshCounts();
       setItems((cur) => cur && cur.filter((y) => y.id !== x.id));
       open(null);
     } catch {

@@ -12,7 +12,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 4 — Notas, Tarefas, Calendário | ✅ feito |
 | 5 — Cofre, Emails, Issues | ✅ feito |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ✅ feito |
-| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ · 7.2 Ordens de Transporte ✅ |
+| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ · 7.2 Ordens de Transporte ✅ · 7.3 Biblioteca de Código SAP ✅ |
 | 8 — Management | ⏳ |
 | 9 — Partilha | ⏳ |
 | 10 — Admin Console + pedidos de plano | ⏳ |
@@ -240,6 +240,14 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Início**: "Ordens em Curso" (contadores e as 4 mais recentes) e "Ordens por passar" no cartão Hoje passam a ter dados.
 - **Adiado**: filtro e coluna **Projeto** — os projetos vêm do Management (Fase 8; a coluna `project_id` já existe).
 - **Testes**: integração (número a partir do DEV, cliente do sistema, passos com data, isolamento, Início, Lixo) e E2E (nova ordem, passos, contador, pista com 3 estações, filtro de tipo, Início, Lixo). Screenshots `fase-7/10–14`, `cmp-ordens.png`, `cmp-ordens-pista.png`.
+
+## Fase 7.3 — Biblioteca de Código SAP (feito)
+- **Dados**: migração `0017_sap_objects` (partilhada pelo tenant, D40): tipo (PROG, FUGR, CLAS, INTF, TABL, STRU, DTEL, DOMA, SNIP), nome, descrição, etiquetas e a **árvore de nós** do protótipo em `jsonb` — código, formulários de configuração, grelhas e código gerado. A árvore é validada no servidor (`ClNodesSchema` em `src/lib/codelib.ts`: chaves, esquemas e separadores conhecidos, limites de tamanho, ids únicos). Gravação automática com **aviso de conflito** por `updated_at` (alguém da equipa gravou entretanto → "Carregar a versão guardada" / "Manter a minha"), como no Quadro.
+- **Ecrã** igual ao protótipo: lista agrupada por tipo (SE38/SE37/SE24/SE11/Snippets, contagens, recolher grupos), pesquisa que inclui o código, menu Novo Objeto com os 9 tipos e os nós iniciais de cada um, cabeçalho (nome em maiúsculas, descrição, transação, pacote, datas, etiquetas, copiar todo o código, descarregar `.abap`, duplicar, eliminar → Lixo), árvore de componentes com "+" (Novo Include / Módulo de Função / Método), mudar o nome e eliminar componentes do utilizador, separadores (Atributos, Importação, Exportação, …, Texto-fonte), formulários com interruptores, grelhas em **Lista** (cartões) ou **Tabela** (campos e componentes), editor ABAP com realce, numeração e Tab = 2 espaços, cabeçalho do módulo de função gerado a partir da interface, **código gerado** (pool de classe, interface, DDL de tabela/estrutura) e **referências**: nomes de outros objetos/componentes sublinhados abrem com Ctrl/⌘ + clique, com "Voltar a …". Larguras da lista e da árvore ajustáveis (duplo clique repõe).
+- **Relações**: Ligações (notas, tarefas, notas de voz, problemas, artefactos) e **Ordens de Transporte** com o estado da ordem. As ligações passam a aceitar objetos de código e ordens; o cartão "Ordens de Transporte" do protótipo aparece também nas Notas, Tarefas e Problemas (com o módulo de ordens no plano).
+- **Barra lateral**: contagens de Biblioteca de Código SAP, Transações, Sistemas e Ordens em curso (como no protótipo; faltavam desde a 7.1).
+- **Desvios**: no protótipo um clique simples num nome sublinhado abre-o (impedindo pôr o cursor nesse nome); aqui é Ctrl/⌘ + clique, como diz a própria dica do protótipo (no código gerado, só de leitura, basta clicar). O primeiro include novo de um programa chama-se `_F02`, tal como no protótipo (o programa principal conta). As ligações continuam a ser de cada utilizador; ao apagar definitivamente um objeto partilhado desaparecem as ligações de quem o apaga e as dos outros deixam de aparecer.
+- **Testes**: unitários (nós iniciais válidos, modelos, validação, cabeçalho do FM, classe/interface/DDL gerados, realce e referências), integração (partilha por tenant, conflito e forçar, duplicar, isolamento, ligações a notas e ordens com estado, candidatos, contagens, Lixo com restauro e purga) e E2E (classe com método → pool gerado, gravação, programa com include e Ctrl + clique → "Voltar", pesquisa no código, filtro SE38, Relações, Lixo). Screenshots `fase-7/15–29`, `cmp-codelib-*.png`.
 
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
