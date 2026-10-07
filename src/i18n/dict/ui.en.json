@@ -200,5 +200,6 @@
   "vt_secDesc": "The vault is encrypted with your master password. The recovery key is the only way back in if you forget it.",
   "vt_copiedClear": "Copied · cleared from the clipboard in 30 s",
   "vt_min": "{n} min",
-  "vt_never": "—"
+  "vt_never": "—",
+  "a_tooBig": "The file is larger than 2 MB."
 }

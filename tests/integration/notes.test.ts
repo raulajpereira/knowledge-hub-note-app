@@ -39,6 +39,7 @@ describe.skipIf(!enabled)('notes', () => {
   let vault: typeof import('@/server/content/vault');
   let mail: typeof import('@/server/content/emails');
   let iss: typeof import('@/server/content/issues');
+  let art: typeof import('@/server/content/artifacts');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -48,7 +49,7 @@ describe.skipIf(!enabled)('notes', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault, mail, iss] =
+    [svc, codesSvc, session, seed, notes, tasksSvc, voiceSvc, homeSvc, dbm, vault, mail, iss, art] =
       await Promise.all([
         import('@/server/auth/service'),
         import('@/server/licensing/codes'),
@@ -62,12 +63,13 @@ describe.skipIf(!enabled)('notes', () => {
         import('@/server/content/vault'),
         import('@/server/content/emails'),
         import('@/server/content/issues'),
+        import('@/server/content/artifacts'),
       ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -571,5 +573,49 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.purgeTrash(a, [{ kind: 'issue', id: i1.id }]);
     expect((await iss.listIssues(a)).map((x) => x.title)).toEqual(['Autorizações F110']);
     expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
+  });
+
+  it('artifacts: private, a version per save, restore keeps history, folders, links, Trash', async () => {
+    const a = await signedIn('art-a@example.pt');
+    const b = await signedIn('art-b@example.pt');
+    const f = await art.createArtifactFolder(a, 'Demos');
+    const a1 = await art.createArtifact(a, { title: 'Dashboard <SAP>', folderId: f.id });
+    expect(a1.html).toContain('<h1>Dashboard &#60;SAP&#62;</h1>');
+    expect(a1.versions).toHaveLength(1);
+    expect(await codeOf(art.createArtifact(b, { title: 'x', folderId: f.id }))).toBe('folder_not_found');
+
+    const v2 = await art.saveArtifactHtml(a, a1.id, '<p>v2</p>');
+    expect(v2.versions.map((v) => v.current)).toEqual([false, true]);
+    const back = await art.restoreArtifactVersion(a, a1.id, v2.versions[0]!.id);
+    expect(back.html).toBe(a1.html);
+    expect(back.versions).toHaveLength(3);
+    expect(await codeOf(art.restoreArtifactVersion(a, a1.id, '00000000-0000-7000-8000-000000000000'))).toBe(
+      'not_found',
+    );
+
+    const up = await art.updateArtifact(a, a1.id, {
+      tags: ['SAP', 'Demo'],
+      description: 'KPIs',
+      pinned: true,
+    });
+    expect(up).toMatchObject({ tags: ['SAP', 'Demo'], description: 'KPIs', pinned: true });
+
+    expect(await art.listArtifacts(b)).toEqual([]);
+    expect(await codeOf(art.getArtifact(b, a1.id))).toBe('not_found');
+    expect(await art.artifactHtml(b, a1.id)).toBeNull();
+    expect(await codeOf(art.saveArtifactHtml(b, a1.id, 'x'))).toBe('not_found');
+
+    const n = await notes.createNote(a, { title: 'Notas da demo' });
+    await notes.linkItems(a, { type: 'artifact', id: a1.id }, { type: 'note', id: n.id });
+    expect((await notes.linksOf(a, { type: 'note', id: n.id })).map((x) => x.type)).toEqual(['artifact']);
+    expect((await notes.contentCounts(a, new Set(['artifacts']))).artifacts).toBe(1);
+
+    await art.deleteArtifactFolder(a, f.id);
+    expect((await art.listArtifacts(a))[0]!.folderId).toBeNull();
+    await art.trashArtifact(a, a1.id);
+    expect((await notes.listTrash(a)).map((x) => x.kind)).toContain('artifact');
+    await notes.purgeTrash(a, 'all');
+    expect(await codeOf(art.getArtifact(a, a1.id))).toBe('not_found');
+    expect(await notes.linksOf(a, { type: 'note', id: n.id })).toEqual([]);
   });
 });

@@ -200,5 +200,6 @@
   "vt_secDesc": "O cofre é cifrado com a sua palavra-passe mestra. A chave de recuperação é a única forma de voltar a entrar se a esquecer.",
   "vt_copiedClear": "Copiado · limpo da área de transferência em 30 s",
   "vt_min": "{n} min",
-  "vt_never": "—"
+  "vt_never": "—",
+  "a_tooBig": "O ficheiro tem mais de 2 MB."
 }

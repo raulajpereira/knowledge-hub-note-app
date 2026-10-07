@@ -194,6 +194,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Calendário**: problemas pelo prazo (filtro "Problemas", arrastar para mudar o prazo, painel do dia, resumo do período). **Início**: estatística "Problemas por resolver" (críticos/altos), cartão com barra por estado e os mais prioritários, problemas nos Próximos Prazos. Contador na barra lateral.
 - **Testes**: integração (privacidade, data de conclusão, ligações, Lixo, Início, contagem) e E2E (criar, editar, Kanban, Calendário, Lixo). Screenshots `fase-5/85–89` e `cmp-problemas*.png`.
 
+## Fase 6.1 — Artefactos (feito)
+- **Dados**: migração `0011_artifacts` (`artifacts`, `artifact_versions`, RLS por tenant e dono). Cada "Guardar Versão" e cada "Repor" criam uma versão (o histórico nunca se perde; ficam as 50 mais recentes). HTML até 2 MB.
+- **Segurança (decisão do utilizador: sem subdomínio próprio)**: o HTML do artefacto corre só num iframe `sandbox` **sem** `allow-same-origin` — origem opaca, sem acesso a cookies, armazenamento ou API da app (testado no E2E). "Abrir num Novo Separador" usa `GET /api/v1/artifacts/:id/view`, servido com `Content-Security-Policy: sandbox …` pela mesma razão (o protótipo usava um blob URL, que correria na origem da app). Descarregar não executa o HTML.
+- **Ecrã** igual ao protótipo: pesquisa, importar ficheiro `.html`, novo, pastas (criar, eliminar — os artefactos ficam em "Todos", arrastar para uma pasta), lista com fixado, descrição, etiquetas e data; título e descrição editáveis, Pré-visualizar / Código (contagem de linhas, Descartar, Guardar Versão, Ctrl/⌘+S), copiar HTML, abrir num novo separador, descarregar, fixar, Histórico de Versões com Repor, etiquetas, Ligações, eliminar → Lixo.
+- **Partilha** (botão do protótipo e link público): Fase 9.
+- **Testes**: integração (versões, repor, privacidade, pastas, ligações, Lixo) e E2E (criar, código, versão, isolamento do script, histórico, cabeçalho do novo separador, Lixo). Screenshots `fase-6/90–92` e `cmp-artefactos.png`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -215,7 +222,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D10 | Email transacional por SMTP Hostinger | utilizador |
 | D11 | Primeiro super admin = `SUPERADMIN_EMAIL` do `.env` (raul.a.j.pereira@gmail.com); criado pelo seed sem password utilizável, recebe link de definição de password; 2FA obrigatório | utilizador + SECURITY.md |
 | D12 | `tenant_id` em **todas** as tabelas de conteúdo (incl. `vault_items`, `task_subtasks`, `voice_notes`…) para RLS uniforme; app liga-se como `kh_app` (não owner, sem BYPASSRLS) | Claude |
-| D13 | Conteúdo de utilizador (Artifacts HTML) servido de `usercontent.knowledge-hub.cloud` (origem separada, sem cookies) — DNS a criar na Fase 6 | Claude |
+| D13 | ~~Conteúdo de utilizador em `usercontent.knowledge-hub.cloud`~~ → substituído: iframe sandbox sem `allow-same-origin` + resposta com `CSP: sandbox` (origem opaca), sem DNS novo | utilizador (Fase 6) |
 | D14 | Fase 0 = infra + fundações técnicas; componentes/i18n na Fase 1 (ordem do DECISIONS §8) | DECISIONS_AND_INFRA |
 | D16 | A MinIO deixou de publicar imagens (`minio/minio`, `minio/mc` já não existem no Docker Hub): usar `pgsty/minio` + `pgsty/mc` (builds comunitários do mesmo código MinIO), fixados a uma versão | utilizador |
 | D18 | Tabelas de identidade/licenciamento são globais (sem RLS): são lidas antes de haver tenant (login, resgate de código) e só o serviço de auth lhes toca; o RLS protege o conteúdo (Fase 3+) | Claude |
@@ -238,4 +245,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D34 | Entradas do cofre eliminadas definitivamente (sem Lixo); a lista de pastas e a chave de recuperação ficam no `meta` cifrado | Claude |
 | D35 | Palavras-passe/Emails/Tarefas de Projeto são extras por tenant (não estão em nenhum plano do protótipo); comando CLI `tenants:module` até à Consola | protótipo |
 | D36 | Emails: leitura no pedido de importação (não no worker); HTML guardado já limpo na base de dados; imagens remotas bloqueadas pela CSP do iframe | Claude (SECURITY.md) |
+| D37 | Anexos de email sem antivírus (ClamAV não cabe no KVM 1): servidos sempre como download | utilizador ("avança") |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

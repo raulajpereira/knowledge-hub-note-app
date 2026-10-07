@@ -355,3 +355,54 @@ export const issues = pgTable(
     ),
   ],
 );
+
+/**
+ * Artifacts (prototype isArtifacts): HTML pages kept with every saved
+ * version. The HTML is user content: it only ever runs in a sandboxed,
+ * opaque-origin frame (or a response with `CSP: sandbox`), never in the app's origin.
+ */
+export const artifacts = pgTable(
+  'artifacts',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    folderId: uuid('folder_id').references(() => folders.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    description: text('description').notNull().default(''),
+    tags: text('tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    pinned: boolean('pinned').notNull().default(false),
+    html: text('html').notNull().default(''),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('artifacts_owner_idx').on(t.tenantId, t.ownerId, t.updatedAt),
+    check(
+      'artifacts_len',
+      sql`char_length(${t.title}) between 1 and 300 and char_length(${t.description}) <= 2000 and char_length(${t.html}) <= 2000000 and cardinality(${t.tags}) <= 30`,
+    ),
+  ],
+);
+
+export const artifactVersions = pgTable(
+  'artifact_versions',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    artifactId: uuid('artifact_id')
+      .notNull()
+      .references(() => artifacts.id, { onDelete: 'cascade' }),
+    html: text('html').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('artifact_versions_idx').on(t.artifactId, t.createdAt),
+    check('artifact_versions_len', sql`char_length(${t.html}) <= 2000000`),
+  ],
+);

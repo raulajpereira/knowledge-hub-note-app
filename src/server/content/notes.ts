@@ -2,6 +2,7 @@ import 'server-only';
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import {
+  artifacts,
   emails,
   folders,
   issues,
@@ -13,6 +14,7 @@ import {
   voiceNotes,
 } from '@/db/schema';
 import { purgeEmailsTx } from './emails';
+import { purgeArtifactsTx } from './artifacts';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
 import { s3 } from '@/lib/storage';
@@ -362,7 +364,7 @@ export async function trashNote(auth: AuthContext, id: string) {
 }
 
 // ── Trash (prototype isTrash) ──────────────────────────────────────────────
-export type TrashKind = 'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue';
+export type TrashKind = 'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -389,6 +391,10 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: voiceNotes.id, title: voiceNotes.title, deletedAt: voiceNotes.deletedAt })
       .from(voiceNotes)
       .where(isNotNull(voiceNotes.deletedAt));
+    const as = await tx
+      .select({ id: artifacts.id, title: artifacts.title, deletedAt: artifacts.deletedAt })
+      .from(artifacts)
+      .where(isNotNull(artifacts.deletedAt));
     const is = await tx
       .select({ id: issues.id, title: issues.title, deletedAt: issues.deletedAt })
       .from(issues)
@@ -399,6 +405,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .where(isNotNull(emails.deletedAt));
     const left = (d: Date) => Math.max(0, TRASH_DAYS - Math.floor((Date.now() - d.getTime()) / 86_400_000));
     return [
+      ...as.map((x) => ({
+        id: x.id,
+        kind: 'artifact' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
       ...is.map((x) => ({
         id: x.id,
         kind: 'issue' as const,
@@ -453,6 +466,8 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     if (tIds.length) await tx.update(tasks).set({ deletedAt: null }).where(inArray(tasks.id, tIds));
     const vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
     if (vIds.length) await tx.update(voiceNotes).set({ deletedAt: null }).where(inArray(voiceNotes.id, vIds));
+    const aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
+    if (aIds.length) await tx.update(artifacts).set({ deletedAt: null }).where(inArray(artifacts.id, aIds));
     const iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
     if (iIds.length) await tx.update(issues).set({ deletedAt: null }).where(inArray(issues.id, iIds));
     const eIds = items.filter((i) => i.kind === 'email').map((i) => i.id);
@@ -517,7 +532,11 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let vIds: string[];
     let eIds: string[];
     let iIds: string[];
+    let aIds: string[];
     if (items === 'all') {
+      aIds = (
+        await tx.select({ id: artifacts.id }).from(artifacts).where(isNotNull(artifacts.deletedAt))
+      ).map((r) => r.id);
       iIds = (await tx.select({ id: issues.id }).from(issues).where(isNotNull(issues.deletedAt))).map(
         (r) => r.id,
       );
@@ -545,6 +564,14 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       tIds = items.filter((i) => i.kind === 'task').map((i) => i.id);
       vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
       iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
+      aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
+      if (aIds.length)
+        aIds = (
+          await tx
+            .select({ id: artifacts.id })
+            .from(artifacts)
+            .where(and(inArray(artifacts.id, aIds), isNotNull(artifacts.deletedAt)))
+        ).map((r) => r.id);
       eIds = items.filter((i) => i.kind === 'email').map((i) => i.id);
       if (eIds.length)
         eIds = (
@@ -565,6 +592,10 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     }
     await purgeNotesTx(tx, [...new Set(nIds)]);
     await purgeEmailsTx(tx, eIds);
+    if (aIds.length) {
+      await unlinkAll(tx, 'artifact', aIds);
+      await purgeArtifactsTx(tx, aIds);
+    }
     if (iIds.length) {
       await unlinkAll(tx, 'issue', iIds);
       await tx.delete(issues).where(and(inArray(issues.id, iIds), isNotNull(issues.deletedAt)));
@@ -739,6 +770,7 @@ const LINKABLE = {
   task: { table: tasks, title: tasks.title },
   voice: { table: voiceNotes, title: voiceNotes.title },
   issue: { table: issues, title: issues.title },
+  artifact: { table: artifacts, title: artifacts.title },
 } as const;
 export type LinkType = keyof typeof LINKABLE;
 
@@ -787,7 +819,7 @@ export async function linkCandidates(
   auth: AuthContext,
   ref: ItemRef,
   query: string,
-  types: LinkType[] = ['note', 'task', 'voice', 'issue'],
+  types: LinkType[] = ['note', 'task', 'voice', 'issue', 'artifact'],
 ) {
   const like = `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return asUser(auth, async (tx) => {
@@ -801,7 +833,9 @@ export async function linkCandidates(
             ? tasks.createdAt
             : type === 'issue'
               ? issues.createdAt
-              : voiceNotes.createdAt;
+              : type === 'artifact'
+                ? artifacts.updatedAt
+                : voiceNotes.createdAt;
       const rows = await tx
         .select({ id: L.table.id, title: L.title, at })
         .from(L.table)
@@ -843,6 +877,14 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(tasks)
         .where(and(isNull(tasks.deletedAt), isNull(tasks.doneAt)));
+      return r?.n ?? 0;
+    });
+  if (modules.has('artifacts'))
+    out.artifacts = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(artifacts)
+        .where(isNull(artifacts.deletedAt));
       return r?.n ?? 0;
     });
   if (modules.has('issues'))

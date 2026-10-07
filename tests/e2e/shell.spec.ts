@@ -76,6 +76,8 @@ test('sidebar shows only the plan’s modules; the server gates the rest', async
   await expect(nav.getByRole('link', { name: 'Notas', exact: true })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.kh-nt-list__title')).toContainText('Todas as Notas');
   await nav.getByRole('link', { name: 'Artefactos' }).click();
+  await expect(page).toHaveURL(/\/app\/artifacts$/);
+  await page.goto('app/whiteboard');
   await expect(page.getByText('chega numa próxima fase')).toBeVisible();
 
   await page.goto('app/mg-overview');
