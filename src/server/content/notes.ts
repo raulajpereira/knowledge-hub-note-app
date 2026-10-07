@@ -12,6 +12,8 @@ import {
   notes,
   snippets,
   whiteboards,
+  sapSystems,
+  sapTcodes,
   tasks,
   vaultItems,
   voiceNotes,
@@ -20,6 +22,7 @@ import { purgeEmailsTx } from './emails';
 import { purgeArtifactsTx } from './artifacts';
 import { purgeSnippetsTx } from './snippets';
 import { purgeBoardsTx } from './whiteboards';
+import { purgeSystemsTx, purgeTcodesTx } from './sap';
 import { purgeApiRequestsTx } from './apiPlayground';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
@@ -371,7 +374,18 @@ export async function trashNote(auth: AuthContext, id: string) {
 
 // ── Trash (prototype isTrash) ──────────────────────────────────────────────
 export type TrashKind =
-  'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact' | 'snippet' | 'request' | 'board';
+  | 'note'
+  | 'folder'
+  | 'task'
+  | 'voice'
+  | 'email'
+  | 'issue'
+  | 'artifact'
+  | 'snippet'
+  | 'request'
+  | 'board'
+  | 'system'
+  | 'tcode';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -402,6 +416,18 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: apiRequests.id, title: apiRequests.title, deletedAt: apiRequests.deletedAt })
       .from(apiRequests)
       .where(isNotNull(apiRequests.deletedAt));
+    const sys = await tx
+      .select({ id: sapSystems.id, title: sapSystems.name, deletedAt: sapSystems.deletedAt })
+      .from(sapSystems)
+      .where(isNotNull(sapSystems.deletedAt));
+    const txs = await tx
+      .select({
+        id: sapTcodes.id,
+        title: sql<string>`trim(${sapTcodes.code} || ' · ' || ${sapTcodes.description}, ' ·')`,
+        deletedAt: sapTcodes.deletedAt,
+      })
+      .from(sapTcodes)
+      .where(isNotNull(sapTcodes.deletedAt));
     const bs = await tx
       .select({ id: whiteboards.id, title: whiteboards.name, deletedAt: whiteboards.deletedAt })
       .from(whiteboards)
@@ -427,6 +453,20 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...rs.map((x) => ({
         id: x.id,
         kind: 'request' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...sys.map((x) => ({
+        id: x.id,
+        kind: 'system' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...txs.map((x) => ({
+        id: x.id,
+        kind: 'tcode' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -514,6 +554,11 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     const bIds = items.filter((i) => i.kind === 'board').map((i) => i.id);
     if (bIds.length)
       await tx.update(whiteboards).set({ deletedAt: null }).where(inArray(whiteboards.id, bIds));
+    const syIds = items.filter((i) => i.kind === 'system').map((i) => i.id);
+    if (syIds.length)
+      await tx.update(sapSystems).set({ deletedAt: null }).where(inArray(sapSystems.id, syIds));
+    const xIds = items.filter((i) => i.kind === 'tcode').map((i) => i.id);
+    if (xIds.length) await tx.update(sapTcodes).set({ deletedAt: null }).where(inArray(sapTcodes.id, xIds));
     const aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
     if (aIds.length) await tx.update(artifacts).set({ deletedAt: null }).where(inArray(artifacts.id, aIds));
     const iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
@@ -583,6 +628,8 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let aIds: string[];
     let sIds: string[];
     let bIds: string[];
+    let syIds: string[];
+    let xIds: string[];
     let rIds: string[];
     if (items === 'all') {
       rIds = (
@@ -590,6 +637,12 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       ).map((r) => r.id);
       bIds = (
         await tx.select({ id: whiteboards.id }).from(whiteboards).where(isNotNull(whiteboards.deletedAt))
+      ).map((r) => r.id);
+      syIds = (
+        await tx.select({ id: sapSystems.id }).from(sapSystems).where(isNotNull(sapSystems.deletedAt))
+      ).map((r) => r.id);
+      xIds = (
+        await tx.select({ id: sapTcodes.id }).from(sapTcodes).where(isNotNull(sapTcodes.deletedAt))
       ).map((r) => r.id);
       sIds = (await tx.select({ id: snippets.id }).from(snippets).where(isNotNull(snippets.deletedAt))).map(
         (r) => r.id,
@@ -633,6 +686,22 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
             .select({ id: whiteboards.id })
             .from(whiteboards)
             .where(and(inArray(whiteboards.id, bIds), isNotNull(whiteboards.deletedAt)))
+        ).map((r) => r.id);
+      syIds = items.filter((i) => i.kind === 'system').map((i) => i.id);
+      if (syIds.length)
+        syIds = (
+          await tx
+            .select({ id: sapSystems.id })
+            .from(sapSystems)
+            .where(and(inArray(sapSystems.id, syIds), isNotNull(sapSystems.deletedAt)))
+        ).map((r) => r.id);
+      xIds = items.filter((i) => i.kind === 'tcode').map((i) => i.id);
+      if (xIds.length)
+        xIds = (
+          await tx
+            .select({ id: sapTcodes.id })
+            .from(sapTcodes)
+            .where(and(inArray(sapTcodes.id, xIds), isNotNull(sapTcodes.deletedAt)))
         ).map((r) => r.id);
       rIds = items.filter((i) => i.kind === 'request').map((i) => i.id);
       if (rIds.length)
@@ -678,6 +747,8 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     await purgeEmailsTx(tx, eIds);
     await purgeSnippetsTx(tx, sIds);
     await purgeBoardsTx(tx, bIds);
+    await purgeSystemsTx(tx, syIds);
+    await purgeTcodesTx(tx, xIds);
     await purgeApiRequestsTx(tx, rIds);
     if (aIds.length) {
       await unlinkAll(tx, 'artifact', aIds);

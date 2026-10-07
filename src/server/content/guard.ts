@@ -30,6 +30,8 @@ export const trashItems = z.object({
           'snippet',
           'request',
           'board',
+          'system',
+          'tcode',
         ]),
         id: z.uuid(),
       }),

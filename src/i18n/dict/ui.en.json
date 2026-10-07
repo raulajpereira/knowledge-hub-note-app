@@ -354,5 +354,20 @@
   "wb_m_type": "Type",
   "wb_m_date": "Date",
   "wb_m_dur": "Duration",
-  "wb_m_desc": "Description"
+  "wb_m_desc": "Description",
+  "tc_ph": "Transaction, program, description, module…",
+  "tc_most": "Most Searched",
+  "tc_res": "Results",
+  "tc_hint": "Click to copy",
+  "tc_copied": "Copied",
+  "tc_none": "No transactions found.",
+  "tc_close": "Close",
+  "sg_title": "SAP GUI Shortcuts",
+  "sg_desc": "The SAP GUI button in SAP Systems downloads a .sap shortcut with the system details. Opening it starts SAP GUI on that system.",
+  "sg_lang": "Logon language",
+  "sg_langSys": "Per system",
+  "sg_tx": "Start transaction",
+  "sg_tipTitle": "Open SAP GUI with one click",
+  "sg_tip": "On the first .sap download in Chrome or Edge, open the download menu and choose \"Always open files of this type\". From then on, each click on the SAP GUI button opens SAP GUI right away.",
+  "set_tab_sap": "SAP GUI"
 }

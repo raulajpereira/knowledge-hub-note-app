@@ -354,5 +354,20 @@
   "wb_m_type": "Tipo",
   "wb_m_date": "Data",
   "wb_m_dur": "Duração",
-  "wb_m_desc": "Descrição"
+  "wb_m_desc": "Descrição",
+  "tc_ph": "Transação, programa, descrição, módulo…",
+  "tc_most": "Mais Pesquisadas",
+  "tc_res": "Resultados",
+  "tc_hint": "Clique para copiar",
+  "tc_copied": "Copiado",
+  "tc_none": "Nenhuma transação encontrada.",
+  "tc_close": "Fechar",
+  "sg_title": "Atalhos SAP GUI",
+  "sg_desc": "O botão SAP GUI nos SAP Systems descarrega um atalho .sap com os dados do sistema. Ao abri-lo, o SAP GUI arranca nesse sistema.",
+  "sg_lang": "Idioma de logon",
+  "sg_langSys": "Do sistema",
+  "sg_tx": "Transação inicial",
+  "sg_tipTitle": "Abrir o SAP GUI com um clique",
+  "sg_tip": "Na primeira transferência .sap no Chrome ou no Edge, abra o menu da transferência e escolha \"Abrir sempre ficheiros deste tipo\". A partir daí, cada clique no botão SAP GUI abre logo o SAP GUI.",
+  "set_tab_sap": "SAP GUI"
 }

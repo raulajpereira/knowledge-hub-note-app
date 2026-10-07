@@ -698,3 +698,114 @@
   height: 7px;
   border-radius: 50%;
 }
+
+/* Transações Favoritas / Acesso Rápido SAP (prototype hTcodes / hSystems) */
+.kh-htx {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+.kh-htx__it {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 12px 12px 14px;
+  border-radius: 18px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.kh-htx__it:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.kh-htx__it > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.kh-htx__it > div > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kh-htx__code {
+  font-family: 'Geist Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.kh-htx__mod {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.kh-htx__desc {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-htx__it > button {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fbf8f5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kh-hsys {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+.kh-hsys > button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  font: inherit;
+  color: #fbf8f5;
+  text-align: left;
+  border: 1px solid transparent;
+  min-width: 0;
+}
+.kh-hsys > button > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.kh-hsys__sid {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+}
+.kh-hsys__env {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+}
+.kh-hsys__cl {
+  font-size: 11px;
+  color: rgba(255, 248, 240, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

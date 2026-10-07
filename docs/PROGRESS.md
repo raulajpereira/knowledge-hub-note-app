@@ -9,10 +9,10 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 1 — Fundações de UI + i18n (componentes + páginas de componentes com screenshots) | ✅ feito (aprovado) |
 | 2 — Auth, tenants, códigos, entitlements | ✅ feito (validado: super admin criado na VPS) |
 | 3 — Shell, Definições, Dashboard | ✅ feito (3.1 Estrutura · 3.2 Definições · 3.3 Início; Personalizar refeito após feedback) |
-| 4 — Notas, Tarefas, Calendário | 🚧 4.1 Notas + Lixo ✅ · 4.2 Tarefas ✅ · Notas de Voz · 4.3 Calendário + Início com dados + Etiquetas — a aguardar testes |
-| 5 — Cofre, Emails, Issues | ⏳ |
-| 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ⏳ |
-| 7 — SAP | ⏳ |
+| 4 — Notas, Tarefas, Calendário | ✅ feito |
+| 5 — Cofre, Emails, Issues | ✅ feito |
+| 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ✅ feito |
+| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ |
 | 8 — Management | ⏳ |
 | 9 — Partilha | ⏳ |
 | 10 — Admin Console + pedidos de plano | ⏳ |
@@ -224,6 +224,16 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Desvios do protótipo**: eliminar um quadro vai para o Lixo (o protótipo apagava logo); as imagens deixam de ir dentro do documento (data URL) para o armazenamento; a vista inicial de um quadro novo neste dispositivo ajusta-se ao conteúdo.
 - **Testes**: unitários (geometria e validação do documento), integração (privacidade, conflito, imagens privadas e copiadas ao duplicar, elementos da app, popup, Lixo e purga com imagens) e E2E (desenhar, escrever, post-it, anular/refazer, elemento da app + popup, gravar e recarregar, conflito, vários quadros, imagem, Lixo). Screenshots `fase-6/110–116`, `cmp-quadro.png` e `cmp-quadro-lista.png`.
 
+## Fase 7.1 — Sistemas SAP e Transações (feito)
+- **Dados partilhados pelo tenant (D40)**: migração `0015_sap_systems_tcodes` — `mg_clients` (clientes; o ecrã Clientes chega com o Management, Fase 8), `sap_systems`, `sap_tcodes`, com RLS **só por tenant** (toda a equipa vê e edita o mesmo landscape); favoritos de sistemas (`sap_system_favs`) e favoritos/uso de transações (`sap_tcode_usage`) são **por utilizador**.
+- **Sistemas SAP** igual ao protótipo: vista Cartões (por omissão, agrupados por cliente, DEV → QAS → PRD) e Lista (colunas ajustáveis e ordenáveis), filtros por ambiente e por cliente, pesquisa, favorito, copiar parâmetros de ligação, painel de detalhe redimensionável (nome, ambiente, cliente, tipo, SID, mandante, servidor, instância, SAProuter, idioma, utilizador, Fiori Launchpad, notas), **atalho SAP GUI (.sap)** com o idioma e a transação inicial das Definições, eliminar → Lixo.
+- **Transações SAP**: biblioteca do tenant, iniciada com o catálogo do protótipo (23 transações; as favoritas iniciais do protótipo ficam para quem a abre primeiro), chips por módulo e Favoritas, filtro por tipo, copiar `/n` + código, painel de detalhe (código, descrição, módulo, tipo, programa, parâmetros para tipos Parâmetro/Variante, notas, datas), eliminar → Lixo.
+- **Popup "SAP TCodes"** no topo (antes ia para a página): Mais Pesquisadas (pelo uso de cada utilizador), pesquisa por código/descrição/programa/módulo, clique ou Enter copia o código.
+- **Definições › SAP GUI**: idioma de logon e transação inicial (guardados nas preferências, sincronizados).
+- **Início**: os cartões Transações Favoritas e Acesso Rápido SAP passam a ter dados (abrir a transação / descarregar o atalho do sistema).
+- **Desvios**: o painel do sistema no protótipo mostra por engano o interruptor "lixo" das Ordens de Transporte — não foi copiado; o seletor de pasta para os atalhos (File System Access) não está no markup do protótipo e não foi feito — o .sap é descarregado normalmente.
+- **Testes**: unitários (ficheiro .sap, sem injeção de linhas), integração (partilha por tenant, isolamento entre tenants, favoritos/uso por utilizador, catálogo inicial, Lixo, cartões do Início) e E2E (definição SAP GUI → atalho descarregado, sistema novo, favorito, cartões, copiar, Início, transação nova, popup do topo, Lixo). Screenshots `fase-7/01–09`, `cmp-sistemas.png`, `cmp-tcodes.png`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -271,4 +281,5 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D37 | Anexos de email sem antivírus (ClamAV não cabe no KVM 1): servidos sempre como download | utilizador ("avança") |
 | D38 | API Playground: as `{{variáveis}}` e a autenticação são resolvidas no browser e o servidor só faz a chamada, de forma segura; credenciais e variáveis cifradas em repouso com a chave da app (não E2E, para poderem ser usadas no envio) | Claude (SECURITY.md §7) |
 | D39 | Quadro implementado a partir do protótipo (SVG próprio), sem tldraw: a licença do tldraw exige chave comercial em produção; documento JSON próprio validado no servidor | utilizador ("ponto 1") |
+| D40 | Dados SAP e Management (clientes, sistemas, transações, ordens, projetos, equipas…) são do tenant (RLS só por tenant, como no DATA_MODEL); favoritos e uso ficam por utilizador. Sem papéis de edição por agora (qualquer membro com o módulo edita) | DATA_MODEL §5 |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

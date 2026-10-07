@@ -5,10 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { useI18n } from '@/i18n/client';
-import { hrefOf } from './nav';
 import { assetUrl } from './assetUrl';
 import { Icon } from './icons';
 import { useShell } from './ShellContext';
+import { TcodesPopup } from '@/components/sap/TcodesPopup';
 
 function useClock(lang: string) {
   // Client-only (server and browser clocks differ → no hydration mismatch).
@@ -28,6 +28,7 @@ function useClock(lang: string) {
 
 export function Header({ onActivity, activityOpen }: { onActivity: () => void; activityOpen: boolean }) {
   const { t, lang } = useI18n();
+  const [tcOpen, setTcOpen] = useState(false);
   const { modules, me, focus, toggleFocus, lock, query, setQuery } = useShell();
   const path = usePathname();
   const { clock, date } = useClock(lang);
@@ -67,11 +68,18 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
       </label>
 
       {modules.has('tcodes') && (
-        <Link href={hrefOf('tcodes')} title="SAP TCodes" className="kh-hdr__pill kh-hdr__glass">
+        <button
+          type="button"
+          title="SAP TCodes"
+          className="kh-hdr__pill kh-hdr__glass"
+          aria-haspopup="dialog"
+          onClick={() => setTcOpen(true)}
+        >
           <Icon name="tcodes" size={18} />
           <span>SAP TCodes</span>
-        </Link>
+        </button>
       )}
+      {tcOpen && <TcodesPopup onClose={() => setTcOpen(false)} />}
       {modules.has('news') && (
         <Link href="/app/news" title="SAP News" className="kh-hdr__btn kh-hdr__glass" aria-label="SAP News">
           <Icon name="news" size={18} />

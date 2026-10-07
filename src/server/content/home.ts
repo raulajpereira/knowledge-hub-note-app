@@ -1,6 +1,17 @@
 import 'server-only';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
-import { emails, folders, issues, notes, tasks } from '@/db/schema';
+import {
+  emails,
+  folders,
+  issues,
+  mgClients,
+  notes,
+  sapSystemFavs,
+  sapSystems,
+  sapTcodeUsage,
+  sapTcodes,
+  tasks,
+} from '@/db/schema';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser } from './tenant';
 
@@ -35,6 +46,22 @@ export type HomeData = {
     starred: Array<{ id: string; subject: string; from: string; sentAt: string | null }>;
     pinned: Array<{ id: string; subject: string }>;
   };
+  /** Transações Favoritas: the user's favourite transactions. */
+  tcodes?: Array<{ id: string; code: string; module: string; description: string }>;
+  /** Acesso Rápido SAP: the user's favourite systems (enough to build the .sap shortcut). */
+  systems?: Array<{
+    id: string;
+    name: string;
+    sid: string;
+    env: string;
+    client: string;
+    host: string;
+    inst: string;
+    mandt: string;
+    router: string;
+    lang: string;
+    sapUser: string;
+  }>;
 };
 
 export async function homeData(auth: AuthContext, modules: ReadonlySet<string>): Promise<HomeData> {
@@ -118,6 +145,46 @@ export async function homeData(auth: AuthContext, modules: ReadonlySet<string>):
         pinned: rows.filter((r) => r.pinned).map((r) => ({ id: r.id, subject: r.subject })),
       };
     }
+    if (modules.has('tcodes'))
+      out.tcodes = await tx
+        .select({
+          id: sapTcodes.id,
+          code: sapTcodes.code,
+          module: sapTcodes.module,
+          description: sapTcodes.description,
+        })
+        .from(sapTcodeUsage)
+        .innerJoin(sapTcodes, eq(sapTcodes.id, sapTcodeUsage.tcodeId))
+        .where(
+          and(
+            eq(sapTcodeUsage.userId, auth.user.id),
+            eq(sapTcodeUsage.fav, true),
+            isNull(sapTcodes.deletedAt),
+          ),
+        )
+        .orderBy(sapTcodes.code)
+        .limit(12);
+    if (modules.has('systems'))
+      out.systems = await tx
+        .select({
+          id: sapSystems.id,
+          name: sapSystems.name,
+          sid: sapSystems.sid,
+          env: sapSystems.env,
+          client: sql<string>`coalesce(${mgClients.name}, '')`,
+          host: sapSystems.host,
+          inst: sapSystems.inst,
+          mandt: sapSystems.mandt,
+          router: sapSystems.router,
+          lang: sapSystems.lang,
+          sapUser: sapSystems.sapUser,
+        })
+        .from(sapSystemFavs)
+        .innerJoin(sapSystems, eq(sapSystems.id, sapSystemFavs.systemId))
+        .leftJoin(mgClients, eq(mgClients.id, sapSystems.clientId))
+        .where(and(eq(sapSystemFavs.userId, auth.user.id), isNull(sapSystems.deletedAt)))
+        .orderBy(sapSystems.name)
+        .limit(24);
     return out;
   });
 }

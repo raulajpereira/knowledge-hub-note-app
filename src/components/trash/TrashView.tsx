@@ -14,7 +14,18 @@ import './trash.css';
 type Item = {
   id: string;
   kind:
-    'note' | 'folder' | 'task' | 'voice' | 'email' | 'issue' | 'artifact' | 'snippet' | 'request' | 'board';
+    | 'note'
+    | 'folder'
+    | 'task'
+    | 'voice'
+    | 'email'
+    | 'issue'
+    | 'artifact'
+    | 'snippet'
+    | 'request'
+    | 'board'
+    | 'system'
+    | 'tcode';
   title: string;
   deletedAt: string;
   daysLeft: number;
@@ -30,6 +41,8 @@ const KINDS: Record<Item['kind'], { label: string; icon: string }> = {
   snippet: { label: 'tr_k_snip', icon: 'devlib' },
   request: { label: 'tr_k_req', icon: 'api' },
   board: { label: 'wb_kind', icon: 'whiteboard' },
+  system: { label: 's_system', icon: 'systems' },
+  tcode: { label: 'x_code', icon: 'tcodes' },
 };
 
 function Check({ on }: { on: boolean }) {

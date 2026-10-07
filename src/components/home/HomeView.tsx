@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { refreshCounts } from '@/components/shell/counts';
 import { useWhen } from '@/components/content/useWhen';
+import { envColor, modColor, sapShortcut } from '@/lib/sap';
+import { downloadShortcut } from '@/components/sap/SidePanel';
+import { copyTcode } from '@/components/sap/TcodesView';
+import { usePersistentState } from '@/components/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePref, usePrefsContext } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
@@ -60,6 +64,20 @@ type HomeData = {
     starred: Array<{ id: string; subject: string; from: string; sentAt: string | null }>;
     pinned: Array<{ id: string; subject: string }>;
   };
+  tcodes?: Array<{ id: string; code: string; module: string; description: string }>;
+  systems?: Array<{
+    id: string;
+    name: string;
+    sid: string;
+    env: string;
+    client: string;
+    host: string;
+    inst: string;
+    mandt: string;
+    router: string;
+    lang: string;
+    sapUser: string;
+  }>;
 };
 // Prototype home: priority dots and the two task groups.
 const H_PRI = {
@@ -398,6 +416,9 @@ export function HomeView() {
   };
   const rowCls = 'kh-hrow';
   const fmtWhen = useWhen();
+  const [txCopied, setTxCopied] = useState<string | null>(null);
+  const [sapLang] = usePersistentState<string>('sap.lang', '');
+  const [sapTx] = usePersistentState<string>('sap.tx', '');
 
   const todayStats = [
     {
@@ -970,9 +991,91 @@ export function HomeView() {
           </div>
         );
       case 'tcodes':
-        return <div className="kh-card__empty">{t('x_noFav')}</div>;
+        if (!data.tcodes?.length) return <div className="kh-card__empty">{t('x_noFav')}</div>;
+        return (
+          <div className="kh-htx">
+            {data.tcodes.map((x) => (
+              <div
+                key={x.id}
+                className="kh-htx__it"
+                role="link"
+                tabIndex={0}
+                style={{
+                  background: `linear-gradient(160deg,${modColor(x.module).replace(')', ' / .22)')},rgba(255,255,255,.04))`,
+                }}
+                onClick={() => router.push(`/app/tcodes?x=${x.id}`)}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(`/app/tcodes?x=${x.id}`)}
+              >
+                <div>
+                  <span>
+                    <span className="kh-htx__code">{x.code}</span>
+                    <span className="kh-htx__mod">{x.module}</span>
+                  </span>
+                  <span className="kh-htx__desc">{x.description}</span>
+                </div>
+                <button
+                  type="button"
+                  title={t('x_copy')}
+                  aria-label={`${t('x_copy')} ${x.code}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyTcode(x.code);
+                    setTxCopied(x.id);
+                    setTimeout(() => setTxCopied(null), 1400);
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    {txCopied === x.id ? (
+                      <path d="M5 12.5l4.5 4.5L19 7.5" />
+                    ) : (
+                      <>
+                        <rect x="9" y="9" width="11" height="11" rx="2.5" />
+                        <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+                      </>
+                    )}
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        );
       case 'systems':
-        return <div className="kh-card__empty">{t('h_noSystems')}</div>;
+        if (!data.systems?.length) return <div className="kh-card__empty">{t('h_noSystems')}</div>;
+        return (
+          <div className="kh-hsys">
+            {data.systems.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                title={t('s_gui')}
+                style={{
+                  background: envColor(x.env).replace(')', ' / .16)'),
+                  borderColor: envColor(x.env).replace(')', ' / .5)'),
+                }}
+                onClick={() => {
+                  const f = sapShortcut(x, { lang: sapLang, tx: sapTx });
+                  downloadShortcut(f.file, f.body);
+                }}
+              >
+                <span>
+                  <span className="kh-hsys__sid">{x.sid || '—'}</span>
+                  <span className="kh-hsys__env">{x.env}</span>
+                </span>
+                <span className="kh-hsys__cl">{x.client || '—'}</span>
+              </button>
+            ))}
+          </div>
+        );
       case 'qnotes':
         return <div className="kh-card__empty">{t('h_noQnotes')}</div>;
       case 'emails':
@@ -1001,14 +1104,14 @@ export function HomeView() {
   };
   const counts: Partial<Record<HomeType, number>> = {
     shortcuts: shortcuts.length,
-    tcodes: 0,
+    tcodes: data.tcodes?.length ?? 0,
     tasks: hTasks.length,
     deadlines: dueItems.length,
     notes: data.recentNotes?.length ?? 0,
     favs: favItems.length,
     transports: 0,
     issues: openIssues.length,
-    systems: 0,
+    systems: data.systems?.length ?? 0,
     qnotes: 0,
     emails: data.emails?.starred.length ?? 0,
   };

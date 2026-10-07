@@ -43,6 +43,7 @@ describe.skipIf(!enabled)('notes', () => {
   let snip: typeof import('@/server/content/snippets');
   let apip: typeof import('@/server/content/apiPlayground');
   let wb: typeof import('@/server/content/whiteboards');
+  let sapSvc: typeof import('@/server/content/sap');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -69,6 +70,7 @@ describe.skipIf(!enabled)('notes', () => {
       snip,
       apip,
       wb,
+      sapSvc,
     ] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
@@ -86,12 +88,13 @@ describe.skipIf(!enabled)('notes', () => {
       import('@/server/content/snippets'),
       import('@/server/content/apiPlayground'),
       import('@/server/content/whiteboards'),
+      import('@/server/content/sap'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -815,5 +818,66 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await wb.readBoardImage(a, img)).toBeNull();
     expect((await wb.readBoardImage(a, copyImg.file))?.mime).toBe('image/png');
     expect((await wb.listBoards(a, [])).boards.map((x) => x.name)).toEqual(['Brainstorm (cópia)']);
+  });
+
+  it('sap: systems and transactions are shared by the tenant, favourites and usage per user, Trash', async () => {
+    const a = await signedIn('sap-a@example.pt');
+    const other = await signedIn('sap-b@example.pt');
+    const [cl] =
+      await admin`insert into mg_clients (tenant_id, name) values (${a.tenant.id}, 'Banco SOL') returning id`;
+    expect((await sapSvc.listClients(a)).map((c) => c.name)).toEqual(['Banco SOL']);
+    expect(await sapSvc.listClients(other)).toEqual([]);
+
+    const s = await sapSvc.createSystem(a, {
+      name: 'BSD - DEV',
+      sid: 'bsd',
+      env: 'DEV',
+      clientId: cl!.id as string,
+    });
+    expect(s).toMatchObject({ sid: 'BSD', env: 'DEV', mandt: '100', inst: '00', fav: false });
+    expect(
+      await codeOf(sapSvc.createSystem(a, { name: 'x', clientId: '0193a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b' })),
+    ).toBe('client_not_found');
+    await sapSvc.setSystemFav(a, s.id, true);
+    expect((await sapSvc.listSystems(a))[0]!.fav).toBe(true);
+    expect(await sapSvc.listSystems(other)).toEqual([]);
+    expect(await codeOf(sapSvc.updateSystem(other, s.id, { name: 'x' }))).toBe('not_found');
+    const up = await sapSvc.updateSystem(a, s.id, { host: '172.16.23.1', env: 'QAS' });
+    expect(up).toMatchObject({ host: '172.16.23.1', env: 'QAS', fav: true });
+
+    // the prototype catalogue is given once per tenant; favourites start for the first user
+    const tx1 = await sapSvc.listTcodes(a);
+    expect(tx1).toHaveLength(23);
+    expect(
+      tx1
+        .filter((x) => x.fav)
+        .map((x) => x.code)
+        .sort(),
+    ).toEqual(['SE09', 'SE16N', 'SE38', 'ST22']);
+    expect(await sapSvc.listTcodes(a)).toHaveLength(23);
+    const se38 = tx1.find((x) => x.code === 'SE38')!;
+    await sapSvc.touchTcode(a, se38.id, { use: true });
+    await sapSvc.touchTcode(a, se38.id, { use: true });
+    await sapSvc.touchTcode(a, se38.id, { fav: false });
+    expect((await sapSvc.listTcodes(a)).find((x) => x.id === se38.id)).toMatchObject({ uses: 2, fav: false });
+    expect((await sapSvc.listTcodes(other)).find((x) => x.id === se38.id)).toBeUndefined();
+    const z = await sapSvc.createTcode(a, { code: 'zfi_x', program: 'sm30', type: 'param' });
+    expect(z).toMatchObject({ code: 'ZFI_X', program: 'SM30', module: 'BC' });
+
+    await sapSvc.trashSystem(a, s.id);
+    await sapSvc.trashTcode(a, z.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toEqual(
+      expect.arrayContaining([
+        ['system', 'BSD - DEV'],
+        ['tcode', 'ZFI_X'],
+      ]),
+    );
+    await notes.restoreTrash(a, [{ kind: 'system', id: s.id }]);
+    expect((await sapSvc.listSystems(a))[0]!.fav).toBe(true);
+    await notes.purgeTrash(a, 'all');
+    expect((await sapSvc.listTcodes(a)).some((x) => x.id === z.id)).toBe(false);
+    const home = await homeSvc.homeData(a, new Set(['tcodes', 'systems']));
+    expect(home.systems?.map((x) => [x.sid, x.client])).toEqual([['BSD', 'Banco SOL']]);
+    expect(home.tcodes?.map((x) => x.code)).toEqual(['SE09', 'SE16N', 'ST22']);
   });
 });
