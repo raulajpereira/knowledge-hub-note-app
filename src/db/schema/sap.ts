@@ -140,3 +140,40 @@ export const sapTcodeUsage = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.tcodeId] })],
 );
+
+/**
+ * Transport requests (prototype `trs`). The route DEV → QAS → PRD is derived
+ * from the client's landscape; released/QAS/PRD/junk are the dates of each step.
+ * project_id points at Management projects (FK added with them, Phase 8).
+ */
+export const sapTransports = pgTable(
+  'sap_transports',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    trkorr: text('trkorr').notNull().default(''),
+    description: text('description').notNull().default(''),
+    clientId: uuid('client_id').references(() => mgClients.id, { onDelete: 'set null' }),
+    projectId: uuid('project_id'),
+    systemId: uuid('system_id').references(() => sapSystems.id, { onDelete: 'set null' }),
+    type: text('type').notNull().default('W'),
+    owner: text('owner').notNull().default(''),
+    notes: text('notes').notNull().default(''),
+    releasedAt: ts('released_at'),
+    qasAt: ts('qas_at'),
+    prdAt: ts('prd_at'),
+    junkAt: ts('junk_at'),
+    createdBy: userRef('created_by'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('sap_transports_tenant_idx').on(t.tenantId),
+    check('sap_transports_type_chk', sql`${t.type} in ('W','C')`),
+    check(
+      'sap_transports_len',
+      sql`char_length(${t.trkorr}) <= 20 and char_length(${t.description}) <= 500 and char_length(${t.owner}) <= 40 and char_length(${t.notes}) <= 20000`,
+    ),
+  ],
+);

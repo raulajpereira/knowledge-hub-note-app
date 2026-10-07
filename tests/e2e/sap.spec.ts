@@ -141,3 +141,49 @@ test('systems, transactions, header popup and SAP GUI settings', async ({ page, 
   await page.goto('app/trash');
   await expect(page.getByText('ZSD_PRICE · Preços especiais')).toBeVisible();
 });
+
+test('transport requests: new, steps, route, filters, Trash', async ({ page }) => {
+  await login(page);
+  await page.goto('app/transports');
+  await expect(page.getByText('Sem ordens para este filtro.')).toBeVisible();
+  await page.getByRole('button', { name: 'Nova Ordem' }).click();
+  await page.getByLabel('Código', { exact: true }).fill('bsqk900123');
+  await expect(page.getByLabel('Código', { exact: true })).toHaveValue('BSQK900123');
+  await page.getByLabel('Descrição', { exact: true }).fill('Config. Regime SS');
+  await page.getByLabel('Tipo', { exact: true }).selectOption('C');
+  const step = (n: string) => page.getByRole('checkbox', { name: new RegExp(n) });
+  await step('Libertada').click();
+  await expect(step('Libertada')).toHaveAttribute('aria-checked', 'true');
+  await step('Importada em QAS').click();
+  await expect(page.getByRole('button', { name: /Em QAS/ })).toContainText('1');
+
+  await page.waitForTimeout(800);
+  await page.reload();
+  await page.getByRole('radio', { name: 'Pista' }).click();
+  const row = page.locator('.kh-ot-prow').filter({ hasText: 'BSQK900123' });
+  await expect(row).toContainText('Customizing');
+  await expect(row.locator('.kh-ot-pill')).toHaveCount(3);
+
+  // multi-select filter by type
+  await page.getByRole('button', { name: /^Tipo/ }).click();
+  await page
+    .getByRole('listbox', { name: 'Tipo' })
+    .getByRole('option', { name: /Workbench/ })
+    .click();
+  await expect(page.getByText('0 / 1')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Limpar filtros' }).click();
+  await expect(page.getByText('1 / 1')).toBeVisible();
+
+  // Início › Ordens em Curso
+  await page.goto('app');
+  await expect(page.getByRole('link', { name: /BSQK900123/ })).toBeVisible();
+
+  await page.goto('app/transports');
+  await page.getByRole('radio', { name: 'Lista' }).click();
+  await page.getByRole('row').filter({ hasText: 'BSQK900123' }).click();
+  await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Mover para o Lixo' }).click();
+  await page.goto('app/trash');
+  await expect(page.getByText('BSQK900123 · Config. Regime SS')).toBeVisible();
+});

@@ -10,6 +10,7 @@ import {
   sapSystems,
   sapTcodeUsage,
   sapTcodes,
+  sapTransports,
   tasks,
 } from '@/db/schema';
 import type { AuthContext } from '@/server/auth/session';
@@ -46,6 +47,15 @@ export type HomeData = {
     starred: Array<{ id: string; subject: string; from: string; sentAt: string | null }>;
     pinned: Array<{ id: string; subject: string }>;
   };
+  /** Ordens em Curso: requests not yet in PRD (and not junk). */
+  transports?: Array<{
+    id: string;
+    trkorr: string;
+    description: string;
+    released: boolean;
+    qas: boolean;
+    createdAt: string;
+  }>;
   /** Transações Favoritas: the user's favourite transactions. */
   tcodes?: Array<{ id: string; code: string; module: string; description: string }>;
   /** Acesso Rápido SAP: the user's favourite systems (enough to build the .sap shortcut). */
@@ -145,6 +155,31 @@ export async function homeData(auth: AuthContext, modules: ReadonlySet<string>):
         pinned: rows.filter((r) => r.pinned).map((r) => ({ id: r.id, subject: r.subject })),
       };
     }
+    if (modules.has('transports'))
+      out.transports = (
+        await tx
+          .select({
+            id: sapTransports.id,
+            trkorr: sapTransports.trkorr,
+            description: sapTransports.description,
+            releasedAt: sapTransports.releasedAt,
+            qasAt: sapTransports.qasAt,
+            createdAt: sapTransports.createdAt,
+          })
+          .from(sapTransports)
+          .where(
+            and(isNull(sapTransports.deletedAt), isNull(sapTransports.prdAt), isNull(sapTransports.junkAt)),
+          )
+          .orderBy(desc(sapTransports.createdAt))
+          .limit(2000)
+      ).map((r) => ({
+        id: r.id,
+        trkorr: r.trkorr,
+        description: r.description,
+        released: !!r.releasedAt,
+        qas: !!r.qasAt,
+        createdAt: r.createdAt.toISOString(),
+      }));
     if (modules.has('tcodes'))
       out.tcodes = await tx
         .select({

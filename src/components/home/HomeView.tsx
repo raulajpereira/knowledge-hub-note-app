@@ -65,6 +65,14 @@ type HomeData = {
     pinned: Array<{ id: string; subject: string }>;
   };
   tcodes?: Array<{ id: string; code: string; module: string; description: string }>;
+  transports?: Array<{
+    id: string;
+    trkorr: string;
+    description: string;
+    released: boolean;
+    qas: boolean;
+    createdAt: string;
+  }>;
   systems?: Array<{
     id: string;
     name: string;
@@ -440,7 +448,8 @@ export function HomeView() {
     {
       m: 'transports',
       label: t('h_st_trs'),
-      sub: `0 ${t('h_st_modif')}`,
+      count: data.transports?.length ?? 0,
+      sub: `${data.transports?.filter((x) => !x.released).length ?? 0} ${t('h_st_modif')}`,
       dot: 'oklch(0.85 0.12 75)',
       page: 'transports',
     },
@@ -858,8 +867,50 @@ export function HomeView() {
           </>
         );
       }
-      case 'transports':
-        return <div className="kh-card__empty">{t('home_noItems')}</div>;
+      case 'transports': {
+        const trs = data.transports ?? [];
+        const stOf = (x: (typeof trs)[number]) => (!x.released ? 'mod' : x.qas ? 'qas' : 'rel');
+        const TRS = {
+          mod: [t('o_mod'), 'oklch(0.82 0.11 210)'],
+          rel: [t('o_st_rel'), 'oklch(0.78 0.12 300)'],
+          qas: [t('o_st_qas'), 'oklch(0.85 0.12 75)'],
+        } as const;
+        return (
+          <>
+            <div className="kh-htr">
+              {(['mod', 'rel', 'qas'] as const).map((k) => (
+                <div key={k}>
+                  <span title={TRS[k][0]}>
+                    <span style={{ background: TRS[k][1] }} />
+                    <span>{TRS[k][0]}</span>
+                  </span>
+                  <span>{trs.filter((x) => stOf(x) === k).length}</span>
+                </div>
+              ))}
+            </div>
+            {trs.length ? (
+              <div className="kh-hlist">
+                {trs.slice(0, 4).map((x) => (
+                  <Link key={x.id} href={`/app/transports?o=${x.id}`} className={rowCls} scroll={false}>
+                    <span className="kh-htr__code">{x.trkorr || '—'}</span>
+                    <span className="kh-hrow__t" style={{ flex: 1 }}>
+                      {x.description}
+                    </span>
+                    <span
+                      className="kh-htr__st"
+                      style={{ background: TRS[stOf(x)][1].replace(')', ' / .28)') }}
+                    >
+                      {TRS[stOf(x)][0]}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="kh-card__empty">{t('home_noItems')}</div>
+            )}
+          </>
+        );
+      }
       case 'tasks': {
         const groups = H_GROUPS.map(([k, label, color]) => ({
           k,
@@ -1109,7 +1160,7 @@ export function HomeView() {
     deadlines: dueItems.length,
     notes: data.recentNotes?.length ?? 0,
     favs: favItems.length,
-    transports: 0,
+    transports: data.transports?.length ?? 0,
     issues: openIssues.length,
     systems: data.systems?.length ?? 0,
     qnotes: 0,

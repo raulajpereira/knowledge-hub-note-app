@@ -32,6 +32,7 @@ export const trashItems = z.object({
           'board',
           'system',
           'tcode',
+          'transport',
         ]),
         id: z.uuid(),
       }),

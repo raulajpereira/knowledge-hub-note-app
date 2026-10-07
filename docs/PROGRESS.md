@@ -12,7 +12,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 4 — Notas, Tarefas, Calendário | ✅ feito |
 | 5 — Cofre, Emails, Issues | ✅ feito |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ✅ feito |
-| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ |
+| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ · 7.2 Ordens de Transporte ✅ |
 | 8 — Management | ⏳ |
 | 9 — Partilha | ⏳ |
 | 10 — Admin Console + pedidos de plano | ⏳ |
@@ -233,6 +233,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Início**: os cartões Transações Favoritas e Acesso Rápido SAP passam a ter dados (abrir a transação / descarregar o atalho do sistema).
 - **Desvios**: o painel do sistema no protótipo mostra por engano o interruptor "lixo" das Ordens de Transporte — não foi copiado; o seletor de pasta para os atalhos (File System Access) não está no markup do protótipo e não foi feito — o .sap é descarregado normalmente.
 - **Testes**: unitários (ficheiro .sap, sem injeção de linhas), integração (partilha por tenant, isolamento entre tenants, favoritos/uso por utilizador, catálogo inicial, Lixo, cartões do Início) e E2E (definição SAP GUI → atalho descarregado, sistema novo, favorito, cartões, copiar, Início, transação nova, popup do topo, Lixo). Screenshots `fase-7/01–09`, `cmp-sistemas.png`, `cmp-tcodes.png`.
+
+## Fase 7.2 — Ordens de Transporte (feito)
+- **Dados**: migração `0016_sap_transports` (partilhadas pelo tenant, D40): número, descrição, cliente, sistema DEV, tipo (Workbench/Customizing), criada por (utilizador SAP), notas e as **datas de cada passo** — libertada, importada em QAS, importada em PRD e "lixo em sistema" — marcadas pelo servidor no momento em que se assinalam.
+- **Ecrã** igual ao protótipo: 5 contadores por estado (Modificável, Aguarda QAS, Em QAS, Em Produção, Lixo em sistema — clicar filtra), filtros de escolha múltipla (Sistema, Cliente, Tipo, com contagens e "Limpar filtros"), pesquisa, vista **Lista** (colunas ajustáveis e ordenáveis, estado em etiquetas) e **Pista** (rota DEV → QAS → PRD com os SID do landscape do cliente, ✓ nos passos feitos e • no próximo). Nova Ordem preenche o número a partir do sistema DEV (SID + "K9") e o cliente a partir do sistema; escolher um sistema preenche o cliente quando não há. Painel com passos, lixo, cliente, sistema, tipo, criada por, notas, copiar número, eliminar → Lixo.
+- **Início**: "Ordens em Curso" (contadores e as 4 mais recentes) e "Ordens por passar" no cartão Hoje passam a ter dados.
+- **Adiado**: filtro e coluna **Projeto** — os projetos vêm do Management (Fase 8; a coluna `project_id` já existe).
+- **Testes**: integração (número a partir do DEV, cliente do sistema, passos com data, isolamento, Início, Lixo) e E2E (nova ordem, passos, contador, pista com 3 estações, filtro de tipo, Início, Lixo). Screenshots `fase-7/10–14`, `cmp-ordens.png`, `cmp-ordens-pista.png`.
 
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.

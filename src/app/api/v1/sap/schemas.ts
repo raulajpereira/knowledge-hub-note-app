@@ -56,3 +56,28 @@ export const TcodeInput = z
   })
   .partial()
   .strict();
+
+export const TransportInput = z
+  .object({
+    trkorr: z
+      .string()
+      .trim()
+      .max(20)
+      .regex(/^[A-Za-z0-9]*$/),
+    description: s(500),
+    clientId: z.uuid().nullable(),
+    systemId: z.uuid().nullable(),
+    type: z.enum(['W', 'C']),
+    owner: z
+      .string()
+      .trim()
+      .max(40)
+      .regex(/^[^\r\n]*$/),
+    notes: z.string().max(20000),
+    steps: z
+      .object({ released: z.boolean(), qas: z.boolean(), prd: z.boolean(), junk: z.boolean() })
+      .partial()
+      .strict(),
+  })
+  .partial()
+  .strict();

@@ -44,6 +44,7 @@ describe.skipIf(!enabled)('notes', () => {
   let apip: typeof import('@/server/content/apiPlayground');
   let wb: typeof import('@/server/content/whiteboards');
   let sapSvc: typeof import('@/server/content/sap');
+  let otSvc: typeof import('@/server/content/transports');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -71,6 +72,7 @@ describe.skipIf(!enabled)('notes', () => {
       apip,
       wb,
       sapSvc,
+      otSvc,
     ] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
@@ -89,12 +91,13 @@ describe.skipIf(!enabled)('notes', () => {
       import('@/server/content/apiPlayground'),
       import('@/server/content/whiteboards'),
       import('@/server/content/sap'),
+      import('@/server/content/transports'),
     ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -879,5 +882,47 @@ describe.skipIf(!enabled)('notes', () => {
     const home = await homeSvc.homeData(a, new Set(['tcodes', 'systems']));
     expect(home.systems?.map((x) => [x.sid, x.client])).toEqual([['BSD', 'Banco SOL']]);
     expect(home.tcodes?.map((x) => x.code)).toEqual(['SE09', 'SE16N', 'ST22']);
+  });
+
+  it('transports: number from the DEV system, client follows the system, steps stamped by the server, Trash', async () => {
+    const a = await signedIn('ot-a@example.pt');
+    const b = await signedIn('ot-b@example.pt');
+    const [cl] =
+      await admin`insert into mg_clients (tenant_id, name) values (${a.tenant.id}, 'Grupo ID') returning id`;
+    const dev = await sapSvc.createSystem(a, {
+      name: 'ECP - DEV',
+      sid: 'JOG',
+      env: 'DEV',
+      clientId: cl!.id as string,
+    });
+    const t1 = await otSvc.createTransport(a, { systemId: dev.id });
+    expect(t1).toMatchObject({ trkorr: 'JOGK9', clientId: cl!.id, type: 'W', releasedAt: null });
+    const up = await otSvc.updateTransport(a, t1.id, {
+      trkorr: 'jogk900700',
+      description: 'Carregamento T5P6NP',
+      steps: { released: true, qas: true },
+    });
+    expect(up.trkorr).toBe('JOGK900700');
+    expect(up.releasedAt && up.qasAt && !up.prdAt).toBeTruthy();
+    const off = await otSvc.updateTransport(a, t1.id, { steps: { qas: false, junk: true } });
+    expect([off.qasAt, !!off.junkAt]).toEqual([null, true]);
+    expect(await otSvc.listTransports(b)).toEqual([]);
+    expect(await codeOf(otSvc.updateTransport(b, t1.id, { notes: 'x' }))).toBe('not_found');
+    expect(await codeOf(otSvc.createTransport(b, { systemId: dev.id }))).toBe('system_not_found');
+
+    const home = await homeSvc.homeData(a, new Set(['transports']));
+    expect(home.transports).toEqual([]); // junk is not "in progress"
+    await otSvc.updateTransport(a, t1.id, { steps: { junk: false } });
+    expect(
+      (await homeSvc.homeData(a, new Set(['transports']))).transports?.map((x) => [x.trkorr, x.released]),
+    ).toEqual([['JOGK900700', true]]);
+
+    await otSvc.trashTransport(a, t1.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual([
+      'transport',
+      'JOGK900700 · Carregamento T5P6NP',
+    ]);
+    await notes.purgeTrash(a, 'all');
+    expect(await otSvc.listTransports(a)).toEqual([]);
   });
 });
