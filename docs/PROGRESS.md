@@ -12,8 +12,8 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 4 — Notas, Tarefas, Calendário | ✅ feito |
 | 5 — Cofre, Emails, Issues | ✅ feito |
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ✅ feito |
-| 7 — SAP | 🚧 7.1 Sistemas + TCodes ✅ · 7.2 Ordens de Transporte ✅ · 7.3 Biblioteca de Código SAP ✅ · 7.4 Funcional SAP ✅ · 7.5 SAP News ✅ |
-| 8 — Management | ⏳ |
+| 7 — SAP | ✅ feito |
+| 8 — Management | ✅ feito (8.1 · 8.2 · 8.3) |
 | 9 — Partilha | ⏳ |
 | 10 — Admin Console + pedidos de plano | ⏳ |
 | 11 — Hardening e lançamento | ⏳ |
@@ -277,7 +277,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 
 ## Fase 8.3 — Management: Pesquisar Recursos, Folhas de Tempos e integrações (feito)
 - **Pesquisar Recursos** (`/app/mg-staff`): pedidos de recurso (em aberto/preenchidos/todos) com perfil necessário (várias competências com nível ou "qualquer nível", projeto, período, horas/semana, custo/hora máximo); resultados por disponibilidade, custo ou nome, com ocupação no período, horas livres e semanas; "Alocar" cria a alocação e marca o pedido como preenchido. "Pedir Recurso" nos Projetos abre aqui.
-- **Folhas de Tempos** (`/app/mg-time`): por pessoa (semana, horas por dia e por projeto planeado, "+ Adicionar Projeto", Submeter/Reabrir — submetida fica só de leitura) e vistas agrupadas por projeto, cliente, função ou área ("Por Equipa", como no protótipo) com total, planeado, desvio e submetidos, por semana ou 4 semanas; as horas alimentam o "Consumido" dos Projetos e Clientes.
+- **Folhas de Tempos** (`/app/mg-time`): por pessoa (semana, horas por dia e por projeto planeado, "+ Adicionar Projeto", Submeter/Reabrir — submetida fica só de leitura) e vistas agrupadas por projeto, cliente, função ou equipa (o protótipo agrupava "Por Equipa" pela área; decisão do utilizador: equipa real) com total, planeado, desvio e submetidos, por semana ou 4 semanas; as horas alimentam o "Consumido" dos Projetos e Clientes.
 - **Integrações**: as Tarefas, os Problemas e as Ordens de Transporte passam a escolher um projeto do Management (FK para `mg_projects` com `ON DELETE SET NULL`, migração `0021`; o servidor só aceita projetos do próprio tenant). Ordens: filtro e coluna Projeto, projetos do cliente escolhido, escolher um projeto preenche o cliente (como no protótipo). Problemas: coluna, ordenação e filtro por projeto. Funcional: as opções de Projeto e de pessoas (Responsável/Testador/Coordenador) vêm do Management. Endpoint `GET /mg/options` (projetos e pessoas) para estes ecrãs.
 - **Testes**: integração (projeto de outro tenant recusado em tarefas/problemas/ordens; ao apagar o projeto as ligações ficam vazias) e E2E (pedido de recurso com competência e alocação; folha de tempos submetida e bloqueada; projeto numa tarefa). Screenshots `fase-8/17–20`.
 

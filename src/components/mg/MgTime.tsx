@@ -33,14 +33,15 @@ function entryOf(d: MgData, person: string, week: string): MgTs {
 
 // Folhas de Tempos (prototype isTime): weekly timesheet per person (planned
 // projects, hours per day, submit/reopen) and the grouped views by project,
-// client, role or area with planned vs. logged hours.
+// client, role or team with planned vs. logged hours.
 export function MgTime({ mg }: { mg: Mg }) {
   const sp = useSearchParams();
   const { D, tr, lang, P, wk, wi, dIso } = mg;
   const L = (i: number) => mgL(i, lang);
   const en = lang === 'en';
   const [w, setW] = useState(-1);
-  const [VM, setVM] = usePersistentState<string>('mg.tsView', 'person');
+  const [vm0, setVM] = usePersistentState<string>('mg.tsView', 'person');
+  const VM = vm0 === 'area' ? 'team' : vm0; // saved before "Por Equipa" grouped by team
   const [RG, setRG] = usePersistentState<string>('mg.tsRange', 'w');
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const wIso = wk(w);
@@ -108,7 +109,7 @@ export function MgTime({ mg }: { mg: Mg }) {
           ? pj?.client || '_'
           : VM === 'role'
             ? p?.role || '—'
-            : p?.area || '_';
+            : p?.team || '_';
     };
     type B = { cells: number[]; plan: number };
     const G: Record<string, B & { kids: Record<string, B> }> = {};
@@ -172,9 +173,10 @@ export function MgTime({ mg }: { mg: Mg }) {
       if (VM === 'client')
         return { name: mg.cById[g]?.name ?? tr('Sem cliente'), dot: 'rgba(255,255,255,.55)' };
       if (VM === 'role') return { name: tr(g), dot: `oklch(0.78 0.1 ${(g.length * 37) % 360})` };
+      // Por Equipa: the person's team (the prototype grouped by main area)
       return {
-        name: mg.SKN[g] ?? g,
-        dot: `oklch(0.78 0.1 ${(Object.keys(mg.SKN).indexOf(g) * 41 + 20) % 360})`,
+        name: mg.tById[g]?.name ?? tr('Sem equipa'),
+        dot: mg.tById[g]?.color ?? 'rgba(255,255,255,.4)',
       };
     };
     const groups = Object.entries(G)
@@ -191,7 +193,7 @@ export function MgTime({ mg }: { mg: Mg }) {
     summary = tr(`${groups.length} grupos · ${allP.size} pessoas · ${subAll} de ${allP.size} submetidos`);
     const gcols = `minmax(240px,1.6fr) repeat(${N}, minmax(64px,1fr)) repeat(3, 88px) 104px`;
     const head = [...cols, tr('Total'), tr('Planeado'), tr('Desvio'), tr('Submetidos')];
-    const gLabel = tr({ project: 'Projeto', client: 'Cliente', role: 'Função', area: 'Equipa' }[VM] ?? '');
+    const gLabel = tr({ project: 'Projeto', client: 'Cliente', role: 'Função', team: 'Equipa' }[VM] ?? '');
     const cellsOf = (cs: Array<{ t: string; c: string }>, kid?: boolean) =>
       cs.map((c, i) => (
         <span
@@ -443,7 +445,7 @@ export function MgTime({ mg }: { mg: Mg }) {
             ['project', 'Por Projeto'],
             ['client', 'Por Cliente'],
             ['role', 'Por Função'],
-            ['area', 'Por Equipa'],
+            ['team', 'Por Equipa'],
           ],
           setVM,
         )}

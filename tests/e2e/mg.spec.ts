@@ -291,6 +291,12 @@ test('resource finder: new search, profile, assign; timesheets; project on a tas
     })
     .toContainEqual(['Submetido', true]);
 
+  // "Por Equipa" groups by the real teams
+  await page.getByRole('tab', { name: 'Por Equipa' }).click();
+  await expect(page.getByRole('row', { name: /Desenvolvimento & Tecnologia/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Pessoas & PMO/ })).toBeVisible();
+  await page.getByRole('tab', { name: 'Por Pessoa' }).click();
+
   // tasks: the project select lists the Management projects
   await page.goto('app/tasks');
   await page
