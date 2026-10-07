@@ -1204,7 +1204,9 @@ describe.skipIf(!enabled)('notes', () => {
     const item = await links.publicItem(f, true);
     expect(item).toMatchObject({ type: 'note', title: 'Pública' });
     const { docHtml } = await import('@/server/share/render');
-    expect(docHtml((item as { doc: never }).doc, () => '')).toBe('<p>Olá &lt;b&gt;mundo&lt;/b&gt;</p>');
+    expect(docHtml((item as unknown as { doc: never }).doc, () => '')).toBe(
+      '<p>Olá &lt;b&gt;mundo&lt;/b&gt;</p>',
+    );
     expect((await links.linkFor(a, 'note', n.id))!.views).toBe(1);
     expect(await links.listLinks(b)).toEqual([]);
     // password: locked until the proof cookie; changing it invalidates old proofs
