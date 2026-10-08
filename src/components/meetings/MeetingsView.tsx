@@ -39,6 +39,7 @@ type Meeting = {
 };
 type Patch = Partial<Omit<Meeting, 'id' | 'createdAt' | 'updatedAt'>>;
 type Folder = { id: string; name: string; color: string };
+const COL = { def: 340, min: 260, gap: 16, read: 420 };
 
 const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
   <svg
@@ -169,6 +170,10 @@ export function MeetingsView() {
   const [items, setItems] = useState<Meeting[] | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [folder0, setFolder] = usePersistentState<string>('meetings.folder', 'all');
+  // the folders/list column is resizable (drag the handle, ←/→, double-click resets)
+  const [colW, setColW] = usePersistentState<number>('meetings.colW', COL.def);
+  const [liveCol, setLiveCol] = useState<number | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [newFolder, setNewFolder] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
   const { ready: aiReady } = useAi();
@@ -379,8 +384,57 @@ export function MeetingsView() {
   const time = (m: Meeting) => (m.startTime ? `${m.startTime}${m.endTime ? `–${m.endTime}` : ''}` : '');
   const now = today();
 
+  const cw = liveCol ?? colW;
+  const maxCol = () => Math.max(COL.min, (rootRef.current?.offsetWidth ?? 1200) - COL.read - COL.gap);
+  const onColDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const x0 = e.clientX;
+    const w0 = Math.min(cw, maxCol());
+    const max = maxCol();
+    let w = w0;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const mv = (ev: PointerEvent) => {
+      w = Math.round(Math.max(COL.min, Math.min(max, w0 + ev.clientX - x0)));
+      setLiveCol(w);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', mv);
+      window.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setLiveCol(null);
+      setColW(w);
+    };
+    window.addEventListener('pointermove', mv);
+    window.addEventListener('pointerup', up);
+  };
+  const colCss = `min(${cw}px, calc(100% - ${COL.read + COL.gap}px))`;
+
   return (
-    <div className="kh-em kh-mt" style={{ gridTemplateColumns: 'minmax(260px, 340px) minmax(0, 1fr)' }}>
+    <div ref={rootRef} className="kh-em kh-mt" style={{ gridTemplateColumns: `${colCss} minmax(0, 1fr)` }}>
+      <div
+        className="kh-mt-handle"
+        style={{ left: `calc(${colCss} + ${COL.gap / 2 - 7}px)` }}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={t('cl_resize')}
+        aria-valuenow={Math.round(cw)}
+        aria-valuemin={COL.min}
+        tabIndex={0}
+        title={t('cl_resize')}
+        data-drag={liveCol !== null || undefined}
+        onPointerDown={onColDown}
+        onDoubleClick={() => setColW(COL.def)}
+        onKeyDown={(e) => {
+          if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+          e.preventDefault();
+          const d = e.key === 'ArrowLeft' ? -20 : 20;
+          setColW(Math.max(COL.min, Math.min(maxCol(), Math.min(cw, maxCol()) + d)));
+        }}
+      >
+        <div />
+      </div>
       <div className="kh-em-side">
         <div className="kh-em-top">
           <label className="kh-em-search">

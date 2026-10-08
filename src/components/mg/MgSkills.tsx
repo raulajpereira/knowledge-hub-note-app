@@ -7,7 +7,7 @@ import { Av, Glass } from './ui';
 import type { Mg } from './store';
 
 const HEAD_BG =
-  'background:linear-gradient(90deg,rgba(255,255,255,.09),rgba(255,255,255,.05));backdrop-filter:blur(28px) saturate(150%);border-right:1px solid rgba(255,255,255,.1);';
+  'background:linear-gradient(90deg,rgba(255,255,255,.09),rgba(255,255,255,.05));backdrop-filter:blur(var(--glass-blur-user, 28px)) saturate(150%);border-right:1px solid rgba(255,255,255,.1);';
 
 // Competências (prototype isSkills): people × skill areas; a click moves the
 // level up (wrapping back to none); the footer counts Sénior + Expert per area.
@@ -77,7 +77,7 @@ export function MgSkills({ mg }: { mg: Mg }) {
           <div
             role="row"
             style={css(
-              `position:sticky;top:0;z-index:3;display:grid;grid-template-columns:${grid};align-items:stretch;height:52px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.1));backdrop-filter:blur(30px) saturate(160%);border-bottom:1px solid rgba(255,255,255,.16);`,
+              `position:sticky;top:0;z-index:3;display:grid;grid-template-columns:${grid};align-items:stretch;height:52px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.1));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgba(255,255,255,.16);`,
             )}
           >
             <span
@@ -160,7 +160,7 @@ export function MgSkills({ mg }: { mg: Mg }) {
           <div
             role="row"
             style={css(
-              `position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:${grid};align-items:center;height:38px;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.08));backdrop-filter:blur(30px);border-top:1px solid rgba(255,255,255,.16);`,
+              `position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:${grid};align-items:center;height:38px;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.08));backdrop-filter:blur(var(--glass-blur-user, 30px));border-top:1px solid rgba(255,255,255,.16);`,
             )}
           >
             <span

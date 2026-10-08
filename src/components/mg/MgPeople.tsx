@@ -7,6 +7,9 @@ import {
   MG_PERSON_STATUS,
   MG_RATE,
   mgAv,
+  mgIso,
+  mgTenure,
+  mgTenureText,
   wLbl,
   wLblY,
   type MgExpPart,
@@ -408,6 +411,16 @@ export function MgPeople({ mg }: { mg: Mg }) {
                   val: sel.hired ?? '',
                   type: 'date',
                   onChange: set('hired'),
+                },
+                {
+                  label: tr('Anos na empresa'),
+                  val: (() => {
+                    const tn = sel.hired ? mgTenure(sel.hired, mgIso(new Date())) : null;
+                    return tn ? mgTenureText(tn, lang) : '—';
+                  })(),
+                  readOnly: true,
+                  title: tr('Calculado a partir da data de contratação'),
+                  onChange: () => {},
                 },
                 {
                   label: tr('Anos de experiência'),

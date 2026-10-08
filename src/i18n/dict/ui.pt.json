@@ -769,5 +769,6 @@
   "tp_err": "Não foi possível guardar o modelo.",
   "tp_phasesT": "Substituir as fases?",
   "tp_phasesB": "As fases atuais do projeto são substituídas pelas do modelo, a partir da semana de início.",
-  "tp_apply": "Aplicar modelo"
+  "tp_apply": "Aplicar modelo",
+  "ai_off": "Desativado"
 }

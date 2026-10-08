@@ -109,6 +109,8 @@ export const MG_EX: Record<string, string> = {
   'Custos e capacidade': 'Cost and capacity',
   'Data de contratação': 'Hire date',
   'Anos de experiência': 'Years of experience',
+  'Anos na empresa': 'Years at the company',
+  'Calculado a partir da data de contratação': 'Worked out from the hire date',
   ano: 'year',
   anos: 'years',
   Telefone: 'Phone',

@@ -133,3 +133,17 @@ describe('management labels', () => {
     expect(en('5 pessoas')).toBe('5 people');
   });
 });
+
+describe('years at the company', () => {
+  it('years, months and days from the hire date', async () => {
+    const { mgTenure, mgTenureText } = await import('@/lib/mg');
+    expect(mgTenure('2020-03-15', '2026-10-08')).toEqual({ y: 6, m: 6, d: 23 });
+    expect(mgTenure('2026-01-31', '2026-03-01')).toEqual({ y: 0, m: 1, d: 1 });
+    expect(mgTenure('2026-10-08', '2026-10-08')).toEqual({ y: 0, m: 0, d: 0 });
+    expect(mgTenure('2027-01-01', '2026-10-08')).toBeNull();
+    expect(mgTenureText({ y: 6, m: 6, d: 23 }, 'pt')).toBe('6 anos, 6 meses e 23 dias');
+    expect(mgTenureText({ y: 1, m: 0, d: 1 }, 'en')).toBe('1 year and 1 day');
+    expect(mgTenureText({ y: 0, m: 1, d: 0 }, 'pt')).toBe('1 mês');
+    expect(mgTenureText({ y: 0, m: 0, d: 0 }, 'pt')).toBe('0 dias');
+  });
+});

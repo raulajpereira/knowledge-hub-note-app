@@ -17,7 +17,7 @@ const GRID = '260px repeat(20,minmax(54px,1fr)) 104px';
 const GRID_CELLS = '260px repeat(20,minmax(108px,1fr)) 104px';
 const CHIP_H = 19;
 const STICKY =
-  'background:linear-gradient(90deg,rgba(255,255,255,.09),rgba(255,255,255,.05));backdrop-filter:blur(28px) saturate(150%);border-right:1px solid rgba(255,255,255,.1);';
+  'background:linear-gradient(90deg,rgba(255,255,255,.09),rgba(255,255,255,.05));backdrop-filter:blur(var(--glass-blur-user, 28px)) saturate(150%);border-right:1px solid rgba(255,255,255,.1);';
 const CELL = [
   ['rgba(255,255,255,.05)', 'rgba(255,248,240,.35)', 'none'],
   ['oklch(0.85 0.14 85)', '#2a1f0e', 'inset 0 1px 0 rgba(255,255,255,.4),0 2px 8px rgba(0,0,0,.15)'],
@@ -290,7 +290,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
           <div style={css(`min-width:${mode === 'timeline' ? 1400 : 2524}px;`)}>
             <div
               style={css(
-                `position:sticky;top:0;z-index:4;display:grid;grid-template-columns:${grid};height:58px;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.1));backdrop-filter:blur(30px) saturate(160%);border-bottom:1px solid rgba(255,255,255,.14);`,
+                `position:sticky;top:0;z-index:4;display:grid;grid-template-columns:${grid};height:58px;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.1));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgba(255,255,255,.14);`,
               )}
             >
               <span
@@ -601,7 +601,7 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
         aria-label={p.name}
         onKeyDown={(e) => e.key === 'Escape' && onClose()}
         style={css(
-          `position:fixed;left:${Math.min(window.innerWidth - 300, Math.max(10, c.x - 140))}px;top:${Math.min(window.innerHeight - 280, c.y)}px;z-index:57;width:280px;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.12)),rgba(34,27,23,.4);backdrop-filter:blur(36px) saturate(170%);border:1px solid rgba(255,255,255,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 18px 50px rgba(0,0,0,.35);color:#fbf8f5;line-height:normal;`,
+          `position:fixed;left:${Math.min(window.innerWidth - 300, Math.max(10, c.x - 140))}px;top:${Math.min(window.innerHeight - 280, c.y)}px;z-index:57;width:280px;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.12)),rgba(34,27,23,.4);backdrop-filter:blur(var(--glass-blur-user, 36px)) saturate(170%);border:1px solid rgba(255,255,255,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 18px 50px rgba(0,0,0,.35);color:#fbf8f5;line-height:normal;`,
         )}
       >
         <div style={css('display:flex;flex-direction:column;gap:2px;')}>
@@ -784,7 +784,7 @@ function AllocPanel({
     >
       <div
         style={css(
-          'position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;backdrop-filter:blur(34px) saturate(150%);',
+          'position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;backdrop-filter:blur(var(--glass-blur-user, 34px)) saturate(150%);',
         )}
       />
       <div

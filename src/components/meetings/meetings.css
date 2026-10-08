@@ -386,3 +386,30 @@
 .kh-mt-item[data-drag] {
   opacity: 0.45;
 }
+
+/* the handle between the folders/list column and the record */
+.kh-mt-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  z-index: 6;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  outline: none;
+}
+.kh-mt-handle > div {
+  width: 4px;
+  height: 48px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.kh-mt-handle:hover > div,
+.kh-mt-handle:focus-visible > div,
+.kh-mt-handle[data-drag] > div {
+  background: rgba(255, 255, 255, 0.75);
+}

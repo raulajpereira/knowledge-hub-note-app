@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { AI_PROVIDERS, aiProvider, type AiProviderId } from '@/lib/ai';
-import { Switch, useConfirm, useToast } from '@/components/ui';
+import { useConfirm, useToast } from '@/components/ui';
 import { aiChanged, useAi } from '@/components/ai/useAi';
 import '@/components/sap/sap.css';
 
@@ -96,10 +96,17 @@ export function AiTab() {
           <div className="kh-set__desc">{t('ai_desc')}</div>
         </div>
         {ai?.configured && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
-            {t('ai_on')}
-            <Switch checked={ai.enabled} label={t('ai_on')} onChange={(v) => void save(v)} />
-          </label>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, flex: 'none' }}>
+            <span style={{ color: 'rgba(255,248,240,.75)' }}>{ai.enabled ? t('ai_on') : t('ai_off')}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={ai.enabled}
+              aria-label={t('ai_on')}
+              className="kh-toggle"
+              onClick={() => void save(!ai.enabled)}
+            />
+          </span>
         )}
       </div>
       <div className="kh-set__rows">

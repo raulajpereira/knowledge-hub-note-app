@@ -12,7 +12,7 @@ import type { Mg } from './store';
 const SEG =
   'display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(18,12,9,.22);border:1px solid rgba(255,255,255,.12);';
 const STICKY =
-  'background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.07));backdrop-filter:blur(30px) saturate(150%);border-right:1px solid rgba(255,255,255,.12);';
+  'background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.07));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(150%);border-right:1px solid rgba(255,255,255,.12);';
 const TSGRID = 'minmax(200px,1fr) repeat(5,72px) 72px';
 const stC = (s: string) =>
   s === 'Submetido'
@@ -216,7 +216,7 @@ export function MgTime({ mg }: { mg: Mg }) {
           <div
             role="row"
             style={css(
-              `position:sticky;top:0;z-index:3;display:grid;grid-template-columns:${gcols};align-items:center;height:44px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.1));backdrop-filter:blur(30px) saturate(160%);border-bottom:1px solid rgba(255,255,255,.16);font-size:12px;font-weight:600;color:rgba(255,248,240,.88);`,
+              `position:sticky;top:0;z-index:3;display:grid;grid-template-columns:${gcols};align-items:center;height:44px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.1));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgba(255,255,255,.16);font-size:12px;font-weight:600;color:rgba(255,248,240,.88);`,
             )}
           >
             <span
@@ -354,7 +354,7 @@ export function MgTime({ mg }: { mg: Mg }) {
           <div
             role="row"
             style={css(
-              `position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:${gcols};align-items:center;height:44px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.09));backdrop-filter:blur(30px);border-top:1px solid rgba(255,255,255,.16);`,
+              `position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:${gcols};align-items:center;height:44px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.09));backdrop-filter:blur(var(--glass-blur-user, 30px));border-top:1px solid rgba(255,255,255,.16);`,
             )}
           >
             <span

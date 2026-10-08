@@ -304,7 +304,7 @@
   border-radius: 28px;
   border: 2px dashed rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(var(--glass-blur-user, 12px));
   pointer-events: none;
   font-size: 16px;
   font-weight: 600;

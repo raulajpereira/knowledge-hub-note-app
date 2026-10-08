@@ -402,7 +402,7 @@
   z-index: 2;
   min-height: 42px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
-  backdrop-filter: blur(24px);
+  backdrop-filter: blur(var(--glass-blur-user, 24px));
   font-size: 12px;
   font-weight: 600;
   color: rgba(255, 248, 240, 0.85);
@@ -698,7 +698,7 @@ select.kh-ad-input option {
   padding: 30px;
   border-radius: 30px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
-  backdrop-filter: blur(34px) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur-user, 34px)) saturate(150%);
 }
 
 @media (max-width: 900px) {

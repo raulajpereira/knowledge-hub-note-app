@@ -664,14 +664,14 @@ textarea.kh-input--md {
   justify-content: center;
   padding: 24px;
   background: rgba(20, 14, 10, 0.18);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--glass-blur-user, 8px));
   animation: kh-fade 0.15s ease-out;
 }
 /* Second layer (e.g. a confirm over a modal) dims less so the stack reads
    as layers of glass rather than a darker and darker screen. */
 .kh-overlay--confirm {
   background: rgba(20, 14, 10, 0.12);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(var(--glass-blur-user, 6px));
 }
 .kh-modal {
   box-sizing: border-box;

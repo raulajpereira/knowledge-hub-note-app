@@ -856,7 +856,7 @@
   padding: 8px;
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
-  backdrop-filter: blur(30px);
+  backdrop-filter: blur(var(--glass-blur-user, 30px));
   border: 1px solid rgba(255, 255, 255, 0.24);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
@@ -1122,7 +1122,7 @@
   padding: 6px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(24px);
+  backdrop-filter: blur(var(--glass-blur-user, 24px));
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
 .kh-nt-insp__results > div {
@@ -1275,7 +1275,7 @@
   background: rgba(255, 255, 255, 0.1);
   color: #fbf8f5;
   cursor: pointer;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(var(--glass-blur-user, 12px));
 }
 .kh-nt-insp-btn[aria-expanded='true'] {
   background: #fbf8f5;
@@ -1291,7 +1291,7 @@
   padding: 12px;
   border-radius: 28px;
   background: linear-gradient(180deg, rgba(60, 46, 38, 0.72), rgba(40, 30, 25, 0.72));
-  backdrop-filter: blur(30px) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur-user, 30px)) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
 }

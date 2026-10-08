@@ -213,7 +213,7 @@ export function TeamBar({ mg, manageOn }: { mg: Mg; manageOn?: boolean }) {
         role="group"
         aria-label={mg.tr('Equipas')}
         style={css(
-          'display:flex;gap:3px;padding:4px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(24px) saturate(150%);overflow-x:auto;min-width:0;',
+          'display:flex;gap:3px;padding:4px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(var(--glass-blur-user, 24px)) saturate(150%);overflow-x:auto;min-width:0;',
         )}
       >
         {items.map((t) => {
@@ -238,7 +238,7 @@ export function TeamBar({ mg, manageOn }: { mg: Mg; manageOn?: boolean }) {
         type="button"
         onClick={() => mg.nav('mg_teams')}
         style={css(
-          `flex:none;height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:${manageOn ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.07)'};backdrop-filter:blur(24px);color:#fbf8f5;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;`,
+          `flex:none;height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:${manageOn ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.07)'};backdrop-filter:blur(var(--glass-blur-user, 24px));color:#fbf8f5;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;`,
         )}
       >
         <svg
@@ -301,7 +301,9 @@ export function Dialog({
       {/* the dim blur is a sibling, not a parent: a backdrop-filter parent would stop the dialog's own blur */}
       <div
         aria-hidden="true"
-        style={css('position:absolute;inset:0;background:rgba(20,14,10,.12);backdrop-filter:blur(6px);')}
+        style={css(
+          'position:absolute;inset:0;background:rgba(20,14,10,.12);backdrop-filter:blur(var(--glass-blur-user, 6px));',
+        )}
       />
       <div
         ref={ref}
@@ -311,7 +313,7 @@ export function Dialog({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={css(
-          `position:relative;${s}background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));backdrop-filter:blur(40px) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);color:#fbf8f5;outline:none;line-height:normal;`,
+          `position:relative;${s}background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));backdrop-filter:blur(var(--glass-blur-user, 40px)) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);color:#fbf8f5;outline:none;line-height:normal;`,
         )}
       >
         {children}
@@ -361,6 +363,9 @@ export type Field = {
   type?: string;
   unit?: string;
   placeholder?: string;
+  /** shown as text (worked out, not edited) */
+  readOnly?: boolean;
+  title?: string;
 };
 /** Label | input rows inside a rounded box (prototype fld()). */
 export function Fields({
@@ -404,7 +409,15 @@ export function Fields({
         >
           <span style={css('font-size:12.5px;color:rgba(255,248,240,.72);')}>{f.label}</span>
           <div style={css('min-width:0;display:flex;align-items:center;gap:8px;')}>
-            {f.opts ? (
+            {f.readOnly ? (
+              <output
+                aria-label={f.label}
+                title={f.title}
+                style={css('font-size:13px;padding:0 10px;color:#fbf8f5;font-variant-numeric:tabular-nums;')}
+              >
+                {f.val}
+              </output>
+            ) : f.opts ? (
               <Sel
                 value={String(f.val)}
                 onChange={f.onChange}

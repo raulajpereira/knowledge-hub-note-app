@@ -182,6 +182,33 @@ export type MgPerson = {
   photo?: string;
   skills: Record<string, number>;
 };
+/** Time at the company from the hire date to `today` (both 'YYYY-MM-DD'); null before the hire date. */
+export function mgTenure(hired: string, today: string): { y: number; m: number; d: number } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hired) || hired > today) return null;
+  const [y0, m0, d0] = hired.split('-').map(Number) as [number, number, number];
+  const [y1, m1, d1] = today.split('-').map(Number) as [number, number, number];
+  let months = (y1 - y0) * 12 + (m1 - m0);
+  if (d1 < d0) months--;
+  // the last "monthiversary" (31 Jan + 1 month = 28/29 Feb), then the days since
+  const am = m0 - 1 + months;
+  const ay = y0 + Math.floor(am / 12);
+  const an = ((am % 12) + 12) % 12;
+  const anchor = Date.UTC(ay, an, Math.min(d0, new Date(Date.UTC(ay, an + 1, 0)).getUTCDate()));
+  const d = Math.round((Date.UTC(y1, m1 - 1, d1) - anchor) / MG_DAY);
+  return { y: Math.floor(months / 12), m: months % 12, d };
+}
+/** "3 anos, 2 meses e 5 dias" / "3 years, 2 months and 5 days" (zero parts left out). */
+export function mgTenureText(t: { y: number; m: number; d: number }, lang: string) {
+  const en = lang === 'en';
+  const w = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const parts = [
+    t.y ? w(t.y, en ? 'year' : 'ano', en ? 'years' : 'anos') : '',
+    t.m ? w(t.m, en ? 'month' : 'mês', en ? 'months' : 'meses') : '',
+    t.d || (!t.y && !t.m) ? w(t.d, en ? 'day' : 'dia', en ? 'days' : 'dias') : '',
+  ].filter(Boolean);
+  const and = en ? ' and ' : ' e ';
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')}${and}${parts.at(-1)}` : parts[0]!;
+}
 export type MgExpPart = { area: string; years: number };
 export const MG_PERSON_STATUS = ['Ativo', 'Inativo', 'Suspenso'] as const;
 export type MgPersonStatus = (typeof MG_PERSON_STATUS)[number];

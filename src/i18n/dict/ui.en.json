@@ -769,5 +769,6 @@
   "tp_err": "The template couldn't be saved.",
   "tp_phasesT": "Replace the phases?",
   "tp_phasesB": "The project's current phases are replaced by the template's, from the start week.",
-  "tp_apply": "Apply template"
+  "tp_apply": "Apply template",
+  "ai_off": "Off"
 }
