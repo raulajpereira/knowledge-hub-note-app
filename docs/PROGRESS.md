@@ -350,6 +350,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - `robots.txt`: só a landing e as páginas legais são indexáveis.
 - **Testes**: E2E (landing com os planos e ligação ao login; termos/privacidade PT/EN com aviso provisório; ligações no registo; axe nas páginas públicas) e integração (purga da auditoria no job).
 
+## Correções (depois da Fase 11)
+- **Notas — realce de sintaxe nos blocos de código**: o mesmo realce da Biblioteca de Código (30 linguagens) mais o ABAP da Code Library SAP, com as mesmas cores; cada bloco tem a linguagem (ou **Automático**, que deteta ABAP, SQL, JSON, HTML/XML, JavaScript/TypeScript, Python, Bash, YAML, CSS, Java/C#) e **Copiar**. Também na página pública de uma nota partilhada.
+- **Tarefas — filtros arrumados**: Ativas · Concluídas · Todas num controlo segmentado com contagens; tipo e ordenação lado a lado em seletores; as pastas partilhadas num seletor próprio (quando existem).
+- **Recursos — Estado, Motivo/observações, Data de contratação, Anos de experiência** (migrações `0027`–`0028`): a data de contratação substitui o antigo "Desde" (ano → 1 de janeiro desse ano). Inativo/Suspenso mostram um selo no perfil e na lista, há filtro por estado, e não aparecem em Pesquisar Recursos nem para novas alocações (as existentes mantêm-se).
+- **Alocações — editar**: o Recurso aparece como "nome · cargo"; novo campo **Função no projeto** (texto livre) com as competências da pessoa e o nível como sugestões de um clique; a função aparece na barra da alocação. Aviso se a pessoa escolhida estiver inativa/suspensa.
+- **Testes**: unidade (realce e deteção), E2E (bloco de código com deteção e linguagem escolhida; estado/motivo/data/anos e filtro; alocação sem pessoas suspensas, nome · cargo e função). Screenshots `correcoes/01–04`.
+
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
 - Opcional: chaves Cloudflare Turnstile e `ADMIN_IP_ALLOWLIST` no `.env`.
@@ -410,5 +417,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D48 | Pedido de mudança de pacote usa sempre os lugares atuais do cliente; só o pacote personalizado indica lugares; aprovar nunca baixa os lugares abaixo das pessoas em uso | Claude |
 | D49 | Eliminar conta: o último admin de um pack passa o papel ao membro ativo mais antigo (o pack mantém-se); o Manager da consola não se pode eliminar | Claude |
 | D50 | CAPTCHA (Turnstile), allowlist de IPs da consola e monitorização leve são opcionais por `.env`; landing e páginas legais feitas por Claude (rascunho legal com dados da entidade no `.env`) | utilizador |
+| D51 | Alocações: "Função no projeto" é texto livre com as competências da pessoa como sugestões; fica na alocação | utilizador |
+| D52 | Recursos: data de contratação substitui o "Desde"; Inativo/Suspenso ficam fora de novas alocações e de Pesquisar Recursos (com selo e filtro) | utilizador |
 | D41 | Management: o ecrã mantém o conjunto de dados do protótipo em memória e envia as alterações como lotes de operações validadas (`/mg/ops`); os projetos são a referência comum de Tarefas, Problemas, Ordens e Funcional | Claude |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

@@ -579,23 +579,6 @@
   caret-color: #fbf8f5;
   overflow: auto;
 }
-.kh-hl-c {
-  color: rgba(255, 248, 240, 0.42);
-  font-style: italic;
-}
-.kh-hl-s {
-  color: oklch(0.85 0.12 150);
-}
-.kh-hl-n {
-  color: oklch(0.85 0.12 60);
-}
-.kh-hl-t {
-  color: oklch(0.8 0.14 25);
-}
-.kh-hl-k {
-  color: oklch(0.8 0.13 250);
-  font-weight: 600;
-}
 .kh-dl-related {
   display: flex;
   flex-direction: column;

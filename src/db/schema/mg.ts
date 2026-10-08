@@ -73,7 +73,13 @@ export const mgPeople = pgTable(
     rate: doublePrecision('rate').notNull().default(0),
     cap: doublePrecision('cap').notNull().default(40),
     loc: text('loc').notNull().default(''),
-    since: text('since').notNull().default(''),
+    status: text('status', { enum: ['Ativo', 'Inativo', 'Suspenso'] })
+      .notNull()
+      .default('Ativo'),
+    statusNote: text('status_note').notNull().default(''),
+    /** hiring date 'YYYY-MM-DD' or '' */
+    hired: text('hired').notNull().default(''),
+    expYears: doublePrecision('exp_years'),
     email: text('email').notNull().default(''),
     av: text('av').notNull(),
     skills: jsonb('skills')

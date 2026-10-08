@@ -79,7 +79,10 @@ export async function loadMg(auth: AuthContext): Promise<MgData> {
         rate: p.rate,
         cap: p.cap,
         loc: p.loc,
-        since: p.since,
+        status: p.status,
+        statusNote: p.statusNote,
+        hired: p.hired,
+        expYears: p.expYears ?? '',
         email: p.email,
         av: p.av,
         skills: p.skills as Record<string, number>,
@@ -184,8 +187,17 @@ function toRow(c: MgCollection, v: unknown) {
     }
     case 'people': {
       const x = v as MgPerson;
-      const { id, team, ...rest } = x;
-      return { refs, row: { id, teamId: r('teams', team), ...rest, updatedAt: now } };
+      const { id, team, expYears, ...rest } = x;
+      return {
+        refs,
+        row: {
+          id,
+          teamId: r('teams', team),
+          ...rest,
+          expYears: expYears === '' ? null : expYears,
+          updatedAt: now,
+        },
+      };
     }
     case 'projects': {
       const x = v as MgProject;

@@ -629,5 +629,11 @@
   "lg_unset": "[a definir]",
   "reg_legal": "Ao criar conta aceita os {terms} e a {privacy}.",
   "reg_terms": "Termos de Utilização",
-  "reg_privacy": "Política de Privacidade"
+  "reg_privacy": "Política de Privacidade",
+  "ne_codeLang": "Linguagem do código",
+  "ne_codeAuto": "Automático",
+  "ne_codePlain": "Texto simples",
+  "t_show": "Mostrar",
+  "t_sortBy": "Ordenar por",
+  "t_allFolders": "Todas as pastas"
 }

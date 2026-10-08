@@ -165,11 +165,21 @@ export type MgPerson = {
   rate: number;
   cap: number;
   loc: string;
-  since: string;
+  /** Ativo / Inativo / Suspenso — Inativo and Suspenso are left out of new allocations and the finder */
+  status: MgPersonStatus;
+  /** free text, e.g. why the person is suspended */
+  statusNote: string;
+  /** hiring date, 'YYYY-MM-DD' or '' */
+  hired: string;
+  /** years of experience ('' = not filled in) */
+  expYears: number | '';
   email: string;
   av: string;
   skills: Record<string, number>;
 };
+export const MG_PERSON_STATUS = ['Ativo', 'Inativo', 'Suspenso'] as const;
+export type MgPersonStatus = (typeof MG_PERSON_STATUS)[number];
+export const isAvailable = (p: Pick<MgPerson, 'status'>) => (p.status ?? 'Ativo') === 'Ativo';
 export type MgPhase = { name: string; from: string; to: string };
 export type MgProject = {
   id: string;
@@ -200,6 +210,8 @@ export type MgAlloc = {
   hpd?: number;
   days?: number;
   mask?: number[];
+  /** role in the project (free text, suggested from the person's skills) */
+  fn?: string;
 };
 export type MgTs = {
   id: string;
@@ -282,7 +294,10 @@ export const MgSchemas = {
     rate: z.number().min(0).max(100000),
     cap: z.number().min(0).max(168),
     loc: line(120),
-    since: line(10),
+    status: z.enum(MG_PERSON_STATUS),
+    statusNote: line(500),
+    hired: z.union([day, z.literal('')]),
+    expYears: z.union([z.number().min(0).max(70), z.literal('')]),
     email: line(200),
     av: color,
     skills: z.record(key, z.number().int().min(1).max(20)).refine((m) => Object.keys(m).length <= 100),
@@ -314,6 +329,8 @@ export const MgSchemas = {
     hpd: z.number().min(0).max(24).optional(),
     days: z.number().int().min(1).max(2000).optional(),
     mask: z.array(z.number().int().min(0).max(1)).length(5).optional(),
+    /** role in the project (free text, suggested from the person's skills) */
+    fn: line(120).optional(),
   }),
   ts: z.strictObject({
     id: z.uuid(),
@@ -501,7 +518,11 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
       rate: MG_RATE[level]! + Math.round(R() * 10),
       cap: 40,
       loc: ['Lisboa', 'Porto', 'Remoto', 'Lisboa', 'Coimbra'][Math.floor(R() * 5)]!,
-      since: String(2012 + Math.floor(R() * 13)),
+      status: 'Ativo' as const,
+      statusNote: '',
+      // one draw, as the old "since" year (the seeded sequence must not shift)
+      hired: `${2012 + Math.floor(R() * 13)}-${String((i % 12) + 1).padStart(2, '0')}-01`,
+      expYears: level + 1 + (i % 4),
       skills,
       email: `${name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '.')}@empresa.pt`,
       av: mgAv(i),

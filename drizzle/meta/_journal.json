@@ -190,6 +190,20 @@
       "when": 1791446377284,
       "tag": "0026_audit_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791454026499,
+      "tag": "0027_mg_people_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791454027873,
+      "tag": "0028_mg_people_hired",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MG_COST, MG_RATE, mgAv, wLbl, wLblY, type MgPerson } from '@/lib/mg';
+import { MG_COST, MG_PERSON_STATUS, MG_RATE, mgAv, wLbl, wLblY, type MgPerson } from '@/lib/mg';
 import { mgL } from '@/lib/mgText';
 import { CHEV, OPT, css } from './css';
 import { Av, Chip, Fields, Sel, Split, Trash, uid } from './ui';
@@ -17,10 +17,12 @@ export function MgPeople({ mg }: { mg: Mg }) {
   const [q, setQ] = useState('');
   const [lvF, setLvF] = useState(0);
   const [ppTeam, setPpTeam] = useState('');
+  const [stF, setStF] = useState('');
   const qq = q.trim().toLowerCase();
   const list = mg.P.filter(
     (p) =>
       (!ppTeam || p.team === ppTeam) &&
+      (!stF || (p.status ?? 'Ativo') === stF) &&
       (!lvF || p.level === lvF) &&
       (!qq ||
         [p.name, p.role, ...Object.keys(p.skills).map((k) => SKN[k])].join(' ').toLowerCase().includes(qq)),
@@ -62,7 +64,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
       }
       return;
     }
-    const v = num ? (raw === '' ? 0 : +raw) : raw;
+    const v = num ? (raw === '' ? 0 : +raw) : k === 'expYears' ? (raw === '' ? '' : +raw) : raw;
     mg.upd((d) => {
       const p = d.people.find((x) => x.id === sel.id)!;
       (p as Record<string, unknown>)[k] = v;
@@ -102,7 +104,10 @@ export function MgPeople({ mg }: { mg: Mg }) {
                     rate: MG_RATE[2]!,
                     cap: 40,
                     loc: 'Lisboa',
-                    since: String(new Date().getFullYear()),
+                    status: 'Ativo',
+                    statusNote: '',
+                    hired: new Date().toISOString().slice(0, 10),
+                    expYears: '',
                     email: '',
                     av: mgAv(d.people.length + 3),
                     skills: { abap: 2 },
@@ -110,6 +115,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
               );
               setQ('');
               setLvF(0);
+              setStF('');
               select(id);
             }}
             style={css(
@@ -133,15 +139,29 @@ export function MgPeople({ mg }: { mg: Mg }) {
             <Chip key={l} on={lvF === l} label={l ? LV[l]! : tr('Todos')} onClick={() => setLvF(l)} />
           ))}
         </div>
-        <Sel
-          value={ppTeam}
-          onChange={setPpTeam}
-          label={tr('Equipa')}
-          opts={mg.teamOpts.map((o) => ({ ...o, l: o.v ? o.l : tr(o.l) }))}
-          pos="right 10px center"
-          size="10px"
-          s="height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;width:100%;"
-        />
+        <div style={css('display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;')}>
+          <Sel
+            value={ppTeam}
+            onChange={setPpTeam}
+            label={tr('Equipa')}
+            opts={mg.teamOpts.map((o) => ({ ...o, l: o.v ? o.l : tr(o.l) }))}
+            pos="right 10px center"
+            size="10px"
+            s="height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;width:100%;"
+          />
+          <Sel
+            value={stF}
+            onChange={setStF}
+            label={tr('Filtrar por estado')}
+            opts={[
+              { v: '', l: tr('Todos os estados') },
+              ...MG_PERSON_STATUS.map((x) => ({ v: x, l: tr(x) })),
+            ]}
+            pos="right 10px center"
+            size="10px"
+            s="height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;width:100%;"
+          />
+        </div>
       </div>
       <div
         style={css(
@@ -190,6 +210,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                   {LV[p.level]}
                 </span>
               </span>
+              {(p.status ?? 'Ativo') !== 'Ativo' && <StatusBadge status={p.status} tr={tr} />}
               <span
                 title={L(64)}
                 style={css(
@@ -251,7 +272,14 @@ export function MgPeople({ mg }: { mg: Mg }) {
                   <span style={css(`color:${t.tc};font-weight:600;`)}>{tr(t.tn)}</span>
                 </>
               )}
-              {` · ${LV[sel.level]} ${L(18)} ${sel.since}`}
+              {` · ${LV[sel.level]}`}
+              {sel.hired && ` ${L(18)} ${sel.hired.slice(0, 4)}`}
+              {(sel.status ?? 'Ativo') !== 'Ativo' && (
+                <>
+                  {' '}
+                  <StatusBadge status={sel.status} tr={tr} />
+                </>
+              )}
             </span>
           </div>
           <button
@@ -284,6 +312,27 @@ export function MgPeople({ mg }: { mg: Mg }) {
         </div>
         <Fields
           fields={[
+            {
+              label: tr('Estado'),
+              val: sel.status ?? 'Ativo',
+              opts: MG_PERSON_STATUS.map((x) => ({ v: x, l: tr(x) })),
+              onChange: set('status'),
+            },
+            {
+              label: tr('Motivo / observações'),
+              val: sel.statusNote ?? '',
+              placeholder:
+                (sel.status ?? 'Ativo') === 'Suspenso' ? tr('Ex.: baixa médica até 30/11') : tr('Opcional'),
+              onChange: set('statusNote'),
+            },
+            { label: tr('Data de contratação'), val: sel.hired ?? '', type: 'date', onChange: set('hired') },
+            {
+              label: tr('Anos de experiência'),
+              val: sel.expYears ?? '',
+              type: 'number',
+              unit: tr('anos'),
+              onChange: (v) => set('expYears')(v === '' ? '' : String(Math.max(0, Math.min(70, Number(v))))),
+            },
             { label: tr('Função'), val: sel.role, onChange: set('role') },
             {
               label: tr('Equipa'),
@@ -478,5 +527,22 @@ export function MgPeople({ mg }: { mg: Mg }) {
         </div>
       </div>
     </Split>
+  );
+}
+
+const ST_C: Record<string, string> = {
+  Inativo: 'rgba(255,255,255,.16)',
+  Suspenso: 'oklch(0.7 0.15 50 / .35)',
+};
+/** "Inativo" / "Suspenso" next to a person (Ativo shows nothing). */
+export function StatusBadge({ status, tr }: { status: string; tr: (s: string) => string }) {
+  return (
+    <span
+      style={css(
+        `flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:700;color:#fbf8f5;background:${ST_C[status] ?? 'rgba(255,255,255,.16)'};vertical-align:middle;`,
+      )}
+    >
+      {tr(status)}
+    </span>
   );
 }

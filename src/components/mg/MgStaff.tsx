@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MG_RST, wLbl, wLblY, type MgReq } from '@/lib/mg';
+import { MG_RST, isAvailable, wLbl, wLblY, type MgReq } from '@/lib/mg';
 import { mgL } from '@/lib/mgText';
 import { usePersistentState } from '@/components/ui';
 import { css } from './css';
@@ -174,6 +174,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
   const pj = mg.pjById[sel.project];
   const res = mg.P.filter(
     (p) =>
+      isAvailable(p) &&
       sk.every((s) => (p.skills[s.k] ?? 0) > 0 && (!s.l || p.skills[s.k] === s.l)) &&
       (!maxC || (+p.cost || 0) <= maxC),
   ).map((p) => {

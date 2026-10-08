@@ -285,9 +285,11 @@ export type DevType = (typeof DEV_TYPES)[number];
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** Prototype dlHL: comments, strings, numbers, tags (markup) and keywords as coloured spans (escaped HTML). */
-export function highlight(code: string, L: DevLang | undefined): string {
-  if (!L || L.id === 'plain' || L.id === 'markdown') return esc(code);
+export type HlRange = { from: number; to: number; cls: string };
+
+/** Prototype dlHL as ranges: comments, strings, numbers, tags (markup) and keywords. */
+export function highlightRanges(code: string, L: DevLang | undefined): HlRange[] {
+  if (!L || L.id === 'plain' || L.id === 'markdown') return [];
   const parts: string[] = [];
   for (const c of L.cm) {
     if (c === '//') parts.push('\\/\\/[^\\n]*');
@@ -312,18 +314,32 @@ export function highlight(code: string, L: DevLang | undefined): string {
     if (isMk && j === 2) return 'kh-hl-t';
     return 'kh-hl-k';
   };
-  let out = '';
-  let last = 0;
+  const out: HlRange[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(code))) {
     if (!m[0]) {
       re.lastIndex++;
       continue;
     }
-    out += esc(code.slice(last, m.index));
     const gi = m.slice(1).findIndex((x) => x !== undefined);
-    out += `<span class="${col(gi)}">${esc(m[0])}</span>`;
-    last = m.index + m[0].length;
+    out.push({ from: m.index, to: m.index + m[0].length, cls: col(gi) });
+  }
+  return out;
+}
+
+/** Ranges as escaped HTML with coloured spans. */
+export function rangesHtml(code: string, ranges: HlRange[]): string {
+  let out = '';
+  let last = 0;
+  for (const r of ranges) {
+    out += esc(code.slice(last, r.from));
+    out += `<span class="${r.cls}">${esc(code.slice(r.from, r.to))}</span>`;
+    last = r.to;
   }
   return out + esc(code.slice(last));
+}
+
+/** Prototype dlHL: comments, strings, numbers, tags (markup) and keywords as coloured spans (escaped HTML). */
+export function highlight(code: string, L: DevLang | undefined): string {
+  return rangesHtml(code, highlightRanges(code, L));
 }

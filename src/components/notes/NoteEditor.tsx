@@ -11,7 +11,7 @@ import { TableKit } from '@tiptap/extension-table';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { useI18n } from '@/i18n/client';
 import { useToast } from '@/components/ui';
-import { Callout, LinkCard, NoteImage } from './extensions';
+import { Callout, LinkCard, NoteCodeBlock, NoteImage } from './extensions';
 import { itemHref } from '@/components/content/Connections';
 import { notesApi, type Candidate } from './notesApi';
 
@@ -176,6 +176,7 @@ export function useNoteEditor({
       extensions: [
         StarterKit.configure({
           heading: { levels: [1, 2, 3, 4] },
+          codeBlock: false,
           link: {
             openOnClick: false,
             autolink: true,
@@ -188,6 +189,7 @@ export function useNoteEditor({
         }),
         TaskList,
         TaskItem.configure({ nested: true }),
+        NoteCodeBlock.configure({ defaultLanguage: null }),
         NoteImage,
         Callout,
         LinkCard,

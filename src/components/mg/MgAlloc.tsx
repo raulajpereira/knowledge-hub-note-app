@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { mgIso, mgMonday, wLbl, wLblY, type MgAlloc as Alloc } from '@/lib/mg';
+import { isAvailable, mgIso, mgMonday, wLbl, wLblY, type MgAlloc as Alloc } from '@/lib/mg';
 import { mgL } from '@/lib/mgText';
 import { usePersistentState } from '@/components/ui';
 import { css } from './css';
@@ -38,6 +38,8 @@ type Modal = {
   hpd: number | string;
   days: number | string;
   mask: number[];
+  /** role in the project (free text, suggested from the person's skills) */
+  fn: string;
 };
 type Pop = { pid: string; w: number; di: number | null; x: number; y: number };
 type Drag = { id: string; edge: 'from' | 'to'; dw: number };
@@ -88,6 +90,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
       hpd,
       days,
       mask: m.mask ?? [1, 1, 1, 1, 1],
+      fn: m.fn ?? '',
     });
   };
   const dragEdge = (a: Alloc, edge: 'from' | 'to') => (e: React.PointerEvent) => {
@@ -260,7 +263,8 @@ export function MgAlloc({ mg }: { mg: Mg }) {
             disabled={!P.length || !mg.PJ.length}
             onClick={() =>
               openM({
-                person: rows[0]?.id ?? P[0]!.id,
+                // the first person who can be allocated (Inativo / Suspenso are not offered)
+                person: (rows.find(isAvailable) ?? P.find(isAvailable) ?? rows[0] ?? P[0]!).id,
                 project: alProj !== 'all' ? alProj : mg.PJ[0]!.id,
                 from: wk(0),
                 to: wk(8),
@@ -414,7 +418,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                           key={a.id}
                           type="button"
                           className="mg-albar"
-                          title={`${pj?.code} ${pj?.name} · ${tr(`${a.hours}h/sem`)} · ${wLblY(a.from)} → ${wLblY(a.to)}`}
+                          title={`${pj?.code} ${pj?.name}${a.fn ? ` · ${a.fn}` : ''} · ${tr(`${a.hours}h/sem`)} · ${wLblY(a.from)} → ${wLblY(a.to)}`}
                           onClick={() => !moved && openM({ ...a })}
                           style={css(
                             `position:absolute;top:${12 + ln * 36}px;height:28px;left:calc(${((f - W0) / N) * 100}% + 4px);width:calc(${((t - f + 1) / N) * 100}% - 8px);border-radius:9px;border:0;background:${pj?.color ?? 'rgba(255,255,255,.3)'};box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 8px rgba(0,0,0,.18);color:#1f1a16;font:inherit;padding:0 10px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;cursor:pointer;box-sizing:border-box;`,
@@ -441,6 +445,15 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                           >
                             {pj?.code}
                           </span>
+                          {a.fn && (
+                            <span
+                              style={css(
+                                'min-width:0;font-size:11px;font-weight:600;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                              )}
+                            >
+                              {a.fn}
+                            </span>
+                          )}
                           <span
                             style={css(
                               "font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;opacity:.7;",
@@ -712,6 +725,7 @@ function AllocPanel({
         hpd,
         days: nd,
         mask,
+        ...(m.fn.trim() ? { fn: m.fn.trim().slice(0, 120) } : {}),
       };
       const ix = d.allocs.findIndex((x) => x.id === id);
       if (ix >= 0) d.allocs[ix] = a;
@@ -769,8 +783,10 @@ function AllocPanel({
           <span style={css(LBL)}>{en ? 'Resource' : 'Recurso'}</span>
           <Sel
             value={m.person}
-            onChange={(v) => set({ person: v })}
-            opts={mg.personOpt}
+            onChange={(v) => set({ person: v, fn: '' })}
+            opts={mg.personOpt.filter(
+              (o) => o.v === m.person || isAvailable(mg.pById[o.v] ?? { status: 'Ativo' }),
+            )}
             s={SEL}
             label={en ? 'Resource' : 'Recurso'}
             pos="right 12px center"
@@ -787,6 +803,61 @@ function AllocPanel({
             pos="right 12px center"
           />
         </label>
+        {pr && !isAvailable(pr) && (
+          <div
+            role="alert"
+            style={css(
+              'padding:10px 14px;border-radius:14px;background:oklch(0.7 0.14 50 / .16);border:1px solid oklch(0.78 0.14 55 / .4);font-size:12.5px;line-height:1.45;',
+            )}
+          >
+            {en
+              ? `${pr.name} is ${mg.tr(pr.status).toLowerCase()}${pr.statusNote ? ` — ${pr.statusNote}` : ''}.`
+              : `${pr.name} está ${pr.status.toLowerCase()}${pr.statusNote ? ` — ${pr.statusNote}` : ''}.`}
+          </div>
+        )}
+        <div style={css('display:flex;flex-direction:column;gap:6px;')}>
+          <label htmlFor="mg-al-fn" style={css(LBL)}>
+            {en ? 'Role in the project' : 'Função no projeto'}
+          </label>
+          <input
+            id="mg-al-fn"
+            value={m.fn}
+            maxLength={120}
+            placeholder={en ? 'E.g. FI lead, ABAP developer…' : 'Ex.: Líder FI, Programador ABAP…'}
+            onChange={(e) => set({ fn: e.target.value })}
+            style={css(INP)}
+          />
+          {pr && Object.keys(pr.skills).length > 0 && (
+            <div
+              role="group"
+              aria-label={en ? "The person's skills" : 'Competências da pessoa'}
+              style={css('display:flex;flex-wrap:wrap;gap:6px;')}
+            >
+              {Object.entries(pr.skills)
+                .sort((a, b) => b[1] - a[1])
+                .map(([k, lv]) => {
+                  const name = mg.tr(mg.SKN[k] ?? k);
+                  const on = m.fn.trim() === name;
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => set({ fn: name })}
+                      style={css(
+                        `height:28px;padding:0 10px;border-radius:999px;border:1px solid ${on ? '#fbf8f5' : 'rgba(255,255,255,.16)'};background:${on ? '#fbf8f5' : 'rgba(255,255,255,.06)'};color:${on ? '#2a211c' : '#fbf8f5'};font:inherit;font-size:12px;font-weight:600;cursor:pointer;`,
+                      )}
+                    >
+                      {name}
+                      <span style={css('margin-left:6px;opacity:.7;font-weight:500;')}>
+                        {mg.LV[lv] ?? lv}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </div>
         <div style={css('display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px;')}>
           <label style={css('display:flex;flex-direction:column;gap:6px;min-width:0;')}>
             <span style={css(LBL)}>{en ? 'Start date' : 'Data de início'}</span>

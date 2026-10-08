@@ -657,7 +657,6 @@ export function TasksView() {
     done: all.filter((x) => x.doneAt).length,
     all: all.length,
   };
-  const chip = (on: boolean) => (on ? { 'data-on': true } : {});
   const listW = liveList ?? cols.list ?? COL_DEFAULTS.list;
 
   return (
@@ -711,68 +710,92 @@ export function TasksView() {
             </button>
           </div>
           <div className="kh-tk-filters">
-            {(
-              [
-                ['active', 't_active'],
-                ['done', 't_done'],
-                ['all', 't_all'],
-              ] as const
-            ).map(([id, k]) => (
-              <button
-                key={id}
-                type="button"
-                className="kh-tk-fchip"
-                {...chip(filter === id)}
-                aria-pressed={filter === id}
-                onClick={() => setFilter(id)}
-              >
-                {t(k)}
-                <span>{counts[id]}</span>
-              </button>
-            ))}
-            <span className="kh-tk-sep" />
-            {(['all', 'tech', 'mgmt'] as const).map((id) => (
-              <button
-                key={id}
-                type="button"
-                className="kh-tk-fchip"
-                {...chip(typeF === id)}
-                aria-pressed={typeF === id}
-                onClick={() => setTypeF(id)}
-              >
-                {id !== 'all' && (
-                  <span className="kh-tk-dot kh-tk-dot--ring" style={{ background: TYPE_C[id] }} />
-                )}
-                {t(id === 'all' ? 'tk_allTypes' : id === 'tech' ? 'tk_tech' : 'tk_mgmt')}
-                <span>{all.filter((x) => !x.doneAt && (id === 'all' || x.type === id)).length}</span>
-              </button>
-            ))}
-            {sh.folders.length > 0 && <span className="kh-tk-sep" />}
-            {sh.folders.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                className="kh-tk-fchip"
-                {...chip(shF === f.id)}
-                aria-pressed={shF === f.id}
-                title={f.mine ? t('sh_shared') : t('sh_sharedBy').replace('{who}', f.owner?.name ?? '')}
-                onClick={() => setShF(shF === f.id ? '' : f.id)}
-              >
-                <ShareIc />
-                {f.name}
-              </button>
-            ))}
-            <div style={{ flex: 1 }} />
-            <select
-              className="kh-tk-sort"
-              value={sort}
-              aria-label={t('t_sortRecent')}
-              onChange={(e) => setSort(e.target.value as typeof sort)}
-            >
-              <option value="recent">{t('t_sortRecent')}</option>
-              <option value="due">{t('t_sortDue')}</option>
-              <option value="prio">{t('t_sortPrio')}</option>
-            </select>
+            <div className="kh-tk-show" role="group" aria-label={t('t_show')}>
+              {(
+                [
+                  ['active', 't_active'],
+                  ['done', 't_done'],
+                  ['all', 't_all'],
+                ] as const
+              ).map(([id, k]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="kh-tk-fchip"
+                  aria-pressed={filter === id}
+                  onClick={() => setFilter(id)}
+                >
+                  {t(k)}
+                  <span>{counts[id]}</span>
+                </button>
+              ))}
+            </div>
+            <div className="kh-tk-frow">
+              <label className="kh-tk-fsel">
+                <span
+                  className="kh-tk-dot kh-tk-dot--ring"
+                  aria-hidden="true"
+                  style={{ background: typeF === 'all' ? 'rgba(255,255,255,.35)' : TYPE_C[typeF] }}
+                />
+                <select
+                  className="kh-tk-sort"
+                  value={typeF}
+                  aria-label={t('tk_allTypes')}
+                  onChange={(e) => setTypeF(e.target.value as typeof typeF)}
+                >
+                  {(['all', 'tech', 'mgmt'] as const).map((id) => (
+                    <option key={id} value={id}>
+                      {id === 'all'
+                        ? t('tk_allTypes')
+                        : `${t(id === 'tech' ? 'tk_tech' : 'tk_mgmt')} (${all.filter((x) => !x.doneAt && x.type === id).length})`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="kh-tk-fsel">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4" />
+                </svg>
+                <select
+                  className="kh-tk-sort"
+                  value={sort}
+                  aria-label={t('t_sortBy')}
+                  onChange={(e) => setSort(e.target.value as typeof sort)}
+                >
+                  <option value="recent">{t('t_sortRecent')}</option>
+                  <option value="due">{t('t_sortDue')}</option>
+                  <option value="prio">{t('t_sortPrio')}</option>
+                </select>
+              </label>
+              {sh.folders.length > 0 && (
+                <label className="kh-tk-fsel kh-tk-fsel--wide">
+                  <ShareIc />
+                  <select
+                    className="kh-tk-sort"
+                    value={shF}
+                    aria-label={t('sh_shared')}
+                    onChange={(e) => setShF(e.target.value)}
+                  >
+                    <option value="">{t('t_allFolders')}</option>
+                    {sh.folders.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.mine ? f.name : `${f.name} · ${f.owner?.name ?? ''}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
           </div>
           <div className="kh-tk-items">
             {list.map((x) => {

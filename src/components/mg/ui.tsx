@@ -351,6 +351,7 @@ export type Field = {
   opts?: Opt[];
   type?: string;
   unit?: string;
+  placeholder?: string;
 };
 /** Label | input rows inside a rounded box (prototype fld()). */
 export function Fields({
@@ -390,6 +391,7 @@ export function Fields({
                 className="mg-in"
                 value={f.val}
                 type={f.type ?? 'text'}
+                placeholder={f.placeholder}
                 aria-label={f.label}
                 onChange={(e) => f.onChange(e.target.value)}
                 style={css(

@@ -78,11 +78,21 @@ type Mg = {
     hours: number;
     ovr?: Record<string, number | ''>;
     dov?: Record<string, number>;
+    fn?: string;
   }>;
   reqs: Array<{ id: string; status: string; assigned: string; skills: Array<{ k: string; l: number }> }>;
   ts: Array<{ person: string; week: string; status: string; rows: Record<string, number[]> }>;
   teams: Array<{ id: string; name: string; desc: string }>;
-  people: Array<{ id: string; name: string; team: string; skills: Record<string, number> }>;
+  people: Array<{
+    id: string;
+    name: string;
+    team: string;
+    skills: Record<string, number>;
+    status: string;
+    statusNote: string;
+    hired: string;
+    expYears: number | '';
+  }>;
   clients: Array<{ name: string }>;
   settings: { levels?: string[] };
 };
@@ -159,6 +169,33 @@ test('skills, people and clients', async ({ page }) => {
   await page.getByRole('rowheader', { name: /Zé Novo/ }).click();
   await expect(page).toHaveURL(/mg-people\?p=/);
   await expect(page.getByLabel('Função', { exact: true })).toHaveValue('Developer ABAP');
+  // status, reason, hiring date and years of experience
+  await page.getByLabel('Data de contratação').fill('2021-03-15');
+  await page.getByLabel('Anos de experiência').fill('6');
+  await expect
+    .poll(async () => {
+      const z = (await mgData(page)).people.find((p) => p.name === 'Zé Novo')!;
+      return [z.status, z.hired, z.expYears];
+    })
+    .toEqual(['Ativo', '2021-03-15', 6]);
+  await page.goto('app/mg-people');
+  await page
+    .getByRole('button', { name: /Rui Martins/ })
+    .first()
+    .click();
+  await page.getByLabel('Estado', { exact: true }).selectOption('Suspenso');
+  await page.getByLabel('Motivo / observações').fill('Baixa médica até 30/11');
+  await expect(
+    page
+      .locator('span', { hasText: /^Suspenso$/ })
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Motivo / observações')).toHaveValue('Baixa médica até 30/11');
+  // the list filters by status
+  await page.getByLabel('Filtrar por estado').selectOption('Suspenso');
+  await expect(page.getByText('1 pessoas')).toBeVisible();
 
   // clients: a new client with a name
   await page.goto('app/mg-clients');
@@ -205,8 +242,17 @@ test('allocations: new allocation from the panel, weekly override, dashboard and
   await page.getByRole('tab', { name: 'Timeline' }).click();
   await page.getByRole('button', { name: '+ Alocação' }).click();
   const panel = page.getByRole('complementary', { name: 'Nova Alocação' });
-  await panel.getByLabel('Recurso').selectOption({ label: 'Zé Novo · Pleno ABAP' });
-  await panel.getByLabel('Projeto').selectOption({ label: 'E2E-01 · Projeto E2E' });
+  // name · cargo; suspended people are not offered for new allocations
+  await expect(panel.getByLabel('Recurso').locator('option', { hasText: 'Rui Martins' })).toHaveCount(0);
+  await panel.getByLabel('Recurso').selectOption({ label: 'Zé Novo · Developer ABAP' });
+  await panel.getByLabel('Projeto', { exact: true }).selectOption({ label: 'E2E-01 · Projeto E2E' });
+  // role in the project: the person's skills as suggestions, or free text
+  await panel
+    .getByRole('group', { name: 'Competências da pessoa' })
+    .getByRole('button', { name: /^ABAP/ })
+    .click();
+  await expect(panel.getByLabel('Função no projeto')).toHaveValue('ABAP');
+  await panel.getByLabel('Função no projeto').fill('Programador ABAP sénior');
   await panel.getByLabel('Horas por dia').fill('4');
   await panel.getByLabel('Número de dias úteis').fill('10');
   await panel.getByRole('button', { name: 'Sex' }).click();
@@ -220,6 +266,7 @@ test('allocations: new allocation from the panel, weekly override, dashboard and
     return d.allocs.find((a) => a.person === pid && a.project === pj);
   };
   await expect.poll(async () => (await alloc())?.hours).toBe(16);
+  expect((await alloc())!.fn).toBe('Programador ABAP sénior');
   expect(Object.values((await alloc())!.dov!).filter((h) => h === 4)).toHaveLength(10);
 
   // weekly grid: override one week from the cell popover

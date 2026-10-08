@@ -65,6 +65,7 @@ test.beforeAll(async ({ browser }) => {
   await page.close();
 });
 
+const CODE_TOOL = 'Bloco de Código';
 const tool = (page: Page, name: string) =>
   page.getByRole('toolbar').getByRole('button', { name, exact: true });
 
@@ -129,6 +130,29 @@ test('notebook + note written with the toolbar only, saved and reloaded', async 
   await expect(page.getByRole('complementary', { name: 'Navigation' }).locator('.kh-nav__count')).toHaveText(
     '1',
   );
+});
+
+test('code blocks: syntax highlighting, detected or chosen language, kept after reload', async ({ page }) => {
+  await login(page);
+  await page.goto('app/notes');
+  await page.getByRole('button', { name: 'Nova Nota' }).last().click();
+  await expect(page.getByLabel('Sem título')).toHaveValue('');
+  await page.getByLabel('Sem título').fill('Menu ZHR');
+  await page.keyboard.press('Enter');
+  await tool(page, CODE_TOOL).click();
+  await page.keyboard.type('DATA lt_menu TYPE TABLE OF zhr_menu.');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('LOOP AT lt_menu INTO DATA(ls_menu).');
+  const block = page.locator('.kh-ne-code');
+  const lang = block.getByLabel('Linguagem do código');
+  await expect(lang.locator('option:checked')).toHaveText('Automático · ABAP');
+  await expect(block.locator('.kh-hl-k').first()).toHaveText('DATA');
+  await lang.selectOption('sql');
+  await expect(block.locator('.kh-hl-k').first()).toHaveText('TABLE');
+  await page.waitForTimeout(1200); // autosave debounce
+  await page.reload();
+  await expect(page.locator('.kh-ne-code').getByLabel('Linguagem do código')).toHaveValue('sql');
+  await expect(page.locator('.kh-ne-code code')).toContainText('LOOP AT lt_menu');
 });
 
 test('favourites, header search, links between notes', async ({ page }) => {

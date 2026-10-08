@@ -1,4 +1,5 @@
 import 'server-only';
+import { codeHtml } from '@/lib/codeHighlight';
 import { FILE_SRC, safeUrl, type PMNode } from '@/server/content/doc';
 
 // A note document (already validated by doc.ts) as static HTML for its public
@@ -65,8 +66,10 @@ export function docHtml(doc: PMNode, fileUrl: (fileId: string) => string): strin
         const on = n.attrs?.checked === true;
         return `<li data-checked="${on}"><label><input type="checkbox" disabled${on ? ' checked' : ''}></label><div>${kids(n)}</div></li>`;
       }
-      case 'codeBlock':
-        return `<pre><code>${kids(n)}</code></pre>`;
+      case 'codeBlock': {
+        const code = (n.content ?? []).map((c) => (c.type === 'text' ? (c.text ?? '') : '')).join('');
+        return `<pre><code>${codeHtml(code, typeof n.attrs?.language === 'string' ? n.attrs.language : null)}</code></pre>`;
+      }
       case 'blockquote':
         return `<blockquote>${kids(n)}</blockquote>`;
       case 'horizontalRule':

@@ -193,7 +193,11 @@ export function useMg() {
     };
     const weekOpts: Array<{ v: string; l: string }> = [];
     for (let w = -30; w <= 52; w++) weekOpts.push({ v: wk(w), l: wLblY(wk(w)) });
-    const personOpt = P.map((p) => ({ v: p.id, l: `${p.name} · ${LV[p.level]} ${SKN[p.area] ?? ''}` }));
+    // name · cargo (Inativo / Suspenso say so)
+    const personOpt = P.map((p) => ({
+      v: p.id,
+      l: `${p.name} · ${tr(p.role)}${(p.status ?? 'Ativo') !== 'Ativo' ? ` (${tr(p.status)})` : ''}`,
+    }));
     const projOpt = PJ.map((p) => ({ v: p.id, l: `${p.code} · ${p.name}` }));
     const band = (h: number, cap: number | string) => {
       const c = +cap || 40;
@@ -259,7 +263,7 @@ export function useMg() {
       tOf,
       MG_SKN,
     };
-  }, [D, team]);
+  }, [D, team, tr]);
   /** prototype nav(page, patch): the selection travels in the URL */
   const nav = useCallback(
     (page: string, q?: Record<string, string>) =>

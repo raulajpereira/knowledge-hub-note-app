@@ -629,5 +629,11 @@
   "lg_unset": "[to be defined]",
   "reg_legal": "By creating an account you accept the {terms} and the {privacy}.",
   "reg_terms": "Terms of Service",
-  "reg_privacy": "Privacy Policy"
+  "reg_privacy": "Privacy Policy",
+  "ne_codeLang": "Code language",
+  "ne_codeAuto": "Automatic",
+  "ne_codePlain": "Plain text",
+  "t_show": "Show",
+  "t_sortBy": "Sort by",
+  "t_allFolders": "All folders"
 }

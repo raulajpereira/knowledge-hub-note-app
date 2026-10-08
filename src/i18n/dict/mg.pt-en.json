@@ -208,5 +208,15 @@
   "Tornar responsável": "Make lead",
   "Total": "Total",
   "Ver Alocação": "View Allocation",
-  "Ver Painel": "View Dashboard"
+  "Ver Painel": "View Dashboard",
+  "Inativo": "Inactive",
+  "Suspenso": "Suspended",
+  "Todos os estados": "All statuses",
+  "Motivo / observações": "Reason / notes",
+  "Ex.: baixa médica até 30/11": "E.g. sick leave until 30/11",
+  "Opcional": "Optional",
+  "Data de contratação": "Hiring date",
+  "Anos de experiência": "Years of experience",
+  "anos": "years",
+  "Filtrar por estado": "Filter by status"
 }
