@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePersistentState } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
 import { useI18n } from '@/i18n/client';
@@ -9,6 +9,7 @@ import { LookTab } from './LookTab';
 import { NavTab } from './NavTab';
 import { NewsTab } from './NewsTab';
 import { SapTab } from './SapTab';
+import { AiTab } from './AiTab';
 import { MgSettingsTab } from '@/components/mg/MgSettings';
 import { SharingTab } from '@/components/share/SharingTab';
 import './settings.css';
@@ -34,6 +35,12 @@ const TABS = [
     label: 'set_tab_sap',
     module: 'systems',
     icon: '<rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M7 10l3 2.5L7 15"></path><line x1="12.5" y1="15" x2="17" y2="15"></line>',
+  },
+  {
+    id: 'ai',
+    label: 'set_tab_ai',
+    module: 'ai',
+    icon: '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path>',
   },
   {
     id: 'share',
@@ -67,6 +74,11 @@ export function SettingsView() {
       (x.module === 'mg_*' ? [...modules].some((m) => m.startsWith('mg_')) : modules.has(x.module)),
   );
   const [saved, setTab] = usePersistentState<TabId>('setTab', 'look');
+  // a link may open a given tab (e.g. ?tab=ai from the assistant)
+  useEffect(() => {
+    const want = new URLSearchParams(window.location.search).get('tab');
+    if (want && TABS.some((x) => x.id === want)) setTab(want as TabId);
+  }, [setTab]);
   const tab = tabs.some((x) => x.id === saved) ? saved : 'look';
   const current = tabs.find((x) => x.id === tab)!;
 
@@ -161,6 +173,7 @@ export function SettingsView() {
             {tab === 'brand' && <BrandTab />}
             {tab === 'news' && <NewsTab />}
             {tab === 'sap' && <SapTab />}
+            {tab === 'ai' && <AiTab />}
             {tab === 'share' && <SharingTab />}
             {tab === 'nav' && <NavTab />}
             {tab === 'mgmt' && <MgSettingsTab />}

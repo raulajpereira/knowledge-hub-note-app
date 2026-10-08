@@ -509,3 +509,9 @@
     overflow: auto;
   }
 }
+.kh-vc-field__row {
+  flex-wrap: wrap;
+}
+.kh-vc-field__row > .kh-vc-lbl {
+  margin-right: auto;
+}

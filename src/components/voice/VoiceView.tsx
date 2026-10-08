@@ -13,6 +13,8 @@ import { ColHandle } from '@/components/content/ColHandle';
 import { Connections } from '@/components/content/Connections';
 import { useDraft } from '@/components/content/useDraft';
 import { useWhen } from '@/components/content/useWhen';
+import { AiButton } from '@/components/ai/AiButton';
+import { aiError, useAi } from '@/components/ai/useAi';
 import './voice.css';
 
 // ZNotes.dc.html `isVoice`: recordings list · recorder + player, transcript
@@ -305,6 +307,11 @@ function Detail({
 }) {
   const { t } = useI18n();
   const when = useWhen();
+  const toast = useToast();
+  const router = useRouter();
+  const { modules } = useShell();
+  const { ai, ready } = useAi();
+  const [aiBusy, setAiBusy] = useState<'' | 'tr' | 'mt'>('');
   const [title, setTitle, flushTitle] = useDraft(v.title, (x) => onPatch({ title: x }));
   const [transcript, setTranscript, flushTr] = useDraft(v.transcript, (x) => onPatch({ transcript: x }), 700);
   const [notes, setNotes, flushNotes] = useDraft(v.notes, (x) => onPatch({ notes: x }), 700);
@@ -526,6 +533,47 @@ function Detail({
       <div className="kh-vc-field">
         <div className="kh-vc-field__row">
           <div className="kh-vc-lbl">{t('v_transcript')}</div>
+          {ready && ai?.audio && (
+            <AiButton
+              label={transcript.trim() ? t('ai_retranscribe') : t('ai_transcribe')}
+              busy={aiBusy === 'tr'}
+              disabled={!!aiBusy}
+              onClick={async () => {
+                setAiBusy('tr');
+                try {
+                  const r = await api<{ transcript: string }>(`/ai/voice/${v.id}`, { action: 'transcribe' });
+                  setTranscript(r.transcript);
+                } catch (e) {
+                  toast({ message: aiError(t, e), tone: 'error' });
+                } finally {
+                  setAiBusy('');
+                }
+              }}
+            />
+          )}
+          {ready && modules.has('meetings') && (
+            <AiButton
+              label={t('ai_toMeeting')}
+              busy={aiBusy === 'mt'}
+              disabled={!!aiBusy || (!transcript.trim() && !ai?.audio)}
+              title={!transcript.trim() && !ai?.audio ? t('ai_toMeetingNeedsTr') : t('ai_toMeeting')}
+              onClick={async () => {
+                flushTr();
+                setAiBusy('mt');
+                try {
+                  const r = await api<{ meeting: { id: string } }>(`/ai/voice/${v.id}`, {
+                    action: 'meeting',
+                  });
+                  toast({ message: t('ai_meetingMade'), tone: 'success' });
+                  router.push(`/app/meetings?m=${r.meeting.id}`);
+                } catch (e) {
+                  toast({ message: aiError(t, e), tone: 'error' });
+                } finally {
+                  setAiBusy('');
+                }
+              }}
+            />
+          )}
           {transcript.trim() && (
             <button
               type="button"

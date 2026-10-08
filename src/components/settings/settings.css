@@ -442,3 +442,17 @@
   outline: none;
   min-width: 0;
 }
+/* Assistente IA */
+.kh-ai-link {
+  font-size: 13px;
+  color: rgba(255, 248, 240, 0.8);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kh-ai-err {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: oklch(0.6 0.16 25 / 0.22);
+  border: 1px solid oklch(0.7 0.16 25 / 0.4);
+  font-size: 13.5px;
+}

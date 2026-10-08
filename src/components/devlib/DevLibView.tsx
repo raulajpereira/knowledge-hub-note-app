@@ -1,5 +1,7 @@
 'use client';
 
+import { AiButton } from '@/components/ai/AiButton';
+import { useExplain } from '@/components/ai/useExplain';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
@@ -148,6 +150,7 @@ export function DevLibView() {
   const sel = D.find((s) => s.id === selId) ?? null;
   const fa = sel ? (sel.files.find((f) => f.id === fileId) ?? sel.files[0]!) : null;
   const L = fa ? langOf(fa.lang) : null;
+  const ex = useExplain();
   const code = fa?.code ?? '';
   const lines = code.split('\n').length;
   const hl = useMemo(() => (fa && L ? `${highlight(code, L)}\n` : ''), [code, L, fa]);
@@ -677,6 +680,13 @@ export function DevLibView() {
                   {t('dl_lines')} · {code.length}
                   {t('dl_chars')}
                 </span>
+                {ex.ready && code.trim() && (
+                  <AiButton
+                    label={t('ai_explain')}
+                    busy={ex.busy}
+                    onClick={() => void ex.run(`${sel.id}:${fa.id}`, code, langOf(fa.lang).name, fa.name)}
+                  />
+                )}
                 <button
                   type="button"
                   className="kh-dl-copy"
@@ -727,6 +737,7 @@ export function DevLibView() {
                   </button>
                 )}
               </div>
+              {ex.out(`${sel.id}:${fa.id}`)}
               <div className="kh-dl-code">
                 <pre ref={gutRef} className="kh-dl-gutter" aria-hidden="true">
                   {Array.from({ length: lines }, (_, i) => i + 1).join('\n')}

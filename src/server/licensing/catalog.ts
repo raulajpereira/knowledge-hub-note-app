@@ -82,6 +82,7 @@ export const MODULE_GROUPS: ReadonlyArray<{
       ['whiteboard', 'Whiteboard', 'Whiteboard'],
       ['share', 'Partilha', 'Sharing'],
       ['news', 'SAP News', 'SAP News'],
+      ['ai', 'Assistente IA', 'AI Assistant'],
     ],
   },
   {
@@ -128,7 +129,7 @@ export const PLANS: PlanDef[] = (
       'oklch(0.8 0.13 150)',
       6,
       20,
-      ['notes', 'tasks', 'calendar', 'meetings', 'files', 'voice', 'artifacts', 'whiteboard', 'share'],
+      ['notes', 'tasks', 'calendar', 'meetings', 'files', 'voice', 'artifacts', 'whiteboard', 'share', 'ai'],
     ],
     [
       'DEVELOPER',
@@ -146,6 +147,7 @@ export const PLANS: PlanDef[] = (
         'api',
         'whiteboard',
         'share',
+        'ai',
       ],
     ],
     [
@@ -165,6 +167,7 @@ export const PLANS: PlanDef[] = (
         'tcodes',
         'functional',
         'share',
+        'ai',
       ],
     ],
     [
@@ -172,7 +175,7 @@ export const PLANS: PlanDef[] = (
       'oklch(0.82 0.13 70)',
       12,
       20,
-      ['notes', 'tasks', 'calendar', 'meetings', 'files', 'management', 'share'],
+      ['notes', 'tasks', 'calendar', 'meetings', 'files', 'management', 'share', 'ai'],
     ],
     [
       'ULTRA',
@@ -198,6 +201,7 @@ export const PLANS: PlanDef[] = (
         'management',
         'news',
         'share',
+        'ai',
       ],
     ],
   ] as const

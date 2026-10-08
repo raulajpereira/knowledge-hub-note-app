@@ -8,6 +8,9 @@ import { useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
+import { AiButton } from '@/components/ai/AiButton';
+import { AiText } from '@/components/ai/AiText';
+import { aiError, useAi } from '@/components/ai/useAi';
 import '../emails/emails.css';
 import '../artifacts/artifacts.css';
 import './meetings.css';
@@ -166,6 +169,11 @@ export function MeetingsView() {
   const [folder0, setFolder] = usePersistentState<string>('meetings.folder', 'all');
   const [newFolder, setNewFolder] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
+  const { ready: aiReady } = useAi();
+  const [aiBusy, setAiBusy] = useState(false);
+  const [sug, setSug] = useState<{ id: string; summary: string; review: string[]; todos: string[] } | null>(
+    null,
+  );
   const [q, setQ] = useState('');
   const [who, setWho] = useState('');
   const [taskOf, setTaskOf] = useState<Record<string, true>>({});
@@ -614,9 +622,89 @@ export function MeetingsView() {
             </div>
 
             <div className="kh-mt-sec">
-              <label className="kh-mt-secT" htmlFor={`mt-topics-${act.id}`}>
-                {t('mt_topics')}
-              </label>
+              <div className="kh-mt-secT">
+                <label htmlFor={`mt-topics-${act.id}`}>{t('mt_topics')}</label>
+                {aiReady && (
+                  <span style={{ marginLeft: 'auto' }}>
+                    <AiButton
+                      label={t('ai_organise')}
+                      title={t('ai_organiseTip')}
+                      busy={aiBusy}
+                      disabled={!act.topics.trim()}
+                      onClick={async () => {
+                        setAiBusy(true);
+                        setSug(null);
+                        try {
+                          const r = await api<{
+                            meeting: { summary: string; review: string[]; todos: string[] };
+                          }>('/ai/action', {
+                            kind: 'meeting',
+                            title: act.title,
+                            participants: act.participants,
+                            topics: act.topics,
+                          });
+                          setSug({ id: act.id, ...r.meeting });
+                        } catch (e) {
+                          toast({ message: aiError(t, e), tone: 'error' });
+                        } finally {
+                          setAiBusy(false);
+                        }
+                      }}
+                    />
+                  </span>
+                )}
+              </div>
+              {sug?.id === act.id && (
+                <div className="kh-ai-out" aria-label={t('ai_suggestion')}>
+                  <div className="kh-ai-out__h">{t('ai_suggestion')}</div>
+                  {sug.summary && <AiText text={sug.summary} cite={(n) => `[${n}]`} />}
+                  {sug.review.length > 0 && (
+                    <div>
+                      <b>{t('mt_review')}</b>
+                      <ul>
+                        {sug.review.map((x, i) => (
+                          <li key={i}>{x}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {sug.todos.length > 0 && (
+                    <div>
+                      <b>{t('mt_todos')}</b>
+                      <ul>
+                        {sug.todos.map((x, i) => (
+                          <li key={i}>{x}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="kh-ai-out__acts">
+                    <button
+                      type="button"
+                      data-main
+                      onClick={() => {
+                        upd(
+                          act.id,
+                          {
+                            topics: sug.summary
+                              ? `${sug.summary.trim()}\n\n— ${t('ai_originalNotes')} —\n${act.topics}`
+                              : act.topics,
+                            review: [...act.review, ...sug.review.map((x) => ({ t: x, done: false }))],
+                            todos: [...act.todos, ...sug.todos.map((x) => ({ t: x, done: false }))],
+                          },
+                          0,
+                        );
+                        setSug(null);
+                      }}
+                    >
+                      {t('ai_apply')}
+                    </button>
+                    <button type="button" onClick={() => setSug(null)}>
+                      {t('ai_discard')}
+                    </button>
+                  </div>
+                </div>
+              )}
               <textarea
                 id={`mt-topics-${act.id}`}
                 className="kh-mt-topics"

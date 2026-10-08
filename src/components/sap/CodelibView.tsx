@@ -1,5 +1,7 @@
 'use client';
 
+import { AiButton } from '@/components/ai/AiButton';
+import { useExplain } from '@/components/ai/useExplain';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
@@ -1054,6 +1056,8 @@ function CodePane({
   const pre = tab.view === 'code' && tab.hdr === 'fm' ? clFmHdr(node) : '';
   const refs = useMemo(() => new Set(clFindRefs((pre ? `${pre}\n` : '') + val, rix)), [pre, val, rix]);
   const lines = (pre ? clCodeLines(pre) : 0) + clCodeLines(val);
+  const ex = useExplain();
+  const exKey = `${o.id}:${node.id}:${tab.k}`;
   return (
     <>
       <div className="kh-cl-cbar">
@@ -1071,6 +1075,13 @@ function CodePane({
           </span>
         )}
         <span className="kh-cl-grow" />
+        {ex.ready && val.trim() && (
+          <AiButton
+            label={t('ai_explain')}
+            busy={ex.busy}
+            onClick={() => void ex.run(exKey, (pre ? `${pre}\n` : '') + val, 'ABAP', `${o.type} ${o.name}`)}
+          />
+        )}
         <button type="button" className="kh-cl-copy" onClick={() => onCopy((pre ? `${pre}\n` : '') + val)}>
           <Svg d={copied ? OK : COPY} size={13} />
           {copied ? t('copied') : t('copy')}
@@ -1087,6 +1098,7 @@ function CodePane({
         label={node.label.startsWith('cl_n_') ? t(node.label) : node.label}
         onChange={onChange}
       />
+      {ex.out(exKey)}
     </>
   );
 }

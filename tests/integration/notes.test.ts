@@ -104,7 +104,7 @@ describe.skipIf(!enabled)('notes', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, drive_files, meetings, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE ai_messages, ai_chats, ai_settings, public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, drive_files, meetings, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -805,6 +805,143 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.purgeTrash(a, [{ kind: 'file', id: f.id }]);
     expect(await codeOf(drive.readDriveFile(a, f.id))).toBe('not_found');
     expect((await drive.listDrive(a)).limits.used).toBe(7);
+  });
+
+  it('ai assistant: own key encrypted, checked with the provider, private chats with sources', async () => {
+    const { startFakeAi } = await import('../stubs/fakeAi.mjs');
+    const fake = await startFakeAi(4011);
+    process.env.AI_TEST_BASE_URL = 'http://127.0.0.1:4011';
+    try {
+      const st = await import('@/server/ai/settings');
+      const chats = await import('@/server/ai/chats');
+      const { streamChat } = await import('@/server/ai/provider');
+      const a = await signedIn('ai-a@example.pt');
+      const b = await signedIn('ai-b@example.pt');
+      expect(await st.aiStatus(a)).toMatchObject({ configured: false });
+      expect(await codeOf(st.aiConfig(a))).toBe('ai_not_configured');
+      // a bad key is refused by the provider and nothing is kept
+      expect(
+        await codeOf(
+          st.saveAiSettings(a, {
+            provider: 'groq',
+            apiKey: 'gsk_wrong_key',
+            model: 'fake-chat-1',
+            enabled: true,
+          }),
+        ),
+      ).toBe('ai_key_invalid');
+      expect(await st.aiModels(a, 'groq', 'test-key-1234')).toEqual(['fake-chat-1', 'fake-chat-2']);
+      expect(
+        await codeOf(
+          st.saveAiSettings(a, { provider: 'groq', apiKey: 'test-key-1234', model: 'nope', enabled: true }),
+        ),
+      ).toBe('ai_model_invalid');
+      const s1 = await st.saveAiSettings(a, {
+        provider: 'groq',
+        apiKey: 'test-key-1234',
+        model: 'fake-chat-1',
+        enabled: true,
+      });
+      expect(s1).toEqual({
+        configured: true,
+        enabled: true,
+        provider: 'groq',
+        model: 'fake-chat-1',
+        keyHint: '1234',
+        audio: true,
+      });
+      // stored encrypted, never in clear; changing the model keeps the key
+      const rows = await admin.unsafe('select key_ct from ai_settings');
+      expect(JSON.stringify(rows)).not.toContain('test-key-1234');
+      expect(
+        (await st.saveAiSettings(a, { provider: 'groq', model: 'fake-chat-2', enabled: true })).model,
+      ).toBe('fake-chat-2');
+      expect(await codeOf(st.saveAiSettings(a, { provider: 'openai', model: 'x', enabled: true }))).toBe(
+        'ai_key_required',
+      );
+      expect((await st.aiConfig(a)).apiKey).toBe('test-key-1234');
+      // private: the other person has nothing
+      expect(await st.aiStatus(b)).toMatchObject({ configured: false });
+
+      // a question finds the person's own content (never someone else's)
+      await notes.createNote(a, { title: 'Rubricas payroll Banco SOL' });
+      const mb = await import('@/server/content/meetings');
+      await mb.createMeeting(a, { title: 'Steering payroll', heldOn: '2026-10-01' });
+      await notes.createNote(b, { title: 'Payroll do Rui (privado)' });
+      const turn = await chats.startTurn(a, { message: 'O que sei sobre o payroll?', today: '2026-10-08' });
+      expect(turn.sources.map((x) => x.title).sort()).toEqual([
+        'Rubricas payroll Banco SOL',
+        'Steering payroll (2026-10-01)',
+      ]);
+      expect(turn.system).toContain('2026-10-08');
+      let out = '';
+      for await (const c of streamChat(await st.aiConfig(a), {
+        system: turn.system,
+        messages: turn.messages,
+      }))
+        out += c;
+      expect(out).toBe('Resposta de teste com 2 fontes [1]. Fim.');
+      await turn.finish(out);
+      const list = await chats.listChats(a);
+      expect(list.map((c) => c.title)).toEqual(['O que sei sobre o payroll?']);
+      expect((await chats.chatMessages(a, list[0]!.id)).map((m) => [m.role, m.sources.length])).toEqual([
+        ['user', 0],
+        ['assistant', 2],
+      ]);
+      // conversations are private and deletable
+      expect(await chats.listChats(b)).toEqual([]);
+      expect(await codeOf(chats.chatMessages(b, list[0]!.id))).toBe('not_found');
+      expect(await codeOf(chats.deleteChat(b, list[0]!.id))).toBe('not_found');
+      // a second turn in the same chat carries the history
+      const t2 = await chats.startTurn(a, {
+        chatId: list[0]!.id,
+        message: 'E as tarefas?',
+        today: '2026-10-08',
+      });
+      expect(t2.messages.slice(0, 2).map((m) => m.role)).toEqual(['user', 'assistant']);
+      await chats.deleteChat(a, list[0]!.id);
+      expect(await chats.listChats(a)).toEqual([]);
+      // page actions: meeting record, voice → transcript → meeting record, explain code, test steps
+      const act = await import('@/server/ai/actions');
+      const sug = await act.organiseMeeting(a, {
+        title: 'Kick-off',
+        participants: ['Ana'],
+        topics: 'falámos da fase 2',
+      });
+      expect(sug).toMatchObject({
+        review: ['Validar mapeamento de rubricas'],
+        todos: ['Pedro — preparar plano de testes'],
+      });
+      const webm = Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3, ...Array(64).fill(7)]);
+      const v = await voiceSvc.createVoice(a, {
+        title: 'Kick-off gravado',
+        kind: 'mic',
+        durationMs: 1000,
+        levels: [],
+        data: webm,
+      });
+      expect(await act.transcribeVoice(a, v.id)).toBe(
+        'Transcrição de teste: decidimos avançar com a fase 2.',
+      );
+      expect((await voiceSvc.getVoice(a, v.id)).transcript).toContain('fase 2');
+      expect(await codeOf(act.transcribeVoice(b, v.id))).not.toBe('ok');
+      const m = await act.meetingFromVoice(a, v.id);
+      expect(m).toMatchObject({
+        title: 'Kick-off fase 2',
+        todos: [{ t: 'Pedro — preparar plano de testes', done: false }],
+      });
+      expect((await notes.linksOf(a, { type: 'meeting', id: m.id })).map((x) => x.type)).toEqual(['voice']);
+      expect(await act.explainCode(a, { code: 'REPORT z.', lang: 'ABAP' })).toContain('Explicação de teste');
+      expect(
+        (await act.testSteps(a, { title: 'Payroll mensal', existing: [] })).map((x) => x.step),
+      ).toHaveLength(2);
+      // switched off: no calls
+      await st.saveAiSettings(a, { provider: 'groq', model: 'fake-chat-2', enabled: false });
+      expect(await codeOf(st.aiConfig(a))).toBe('ai_disabled');
+    } finally {
+      delete process.env.AI_TEST_BASE_URL;
+      fake.close();
+    }
   });
 
   it('artifacts: private, a version per save, restore keeps history, folders, links, Trash', async () => {

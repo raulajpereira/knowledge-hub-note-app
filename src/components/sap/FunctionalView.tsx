@@ -19,6 +19,8 @@ import {
 import { useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { useWhen } from '@/components/content/useWhen';
+import { AiButton } from '@/components/ai/AiButton';
+import { aiError, useAi } from '@/components/ai/useAi';
 import './functional.css';
 
 // Funcional SAP — SapFunctional.dc.html: Processos, Testes, Migração de
@@ -44,6 +46,8 @@ export function FunctionalView({ page }: { page: FnPage }) {
   const { t, lang } = useI18n();
   const when = useWhen();
   const toast = useToast();
+  const { ready: aiReady } = useAi();
+  const [aiBusy, setAiBusy] = useState(false);
   const confirm = useConfirm();
   const router = useRouter();
   const path = usePathname();
@@ -632,6 +636,51 @@ export function FunctionalView({ page }: { page: FnPage }) {
             <div className="kh-fn-rows">
               <div className="kh-fn-rhead">
                 <span>{tr(R.title)}</span>
+                {aiReady && page === 'fn_test' && (
+                  <AiButton
+                    label={t('ai_testSteps')}
+                    busy={aiBusy}
+                    disabled={!sel.title.trim() || sel.rows.length >= 460}
+                    onClick={async () => {
+                      setAiBusy(true);
+                      try {
+                        const r = await api<{ steps: Array<{ step: string; expected: string }> }>(
+                          '/ai/action',
+                          {
+                            kind: 'tests',
+                            title: sel.title,
+                            module: typeof sel.f.module === 'string' ? sel.f.module : undefined,
+                            kind2: typeof sel.f.kind === 'string' ? sel.f.kind : undefined,
+                            pre: typeof sel.f.pre === 'string' ? sel.f.pre.slice(0, 10_000) : undefined,
+                            existing: sel.rows.map((x) => x.step ?? '').filter(Boolean),
+                          },
+                        );
+                        upd(
+                          sel.id,
+                          {
+                            rows: [
+                              ...sel.rows,
+                              ...r.steps.map((x) => ({
+                                ...fnBlankRow(page),
+                                step: x.step,
+                                expected: x.expected,
+                              })),
+                            ],
+                          },
+                          0,
+                        );
+                        toast({
+                          message: t('ai_stepsAdded').replace('{n}', String(r.steps.length)),
+                          tone: 'success',
+                        });
+                      } catch (e) {
+                        toast({ message: aiError(t, e), tone: 'error' });
+                      } finally {
+                        setAiBusy(false);
+                      }
+                    }}
+                  />
+                )}
                 <button
                   type="button"
                   disabled={sel.rows.length >= 500}

@@ -84,8 +84,13 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Start worker
         run: node dist/worker.mjs > worker.log 2>&1 &
+      - name: Start fake AI provider (tests only)
+        run: node tests/stubs/fakeAi.mjs 4010 > fakeai.log 2>&1 &
       - name: E2E (Playwright)
         run: npm run test:e2e
+        env:
+          # the assistant's OpenAI-compatible calls go to the local fake, never to a real provider
+          AI_TEST_BASE_URL: http://127.0.0.1:4010
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

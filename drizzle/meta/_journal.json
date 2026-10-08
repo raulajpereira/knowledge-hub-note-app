@@ -253,6 +253,13 @@
       "when": 1791484768481,
       "tag": "0035_meeting_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791492652404,
+      "tag": "0036_ai_assistant",
+      "breakpoints": true
     }
   ]
 }

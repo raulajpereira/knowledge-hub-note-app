@@ -10,6 +10,7 @@ import './fonts';
 import { AboutModal } from './AboutModal';
 import { AccountModal } from './AccountModal';
 import { ActivityModal } from './ActivityModal';
+import { AiPanel } from '@/components/ai/AiPanel';
 import { Header } from './Header';
 import { LockScreen } from './LockScreen';
 import { PrefsProvider, usePref, usePrefsContext } from './PrefsProvider';
@@ -45,6 +46,7 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const [accOpen, setAccOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [actOpen, setActOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [query, setQuery] = useState('');
 
   // Locked state survives a reload in this tab (prototype kv.locked in sessionStorage).
@@ -135,7 +137,12 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
       />
       <div className="kh-shell kh-above" aria-hidden={locked || undefined} inert={locked || undefined}>
         <div className="kh-shell__grid">
-          <Header onActivity={() => setActOpen((o) => !o)} activityOpen={actOpen} />
+          <Header
+            onActivity={() => setActOpen((o) => !o)}
+            activityOpen={actOpen}
+            onAi={() => setAiOpen((o) => !o)}
+            aiOpen={aiOpen}
+          />
           <div
             className="kh-main"
             style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${width}px minmax(0,1fr)` }}
@@ -171,6 +178,7 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
       <AccountModal open={accOpen} onClose={() => setAccOpen(false)} />
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />
+      <AiPanel open={aiOpen} onClose={() => setAiOpen(false)} />
       {locked && (
         <LockScreen name={me.user.name} email={me.user.email} photoV={me.assets.avatar} onUnlock={unlock} />
       )}
