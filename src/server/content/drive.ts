@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
@@ -9,7 +9,7 @@ import {
   HeadObjectCommand,
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
-import { driveFiles, folders, sharedFolders, users } from '@/db/schema';
+import { driveFiles, sharedFolders, users } from '@/db/schema';
 import { env } from '@/lib/env';
 import { s3 } from '@/lib/storage';
 import { redis } from '@/lib/redis';
@@ -18,6 +18,14 @@ import { cleanName, FILES_MAX_MB, FILES_QUOTA_MB, UPLOAD_PART } from '@/lib/driv
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
 import { asSharer, asUser, type Tx } from './tenant';
+import {
+  checkKindFolder,
+  createKindFolder,
+  deleteKindFolder,
+  listKindFolders,
+  renameKindFolder,
+  type KindFolder,
+} from './kindFolders';
 
 // Ficheiros: files in object storage, in flat folders (as Notes/Artifacts)
 // or in shared folders. Uploads go in chunks (S3 multipart) so a file never
@@ -36,7 +44,7 @@ export type DriveFile = {
   createdAt: string;
   updatedAt: string;
 };
-export type DriveFolder = { id: string; name: string; color: string };
+export type DriveFolder = KindFolder;
 export type DriveLimits = { used: number; quota: number; maxFile: number };
 
 const MB = 1024 * 1024;
@@ -108,70 +116,18 @@ export async function listDrive(
       .where(and(isNull(driveFiles.deletedAt), inShared))
       .orderBy(desc(driveFiles.createdAt))
       .limit(10_000)) as Row[];
-    const fs = shared
-      ? []
-      : await tx
-          .select({ id: folders.id, name: folders.name, color: folders.color })
-          .from(folders)
-          .where(and(eq(folders.kind, 'files'), isNull(folders.deletedAt)))
-          .orderBy(asc(folders.sort), asc(folders.createdAt));
+    const fs = shared ? [] : await listKindFolders(tx, 'files');
     return { files: rows.map((r) => toFile(r, auth.user.id)), folders: fs, limits: await limitsTx(tx, auth) };
   });
 }
 
 // ── Folders (flat, as in Notes and Artifacts) ───────────────────────────────
-const COLORS = ['#7fb0ff', '#7fd0a7', '#f0c36d', '#d39bff', '#ff9f8a', '#7fd6e0'];
-export async function createDriveFolder(auth: AuthContext, name: string): Promise<DriveFolder> {
-  return asUser(auth, async (tx) => {
-    const [{ n }] = (await tx
-      .select({ n: sql<number>`count(*)::int` })
-      .from(folders)
-      .where(eq(folders.kind, 'files'))) as [{ n: number }];
-    if (n >= 200) throw new ApiError(400, 'too_many_folders');
-    const [f] = await tx
-      .insert(folders)
-      .values({
-        tenantId: auth.tenant.id,
-        ownerId: auth.user.id,
-        kind: 'files',
-        name,
-        color: COLORS[n % COLORS.length]!,
-        sort: n,
-      })
-      .returning({ id: folders.id, name: folders.name, color: folders.color });
-    return f!;
-  });
-}
-export async function renameDriveFolder(auth: AuthContext, id: string, name: string) {
-  await asUser(auth, async (tx) => {
-    const r = await tx
-      .update(folders)
-      .set({ name })
-      .where(and(eq(folders.id, id), eq(folders.kind, 'files')))
-      .returning({ id: folders.id });
-    if (!r.length) throw new ApiError(404, 'not_found');
-  });
-}
+export const createDriveFolder = (auth: AuthContext, name: string) => createKindFolder(auth, 'files', name);
+export const renameDriveFolder = (auth: AuthContext, id: string, name: string) =>
+  renameKindFolder(auth, 'files', id, name);
 /** Removing a folder keeps its files (they go to "Sem pasta"). */
-export async function deleteDriveFolder(auth: AuthContext, id: string) {
-  await asUser(auth, async (tx) => {
-    const r = await tx
-      .delete(folders)
-      .where(and(eq(folders.id, id), eq(folders.kind, 'files')))
-      .returning({ id: folders.id });
-    if (!r.length) throw new ApiError(404, 'not_found');
-  });
-}
-
-async function checkFolder(tx: Tx, id: string | null | undefined) {
-  if (!id) return null;
-  const [f] = await tx
-    .select({ id: folders.id })
-    .from(folders)
-    .where(and(eq(folders.id, id), eq(folders.kind, 'files'), isNull(folders.deletedAt)));
-  if (!f) throw new ApiError(404, 'folder_not_found');
-  return f.id;
-}
+export const deleteDriveFolder = (auth: AuthContext, id: string) => deleteKindFolder(auth, 'files', id);
+const checkFolder = (tx: Tx, id: string | null | undefined) => checkKindFolder(tx, 'files', id);
 
 // ── Uploads (S3 multipart, chunk by chunk) ──────────────────────────────────
 type Pending = {

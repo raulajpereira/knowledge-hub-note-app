@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Atas de Reunião: minutes with participants, topics, checklists, a task from a to-do, Calendar, Trash.
+// Registos Reuniões: records with participants, topics, checklists, a task from a to-do, Calendar, Trash.
 test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 } });
 test.describe.configure({ mode: 'serial' });
 
@@ -68,11 +68,14 @@ const isoToday = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-test('write minutes, a task from a to-do, on the Calendar, Trash', async ({ page }) => {
+test('write a record, a task from a to-do, on the Calendar, Trash', async ({ page }) => {
   await login(page);
   await page.goto('app/meetings');
-  await expect(page.getByText('Ainda sem atas. Crie a primeira com +.').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Nova Ata' }).click();
+  await expect(page.getByRole('link', { name: 'Registos Reuniões' })).toBeVisible();
+  await expect(page.getByText('Ainda sem registos. Crie o primeiro com +.').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Novo Registo' }).click();
+  // the new record is created on the server first: write once it is open
+  await expect(page.getByLabel('Tema da reunião')).toHaveValue('Nova reunião');
   await page.getByLabel('Tema da reunião').fill('Kick-off Atlas');
   await page.getByLabel('Data', { exact: true }).fill(isoToday());
   await page.getByLabel('Início', { exact: true }).fill('09:30');
@@ -121,6 +124,33 @@ test('write minutes, a task from a to-do, on the Calendar, Trash', async ({ page
   await expect(page.locator('.kh-cal__item', { hasText: '09:30 Kick-off Atlas' }).first()).toBeVisible();
   await page.locator('.kh-cal__item', { hasText: '09:30 Kick-off Atlas' }).first().click();
   await expect(page).toHaveURL(/app\/meetings\?m=/);
+
+  // folders: create one, a new record goes in the folder that is open, move with the selector
+  await page.getByLabel('Nome da pasta').fill('Projeto Atlas');
+  await page.getByRole('button', { name: '+ Nova Pasta' }).click();
+  const atlas = page.locator('.kh-em-folder', { hasText: 'Projeto Atlas' });
+  await expect(atlas).toHaveAttribute('data-on', 'true');
+  await expect(page.locator('.kh-mt-item')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Novo Registo' }).click();
+  // the new record is created on the server first: write once it is open
+  await expect(page.getByLabel('Tema da reunião')).toHaveValue('Nova reunião');
+  await page.getByLabel('Tema da reunião').fill('Workshop Payroll');
+  await expect(page.getByLabel('Pasta', { exact: true })).toHaveValue(/.+/);
+  await expect(atlas.locator('.kh-em-count')).toHaveText('1');
+  await page.locator('.kh-em-folder', { hasText: 'Todos os registos' }).click();
+  await expect(page.locator('.kh-mt-item')).toHaveCount(2);
+  await page.locator('.kh-mt-item', { hasText: 'Kick-off Atlas' }).click();
+  await page.getByLabel('Pasta', { exact: true }).selectOption({ label: 'Projeto Atlas' });
+  await expect(atlas.locator('.kh-em-count')).toHaveText('2');
+  // deleting the folder keeps its records
+  await page.getByRole('button', { name: 'Eliminar Projeto Atlas' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Eliminar', exact: true }).click();
+  await expect(atlas).toHaveCount(0);
+  await expect(page.locator('.kh-mt-item')).toHaveCount(2);
+  await page.locator('.kh-mt-item', { hasText: 'Workshop Payroll' }).click();
+  await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Mover para o Lixo' }).click();
+  await page.locator('.kh-mt-item', { hasText: 'Kick-off Atlas' }).click();
 
   // delete → Trash
   await page.getByRole('button', { name: 'Eliminar', exact: true }).click();

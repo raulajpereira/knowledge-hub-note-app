@@ -153,7 +153,8 @@
   font-size: 12px;
   color: rgba(255, 248, 240, 0.7);
 }
-.kh-mt-when input {
+.kh-mt-when input,
+.kh-mt-when select {
   height: 38px;
   padding: 0 12px;
   border-radius: 12px;
@@ -166,6 +167,7 @@
   color-scheme: dark;
 }
 .kh-mt-when input:focus,
+.kh-mt-when select:focus,
 .kh-mt-topics:focus,
 .kh-mt-row input:focus {
   border-color: rgba(255, 255, 255, 0.36);
@@ -371,4 +373,16 @@
   .kh-mt {
     grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) !important;
   }
+}
+
+.kh-mt-folderSel {
+  max-width: 220px;
+  cursor: pointer;
+}
+.kh-mt-folderSel option {
+  background: #2a211c;
+  color: #fbf8f5;
+}
+.kh-mt-item[data-drag] {
+  opacity: 0.45;
 }

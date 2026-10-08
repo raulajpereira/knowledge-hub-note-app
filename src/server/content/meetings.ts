@@ -4,13 +4,15 @@ import { meetings, type MeetingItem } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser } from './tenant';
+import { checkKindFolder, listKindFolders, type KindFolder } from './kindFolders';
 
-// Meeting minutes ("Atas de Reunião"): date and time, subject, participants
+// Meeting records ("Registos Reuniões"): date and time, subject, participants
 // by name (they may be outside the app), and the minutes — topics discussed,
-// points to review and things to do. Shown on the Calendar by date.
+// points to review and things to do. In flat folders; shown on the Calendar by date.
 
 export type Meeting = {
   id: string;
+  folderId: string | null;
   title: string;
   heldOn: string;
   startTime: string;
@@ -25,6 +27,7 @@ export type Meeting = {
 
 const cols = {
   id: meetings.id,
+  folderId: meetings.folderId,
   title: meetings.title,
   heldOn: meetings.heldOn,
   startTime: meetings.startTime,
@@ -43,7 +46,9 @@ const toMeeting = (r: Row): Meeting => ({
   updatedAt: r.updatedAt.toISOString(),
 });
 
-export async function listMeetings(auth: AuthContext): Promise<Meeting[]> {
+export async function listMeetings(
+  auth: AuthContext,
+): Promise<{ meetings: Meeting[]; folders: KindFolder[] }> {
   return asUser(auth, async (tx) => {
     const rows = await tx
       .select(cols)
@@ -51,13 +56,13 @@ export async function listMeetings(auth: AuthContext): Promise<Meeting[]> {
       .where(isNull(meetings.deletedAt))
       .orderBy(desc(meetings.heldOn), desc(meetings.startTime), desc(meetings.createdAt))
       .limit(5000);
-    return rows.map(toMeeting);
+    return { meetings: rows.map(toMeeting), folders: await listKindFolders(tx, 'meetings') };
   });
 }
 
 export async function createMeeting(
   auth: AuthContext,
-  input: { title: string; heldOn: string; startTime?: string; endTime?: string },
+  input: { title: string; heldOn: string; startTime?: string; endTime?: string; folderId?: string | null },
 ): Promise<Meeting> {
   return asUser(auth, async (tx) => {
     const [{ n }] = (await tx
@@ -70,6 +75,7 @@ export async function createMeeting(
       .values({
         tenantId: auth.tenant.id,
         ownerId: auth.user.id,
+        folderId: await checkKindFolder(tx, 'meetings', input.folderId),
         title: input.title,
         heldOn: input.heldOn,
         startTime: input.startTime ?? '',
@@ -81,14 +87,19 @@ export async function createMeeting(
 }
 
 export type MeetingPatch = Partial<
-  Pick<Meeting, 'title' | 'heldOn' | 'startTime' | 'endTime' | 'participants' | 'topics' | 'review' | 'todos'>
+  Pick<
+    Meeting,
+    'folderId' | 'title' | 'heldOn' | 'startTime' | 'endTime' | 'participants' | 'topics' | 'review' | 'todos'
+  >
 >;
 
 export async function updateMeeting(auth: AuthContext, id: string, patch: MeetingPatch): Promise<Meeting> {
   return asUser(auth, async (tx) => {
+    const set = { ...patch, updatedAt: new Date() };
+    if (patch.folderId !== undefined) set.folderId = await checkKindFolder(tx, 'meetings', patch.folderId);
     const [r] = await tx
       .update(meetings)
-      .set({ ...patch, updatedAt: new Date() })
+      .set(set)
       .where(and(eq(meetings.id, id), isNull(meetings.deletedAt)))
       .returning(cols);
     if (!r) throw new ApiError(404, 'not_found');

@@ -43,7 +43,7 @@ export const folders = pgTable(
     tenantId: tenantId(),
     ownerId: ownerId(),
     kind: text('kind', {
-      enum: ['notes', 'tasks', 'artifacts', 'passwords', 'emails', 'api', 'files'],
+      enum: ['notes', 'tasks', 'artifacts', 'passwords', 'emails', 'api', 'files', 'meetings'],
     }).notNull(),
     name: text('name').notNull(),
     color: text('color').notNull(),
@@ -56,7 +56,7 @@ export const folders = pgTable(
     index('folders_owner_kind_idx').on(t.tenantId, t.ownerId, t.kind),
     check(
       'folders_kind_chk',
-      sql`${t.kind} in ('notes','tasks','artifacts','passwords','emails','api','files')`,
+      sql`${t.kind} in ('notes','tasks','artifacts','passwords','emails','api','files','meetings')`,
     ),
     check('folders_name_len', sql`char_length(${t.name}) between 1 and 80`),
   ],
@@ -369,6 +369,7 @@ export const meetings = pgTable(
     id: id(),
     tenantId: tenantId(),
     ownerId: ownerId(),
+    folderId: uuid('folder_id').references(() => folders.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     heldOn: date('held_on', { mode: 'string' }).notNull(),
     /** 'HH:MM' or '' */

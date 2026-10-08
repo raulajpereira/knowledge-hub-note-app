@@ -4,21 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { useConfirm, useToast } from '@/components/ui';
+import { useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
 import '../emails/emails.css';
+import '../artifacts/artifacts.css';
 import './meetings.css';
 
-// Atas de Reunião: a meeting record kept as minutes — when, the subject, who
+// Registos Reuniões: a meeting record kept as minutes — when, the subject, who
 // was there (any names, people may be outside the app), the topics discussed,
-// points to review and things to do. Shown on the Calendar by its date;
-// linkable to notes, tasks and project issues.
+// points to review and things to do. In folders (as Artefactos); shown on the
+// Calendar by its date; linkable to notes, tasks and project issues.
 
 type Item = { t: string; done: boolean };
 type Meeting = {
   id: string;
+  folderId: string | null;
   title: string;
   heldOn: string;
   startTime: string;
@@ -31,6 +33,7 @@ type Meeting = {
   updatedAt: string;
 };
 type Patch = Partial<Omit<Meeting, 'id' | 'createdAt' | 'updatedAt'>>;
+type Folder = { id: string; name: string; color: string };
 
 const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
   <svg
@@ -50,6 +53,7 @@ const I = {
   search: '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>',
   plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
   x: '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>',
   trash: '<path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path>',
   ok: '<path d="M5 12.5l4.5 4.5L19 7.5"></path>',
   task: '<rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8.5 12l2.5 2.5 4.5-5"></path>',
@@ -158,15 +162,23 @@ export function MeetingsView() {
   const sp = useSearchParams();
   const { modules } = useShell();
   const [items, setItems] = useState<Meeting[] | null>(null);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folder0, setFolder] = usePersistentState<string>('meetings.folder', 'all');
+  const [newFolder, setNewFolder] = useState('');
+  const [dragId, setDragId] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [who, setWho] = useState('');
   const [taskOf, setTaskOf] = useState<Record<string, true>>({});
   const timers = useRef(new Map<string, { patch: Patch; tm: ReturnType<typeof setTimeout> }>());
-  const activeId = sp.get('m');
+  // the open record switches at once; the URL (?m=) follows
+  const urlId = sp.get('m');
+  const [activeId, setActiveId] = useState<string | null>(urlId);
+  useEffect(() => setActiveId(urlId), [urlId]);
   const loc = lang === 'en' ? 'en-GB' : 'pt-PT';
 
   const open = useCallback(
     (id: string | null) => {
+      setActiveId(id);
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('m', id);
       else next.delete('m');
@@ -176,8 +188,11 @@ export function MeetingsView() {
   );
 
   useEffect(() => {
-    api<{ meetings: Meeting[] }>('/meetings')
-      .then((r) => setItems(r.meetings))
+    api<{ meetings: Meeting[]; folders: Folder[] }>('/meetings')
+      .then((r) => {
+        setItems(r.meetings);
+        setFolders(r.folders);
+      })
       .catch(() => setItems([]));
   }, []);
 
@@ -209,15 +224,18 @@ export function MeetingsView() {
   };
 
   const all = useMemo(() => items ?? [], [items]);
+  // a folder that is gone falls back to "Todas"
+  const folder = folder0 === 'all' || folders.some((f) => f.id === folder0) ? folder0 : 'all';
   const query = q.trim().toLowerCase();
   const list = all
     .filter(
       (m) =>
-        !query ||
-        [m.title, m.topics, ...m.participants, ...m.review.map((x) => x.t), ...m.todos.map((x) => x.t)]
-          .join(' ')
-          .toLowerCase()
-          .includes(query),
+        (folder === 'all' || m.folderId === folder) &&
+        (!query ||
+          [m.title, m.topics, ...m.participants, ...m.review.map((x) => x.t), ...m.todos.map((x) => x.t)]
+            .join(' ')
+            .toLowerCase()
+            .includes(query)),
     )
     .sort((a, b) => (b.heldOn + b.startTime).localeCompare(a.heldOn + a.startTime));
   const act = all.find((m) => m.id === activeId) ?? null;
@@ -243,6 +261,7 @@ export function MeetingsView() {
       const { meeting } = await api<{ meeting: Meeting }>('/meetings', {
         title: t('mt_newTitle'),
         heldOn: today(),
+        folderId: folder === 'all' ? null : folder,
       });
       setItems((cur) => [meeting, ...(cur ?? [])]);
       setQ('');
@@ -271,6 +290,46 @@ export function MeetingsView() {
     setItems((cur) => cur && cur.filter((x) => x.id !== act.id));
     open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
+  };
+  const addFolder = async () => {
+    const n = newFolder.trim();
+    if (!n) return;
+    try {
+      const { folder: f } = await api<{ folder: Folder }>('/meetings/folders', { name: n.slice(0, 80) });
+      setFolders((cur) => [...cur, f]);
+      setNewFolder('');
+      setFolder(f.id);
+    } catch {
+      fail();
+    }
+  };
+  const removeFolder = async (f: Folder) => {
+    const n = all.filter((m) => m.folderId === f.id).length;
+    if (
+      n &&
+      !(await confirm({
+        title: t('mt_folderDelT').replace('{name}', f.name),
+        body: t('mt_folderDel'),
+        confirmLabel: t('del'),
+        cancelLabel: t('tr_cancel'),
+      }))
+    )
+      return;
+    try {
+      await api(`/meetings/folders/${f.id}`, undefined, 'DELETE');
+      setFolders((cur) => cur.filter((x) => x.id !== f.id));
+      setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: null } : x)));
+      if (folder === f.id) setFolder('all');
+    } catch {
+      fail();
+    }
+  };
+  /** drag a meeting onto a folder ("Todas" takes it out of its folder) */
+  const dropOn = (id: string, target: string) => {
+    const folderId = target === 'all' ? null : target;
+    const m = all.find((x) => x.id === id);
+    if (!m || m.folderId === folderId) return;
+    upd(id, { folderId }, 0);
   };
   const addWho = () => {
     if (!act) return;
@@ -327,6 +386,68 @@ export function MeetingsView() {
             <Svg d={I.plus} s={16} />
           </button>
         </div>
+        <div className="kh-em-folders kh-ar-folders">
+          {[{ id: 'all', name: t('mt_all'), top: true }, ...folders].map((f) => {
+            const top = 'top' in f;
+            const n = top ? all.length : all.filter((m) => m.folderId === f.id).length;
+            return (
+              <div
+                key={f.id}
+                className="kh-em-folder"
+                data-on={folder === f.id || undefined}
+                data-top={top || undefined}
+                onClick={() => setFolder(f.id)}
+                onDragOver={(e) => dragId && e.preventDefault()}
+                onDrop={(e) => {
+                  if (!dragId) return;
+                  e.preventDefault();
+                  dropOn(dragId, f.id);
+                  setDragId(null);
+                }}
+              >
+                <Svg d={I.folder} s={17} />
+                <button
+                  type="button"
+                  className="kh-rowbtn kh-em-folder__name"
+                  aria-current={folder === f.id || undefined}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFolder(f.id);
+                  }}
+                >
+                  {f.name}
+                </button>
+                {!top && (
+                  <button
+                    type="button"
+                    title={t('del')}
+                    aria-label={`${t('del')} ${f.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void removeFolder(f as Folder);
+                    }}
+                  >
+                    <Svg d={I.x} s={14} />
+                  </button>
+                )}
+                <span className="kh-em-count">{n}</span>
+              </div>
+            );
+          })}
+          <div className="kh-em-newfolder">
+            <input
+              value={newFolder}
+              maxLength={80}
+              placeholder={t('a_folderPh')}
+              aria-label={t('a_folderPh')}
+              onChange={(e) => setNewFolder(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
+            />
+            <button type="button" onClick={() => void addFolder()}>
+              + {t('newFolder')}
+            </button>
+          </div>
+        </div>
         <section className="kh-em-list kh-mt-items" aria-label={t('nav_meetings')}>
           {groups.map((g) => (
             <div key={g.key} className="kh-mt-group">
@@ -339,8 +460,16 @@ export function MeetingsView() {
                     className="kh-mt-item"
                     data-on={m.id === activeId || undefined}
                     data-next={m.heldOn >= now || undefined}
+                    data-drag={dragId === m.id || undefined}
                     role="button"
                     tabIndex={0}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', m.id);
+                      setDragId(m.id);
+                    }}
+                    onDragEnd={() => setDragId(null)}
                     onClick={() => open(m.id)}
                     onKeyDown={(e) => e.key === 'Enter' && open(m.id)}
                   >
@@ -422,6 +551,22 @@ export function MeetingsView() {
                   value={act.endTime}
                   onChange={(e) => upd(act.id, { endTime: e.target.value }, 0)}
                 />
+              </label>
+              <label>
+                <span>{t('mt_folder')}</span>
+                <select
+                  className="kh-mt-folderSel"
+                  aria-label={t('mt_folder')}
+                  value={act.folderId ?? ''}
+                  onChange={(e) => upd(act.id, { folderId: e.target.value || null }, 0)}
+                >
+                  <option value="">{t('mt_noFolder')}</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
               </label>
               <span className="kh-mt-whenTxt">
                 <Svg d={I.clock} s={14} />

@@ -8,9 +8,11 @@ export const MeetingCreate = z.object({
   heldOn: z.iso.date(),
   startTime: time.optional(),
   endTime: time.optional(),
+  folderId: z.uuid().nullable().optional(),
 });
 
 export const MeetingPatch = z.object({
+  folderId: z.uuid().nullable().optional(),
   title: z.string().trim().min(1).max(300).optional(),
   heldOn: z.iso.date().optional(),
   startTime: time.optional(),

@@ -610,7 +610,7 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
   });
 
-  it('meetings: private minutes, links to notes/tasks/issues, upcoming count, Trash', async () => {
+  it('meetings: private records, folders, links to notes/tasks/issues, upcoming count, Trash', async () => {
     const meet = await import('@/server/content/meetings');
     const a = await signedIn('meet-a@example.pt');
     const b = await signedIn('meet-b@example.pt');
@@ -623,7 +623,7 @@ describe.skipIf(!enabled)('notes', () => {
     const past = await meet.createMeeting(a, { title: 'Steering antigo', heldOn: '2020-03-02' });
 
     // private to its owner
-    expect(await meet.listMeetings(b)).toEqual([]);
+    expect(await meet.listMeetings(b)).toEqual({ meetings: [], folders: [] });
     expect(await codeOf(meet.updateMeeting(b, m.id, { title: 'x' }))).toBe('not_found');
 
     const up = await meet.updateMeeting(a, m.id, {
@@ -640,7 +640,29 @@ describe.skipIf(!enabled)('notes', () => {
     });
     // a bad time is refused by the database too
     expect(await codeOf(meet.updateMeeting(a, m.id, { startTime: '25:00' }))).not.toBe('ok');
-    expect((await meet.listMeetings(a)).map((x) => x.title)).toEqual(['Kick-off Atlas', 'Steering antigo']);
+    expect((await meet.listMeetings(a)).meetings.map((x) => x.title)).toEqual([
+      'Kick-off Atlas',
+      'Steering antigo',
+    ]);
+
+    // folders: own only; deleting one leaves its meetings without a folder
+    const kf = await import('@/server/content/kindFolders');
+    const fo = await kf.createKindFolder(a, 'meetings', 'Projeto Atlas');
+    const fb = await kf.createKindFolder(b, 'meetings', 'Do Rui');
+    expect((await meet.updateMeeting(a, m.id, { folderId: fo.id })).folderId).toBe(fo.id);
+    expect(await codeOf(meet.updateMeeting(a, m.id, { folderId: fb.id }))).toBe('folder_not_found');
+    const nf = await kf.createKindFolder(a, 'files', 'Ficheiros');
+    expect(await codeOf(meet.createMeeting(a, { title: 'x', heldOn: '2099-01-01', folderId: nf.id }))).toBe(
+      'folder_not_found',
+    );
+    const inF = await meet.createMeeting(a, { title: 'Na pasta', heldOn: '2099-02-01', folderId: fo.id });
+    expect((await meet.listMeetings(a)).folders.map((f) => f.name)).toEqual(['Projeto Atlas']);
+    expect((await meet.listMeetings(b)).folders.map((f) => f.name)).toEqual(['Do Rui']);
+    expect(await codeOf(kf.deleteKindFolder(b, 'meetings', fo.id))).toBe('not_found');
+    await kf.deleteKindFolder(a, 'meetings', fo.id);
+    expect((await meet.listMeetings(a)).meetings.map((x) => x.folderId)).toEqual([null, null, null]);
+    await meet.trashMeeting(a, inF.id);
+    await notes.purgeTrash(a, [{ kind: 'meeting', id: inF.id }]);
 
     // links to a note, a task and an issue
     const n = await notes.createNote(a, { title: 'Notas do kick-off' });
@@ -669,10 +691,10 @@ describe.skipIf(!enabled)('notes', () => {
       'Steering antigo',
     ]);
     await notes.restoreTrash(a, [{ kind: 'meeting', id: past.id }]);
-    expect(await meet.listMeetings(a)).toHaveLength(2);
+    expect((await meet.listMeetings(a)).meetings).toHaveLength(2);
     await meet.trashMeeting(a, m.id);
     await notes.purgeTrash(a, [{ kind: 'meeting', id: m.id }]);
-    expect((await meet.listMeetings(a)).map((x) => x.title)).toEqual(['Steering antigo']);
+    expect((await meet.listMeetings(a)).meetings.map((x) => x.title)).toEqual(['Steering antigo']);
     expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
   });
 

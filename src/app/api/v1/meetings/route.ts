@@ -3,10 +3,10 @@ import { requireContent } from '@/server/content/guard';
 import { createMeeting, listMeetings } from '@/server/content/meetings';
 import { MeetingCreate } from './schemas';
 
-/** GET /meetings — the caller's meeting minutes, newest first · POST creates one. */
+/** GET /meetings — the caller's meeting records (newest first) and folders · POST creates one. */
 export const GET = handler(async () => {
   const auth = await requireContent('meetings');
-  return json({ meetings: await listMeetings(auth) });
+  return json(await listMeetings(auth));
 });
 
 export const POST = handler(async (req) => {

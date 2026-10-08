@@ -7,7 +7,7 @@ import { translate } from '@/i18n';
 import { Placeholder } from '@/components/shell/Placeholder';
 import { MeetingsView } from '@/components/meetings/MeetingsView';
 
-export const metadata = { title: 'KnowledgeHub · Atas de Reunião' };
+export const metadata = { title: 'KnowledgeHub · Registos Reuniões' };
 
 export default async function MeetingsPage() {
   const auth = await getAuth();

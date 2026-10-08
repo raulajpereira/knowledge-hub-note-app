@@ -18,7 +18,7 @@ export const MODULE_GROUPS: ReadonlyArray<{
       ['notes', 'Notas', 'Notes'],
       ['voice', 'Notas de Voz', 'Voice Notes'],
       ['tasks', 'Tarefas', 'Tasks'],
-      ['meetings', 'Atas de Reunião', 'Meeting Minutes'],
+      ['meetings', 'Registos Reuniões', 'Meeting Records'],
       ['files', 'Ficheiros', 'Files'],
     ],
   },
