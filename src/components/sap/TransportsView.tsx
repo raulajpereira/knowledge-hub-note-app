@@ -7,7 +7,7 @@ import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
 import { envColor } from '@/lib/sap';
-import { ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
+import { Popover, ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
 import { SidePanel } from './SidePanel';
 import './sap.css';
@@ -112,6 +112,7 @@ export function TransportsView() {
   });
   const [q, setQ] = useState('');
   const [fOpen, setFOpen] = useState<FKey | null>(null);
+  const fBtn = useRef<HTMLButtonElement>(null);
   const [copied, setCopied] = useState(false);
   const timers = useRef(new Map<string, { tm: ReturnType<typeof setTimeout>; patch: Patch }>());
   // the open filter menu closes on Escape or a click anywhere else
@@ -119,7 +120,8 @@ export function TransportsView() {
     if (!fOpen) return;
     const key = (e: KeyboardEvent) => e.key === 'Escape' && setFOpen(null);
     const down = (e: PointerEvent) => {
-      if (!(e.target as Element).closest?.('.kh-ot-f')) setFOpen(null);
+      const el = e.target as Element;
+      if (!el.closest?.('.kh-ot-f') && !el.closest?.('.kh-popover')) setFOpen(null);
     };
     window.addEventListener('keydown', key);
     window.addEventListener('pointerdown', down);
@@ -575,6 +577,7 @@ export function TransportsView() {
             return (
               <div key={k} className="kh-ot-f">
                 <button
+                  ref={isOpen ? fBtn : undefined}
                   type="button"
                   data-on={sel.length > 0 || undefined}
                   aria-expanded={isOpen}
@@ -616,7 +619,16 @@ export function TransportsView() {
                   </svg>
                 </button>
                 {isOpen && (
-                  <div className="kh-ot-menu" role="listbox" aria-multiselectable="true" aria-label={label}>
+                  <Popover
+                    anchor={fBtn}
+                    align="left"
+                    onClose={() => setFOpen(null)}
+                    className="kh-ot-menu"
+                    width={250}
+                    role="listbox"
+                    aria-multiselectable
+                    aria-label={label}
+                  >
                     {opts.map((o) => {
                       const on = sel.includes(o.v);
                       return (
@@ -636,7 +648,7 @@ export function TransportsView() {
                         </button>
                       );
                     })}
-                  </div>
+                  </Popover>
                 )}
               </div>
             );

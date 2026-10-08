@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ShareButton } from '@/components/share/ShareButton';
 import { FolderShareDialog } from '@/components/share/FolderShareDialog';
@@ -9,7 +9,7 @@ import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { tagTint } from '@/lib/tags';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Popover, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
@@ -91,7 +91,8 @@ export function ArtifactsView() {
   const [cols, setCols] = usePref<Cols>('cols', {});
   const [liveList, setLiveList] = useState<number | null>(null);
   const [folder0, setFolder] = usePersistentState<string>('artifacts.folder', 'all');
-  const [mode, setMode] = usePersistentState<'preview' | 'code'>('artifacts.mode', 'preview');
+  // an artifact always opens in the preview (the code is one click away)
+  const [mode, setMode] = useState<'preview' | 'code'>('preview');
   const [items, setItems] = useState<Summary[] | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [full, setFull] = useState<Full | null>(null);
@@ -100,6 +101,7 @@ export function ArtifactsView() {
   const [newFolder, setNewFolder] = useState('');
   const [newTag, setNewTag] = useState('');
   const [histOpen, setHistOpen] = useState(false);
+  const histBtn = useRef<HTMLButtonElement>(null);
   const [copied, setCopied] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -148,6 +150,7 @@ export function ArtifactsView() {
   useEffect(() => {
     setDraft(null);
     setHistOpen(false);
+    setMode('preview');
     setNewTag('');
     if (!activeId) return setFull(null);
     let live = true;
@@ -653,6 +656,7 @@ export function ArtifactsView() {
               )}
               <div className="kh-ar-histwrap">
                 <button
+                  ref={histBtn}
                   type="button"
                   className="kh-em-act"
                   title={t('a_history')}
@@ -664,7 +668,14 @@ export function ArtifactsView() {
                   <Svg d={I.hist} />
                 </button>
                 {histOpen && (
-                  <div className="kh-ar-hist" role="dialog" aria-label={t('a_history')}>
+                  <Popover
+                    anchor={histBtn}
+                    onClose={() => setHistOpen(false)}
+                    className="kh-ar-hist"
+                    width={300}
+                    role="dialog"
+                    aria-label={t('a_history')}
+                  >
                     <div className="kh-ar-hist__t">{t('a_history')}</div>
                     {full.versions
                       .map((v, i) => ({ ...v, n: i + 1 }))
@@ -682,7 +693,7 @@ export function ArtifactsView() {
                           )}
                         </div>
                       ))}
-                  </div>
+                  </Popover>
                 )}
               </div>
               {!ro && (

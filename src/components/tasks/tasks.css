@@ -637,3 +637,16 @@ fieldset.kh-tk-detail:disabled .kh-tk-donebtn {
   flex: none;
   color: rgba(255, 248, 240, 0.7);
 }
+
+.kh-tk-type {
+  flex: none;
+  font-weight: 600;
+  color: var(--c);
+}
+/* on the light selected card the type reads as a pill with dark text */
+.kh-tk-item[data-on] .kh-tk-type {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--c);
+  color: #16131f;
+}

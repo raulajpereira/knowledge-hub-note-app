@@ -30,7 +30,7 @@ import {
   type Row,
   type Val,
 } from '@/lib/codelib';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Popover, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
@@ -168,7 +168,7 @@ export function CodelibView() {
   const base = useRef(new Map<string, string>());
   const conflictRef = useRef<string | null>(null);
   conflictRef.current = conflict;
-  const newRef = useRef<HTMLDivElement>(null);
+  const newRef = useRef<HTMLButtonElement>(null);
   const copyTm = useRef<ReturnType<typeof setTimeout>>(undefined);
   const activeId = sp.get('o');
 
@@ -195,20 +195,6 @@ export function CodelibView() {
     [path, router, sp],
   );
 
-  // new-object menu: closes on Escape / outside click
-  useEffect(() => {
-    if (!newOpen) return;
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && setNewOpen(false);
-    const down = (e: PointerEvent) => {
-      if (!newRef.current?.contains(e.target as Node)) setNewOpen(false);
-    };
-    document.addEventListener('keydown', key);
-    document.addEventListener('pointerdown', down);
-    return () => {
-      document.removeEventListener('keydown', key);
-      document.removeEventListener('pointerdown', down);
-    };
-  }, [newOpen]);
 
   // ── Saving (debounced per object, `base` = updatedAt it was edited from) ──
   const send = useCallback(
@@ -543,8 +529,9 @@ export function CodelibView() {
         <div className="kh-cl-lhead">
           <div className="kh-cl-titlerow">
             <h1>{t('nav_codelib')}</h1>
-            <div className="kh-cl-newwrap" ref={newRef}>
+            <div className="kh-cl-newwrap">
               <button
+                ref={newRef}
                 type="button"
                 className="kh-cl-new"
                 title={t('cl_new')}
@@ -555,7 +542,14 @@ export function CodelibView() {
                 <Svg d={PLUS} size={16} sw={2} />
               </button>
               {newOpen && (
-                <div className="kh-cl-newmenu" role="menu" aria-label={t('cl_new')}>
+                <Popover
+                  anchor={newRef}
+                  onClose={() => setNewOpen(false)}
+                  className="kh-cl-newmenu"
+                  width={280}
+                  role="menu"
+                  aria-label={t('cl_new')}
+                >
                   {CL_TYPE_IDS.map((ty) => (
                     <button key={ty} type="button" role="menuitem" onClick={() => void create(ty)}>
                       <span
@@ -568,7 +562,7 @@ export function CodelibView() {
                       <span className="kh-cl-tc">{CL_TYPES[ty][0]}</span>
                     </button>
                   ))}
-                </div>
+                </Popover>
               )}
             </div>
           </div>

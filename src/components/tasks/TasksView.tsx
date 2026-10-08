@@ -852,7 +852,7 @@ export function TasksView() {
                       </button>
                     </div>
                     <div className="kh-tk-item__meta">
-                      <span style={{ color: TYPE_C[x.type], fontWeight: 600, flex: 'none' }}>
+                      <span className="kh-tk-type" style={{ ['--c' as string]: TYPE_C[x.type] }}>
                         {t(x.type === 'tech' ? 'tk_tech' : 'tk_mgmt')}
                       </span>
                       {x.dueOn && (

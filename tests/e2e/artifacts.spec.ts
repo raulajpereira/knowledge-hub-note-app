@@ -101,7 +101,10 @@ test('create, edit the HTML as versions, isolated preview, history, new tab, Tra
   expect(res.headers()['content-security-policy']).toContain('sandbox');
   expect(res.headers()['content-security-policy']).not.toContain('allow-same-origin');
 
+  // left in Código, an artifact always opens again in Pré-visualizar
+  await page.getByRole('radio', { name: 'Código' }).click();
   await page.reload();
+  await expect(page.getByRole('radio', { name: 'Pré-visualizar' })).toBeChecked();
   await expect(page.locator('.kh-ar-tag')).toContainText('SAP');
   await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Mover para o Lixo' }).click();

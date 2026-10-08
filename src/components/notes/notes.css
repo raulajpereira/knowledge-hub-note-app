@@ -1258,3 +1258,52 @@
 .kh-ne-code__bar :is(select, button):hover {
   background: rgba(255, 255, 255, 0.16);
 }
+
+/* narrow screens: the inspector opens over the editor's right edge */
+.kh-nt-insp-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 8;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fbf8f5;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+.kh-nt-insp-btn[aria-expanded='true'] {
+  background: #fbf8f5;
+  color: #2a211c;
+}
+.kh-nt-insp--float {
+  position: absolute;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  z-index: 9;
+  width: min(320px, 90%);
+  padding: 12px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(60, 46, 38, 0.72), rgba(40, 30, 25, 0.72));
+  backdrop-filter: blur(30px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+}
+.kh-nt-insp__close {
+  align-self: flex-end;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fbf8f5;
+  font-size: 16px;
+  cursor: pointer;
+}

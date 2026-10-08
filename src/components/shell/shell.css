@@ -12,7 +12,8 @@
   position: relative;
   /* body is zoomed by "Tamanho dos Elementos"; keep one screen tall. */
   height: calc(100vh / var(--ui-scale, 1));
-  min-width: 1280px;
+  /* laptops (1024–1280 px) fit without sideways scrolling */
+  min-width: 1024px;
   overflow: hidden;
   color: var(--text);
 }
@@ -169,6 +170,27 @@
 }
 @media (max-width: 1500px) {
   .kh-hdr__dtext {
+    display: none;
+  }
+}
+@media (max-width: 1279px) {
+  .kh-hdr {
+    gap: 10px;
+  }
+  .kh-hdr__pill > span {
+    display: none;
+  }
+  .kh-hdr__pill {
+    width: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+  .kh-hdr__clock {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .kh-hdr__word {
     display: none;
   }
 }

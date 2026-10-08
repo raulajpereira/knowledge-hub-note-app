@@ -635,5 +635,6 @@
   "ne_codePlain": "Plain text",
   "t_show": "Show",
   "t_sortBy": "Sort by",
-  "t_allFolders": "All folders"
+  "t_allFolders": "All folders",
+  "nt_inspector": "Links and details"
 }

@@ -624,11 +624,39 @@ function EditorCard({
 }
 
 // ── Inspector: Ligações + Detalhes ─────────────────────────────────────────
-function Inspector({ note, folderName, author }: { note: Note; folderName: string; author: string }) {
+function useNarrow(max: number) {
+  const [n, setN] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${max}px)`);
+    const on = () => setN(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [max]);
+  return n;
+}
+
+function Inspector({
+  note,
+  folderName,
+  author,
+  onClose,
+}: {
+  note: Note;
+  folderName: string;
+  author: string;
+  /** set when shown as an overlay (narrow screens) */
+  onClose?: () => void;
+}) {
   const { t } = useI18n();
   const when = useWhen();
   return (
-    <aside className="kh-nt-insp">
+    <aside className={onClose ? 'kh-nt-insp kh-nt-insp--float' : 'kh-nt-insp'} aria-label={t('nt_inspector')}>
+      {onClose && (
+        <button type="button" className="kh-nt-insp__close" onClick={onClose} aria-label={t('i_close')}>
+          ×
+        </button>
+      )}
       <Connections type="note" id={note.id} transports />
       <div className="kh-nt-insp__card kh-nt-insp__card--details">
         <div className="kh-nt-insp__h">{t('details')}</div>
@@ -899,7 +927,10 @@ export function NotesView() {
 
   const listW = liveList ?? cols.list ?? COL_DEFAULTS.list;
   const inspW = liveInsp ?? cols.insp ?? COL_DEFAULTS.insp;
-  const showInsp = !focus && !!note;
+  // below 1366 px the inspector is not a column: a button opens it over the editor's edge
+  const narrow = useNarrow(1365);
+  const [inspOpen, setInspOpen] = useState(false);
+  const showInsp = !focus && !!note && !narrow;
   const curFolder = (note?.mine && note.folderId && folderMap.get(note.folderId)) || NO_FOLDER;
   const listTitle =
     validFilter === 'all'
@@ -1022,6 +1053,40 @@ export function NotesView() {
             folderName={note.mine ? curFolder.name : (noteShared?.name ?? '')}
             author={note.mine ? me.user.name : (noteShared?.owner?.name ?? '')}
           />
+        </>
+      )}
+      {narrow && !focus && note && (
+        <>
+          <button
+            type="button"
+            className="kh-nt-insp-btn"
+            aria-expanded={inspOpen}
+            title={t('nt_inspector')}
+            aria-label={t('nt_inspector')}
+            onClick={() => setInspOpen((o) => !o)}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <rect x="3.5" y="4" width="17" height="16" rx="3" />
+              <path d="M14.5 4v16" />
+            </svg>
+          </button>
+          {inspOpen && (
+            <Inspector
+              note={note}
+              folderName={note.mine ? curFolder.name : (noteShared?.name ?? '')}
+              author={note.mine ? me.user.name : (noteShared?.owner?.name ?? '')}
+              onClose={() => setInspOpen(false)}
+            />
+          )}
         </>
       )}
       {fs && (
