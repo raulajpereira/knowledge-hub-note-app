@@ -1,18 +1,25 @@
 // Background worker (BullMQ). Runs as its own container from the same
-// codebase: `node dist/worker.mjs`. Phase 0 only wires the scheduler and a
-// heartbeat; RSS refresh, purges, expiries, emails etc. plug in here later.
+// codebase: `node dist/worker.mjs`. Heartbeat, the daily license job and the
+// transactional email queue.
 import { Worker } from 'bullmq';
 import { QUEUES, WORKER_HEARTBEAT_KEY, queue } from '@/lib/queue';
 import { createQueueConnection, redis } from '@/lib/redis';
 import { env } from '@/lib/env';
 import { deliverMail } from '@/server/mail/send';
 import type { MailMessage } from '@/server/mail/templates';
+import { runLicenseJob } from '@/server/jobs/licenses';
 
 type JobHandler = () => Promise<unknown>;
 
 const handlers: Record<string, JobHandler> = {
   heartbeat: async () => {
     await redis().set(WORKER_HEARTBEAT_KEY, String(Date.now()), 'EX', 600);
+  },
+  // trials and renewals → suspended, reminders, expired codes, purge of revoked data (30 days)
+  licenses: async () => {
+    const r = await runLicenseJob();
+    console.log('[worker] licenses', JSON.stringify(r));
+    return r;
   },
 };
 
@@ -23,6 +30,13 @@ async function main() {
     'heartbeat',
     { every: 60_000 },
     { name: 'heartbeat', opts: { removeOnComplete: 100, removeOnFail: 500 } },
+  );
+
+  // every day at 03:17 (server time)
+  await queue(QUEUES.system).upsertJobScheduler(
+    'licenses',
+    { pattern: '17 3 * * *' },
+    { name: 'licenses', opts: { removeOnComplete: 30, removeOnFail: 100 } },
   );
 
   const worker = new Worker(

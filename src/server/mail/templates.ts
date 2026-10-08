@@ -71,6 +71,52 @@ const COPY: Record<string, Record<Lang, Copy>> = {
       foot: 'You receive this email as an administrator of the KnowledgeHub Console.',
     },
   },
+  planApproved: {
+    pt: {
+      subject: 'O seu pedido de plano foi aprovado · KnowledgeHub',
+      title: 'Pedido aprovado',
+      body: 'O pedido de {plan} para {client} foi aprovado e já está ativo. {extra}',
+      cta: 'Abrir o KnowledgeHub',
+      foot: 'Obrigado por usar o KnowledgeHub.',
+    },
+    en: {
+      subject: 'Your plan request was approved · KnowledgeHub',
+      title: 'Request approved',
+      body: 'The {plan} request for {client} was approved and is active now. {extra}',
+      cta: 'Open KnowledgeHub',
+      foot: 'Thank you for using KnowledgeHub.',
+    },
+  },
+  planRejected: {
+    pt: {
+      subject: 'Sobre o seu pedido de plano · KnowledgeHub',
+      title: 'Pedido não aprovado',
+      body: 'Não foi possível aprovar o pedido de {plan} para {client}. {extra} Responda a este email se quiser falar connosco.',
+      foot: 'Obrigado por usar o KnowledgeHub.',
+    },
+    en: {
+      subject: 'About your plan request · KnowledgeHub',
+      title: 'Request not approved',
+      body: "We couldn't approve the {plan} request for {client}. {extra} Reply to this email if you'd like to talk to us.",
+      foot: 'Thank you for using KnowledgeHub.',
+    },
+  },
+  renewalReminder: {
+    pt: {
+      subject: 'A sua subscrição renova em {days} dias · KnowledgeHub',
+      title: 'Renovação próxima',
+      body: 'A subscrição {plan} de {client} renova a {date}. Se precisar de mudar de plano ou de lugares, responda a este email.',
+      cta: 'Abrir o KnowledgeHub',
+      foot: 'Recebe este email por ser administrador da conta.',
+    },
+    en: {
+      subject: 'Your subscription renews in {days} days · KnowledgeHub',
+      title: 'Upcoming renewal',
+      body: 'The {plan} subscription of {client} renews on {date}. If you need to change plan or seats, reply to this email.',
+      cta: 'Open KnowledgeHub',
+      foot: 'You receive this email as the account administrator.',
+    },
+  },
   verify: {
     pt: {
       subject: 'Confirme o seu email · KnowledgeHub',

@@ -15,11 +15,14 @@ import { PrefsProvider, usePrefsContext } from '@/components/shell/PrefsProvider
 import '@/components/shell/fonts';
 import '@/components/shell/shell.css';
 import { useA } from './ui';
+import { adminApi } from '@/lib/client/api';
 import { Overview } from './Overview';
 import { Codes } from './Codes';
 import { Audit } from './Audit';
 import { ClientList, ClientPage, UserPage } from './Clients';
 import { Admins } from './Admins';
+import { Plans } from './Plans';
+import { Requests } from './Requests';
 import './admin.css';
 
 export type AdminRole = 'owner' | 'admin' | 'billing' | 'support' | 'readonly';
@@ -74,7 +77,7 @@ const SEC_AREA: Record<Section, Area> = {
   audit: 'audit',
 };
 /** Sections built so far (the rest arrive with Fases 10.2/10.3). */
-const READY: Section[] = ['overview', 'packs', 'inds', 'codes', 'admins', 'audit'];
+const READY: Section[] = ['overview', 'packs', 'inds', 'codes', 'plans', 'requests', 'admins', 'audit'];
 
 const ICONS: Record<Section, string> = {
   overview:
@@ -191,6 +194,19 @@ function Console({ me }: { me: AdminMe }) {
   const sec: Section = SEC_AREA[asked] && visible(asked) ? asked : 'overview';
 
   const [drawerNode, setDrawerNode] = useState<React.ReactNode | null>(null);
+  // badge: plan requests still to handle
+  const [pendingReq, setPendingReq] = useState(0);
+  useEffect(() => {
+    if (!me.totp || !can('requests')) return;
+    const load = () =>
+      adminApi<{ requests: Array<{ status: string }> }>('/requests')
+        .then((r) => setPendingReq(r.requests.filter((x) => x.status === 'new').length))
+        .catch(() => {});
+    void load();
+    // Pedidos tells when one was handled
+    window.addEventListener('kh-admin-requests', load);
+    return () => window.removeEventListener('kh-admin-requests', load);
+  }, [sec, sp, me.totp, can]);
   const go = useCallback(
     (s: Section, extra: Record<string, string> = {}) => {
       setDrawerNode(null);
@@ -337,6 +353,9 @@ function Console({ me }: { me: AdminMe }) {
                       >
                         <Svg d={ICONS[s]} />
                         <span>{A(SEC_TITLE[s][0])}</span>
+                        {s === 'requests' && pendingReq > 0 && (
+                          <span className="kh-ad-badge">{pendingReq}</span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -409,6 +428,8 @@ function Console({ me }: { me: AdminMe }) {
                 ) : (
                   <ClientList key={sec} mode={sec} />
                 ))}
+              {sec === 'plans' && <Plans />}
+              {sec === 'requests' && <Requests />}
               {sec === 'admins' && <Admins />}
               {sec === 'codes' && <Codes />}
               {sec === 'audit' && <Audit />}

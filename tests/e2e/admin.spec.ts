@@ -4,8 +4,9 @@ import { createHmac } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Fase 10.1 Admin Console: 2FA gate, Visão Geral, Códigos (generate, detail,
-// pause) and Auditoria with the CSV export.
+// Fase 10 Admin Console: 2FA gate, Visão Geral, Códigos (generate, detail,
+// pause), Auditoria with the CSV export, packs, and a plan request from the
+// app's plans window approved in Pedidos.
 // its own client IP: sign-ups are limited per IP (10/h) and the suite registers many people
 test.use({
   locale: 'pt-PT',
@@ -43,8 +44,8 @@ function totp(secret: string) {
   return String((h.readUInt32BE(o) & 0x7fffffff) % 1e6).padStart(6, '0');
 }
 
-async function verifyLink(): Promise<string> {
-  const safe = email.replace(/[^a-z0-9@.]/gi, '_');
+async function verifyLink(who = email): Promise<string> {
+  const safe = who.replace(/[^a-z0-9@.]/gi, '_');
   for (let i = 0; i < 40; i++) {
     const files = fs.existsSync(outbox!)
       ? fs.readdirSync(outbox!).filter((f) => f.includes('-verify-') && f.includes(safe))
@@ -131,18 +132,22 @@ test('console: 2FA gate, overview, generate and pause a code, audit and CSV', as
   expect(csv).toContain(newCode);
 });
 
-test('console: new pack with its license, subscription edits, suspend', async ({ page }) => {
+async function adminLogin(page: import('@playwright/test').Page) {
   await page.goto('login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  // the same TOTP window can't be used twice: wait for the next one if needed
+  // the same TOTP window can't be used twice: wait for the next one
   const box = page.locator('input[autocomplete="one-time-code"]');
   await box.waitFor();
   await new Promise((r) => setTimeout(r, 30_000 - (Date.now() % 30_000) + 500));
   await box.fill(totp(secret));
   await page.locator('button[type=submit]').click();
   await page.waitForURL(/\/app$/);
+}
+
+test('console: new pack with its license, subscription edits, suspend', async ({ page }) => {
+  await adminLogin(page);
 
   const name = `Pack E2E ${Date.now()}`;
   await page.goto('admin?s=packs');
@@ -168,4 +173,54 @@ test('console: new pack with its license, subscription edits, suspend', async ({
   await page.locator('.kh-ad-chip', { hasText: 'Atividade' }).click();
   await expect(page.locator('.kh-ad-tr', { hasText: 'Suspendeu cliente' })).toBeVisible();
   await expect(page.locator('.kh-ad-tr', { hasText: 'Criou cliente' })).toBeVisible();
+});
+
+test('plans window: a FREE user asks for PRO, the console approves it', async ({ page, browser }) => {
+  test.setTimeout(120_000);
+  const who = `free-${Date.now()}@example.com`;
+  const code = /KH-LIC-\d{6}/.exec(cli('codes:create', '--type', 'license', '--plan', 'FREE'))![0];
+  await page.goto('register');
+  await page.getByLabel('Nome').fill('Free Asker');
+  await page.getByLabel('Email').fill(who);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByLabel('Licença').fill(code);
+  await page.getByRole('button', { name: 'Criar conta' }).click();
+  await expect(page.getByText('Conta criada')).toBeVisible();
+  await page.goto(await verifyLink(who));
+  await page.goto('login');
+  await page.getByLabel('Email').fill(who);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await page.waitForURL(/\/app$/);
+
+  await page.goto('app/pricing');
+  const dialog = page.getByRole('dialog', { name: 'Escolha o plano certo para si' });
+  const free = dialog.locator('.kh-pr-card', { hasText: 'Para começar' });
+  await expect(free.getByRole('button', { name: 'Plano atual' })).toBeDisabled();
+  const pro = dialog
+    .locator('.kh-pr-card')
+    .filter({ has: page.locator('.kh-pr-chip', { hasText: /^PRO$/ }) });
+  await pro.getByRole('button', { name: /Pedir este plano/ }).click();
+  await expect(page.getByRole('status')).toContainText('Recebemos o seu pedido para PRO');
+  await expect(pro.getByRole('button', { name: 'Pedido enviado ✓' })).toBeDisabled();
+
+  const ctx = await browser.newContext({
+    locale: 'pt-PT',
+    viewport: { width: 1440, height: 900 },
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.122' },
+  });
+  const adm = await ctx.newPage();
+  await adminLogin(adm);
+  await adm.goto('admin?s=requests');
+  const row = adm.locator('.kh-ad-tr', { hasText: who });
+  await expect(row).toContainText('PRO');
+  await row.getByRole('button', { name: 'Aprovar' }).click();
+  await adm.getByRole('dialog').getByRole('button', { name: 'Aprovar' }).click();
+  await expect(adm.getByText('Pedido aprovado.')).toBeVisible();
+  await adm.locator('.kh-ad-chip', { hasText: 'Todos' }).click();
+  await expect(adm.locator('.kh-ad-tr', { hasText: who })).toContainText('Aprovado');
+  await ctx.close();
+
+  await page.reload();
+  await expect(pro.getByRole('button', { name: 'Plano atual' })).toBeDisabled();
 });

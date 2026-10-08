@@ -1,7 +1,7 @@
 // Identity, tenants and licensing (DATA_MODEL.md §2, adjusted by
 // DECISIONS_AND_INFRA.md §7: no Stripe fields, no `hosting`, revocation keeps
-// data 30 days via deleted_at). `past_due` is set by hand in the Admin Console
-// (sales happen outside the app).
+// data 30 days via deleted_at). `past_due` is set in the Admin Console or by the
+// daily license job after a missed renewal (sales happen outside the app).
 //
 // These tables are global (not tenant content): they are read before a
 // tenant is known (login by email, code redemption) and only ever touched by

@@ -14,8 +14,8 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 6 — Developer (Artifacts, Code Library, API, Whiteboard) | ✅ feito |
 | 7 — SAP | ✅ feito |
 | 8 — Management | ✅ feito (8.1 · 8.2 · 8.3) |
-| 9 — Partilha | ⏳ |
-| 10 — Admin Console + pedidos de plano | ⏳ |
+| 9 — Partilha | ✅ feito (9.1 · 9.2 · 9.3) |
+| 10 — Admin Console + pedidos de plano | ✅ feito (10.1 · 10.2 · 10.3) |
 | 11 — Hardening e lançamento | ⏳ |
 
 ## Fase 0 — feito
@@ -318,6 +318,15 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - Sem o campo "Pagamento" do protótipo (não há faturação na app; o FREE mostra "Grátis").
 - **Testes**: integração (novo pack → primeiro registo é admin, convite para lugares livres, pacote individual ↔ módulos, 1 lugar = individual, suspenso só leitura, desativar termina sessões, mudança de email, reposição, eliminar, administradores e proteção do Manager) e E2E (novo pack com licença → lugares → suspender → atividade). Screenshots `fase-10/07–14`.
 
+## Fase 10.3 — Pacotes e Preços, Pedidos, janela de planos, job de licenças (feito)
+- **Pacotes e Preços** (consola): por pacote, preço mensal por utilizador, desconto anual (mostra o plano anual), período de experiência (ligar/desligar e dias), **limites de criação do FREE** (vazio = sem limite) e **módulos incluídos** por grupo (marcar o grupo todo ou abrir e escolher módulos; caixa em três estados). Cartão **INDIVIDUAL**: preço por grupo (€/utilizador/mês) e desconto anual do pacote individual. Cada alteração vale logo para todos os clientes do pacote (entitlements recalculados) e fica na auditoria.
+- **Trials desligados por omissão**: os pacotes do seed continuam sem período de experiência; liga-se em Pacotes e Preços. (Ligá-los por omissão faria entrar em trial — e ser suspenso pelo job ao fim dos dias — quem resgata uma licença paga vendida fora da app.)
+- **Janela de planos na app** (`/app/pricing`, ecrã novo; Pricing.dc.html): Mensal/Anual com o maior desconto, cartões dos pacotes com o que cada um inclui e os limites do FREE, "Porquê o KnowledgeHub?", **pacote personalizado** (grupos, lugares, ciclo, resumo e total) e tabela de comparação por grupo/módulo. Sem checkout: os botões criam um **pedido** (D43) — "Pedir este plano" / "Pedir mudança para X" / "Pedir este plano" no personalizado; o botão passa a "Pedido enviado ✓". Abre pelo "Upgrade" da barra lateral e pela nova linha **O seu plano · Gerir plano** em Conta.
+- **Pedidos** (consola): Novos/Aprovados/Recusados/Todos, pedido (pacote ← atual, ou grupos do individual), cliente, quem pediu, lugares·ciclo, recebido, estado e quem tratou; badge com os novos no menu. **Aprovar** aplica pacote (ou grupos), ciclo e lugares ao cliente e avisa quem pediu por email; vindo de um plano grátis para um pacote com trial ligado, começa o trial. **Recusar** pede o motivo, que vai no email. Cada pedido novo é enviado por email aos administradores da consola (Manager, Administrador, Faturação, Suporte). O mesmo pedido repetido não duplica; 10 pedidos por dia por pessoa. Um pedido de mudança de pacote mantém os lugares do cliente, e aprovar nunca deixa menos lugares do que pessoas em uso (D48).
+- **Job diário de licenças** (worker, 03:17): trial terminado → **suspenso**; subscrição paga com a renovação ultrapassada → **Em atraso**, e 7 dias depois → **suspenso** (D47); lembretes de renovação 7, 3 e 1 dias antes (email aos admins do cliente); códigos fora de prazo → expirados; o que foi revogado há mais de 30 dias é **apagado de vez** (D45), incluindo os ficheiros no MinIO (`tenants/<id>/`, `users/<id>/`). Tudo na auditoria como "Sistema".
+- Pedidos de cliente suspenso continuam possíveis (`/api/v1/plan-requests` fica fora do só-leitura), para poder pedir a reativação/upgrade.
+- **Testes**: integração (preços/trial/módulos/limites/preços do individual e efeito nos clientes; pedidos: criar, deduplicar, emails, aprovar com trial e lugares do pack, recusar com motivo; job: trial e atraso → suspenso, FREE nunca fica em atraso, lembretes, códigos expirados, purga a 30 dias) e E2E (utilizador FREE pede PRO na janela de planos → consola aprova em Pedidos → a app mostra PRO como plano atual). Screenshots `fase-10/15–23`.
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -371,5 +380,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D44 | Visão Geral da consola sem o gráfico de 12 meses nem a variação do protótipo (eram inventados): só MRR e ARR atuais | utilizador |
 | D45 | Revogar código segue os documentos (não o protótipo): acesso cortado já, dados mantidos 30 dias com Restaurar na consola, depois apagados por um job | utilizador |
 | D46 | Papel Suporte: vê clientes e utilizadores (dados comerciais só leitura), repõe password, reenvia convite, pausa/reativa utilizadores, trata pedidos e vê a auditoria; papéis verificados no servidor | utilizador |
+| D47 | "Em atraso" automático: subscrição paga ativa com a data de renovação ultrapassada passa a Em atraso no job diário e, 7 dias depois, a suspensa (só leitura). A consola continua a poder marcar à mão; os planos grátis nunca ficam em atraso | Claude (sem faturação na app) |
+| D48 | Pedido de mudança de pacote usa sempre os lugares atuais do cliente; só o pacote personalizado indica lugares; aprovar nunca baixa os lugares abaixo das pessoas em uso | Claude |
 | D41 | Management: o ecrã mantém o conjunto de dados do protótipo em memória e envia as alterações como lotes de operações validadas (`/mg/ops`); os projetos são a referência comum de Tarefas, Problemas, Ordens e Funcional | Claude |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

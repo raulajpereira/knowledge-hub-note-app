@@ -463,6 +463,34 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
           </div>
         </div>
 
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 14px 12px 16px',
+            borderRadius: 18,
+            background: 'rgba(255,255,255,.06)',
+            border: '1px solid rgba(255,255,255,.14)',
+          }}
+        >
+          <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 14.5, fontWeight: 600 }}>
+              {t('acc_plan')} · {me.tenant.planCode ?? tier}
+            </span>
+            <span style={{ fontSize: 12.5, color: 'rgba(255,248,240,.7)' }}>{t('acc_planSub')}</span>
+          </span>
+          <Link
+            scroll={false}
+            href="/app/pricing"
+            onClick={onClose}
+            className="kh-acc__wide"
+            style={{ flex: 'none', padding: '0 18px', height: 40 }}
+          >
+            {t('acc_planBtn')}
+          </Link>
+        </div>
+
         {me.admin && (
           <Link
             href="/admin"
