@@ -27,6 +27,9 @@ type ModalProps = {
   children?: React.ReactNode;
   className?: string;
   hideClose?: boolean;
+  /** Accessible name / description when there is no `title` (confirmations). */
+  labelledBy?: string;
+  describedBy?: string;
 };
 
 /** Glass modal with layered blur (overlay blur + panel blur), README §6. */
@@ -43,6 +46,8 @@ export function Modal({
   children,
   className,
   hideClose,
+  labelledBy,
+  describedBy,
 }: ModalProps) {
   const id = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -104,7 +109,8 @@ export function Modal({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? `${id}-title` : undefined}
+        aria-labelledby={title ? `${id}-title` : labelledBy}
+        aria-describedby={describedBy}
         tabIndex={-1}
         className={cx('kh-modal', size !== 'md' && `kh-modal--${size}`, className)}
         data-zs=""
@@ -152,10 +158,13 @@ export function ConfirmDialog({
   options: ConfirmOptions | null;
   onResult: (ok: boolean) => void;
 }) {
+  const id = useId();
   if (!options) return null;
   const { title, body, confirmLabel, cancelLabel, danger } = options;
   return (
     <Modal
+      labelledBy={`${id}-t`}
+      describedBy={body ? `${id}-b` : undefined}
       open={open}
       onClose={() => onResult(false)}
       size="sm"
@@ -167,8 +176,14 @@ export function ConfirmDialog({
         {danger ? <Trash /> : <Info />}
       </span>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span className="kh-confirm__title">{title}</span>
-        {body && <span className="kh-confirm__body">{body}</span>}
+        <span id={`${id}-t`} className="kh-confirm__title">
+          {title}
+        </span>
+        {body && (
+          <span id={`${id}-b`} className="kh-confirm__body">
+            {body}
+          </span>
+        )}
       </div>
       <div className="kh-modal__foot">
         <Button variant="glass" onClick={() => onResult(false)}>

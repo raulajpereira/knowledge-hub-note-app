@@ -1,7 +1,7 @@
 import 'server-only';
-import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, ne } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { sessions, tenants, users } from '@/db/schema';
+import { admins, sessions, tenants, users } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import { audit } from '@/server/audit';
 import { renderMail } from '@/server/mail/templates';
@@ -10,6 +10,7 @@ import { checkPasswordPolicy, hashPassword, verifyPassword } from '@/server/auth
 import { Lockout } from '@/server/auth/rateLimit';
 import { revokeAllSessions, revokeSession, type AuthContext } from '@/server/auth/session';
 import type { RequestMeta } from '@/server/auth/service';
+import { requireRecentReauth } from '@/server/auth/request';
 import type { Lang } from '@/i18n';
 import { getPrefs } from './prefs';
 
@@ -135,4 +136,53 @@ export async function exportData(auth: AuthContext) {
     prefs: await getPrefs(auth.user.id),
     sessions: await listSessions(auth),
   };
+}
+
+/**
+ * "Eliminar conta" (RGPD): the person and everything they own go now (their
+ * files leave the bucket with the daily sweep). Needs a password check in the
+ * last 5 minutes. The console's Manager can't delete itself; the last admin
+ * of a pack hands the role to the longest-standing active member; an
+ * individual client goes with its only person.
+ */
+export async function deleteAccount(auth: AuthContext, meta: { ip: string | null }) {
+  requireRecentReauth(auth, 5);
+  const [a] = await db()
+    .select({ role: admins.role })
+    .from(admins)
+    .where(eq(admins.userId, auth.user.id))
+    .limit(1);
+  if (a?.role === 'owner') throw new ApiError(409, 'manager_account');
+  const [me] = await db().select().from(users).where(eq(users.id, auth.user.id)).limit(1);
+  if (!me) throw new ApiError(404, 'not_found');
+  const [t] = await db().select().from(tenants).where(eq(tenants.id, me.tenantId)).limit(1);
+  const others = await db()
+    .select({ id: users.id, role: users.roleInTenant, status: users.status })
+    .from(users)
+    .where(and(eq(users.tenantId, me.tenantId), ne(users.id, me.id)))
+    .orderBy(asc(users.createdAt));
+  const heir =
+    me.roleInTenant === 'admin' && !others.some((o) => o.role === 'admin' && o.status === 'active')
+      ? others.find((o) => o.status === 'active')
+      : undefined;
+  await db().transaction(async (tx) => {
+    if (heir) await tx.update(users).set({ roleInTenant: 'admin' }).where(eq(users.id, heir.id));
+    await tx.delete(users).where(eq(users.id, me.id));
+    if (t && t.kind === 'individual' && others.length === 0)
+      await tx.delete(tenants).where(eq(tenants.id, t.id));
+  });
+  await audit({
+    action: 'account.deleted',
+    actorUserId: me.id,
+    tenantId: t && t.kind === 'individual' && others.length === 0 ? null : me.tenantId,
+    targetType: 'user',
+    targetId: me.id,
+    details: {
+      client: t?.name,
+      clientDeleted: t?.kind === 'individual' && others.length === 0,
+      newAdmin: heir?.id,
+    },
+    ip: meta.ip,
+  });
+  await sendMail(renderMail('accountDeleted', me.lang, me.email, undefined, { name: me.name }));
 }

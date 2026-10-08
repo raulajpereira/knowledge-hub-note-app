@@ -12,6 +12,7 @@ import { sendMail } from '@/server/mail/send';
 import { createCode, redeemCode } from '@/server/licensing/codes';
 import { codeType, normalizeCode } from '@/server/licensing/codeFormat';
 import { burnPasswordCheck, checkPasswordPolicy, hashPassword, verifyPassword } from './password';
+import { captchaNeeded, captchaSiteKey, noteLoginFailure, verifyCaptcha } from './captcha';
 import { Lockout, allow } from './rateLimit';
 import {
   accessProblem,
@@ -183,13 +184,16 @@ async function loadForLogin(email: string) {
 }
 
 export async function login(
-  input: { email: string; password: string; remember: boolean },
+  input: { email: string; password: string; remember: boolean; captcha?: string },
   meta: RequestMeta,
 ): Promise<LoginResult> {
   const email = input.email.trim().toLowerCase();
   const lockKey = `${email}|${meta.ip ?? '-'}`;
   const wait = await loginLock.lockedFor(lockKey);
   if (wait) throw new ApiError(429, 'locked', undefined, { retryAfter: wait });
+  const st = await loginLock.state(lockKey);
+  if ((await captchaNeeded(st.fails, st.lockouts, meta.ip)) && !(await verifyCaptcha(input.captcha, meta.ip)))
+    throw new ApiError(403, 'captcha_required', undefined, { siteKey: captchaSiteKey() });
 
   const u = await loadForLogin(email);
   const ok = u
@@ -197,6 +201,7 @@ export async function login(
     : (await burnPasswordCheck(input.password), false);
   if (!u || !ok) {
     const locked = await loginLock.fail(lockKey);
+    await noteLoginFailure(meta.ip);
     await audit({ action: 'auth.login_failed', details: { email }, ip: meta.ip });
     if (locked) throw new ApiError(429, 'locked', undefined, { retryAfter: locked });
     throw new ApiError(401, 'bad_credentials');

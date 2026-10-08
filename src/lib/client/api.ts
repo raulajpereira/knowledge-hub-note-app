@@ -4,7 +4,7 @@
 // { code, ... } from the server's { error: { code } } envelope).
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
-export type ApiFailure = { code: string; status: number; retryAfter?: number };
+export type ApiFailure = { code: string; status: number; retryAfter?: number; siteKey?: string };
 
 export function api<T = unknown>(
   path: string,
@@ -44,8 +44,13 @@ async function request<T>(url: string, body: unknown, method: string): Promise<T
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const e = (data as { error?: { code?: string; retryAfter?: number } }).error ?? {};
-    throw { code: e.code ?? 'internal', status: res.status, retryAfter: e.retryAfter } satisfies ApiFailure;
+    const e = (data as { error?: { code?: string; retryAfter?: number; siteKey?: string } }).error ?? {};
+    throw {
+      code: e.code ?? 'internal',
+      status: res.status,
+      retryAfter: e.retryAfter,
+      siteKey: e.siteKey,
+    } satisfies ApiFailure;
   }
   return data as T;
 }

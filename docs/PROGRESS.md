@@ -327,6 +327,16 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - Pedidos de cliente suspenso continuam possíveis (`/api/v1/plan-requests` fica fora do só-leitura), para poder pedir a reativação/upgrade.
 - **Testes**: integração (preços/trial/módulos/limites/preços do individual e efeito nos clientes; pedidos: criar, deduplicar, emails, aprovar com trial e lugares do pack, recusar com motivo; job: trial e atraso → suspenso, FREE nunca fica em atraso, lembretes, códigos expirados, purga a 30 dias) e E2E (utilizador FREE pede PRO na janela de planos → consola aprova em Pedidos → a app mostra PRO como plano atual). Screenshots `fase-10/15–23`.
 
+## Fase 11.1 — Segurança (feito)
+- **CSP global com nonce** (middleware): cada página recebe uma política própria — scripts só com o nonce do pedido (`strict-dynamic`, `wasm-unsafe-eval` para o Argon2id do cofre), `frame-ancestors 'none'`, `object-src 'none'`, `base-uri`/`form-action 'self'`. Os artefactos (app e links públicos) passam a ser mostrados a partir das rotas `/view` (`CSP: sandbox`, origem opaca), as únicas que a própria app pode enquadrar; o resto responde `X-Frame-Options: DENY`. Varrimento de 26 ecrãs, consola e artefactos sem violações.
+- **Eliminar conta** (RGPD) em Conta e Dados: confirmação + password recente (5 min); apaga a pessoa e tudo o que é dela; um cliente individual vai com ela; o último admin de um pack passa o papel ao membro ativo mais antigo; o Manager da consola não se pode eliminar; email de confirmação e auditoria.
+- **Ficheiros órfãos**: o job diário remove do MinIO os objetos que já nada referencia (pessoas eliminadas, notas/emails apagados…), só com mais de 24 h; a lista do que existe vem de `kh_storage_keys()` (migração `0025`, SECURITY DEFINER porque o job não tem tenant). Verificado contra o MinIO local: 236 referenciados, 0 em falta.
+- **CAPTCHA opcional** (Cloudflare Turnstile): com `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` no `.env`, o login pede o desafio após 3 falhas para o email a partir do mesmo IP (ou um bloqueio nas últimas 24 h) ou 10 falhas do IP numa hora; sem chaves fica só o bloqueio progressivo.
+- **Allowlist de IPs da consola** opcional (`ADMIN_IP_ALLOWLIST`, IPs ou CIDR IPv4): fora da lista a consola responde 404.
+- Caddy (depois do corte) passa `X-Real-IP` explicitamente; `npm audit` sem vulnerabilidades (postcss do Next forçado para 8.5.x); diálogos de confirmação com nome acessível.
+- Revisão do checklist `SECURITY.md §9` e ASVS L2 em `docs/SECURITY_REVIEW.md`.
+- **Testes**: integração (eliminar conta: re-auth, individual, pack com passagem de admin, Manager; allowlist; captcha desligado sem chaves) e E2E (CSP com nonce em todos os scripts e diferente por pedido, sem enquadramento; eliminar conta pela interface).
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
@@ -382,5 +392,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D46 | Papel Suporte: vê clientes e utilizadores (dados comerciais só leitura), repõe password, reenvia convite, pausa/reativa utilizadores, trata pedidos e vê a auditoria; papéis verificados no servidor | utilizador |
 | D47 | "Em atraso" automático: subscrição paga ativa com a data de renovação ultrapassada passa a Em atraso no job diário e, 7 dias depois, a suspensa (só leitura). A consola continua a poder marcar à mão; os planos grátis nunca ficam em atraso | Claude (sem faturação na app) |
 | D48 | Pedido de mudança de pacote usa sempre os lugares atuais do cliente; só o pacote personalizado indica lugares; aprovar nunca baixa os lugares abaixo das pessoas em uso | Claude |
+| D49 | Eliminar conta: o último admin de um pack passa o papel ao membro ativo mais antigo (o pack mantém-se); o Manager da consola não se pode eliminar | Claude |
+| D50 | CAPTCHA (Turnstile), allowlist de IPs da consola e monitorização leve são opcionais por `.env`; landing e páginas legais feitas por Claude (rascunho legal com dados da entidade no `.env`) | utilizador |
 | D41 | Management: o ecrã mantém o conjunto de dados do protótipo em memória e envia as alterações como lotes de operações validadas (`/mg/ops`); os projetos são a referência comum de Tarefas, Problemas, Ordens e Funcional | Claude |
 | D15 | Migrações correm como owner (`DATABASE_ADMIN_URL`) num contentor `migrate` antes do `up` | Claude |

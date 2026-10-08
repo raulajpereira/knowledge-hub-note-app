@@ -7,7 +7,6 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Permissions-Policy', value: 'camera=(), geolocation=(self), microphone=(self)' },
   { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
 ];
@@ -19,7 +18,18 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['postgres', 'bullmq', 'ioredis', '@node-rs/argon2', 'nodemailer'],
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // nothing frames the app, except its own sandboxed artifact views
+      {
+        source: '/:path((?!api/v1/artifacts/[^/]+/view|api/v1/public/[^/]+/view).*)',
+        headers: [{ key: 'X-Frame-Options', value: 'DENY' }],
+      },
+      {
+        source: '/api/v1/:kind(artifacts|public)/:id/view',
+        headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
+      },
+    ];
   },
 };
 

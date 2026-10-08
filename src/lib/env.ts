@@ -47,6 +47,13 @@ export const serverEnvSchema = z.object({
   // Have I Been Pwned check on new passwords (k-anonymity; off in tests).
   HIBP_CHECK: bool.default(true),
 
+  // Cloudflare Turnstile after repeated failed sign-ins (both or neither).
+  TURNSTILE_SITE_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
+
+  // Admin Console only from these client IPs/CIDRs (comma separated; empty = any).
+  ADMIN_IP_ALLOWLIST: z.string().optional(),
+
   // Serves the component catalogue (/ui) in production builds too.
   KH_UI_CATALOG: bool.default(false),
 

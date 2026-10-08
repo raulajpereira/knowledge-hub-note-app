@@ -8,6 +8,7 @@ import { env } from '@/lib/env';
 import { deliverMail } from '@/server/mail/send';
 import type { MailMessage } from '@/server/mail/templates';
 import { runLicenseJob } from '@/server/jobs/licenses';
+import { sweepStorage } from '@/server/jobs/storage';
 
 type JobHandler = () => Promise<unknown>;
 
@@ -15,11 +16,13 @@ const handlers: Record<string, JobHandler> = {
   heartbeat: async () => {
     await redis().set(WORKER_HEARTBEAT_KEY, String(Date.now()), 'EX', 600);
   },
-  // trials and renewals → suspended, reminders, expired codes, purge of revoked data (30 days)
+  // trials and renewals → suspended, reminders, expired codes, purge of revoked data (30 days),
+  // then files nothing points to any more
   licenses: async () => {
     const r = await runLicenseJob();
-    console.log('[worker] licenses', JSON.stringify(r));
-    return r;
+    const files = await sweepStorage().catch((e: unknown) => ({ error: String(e) }));
+    console.log('[worker] licenses', JSON.stringify({ ...r, files }));
+    return { ...r, files };
   },
 };
 

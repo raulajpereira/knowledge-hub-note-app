@@ -101,6 +101,22 @@ const COPY: Record<string, Record<Lang, Copy>> = {
       foot: 'Thank you for using KnowledgeHub.',
     },
   },
+  accountDeleted: {
+    pt: {
+      subject: 'A sua conta foi eliminada · KnowledgeHub',
+      title: 'Conta eliminada',
+      body: 'Olá {name}, a sua conta do KnowledgeHub e os dados que lhe pertenciam foram eliminados, como pediu. Os ficheiros são removidos do armazenamento nas próximas 48 horas e as cópias de segurança expiram de acordo com a política de privacidade.',
+      cta: '',
+      foot: 'Se não foi você a pedir, responda a este email imediatamente.',
+    },
+    en: {
+      subject: 'Your account was deleted · KnowledgeHub',
+      title: 'Account deleted',
+      body: 'Hi {name}, your KnowledgeHub account and the data that belonged to it were deleted, as you asked. Files are removed from storage within 48 hours and backups expire according to the privacy policy.',
+      cta: '',
+      foot: "If you didn't ask for this, reply to this email right away.",
+    },
+  },
   renewalReminder: {
     pt: {
       subject: 'A sua subscrição renova em {days} dias · KnowledgeHub',

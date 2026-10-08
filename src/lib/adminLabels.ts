@@ -56,6 +56,7 @@ const ACTIONS: Record<string, [string, string]> = {
   'account.session_ended': ['Terminou uma sessão', 'Ended a session'],
   'account.sessions_ended': ['Terminou outras sessões', 'Ended other sessions'],
   'account.exported': ['Exportou os dados', 'Exported data'],
+  'account.deleted': ['Eliminou a própria conta', 'Deleted own account'],
   'vault.setup': ['Configurou o cofre', 'Set up the vault'],
   'vault.master_changed': ['Mudou a master password', 'Changed master password'],
   'vault.wiped': ['Apagou o cofre', 'Wiped the vault'],

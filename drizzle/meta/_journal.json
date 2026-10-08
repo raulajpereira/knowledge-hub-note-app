@@ -176,6 +176,13 @@
       "when": 1791435280623,
       "tag": "0024_console",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791442758204,
+      "tag": "0025_storage_keys",
+      "breakpoints": true
     }
   ]
 }

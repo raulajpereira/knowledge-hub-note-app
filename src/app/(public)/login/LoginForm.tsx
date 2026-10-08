@@ -9,6 +9,7 @@ import { Button, Checkbox, Field, Input, Message, PasswordInput } from '@/compon
 import { EMAIL_RE } from '@/lib/passwordStrength';
 import { api, isApiFailure } from '@/lib/client/api';
 import { useI18n } from '@/i18n/client';
+import { Turnstile } from '@/components/auth/Turnstile';
 
 const EMAIL_KEY = 'kh.authEmail';
 
@@ -18,7 +19,7 @@ function safeNext(next?: string) {
 }
 
 export function LoginForm({ next, focusForgot }: { next?: string; focusForgot?: boolean }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const router = useRouter();
   const emailRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState('');
@@ -29,6 +30,10 @@ export function LoginForm({ next, focusForgot }: { next?: string; focusForgot?: 
   const [busy, setBusy] = useState(false);
   const [challenge, setChallenge] = useState<string | null>(null);
   const [code, setCode] = useState('');
+  // Turnstile, once the server asks for it; each token is single-use
+  const [siteKey, setSiteKey] = useState<string | null>(null);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
 
   useEffect(() => {
     try {
@@ -69,6 +74,7 @@ export function LoginForm({ next, focusForgot }: { next?: string; focusForgot?: 
         email: email.trim(),
         password,
         remember,
+        ...(captcha ? { captcha } : {}),
       });
       if (r.twoFactor && r.challenge) {
         setChallenge(r.challenge);
@@ -77,6 +83,11 @@ export function LoginForm({ next, focusForgot }: { next?: string; focusForgot?: 
       }
       signedIn();
     } catch (err) {
+      if (isApiFailure(err) && err.code === 'captcha_required' && err.siteKey) setSiteKey(err.siteKey);
+      if (captcha) {
+        setCaptcha(null);
+        setRound((n) => n + 1);
+      }
       setMsg({ text: isApiFailure(err) ? authErrorMessage(err, t) : t('auth_generic'), ok: false });
       setBusy(false);
     }
@@ -205,6 +216,7 @@ export function LoginForm({ next, focusForgot }: { next?: string; focusForgot?: 
           {t('login_forgot')}
         </a>
       </div>
+      {siteKey && <Turnstile key={round} siteKey={siteKey} lang={lang} onToken={setCaptcha} />}
       {msg && <Message tone={msg.ok ? 'ok' : 'error'}>{msg.text}</Message>}
       <Button type="submit" variant="primary" size="lg" block loading={busy}>
         {t('login_submit')}

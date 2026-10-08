@@ -576,5 +576,11 @@
   "pr_lim_voice": "notas de voz",
   "acc_plan": "O seu plano",
   "acc_planSub": "Mudar de plano e comparar pacotes",
-  "acc_planBtn": "Gerir plano"
+  "acc_planBtn": "Gerir plano",
+  "acc_delete": "Eliminar conta",
+  "acc_deleteT": "Eliminar a sua conta?",
+  "acc_deleteB": "A conta e tudo o que lhe pertence (notas, tarefas, cofre, ficheiros, partilhas) são apagados de vez. Exporte os dados antes, se precisar. Esta ação não se pode desfazer.",
+  "acc_deleteManager": "A conta do Manager da consola não pode ser eliminada.",
+  "acc_deleteFail": "Não foi possível eliminar a conta.",
+  "auth_captcha": "Por segurança, confirme que não é um robô e tente de novo."
 }

@@ -38,6 +38,12 @@ export class Lockout {
     return secs;
   }
 
+  /** Failures in the current window and lockouts in the last 24 h. */
+  async state(key: string): Promise<{ fails: number; lockouts: number }> {
+    const [f, n] = await this.r().mget(this.k('fail', key), this.k('n', key));
+    return { fails: Number(f ?? 0), lockouts: Number(n ?? 0) };
+  }
+
   async success(key: string): Promise<void> {
     await this.r().del(this.k('fail', key), this.k('n', key), this.k('lock', key));
   }

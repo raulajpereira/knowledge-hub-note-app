@@ -9,6 +9,8 @@ export function authErrorMessage(e: ApiFailure, t: (k: string) => string): strin
       return t('login_wait').replace('{s}', String(e.retryAfter ?? 30));
     case 'unverified':
       return t('auth_unverified');
+    case 'captcha_required':
+      return t('auth_captcha');
     case 'user_paused':
     case 'code_paused':
     case 'tenant_canceled':

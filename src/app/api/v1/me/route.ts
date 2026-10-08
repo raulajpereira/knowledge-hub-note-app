@@ -6,7 +6,9 @@ import { body, handler, json } from '@/server/http';
 import { requireAuth } from '@/server/auth/request';
 import { getEntitlements } from '@/server/licensing/entitlements';
 import { getPrefs } from '@/server/prefs';
-import { updateProfile } from '@/server/account';
+import { deleteAccount, updateProfile } from '@/server/account';
+import { clientIp } from '@/server/http';
+import { clearSessionCookie } from '@/server/auth/route-utils';
 
 // GET /me → user, tenant, plan, entitlements, prefs (API.md). The UI gates
 // the sidebar with `entitlements.modules`; the server re-checks on every call.
@@ -40,4 +42,13 @@ export const PATCH = handler(async (req) => {
   const auth = await requireAuth();
   await updateProfile(auth, await body(req, Patch));
   return json({ ok: true });
+});
+
+/** DELETE /me → delete the account and its data (RGPD); needs a recent password check. */
+export const DELETE = handler(async (req) => {
+  const auth = await requireAuth();
+  await deleteAccount(auth, { ip: clientIp(req) });
+  const res = json({ ok: true });
+  clearSessionCookie(res);
+  return res;
 });

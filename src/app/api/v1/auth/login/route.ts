@@ -7,6 +7,7 @@ const Body = z.object({
   email: z.string().trim().max(254),
   password: z.string().max(256),
   remember: z.boolean().default(false),
+  captcha: z.string().max(4096).optional(),
 });
 
 export const POST = handler(async (req) => {

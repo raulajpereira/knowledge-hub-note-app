@@ -18,7 +18,8 @@ export const GET = handler(async (req: NextRequest, ctx: Ctx) => {
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Content-Security-Policy': 'sandbox allow-scripts allow-popups allow-forms allow-modals',
+      'Content-Security-Policy':
+        "sandbox allow-scripts allow-popups allow-forms allow-modals; frame-ancestors 'self'",
       'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'no-referrer',

@@ -740,7 +740,7 @@ export function ArtifactsView() {
                 <iframe
                   key={full.versions.length}
                   className="kh-ar-frame"
-                  srcDoc={full.html}
+                  src={`${BASE}/api/v1/artifacts/${full.id}/view?v=${full.versions.length}`}
                   sandbox="allow-scripts allow-popups allow-modals"
                   referrerPolicy="no-referrer"
                   title={full.title}

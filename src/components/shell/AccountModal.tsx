@@ -71,6 +71,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
   const confirm = useConfirm();
   const { me } = useShell();
   const { withReauth, dialog } = useReauth();
+  const [delErr, setDelErr] = useState('');
   const tier = tierOf(me.tenant.planCode);
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-PT');
 
@@ -538,6 +539,37 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             {t('acc_logout')}
           </button>
         </div>
+        <button
+          type="button"
+          className="kh-acc__del"
+          onClick={async () => {
+            const ok = await confirm({
+              title: t('acc_deleteT'),
+              body: t('acc_deleteB'),
+              confirmLabel: t('acc_delete'),
+              cancelLabel: t('tr_cancel'),
+              danger: true,
+            });
+            if (!ok) return;
+            try {
+              const r = await withReauth(() => api('/me', {}, 'DELETE'));
+              if (r !== undefined) window.location.assign(`${BASE}/login`);
+            } catch (e) {
+              setDelErr(
+                isApiFailure(e) && e.code === 'manager_account'
+                  ? t('acc_deleteManager')
+                  : t('acc_deleteFail'),
+              );
+            }
+          }}
+        >
+          {t('acc_delete')}
+        </button>
+        {delErr && (
+          <span role="alert" style={{ fontSize: 12.5, color: 'oklch(0.8 0.14 25)', textAlign: 'center' }}>
+            {delErr}
+          </span>
+        )}
 
         {/* Password */}
         <div className="kh-card">

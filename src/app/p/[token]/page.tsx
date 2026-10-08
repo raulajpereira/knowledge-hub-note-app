@@ -5,7 +5,7 @@ import { translate, type AppKey } from '@/i18n';
 import { Logo } from '@/components/brand/Logo';
 import { PublicPassword } from '@/components/share/PublicPassword';
 import { docHtml } from '@/server/share/render';
-import { findLink, isUnlocked, publicArtifactHtml, publicItem, unlockCookie } from '@/server/share/links';
+import { findLink, isUnlocked, publicItem, unlockCookie } from '@/server/share/links';
 import '@/components/notes/notes.css';
 import '@/components/share/public.css';
 
@@ -26,8 +26,6 @@ export default async function PublicPage({ params }: { params: Promise<{ token: 
   const f = await findLink(token);
   const unlocked = f ? isUnlocked(f, (await cookies()).get(unlockCookie(f))?.value) : false;
   const item = f && unlocked ? await publicItem(f, true) : null;
-  // srcDoc (the app sends X-Frame-Options: DENY): sandboxed, opaque origin, like the Artifacts screen
-  const html = f && item?.type === 'artifact' ? await publicArtifactHtml(f) : null;
   const when = item
     ? new Date(item.updatedAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-PT', {
         day: 'numeric',
@@ -128,7 +126,7 @@ export default async function PublicPage({ params }: { params: Promise<{ token: 
           </div>
           <iframe
             className="kh-pub__frame"
-            srcDoc={html ?? ''}
+            src={`${BASE}/api/v1/public/${token}/view`}
             sandbox="allow-scripts allow-popups allow-modals"
             referrerPolicy="no-referrer"
             title={item.title}

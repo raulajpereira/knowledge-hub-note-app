@@ -576,5 +576,11 @@
   "pr_lim_voice": "voice notes",
   "acc_plan": "Your plan",
   "acc_planSub": "Change plan and compare plans",
-  "acc_planBtn": "Manage plan"
+  "acc_planBtn": "Manage plan",
+  "acc_delete": "Delete account",
+  "acc_deleteT": "Delete your account?",
+  "acc_deleteB": "The account and everything that belongs to it (notes, tasks, vault, files, shares) are deleted for good. Export your data first if you need it. This can't be undone.",
+  "acc_deleteManager": "The console Manager's account can't be deleted.",
+  "acc_deleteFail": "Couldn't delete the account.",
+  "auth_captcha": "For your security, confirm you're not a robot and try again."
 }

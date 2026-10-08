@@ -988,3 +988,20 @@
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
+.kh-acc__del {
+  align-self: center;
+  border: 0;
+  background: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: oklch(0.82 0.12 28);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.kh-acc__del:hover {
+  background: oklch(0.6 0.16 28 / 0.16);
+}
