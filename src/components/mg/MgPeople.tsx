@@ -1,8 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MG_COST, MG_PERSON_STATUS, MG_RATE, mgAv, wLbl, wLblY, type MgPerson } from '@/lib/mg';
+import {
+  MG_COST,
+  MG_PERSON_STATUS,
+  MG_RATE,
+  mgAv,
+  wLbl,
+  wLblY,
+  type MgExpPart,
+  type MgPerson,
+} from '@/lib/mg';
 import { mgL } from '@/lib/mgText';
 import { CHEV, OPT, css } from './css';
 import { Av, Chip, Fields, Sel, Split, Trash, uid } from './ui';
@@ -108,7 +117,9 @@ export function MgPeople({ mg }: { mg: Mg }) {
                     statusNote: '',
                     hired: new Date().toISOString().slice(0, 10),
                     expYears: '',
+                    expSplit: [],
                     email: '',
+                    phone: '',
                     av: mgAv(d.people.length + 3),
                     skills: { abap: 2 },
                   }),
@@ -310,68 +321,122 @@ export function MgPeople({ mg }: { mg: Mg }) {
             <Trash />
           </button>
         </div>
-        <Fields
-          fields={[
-            {
-              label: tr('Estado'),
-              val: sel.status ?? 'Ativo',
-              opts: MG_PERSON_STATUS.map((x) => ({ v: x, l: tr(x) })),
-              onChange: set('status'),
-            },
-            {
-              label: tr('Motivo / observações'),
-              val: sel.statusNote ?? '',
-              placeholder:
-                (sel.status ?? 'Ativo') === 'Suspenso' ? tr('Ex.: baixa médica até 30/11') : tr('Opcional'),
-              onChange: set('statusNote'),
-            },
-            { label: tr('Data de contratação'), val: sel.hired ?? '', type: 'date', onChange: set('hired') },
-            {
-              label: tr('Anos de experiência'),
-              val: sel.expYears ?? '',
-              type: 'number',
-              unit: tr('anos'),
-              onChange: (v) => set('expYears')(v === '' ? '' : String(Math.max(0, Math.min(70, Number(v))))),
-            },
-            { label: tr('Função'), val: sel.role, onChange: set('role') },
-            {
-              label: tr('Equipa'),
-              val: sel.team,
-              opts: mg.TEAMS.map((x) => ({ v: x.id, l: x.name })),
-              onChange: set('team'),
-            },
-            { label: tr('Área principal'), val: sel.area, opts: areaOpts, onChange: set('area') },
-            {
-              label: tr('Senioridade'),
-              val: String(sel.level),
-              opts: levelOpts,
-              onChange: set('level', true),
-            },
-            {
-              label: tr('Custo interno'),
-              val: sel.cost,
-              type: 'number',
-              unit: '€/h',
-              onChange: set('cost', true),
-            },
-            {
-              label: tr('Preço de venda'),
-              val: sel.rate,
-              type: 'number',
-              unit: '€/h',
-              onChange: set('rate', true),
-            },
-            {
-              label: tr('Capacidade'),
-              val: sel.cap,
-              type: 'number',
-              unit: tr('h/semana'),
-              onChange: set('cap', true),
-            },
-            { label: tr('Localização'), val: sel.loc, onChange: set('loc') },
-            { label: tr('Email'), val: sel.email, onChange: set('email') },
-          ]}
-        />
+        {/* two columns of blocks (one on narrow screens) */}
+        <div
+          style={css(
+            'display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;align-items:start;',
+          )}
+        >
+          <div style={css('display:flex;flex-direction:column;gap:12px;min-width:0;')}>
+            <Fields
+              labelW="38%"
+              title={tr('Disponibilidade')}
+              fields={[
+                {
+                  label: tr('Estado'),
+                  val: sel.status ?? 'Ativo',
+                  opts: MG_PERSON_STATUS.map((x) => ({ v: x, l: tr(x) })),
+                  onChange: set('status'),
+                },
+                {
+                  label: tr('Motivo / observações'),
+                  val: sel.statusNote ?? '',
+                  placeholder:
+                    (sel.status ?? 'Ativo') === 'Suspenso'
+                      ? tr('Ex.: baixa médica até 30/11')
+                      : tr('Opcional'),
+                  onChange: set('statusNote'),
+                },
+              ]}
+            />
+            <Fields
+              labelW="38%"
+              title={tr('Função e equipa')}
+              fields={[
+                { label: tr('Função'), val: sel.role, onChange: set('role') },
+                {
+                  label: tr('Equipa'),
+                  val: sel.team,
+                  opts: mg.TEAMS.map((x) => ({ v: x.id, l: x.name })),
+                  onChange: set('team'),
+                },
+                { label: tr('Área principal'), val: sel.area, opts: areaOpts, onChange: set('area') },
+                {
+                  label: tr('Senioridade'),
+                  val: String(sel.level),
+                  opts: levelOpts,
+                  onChange: set('level', true),
+                },
+              ]}
+            />
+            <Fields
+              labelW="38%"
+              title={tr('Custos e capacidade')}
+              fields={[
+                {
+                  label: tr('Custo interno'),
+                  val: sel.cost,
+                  type: 'number',
+                  unit: '€/h',
+                  onChange: set('cost', true),
+                },
+                {
+                  label: tr('Preço de venda'),
+                  val: sel.rate,
+                  type: 'number',
+                  unit: '€/h',
+                  onChange: set('rate', true),
+                },
+                {
+                  label: tr('Capacidade'),
+                  val: sel.cap,
+                  type: 'number',
+                  unit: tr('h/semana'),
+                  onChange: set('cap', true),
+                },
+              ]}
+            />
+          </div>
+          <div style={css('display:flex;flex-direction:column;gap:12px;min-width:0;')}>
+            <Fields
+              labelW="38%"
+              title={tr('Experiência')}
+              fields={[
+                {
+                  label: tr('Data de contratação'),
+                  val: sel.hired ?? '',
+                  type: 'date',
+                  onChange: set('hired'),
+                },
+                {
+                  label: tr('Anos de experiência'),
+                  val: sel.expYears ?? '',
+                  type: 'number',
+                  unit: tr('anos'),
+                  onChange: (v) =>
+                    set('expYears')(v === '' ? '' : String(Math.max(0, Math.min(70, Number(v))))),
+                },
+              ]}
+            >
+              <ExpSplit mg={mg} p={sel} />
+            </Fields>
+            <Fields
+              labelW="38%"
+              title={tr('Contacto')}
+              fields={[
+                { label: tr('Localização'), val: sel.loc, onChange: set('loc') },
+                { label: tr('Email'), val: sel.email, type: 'email', onChange: set('email') },
+                {
+                  label: tr('Telefone'),
+                  val: sel.phone ?? '',
+                  type: 'tel',
+                  placeholder: '+351 912 345 678',
+                  onChange: set('phone'),
+                },
+              ]}
+            />
+          </div>
+        </div>
         <div style={css('display:flex;flex-direction:column;gap:10px;')}>
           <div style={css('display:flex;align-items:center;gap:10px;')}>
             <span style={css('font-size:16px;font-weight:600;margin-right:auto;')}>{L(19)}</span>
@@ -544,5 +609,222 @@ export function StatusBadge({ status, tr }: { status: string; tr: (s: string) =>
     >
       {tr(status)}
     </span>
+  );
+}
+
+const EXP_C = [
+  'oklch(0.78 0.12 250)',
+  'oklch(0.8 0.13 150)',
+  'oklch(0.83 0.12 75)',
+  'oklch(0.76 0.13 320)',
+  'oklch(0.8 0.1 200)',
+  'oklch(0.78 0.14 30)',
+];
+const fmtY = (n: number) => String(Math.round(n * 10) / 10);
+/** "1 ano" / "3 anos" */
+const yrsOf = (n: number, tr: (s: string) => string) => `${fmtY(n)} ${tr(n === 1 ? 'ano' : 'anos')}`;
+
+/**
+ * Optional breakdown of the years of experience by area (e.g. 10 = 5 HCM +
+ * 2 project management + 3 ABAP): a proportional bar, editable chips and an
+ * inline "+ Especificar" row; says what is left to place or what goes over.
+ */
+function ExpSplit({ mg, p }: { mg: Mg; p: MgPerson }) {
+  const { tr, SKN } = mg;
+  const listId = useId();
+  const parts = p.expSplit ?? [];
+  const total = p.expYears === '' || p.expYears == null ? null : Number(p.expYears);
+  const sum = parts.reduce((n, x) => n + (Number(x.years) || 0), 0);
+  const [adding, setAdding] = useState(false);
+  const [area, setArea] = useState('');
+  const [yrs, setYrs] = useState('');
+  const save = (next: MgExpPart[]) =>
+    mg.upd((d) => {
+      d.people.find((x) => x.id === p.id)!.expSplit = next;
+    });
+  const add = () => {
+    const a = area.trim().slice(0, 80);
+    const y = Math.max(0, Math.min(70, Number(yrs) || 0));
+    if (!a || !y) return;
+    const i = parts.findIndex((x) => x.area.toLowerCase() === a.toLowerCase());
+    save(
+      i >= 0 ? parts.map((x, j) => (j === i ? { ...x, years: y } : x)) : [...parts, { area: a, years: y }],
+    );
+    setArea('');
+    setYrs('');
+  };
+  const sugg = [
+    ...new Set([
+      ...Object.values(SKN).map((n) => tr(n)),
+      ...mg.P.flatMap((x) => (x.expSplit ?? []).map((e) => e.area)),
+      tr('Gestão de projeto'),
+    ]),
+  ].filter((n) => !parts.some((x) => x.area.toLowerCase() === n.toLowerCase()));
+  const scale = Math.max(sum, total ?? 0) || 1;
+  const left = total == null ? null : Math.round((total - sum) * 10) / 10;
+  const inS =
+    'height:30px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(18,12,9,.2);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;box-sizing:border-box;';
+  return (
+    <div
+      role="group"
+      aria-label={tr('Repartição da experiência')}
+      style={css(
+        'display:flex;flex-direction:column;gap:10px;padding:10px 14px 13px;border-top:1px solid rgba(255,255,255,.07);',
+      )}
+    >
+      <div style={css('display:flex;align-items:center;gap:10px;')}>
+        <span style={css('font-size:12.5px;color:rgba(255,248,240,.72);margin-right:auto;')}>
+          {tr('Repartição da experiência')}
+        </span>
+        {parts.length > 0 && (
+          <span
+            style={css(
+              `font-size:12px;color:${left != null && left < 0 ? '#ffc9b8' : 'rgba(255,248,240,.6)'};`,
+            )}
+          >
+            {left == null
+              ? yrsOf(sum, tr)
+              : left < 0
+                ? tr('{s} de {t} — excede').replace('{s}', fmtY(sum)).replace('{t}', yrsOf(total!, tr))
+                : left > 0
+                  ? tr('{l} por especificar').replace('{l}', yrsOf(left, tr))
+                  : tr('Tudo especificado')}
+          </span>
+        )}
+      </div>
+      {parts.length > 0 && (
+        <div
+          aria-hidden="true"
+          style={css(
+            'display:flex;height:8px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.08);gap:2px;',
+          )}
+        >
+          {parts.map((x, i) => (
+            <span
+              key={x.area}
+              title={`${x.area} · ${fmtY(x.years)} ${tr('anos')}`}
+              style={css(
+                `flex:none;width:${(x.years / scale) * 100}%;background:${EXP_C[i % EXP_C.length]};`,
+              )}
+            />
+          ))}
+        </div>
+      )}
+      <div style={css('display:flex;flex-wrap:wrap;gap:6px;align-items:center;')}>
+        {parts.map((x, i) => (
+          <span
+            key={x.area}
+            style={css(
+              'display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);font-size:12.5px;',
+            )}
+          >
+            <span
+              style={css(
+                `width:8px;height:8px;border-radius:50%;background:${EXP_C[i % EXP_C.length]};flex:none;`,
+              )}
+            />
+            <span style={css('font-weight:600;')}>{x.area}</span>
+            <input
+              type="number"
+              min={0}
+              max={70}
+              step={0.5}
+              value={x.years}
+              aria-label={`${tr('Anos em')} ${x.area}`}
+              onChange={(e) =>
+                save(
+                  parts.map((y, j) =>
+                    j === i ? { ...y, years: Math.max(0, Math.min(70, Number(e.target.value) || 0)) } : y,
+                  ),
+                )
+              }
+              style={css(
+                'width:44px;height:22px;padding:0 4px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:rgba(18,12,9,.2);color:#fbf8f5;font:inherit;font-size:12px;text-align:right;outline:none;',
+              )}
+            />
+            <span style={css('font-size:11.5px;color:rgba(255,248,240,.6);')}>{tr('anos')}</span>
+            <button
+              type="button"
+              className="mg-hx"
+              aria-label={`${tr('Remover')} ${x.area}`}
+              onClick={() => save(parts.filter((_, j) => j !== i))}
+              style={css(
+                'width:22px;height:22px;border:0;border-radius:50%;background:transparent;color:rgba(255,248,240,.6);cursor:pointer;padding:0;font-size:13px;',
+              )}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {adding ? (
+          <span style={css('display:flex;align-items:center;gap:6px;flex-wrap:wrap;')}>
+            <input
+              autoFocus
+              list={listId}
+              value={area}
+              maxLength={80}
+              placeholder={tr('Área (ex.: HCM)')}
+              aria-label={tr('Área')}
+              onChange={(e) => setArea(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') add();
+                if (e.key === 'Escape') setAdding(false);
+              }}
+              style={css(inS + 'width:170px;')}
+            />
+            <datalist id={listId}>
+              {sugg.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
+            <input
+              type="number"
+              min={0}
+              max={70}
+              step={0.5}
+              value={yrs}
+              placeholder={left != null && left > 0 ? fmtY(left) : '0'}
+              aria-label={tr('Anos')}
+              onChange={(e) => setYrs(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') add();
+                if (e.key === 'Escape') setAdding(false);
+              }}
+              style={css(inS + 'width:72px;')}
+            />
+            <button
+              type="button"
+              onClick={add}
+              style={css(
+                'height:30px;padding:0 12px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
+              )}
+            >
+              {tr('Adicionar')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdding(false)}
+              style={css(
+                'height:30px;padding:0 10px;border-radius:999px;border:0;background:transparent;color:rgba(255,248,240,.7);font:inherit;font-size:12.5px;cursor:pointer;',
+              )}
+            >
+              {tr('Fechar')}
+            </button>
+          </span>
+        ) : (
+          parts.length < 20 && (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              style={css(
+                'height:30px;padding:0 12px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background:transparent;color:rgba(255,248,240,.85);font:inherit;font-size:12.5px;cursor:pointer;',
+              )}
+            >
+              {parts.length ? tr('+ Área') : tr('+ Especificar por área')}
+            </button>
+          )
+        )}
+      </div>
+    </div>
   );
 }

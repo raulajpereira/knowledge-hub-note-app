@@ -92,6 +92,8 @@ type Mg = {
     statusNote: string;
     hired: string;
     expYears: number | '';
+    expSplit: Array<{ area: string; years: number }>;
+    phone: string;
   }>;
   clients: Array<{ name: string }>;
   settings: { levels?: string[] };
@@ -178,6 +180,29 @@ test('skills, people and clients', async ({ page }) => {
       return [z.status, z.hired, z.expYears];
     })
     .toEqual(['Ativo', '2021-03-15', 6]);
+  // phone with the email; the 6 years broken down by area
+  await page.getByLabel('Telefone').fill('+351 912 000 111');
+  const exp = page.getByRole('group', { name: 'Repartição da experiência' });
+  await exp.getByRole('button', { name: '+ Especificar por área' }).click();
+  for (const [a, y] of [
+    ['ABAP', '4'],
+    ['Gestão de projeto', '1'],
+  ] as const) {
+    await exp.getByLabel('Área', { exact: true }).fill(a);
+    await exp.getByLabel('Anos', { exact: true }).fill(y);
+    await exp.getByLabel('Anos', { exact: true }).press('Enter');
+  }
+  await expect(exp).toContainText('1 ano por especificar');
+  await exp.getByLabel('Anos em ABAP').fill('6');
+  await expect(exp).toContainText('7 de 6 anos — excede');
+  await exp.getByRole('button', { name: 'Remover Gestão de projeto' }).click();
+  await expect(exp).toContainText('Tudo especificado');
+  await expect
+    .poll(async () => {
+      const z = (await mgData(page)).people.find((p) => p.name === 'Zé Novo')!;
+      return [z.phone, z.expSplit];
+    })
+    .toEqual(['+351 912 000 111', [{ area: 'ABAP', years: 6 }]]);
   await page.goto('app/mg-people');
   await page
     .getByRole('button', { name: /Rui Martins/ })

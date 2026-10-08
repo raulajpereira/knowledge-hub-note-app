@@ -358,17 +358,34 @@ export function Fields({
   fields,
   labelW = '32%',
   inputS = '',
+  title,
+  children,
 }: {
   fields: Field[];
   labelW?: string;
   inputS?: string;
+  /** small heading of the block */
+  title?: string;
+  /** extra rows below the fields (same box) */
+  children?: React.ReactNode;
 }) {
   return (
     <div
+      role={title ? 'group' : undefined}
+      aria-label={title}
       style={css(
-        'display:flex;flex-direction:column;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);',
+        'display:flex;flex-direction:column;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);min-width:0;',
       )}
     >
+      {title && (
+        <div
+          style={css(
+            'padding:11px 14px 3px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,248,240,.6);',
+          )}
+        >
+          {title}
+        </div>
+      )}
       {fields.map((f, j) => (
         <div
           key={f.label}
@@ -405,6 +422,7 @@ export function Fields({
           </div>
         </div>
       ))}
+      {children}
     </div>
   );
 }

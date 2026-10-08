@@ -80,7 +80,12 @@ export const mgPeople = pgTable(
     /** hiring date 'YYYY-MM-DD' or '' */
     hired: text('hired').notNull().default(''),
     expYears: doublePrecision('exp_years'),
+    /** [{ area, years }] — optional breakdown of exp_years */
+    expSplit: jsonb('exp_split')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     email: text('email').notNull().default(''),
+    phone: text('phone').notNull().default(''),
     av: text('av').notNull(),
     skills: jsonb('skills')
       .notNull()

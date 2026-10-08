@@ -173,10 +173,14 @@ export type MgPerson = {
   hired: string;
   /** years of experience ('' = not filled in) */
   expYears: number | '';
+  /** optional breakdown of those years by area, e.g. 5 in HCM, 2 in project management */
+  expSplit: MgExpPart[];
   email: string;
+  phone: string;
   av: string;
   skills: Record<string, number>;
 };
+export type MgExpPart = { area: string; years: number };
 export const MG_PERSON_STATUS = ['Ativo', 'Inativo', 'Suspenso'] as const;
 export type MgPersonStatus = (typeof MG_PERSON_STATUS)[number];
 export const isAvailable = (p: Pick<MgPerson, 'status'>) => (p.status ?? 'Ativo') === 'Ativo';
@@ -298,7 +302,16 @@ export const MgSchemas = {
     statusNote: line(500),
     hired: z.union([day, z.literal('')]),
     expYears: z.union([z.number().min(0).max(70), z.literal('')]),
+    expSplit: z
+      .array(
+        z.strictObject({
+          area: line(80).refine((s) => s.trim().length > 0),
+          years: z.number().min(0).max(70),
+        }),
+      )
+      .max(20),
     email: line(200),
+    phone: line(40),
     av: color,
     skills: z.record(key, z.number().int().min(1).max(20)).refine((m) => Object.keys(m).length <= 100),
   }),
@@ -523,6 +536,8 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
       // one draw, as the old "since" year (the seeded sequence must not shift)
       hired: `${2012 + Math.floor(R() * 13)}-${String((i % 12) + 1).padStart(2, '0')}-01`,
       expYears: level + 1 + (i % 4),
+      expSplit: [],
+      phone: '',
       skills,
       email: `${name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '.')}@empresa.pt`,
       av: mgAv(i),
