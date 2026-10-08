@@ -28,7 +28,8 @@ export type ApiRequest = {
   createdAt: string;
   updatedAt: string;
 };
-export type ApiEnv = { id: string; name: string; vars: KvRow[] };
+/** folderId null: the global environments (requests without a folder). */
+export type ApiEnv = { id: string; folderId: string | null; name: string; vars: KvRow[] };
 
 const EMPTY_AUTH: Auth = { token: '', user: '', pass: '' };
 const cols = {
@@ -230,39 +231,124 @@ const readVars = (ct: string): KvRow[] => {
   }
 };
 
+const envCols = { id: apiEnvs.id, folderId: apiEnvs.folderId, name: apiEnvs.name, varsCt: apiEnvs.varsCt };
+const MAX_ENVS = 20;
+
+/**
+ * Every environment: the global ones and each folder's own. Missing ones are
+ * created — DEV / QAS / PRD globally, and a folder starts with copies of the
+ * global environments (names and variables), so its requests resolve as before.
+ */
 export async function listApiEnvs(auth: AuthContext): Promise<ApiEnv[]> {
   return asUser(auth, async (tx) => {
-    let rows = await tx
-      .select({ id: apiEnvs.id, name: apiEnvs.name, varsCt: apiEnvs.varsCt })
-      .from(apiEnvs)
-      .orderBy(asc(apiEnvs.sort));
-    if (!rows.length) {
-      rows = await tx
+    let rows = await tx.select(envCols).from(apiEnvs).orderBy(asc(apiEnvs.sort), asc(apiEnvs.createdAt));
+    const owner = { tenantId: auth.tenant.id, ownerId: auth.user.id };
+    let global = rows.filter((r) => !r.folderId);
+    if (!global.length) {
+      global = await tx
         .insert(apiEnvs)
         .values(
           DEFAULT_ENVS.map((name, sort) => ({
-            tenantId: auth.tenant.id,
-            ownerId: auth.user.id,
+            ...owner,
             name,
             sort,
             varsCt: encryptSecret(JSON.stringify([{ k: 'host', v: '', on: true }])),
           })),
         )
-        .returning({ id: apiEnvs.id, name: apiEnvs.name, varsCt: apiEnvs.varsCt });
+        .returning(envCols);
+      rows = [...global, ...rows];
     }
-    return rows.map((r) => ({ id: r.id, name: r.name, vars: readVars(r.varsCt) }));
+    const withEnvs = new Set(rows.map((r) => r.folderId).filter(Boolean));
+    const bare = (
+      await tx
+        .select({ id: folders.id })
+        .from(folders)
+        .where(and(eq(folders.kind, 'api'), eq(folders.ownerId, auth.user.id), isNull(folders.deletedAt)))
+    ).filter((f) => !withEnvs.has(f.id));
+    if (bare.length) {
+      const copies = await tx
+        .insert(apiEnvs)
+        .values(
+          bare.flatMap((f) =>
+            global.map((g, sort) => ({ ...owner, folderId: f.id, name: g.name, sort, varsCt: g.varsCt })),
+          ),
+        )
+        .returning(envCols);
+      rows = [...rows, ...copies];
+    }
+    return rows.map((r) => ({ id: r.id, folderId: r.folderId, name: r.name, vars: readVars(r.varsCt) }));
   });
 }
 
-export async function updateApiEnv(auth: AuthContext, id: string, vars: KvRow[]): Promise<ApiEnv> {
+/** A new environment in a folder (or global), with the variable names of its first one. */
+export async function createApiEnv(
+  auth: AuthContext,
+  input: { name: string; folderId: string | null },
+): Promise<ApiEnv> {
   return asUser(auth, async (tx) => {
+    const folderId = await checkFolder(tx, input.folderId);
+    const scope = folderId ? eq(apiEnvs.folderId, folderId) : isNull(apiEnvs.folderId);
+    const same = await tx.select(envCols).from(apiEnvs).where(scope).orderBy(asc(apiEnvs.sort));
+    if (same.length >= MAX_ENVS) throw new ApiError(400, 'too_many_envs');
+    if (same.some((e) => e.name.toLowerCase() === input.name.toLowerCase()))
+      throw new ApiError(409, 'env_exists');
+    const vars = same[0] ? readVars(same[0].varsCt).map((v) => ({ ...v, v: '' })) : [];
+    const [r] = await tx
+      .insert(apiEnvs)
+      .values({
+        tenantId: auth.tenant.id,
+        ownerId: auth.user.id,
+        folderId,
+        name: input.name,
+        sort: same.length,
+        varsCt: encryptSecret(JSON.stringify(vars)),
+      })
+      .returning(envCols);
+    return { id: r!.id, folderId: r!.folderId, name: r!.name, vars };
+  });
+}
+
+/** Variables (stored encrypted) and / or a new name. */
+export async function updateApiEnv(
+  auth: AuthContext,
+  id: string,
+  patch: { vars?: KvRow[]; name?: string },
+): Promise<ApiEnv> {
+  return asUser(auth, async (tx) => {
+    const [cur] = await tx.select(envCols).from(apiEnvs).where(eq(apiEnvs.id, id));
+    if (!cur) throw new ApiError(404, 'not_found');
+    if (patch.name !== undefined && patch.name.toLowerCase() !== cur.name.toLowerCase()) {
+      const scope = cur.folderId ? eq(apiEnvs.folderId, cur.folderId) : isNull(apiEnvs.folderId);
+      const [dup] = await tx
+        .select({ id: apiEnvs.id })
+        .from(apiEnvs)
+        .where(and(scope, sql`lower(${apiEnvs.name}) = lower(${patch.name})`));
+      if (dup) throw new ApiError(409, 'env_exists');
+    }
     const [r] = await tx
       .update(apiEnvs)
-      .set({ varsCt: encryptSecret(JSON.stringify(vars)) })
+      .set({
+        ...(patch.vars ? { varsCt: encryptSecret(JSON.stringify(patch.vars)) } : {}),
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+      })
       .where(eq(apiEnvs.id, id))
-      .returning({ id: apiEnvs.id, name: apiEnvs.name });
-    if (!r) throw new ApiError(404, 'not_found');
-    return { ...r, vars };
+      .returning(envCols);
+    return { id: r!.id, folderId: r!.folderId, name: r!.name, vars: patch.vars ?? readVars(r!.varsCt) };
+  });
+}
+
+/** Removes an environment; each folder (and the global list) keeps at least one. */
+export async function deleteApiEnv(auth: AuthContext, id: string) {
+  return asUser(auth, async (tx) => {
+    const [cur] = await tx.select(envCols).from(apiEnvs).where(eq(apiEnvs.id, id));
+    if (!cur) throw new ApiError(404, 'not_found');
+    const scope = cur.folderId ? eq(apiEnvs.folderId, cur.folderId) : isNull(apiEnvs.folderId);
+    const [{ n }] = (await tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(apiEnvs)
+      .where(scope)) as [{ n: number }];
+    if (n <= 1) throw new ApiError(400, 'last_env');
+    await tx.delete(apiEnvs).where(eq(apiEnvs.id, id));
   });
 }
 

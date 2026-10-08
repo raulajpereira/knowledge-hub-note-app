@@ -5,7 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Modal, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { encodeFormBody, parseFormBody, storeFormBody } from '@/lib/apiForm';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
@@ -35,7 +36,8 @@ type Req = {
   auth: { token: string; user: string; pass: string };
   createdAt: string;
 };
-type Env = { id: string; name: string; vars: Kv[] };
+/** folderId null: the global environments (requests without a folder) */
+type Env = { id: string; folderId: string | null; name: string; vars: Kv[] };
 type Folder = { id: string; name: string };
 type Resp =
   | {
@@ -113,7 +115,145 @@ const I = {
   trash: '<path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path>',
   send: '<path d="M4 12l16-8-6 16-3-7z"></path>',
   ok: '<path d="M5 12.5l4.5 4.5L19 7.5"></path>',
+  sliders:
+    '<line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="9" cy="7" r="2.2"></circle><circle cx="15" cy="17" r="2.2"></circle>',
 };
+
+/** Key / value rows with a switch each — Params, Headers, Variables and the form body. */
+function KvEditor({ list, onChange, hint }: { list: Kv[]; onChange: (L: Kv[]) => void; hint?: string }) {
+  const { t } = useI18n();
+  return (
+    <div className="kh-ap-kv">
+      {list.map((p, i) => (
+        <div key={i} className="kh-ap-kvrow" style={{ opacity: p.on ? 1 : 0.45 }}>
+          <button
+            type="button"
+            className="kh-ap-ck"
+            data-on={p.on || undefined}
+            aria-pressed={p.on}
+            aria-label={p.k || t('p_key')}
+            onClick={() => onChange(list.map((x, j) => (j === i ? { ...x, on: !x.on } : x)))}
+          >
+            {p.on && <Svg d={I.ok} s={12} />}
+          </button>
+          <input
+            value={p.k}
+            placeholder={t('p_key')}
+            spellCheck={false}
+            aria-label={t('p_key')}
+            onChange={(e) => onChange(list.map((x, j) => (j === i ? { ...x, k: e.target.value } : x)))}
+          />
+          <input
+            value={p.v}
+            placeholder={t('p_value')}
+            spellCheck={false}
+            aria-label={`${t('p_value')} ${p.k}`}
+            onChange={(e) => onChange(list.map((x, j) => (j === i ? { ...x, v: e.target.value } : x)))}
+          />
+          <button
+            type="button"
+            className="kh-ap-rm"
+            title={t('del')}
+            aria-label={`${t('del')} ${p.k || t('p_key')}`}
+            onClick={() => onChange(list.filter((_, j) => j !== i))}
+          >
+            <Svg d={I.x} s={13} />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="kh-ap-add"
+        onClick={() => onChange([...list, { k: '', v: '', on: true }])}
+      >
+        + {t('p_add')}
+      </button>
+      {hint && <div className="kh-ap-hint">{hint}</div>}
+    </div>
+  );
+}
+
+/** A folder's environments (or the global ones): add, rename, remove. */
+function EnvManager({
+  scope,
+  envs,
+  onClose,
+  onCreate,
+  onRename,
+  onRemove,
+}: {
+  scope: string;
+  envs: Env[];
+  onClose: () => void;
+  onCreate: (name: string) => Promise<void>;
+  onRename: (e: Env, name: string) => Promise<void>;
+  onRemove: (e: Env) => Promise<void>;
+}) {
+  const { t } = useI18n();
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [nu, setNu] = useState('');
+  const rename = (e: Env) => {
+    const n = (names[e.id] ?? e.name).trim().slice(0, 40);
+    setNames(({ [e.id]: _, ...rest }) => rest);
+    if (n && n !== e.name) void onRename(e, n);
+  };
+  const add = () => {
+    const n = nu.trim().slice(0, 40);
+    if (!n) return;
+    setNu('');
+    void onCreate(n);
+  };
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={t('p_envsTitle')}
+      subtitle={scope}
+      size="sm"
+      closeLabel={t('ui_close')}
+    >
+      <div className="kh-ap-envs">
+        {envs.map((e) => (
+          <div key={e.id} className="kh-ap-envrow">
+            <input
+              value={names[e.id] ?? e.name}
+              maxLength={40}
+              aria-label={`${t('p_envName')} ${e.name}`}
+              onChange={(ev) => setNames((m) => ({ ...m, [e.id]: ev.target.value }))}
+              onBlur={() => rename(e)}
+              onKeyDown={(ev) => ev.key === 'Enter' && rename(e)}
+            />
+            <span>{t('p_envVars').replace('{n}', String(e.vars.length))}</span>
+            <button
+              type="button"
+              className="kh-ap-rm"
+              title={t('del')}
+              aria-label={`${t('del')} ${e.name}`}
+              disabled={envs.length <= 1}
+              onClick={() => void onRemove(e)}
+            >
+              <Svg d={I.trash} s={14} />
+            </button>
+          </div>
+        ))}
+        <div className="kh-ap-envrow kh-ap-envnew">
+          <input
+            value={nu}
+            maxLength={40}
+            placeholder={t('p_envNew')}
+            aria-label={t('p_envNew')}
+            onChange={(e) => setNu(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && add()}
+          />
+          <button type="button" className="kh-ap-add" onClick={add}>
+            + {t('p_add')}
+          </button>
+        </div>
+        <div className="kh-ap-hint">{t('p_envsHint')}</div>
+      </div>
+    </Modal>
+  );
+}
 
 export function ApiView() {
   const { t, lang } = useI18n();
@@ -127,7 +267,9 @@ export function ApiView() {
   const [cols, setCols] = usePref<Cols>('cols', {});
   const [liveList, setLiveList] = useState<number | null>(null);
   const [folder, setFolder] = usePersistentState<string>('api.folder', 'all');
-  const [envName, setEnvName] = usePersistentState<string>('api.env', 'DEV');
+  // the chosen environment of each folder ('global': requests without a folder)
+  const [envSel, setEnvSel] = usePersistentState<Record<string, string>>('api.envSel', {});
+  const [envMgr, setEnvMgr] = useState(false);
   const [tab, setTab] = useState<Tab>('params');
   const [items, setItems] = useState<Req[] | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -191,7 +333,13 @@ export function ApiView() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const all = useMemo(() => items ?? [], [items]);
-  const env = envs.find((e) => e.name === envName) ?? envs[0];
+  const act = all.find((x) => x.id === activeId) ?? null;
+  const scopeKey = act?.folderId ?? 'global';
+  const scopeEnvs = envs.filter((e) => (e.folderId ?? 'global') === scopeKey);
+  const env = scopeEnvs.find((e) => e.id === envSel[scopeKey]) ?? scopeEnvs[0];
+  const scopeName = act?.folderId
+    ? (folders.find((f) => f.id === act.folderId)?.name ?? '')
+    : `${t('p_noFolder')} · ${t('p_envGlobal')}`;
   const resolve = useCallback(
     (s: string) =>
       String(s ?? '').replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (m, k: string) => {
@@ -206,7 +354,6 @@ export function ApiView() {
       (folder === 'all' || (folder === 'none' ? !x.folderId : x.folderId === folder)) &&
       (!query || `${x.title} ${x.url}`.toLowerCase().includes(query)),
   );
-  const act = all.find((x) => x.id === activeId) ?? null;
   const rs = act ? resps[act.id] : undefined;
 
   const create = async () => {
@@ -266,6 +413,8 @@ export function ApiView() {
       setFolders((cur) => [...cur, f]);
       setNewFolder('');
       setFolder(f.id);
+      // the folder's own environments (copies of the global ones)
+      void api<{ envs: Env[] }>('/api-envs').then((r) => setEnvs(r.envs), fail);
     } catch {
       fail();
     }
@@ -273,6 +422,7 @@ export function ApiView() {
   const removeFolder = async (f: Folder) => {
     await api(`/api-requests/folders/${f.id}`, undefined, 'DELETE').catch(() => {});
     setFolders((cur) => cur.filter((x) => x.id !== f.id));
+    setEnvs((cur) => cur.filter((e) => e.folderId !== f.id));
     setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: null } : x)));
     if (folder === f.id) setFolder('all');
   };
@@ -283,6 +433,49 @@ export function ApiView() {
     const id = env.id;
     envTimer.current = setTimeout(() => void api(`/api-envs/${id}`, { vars }, 'PUT').catch(fail), 500);
   };
+
+  const createEnv = async (name: string) => {
+    try {
+      const { env: e } = await api<{ env: Env }>('/api-envs', { name, folderId: act?.folderId ?? null });
+      setEnvs((cur) => [...cur, e]);
+      setEnvSel({ ...envSel, [scopeKey]: e.id });
+    } catch (e) {
+      toast({
+        message: (e as { code?: string }).code === 'env_exists' ? t('p_envExists') : t('ne_saveFail'),
+        tone: 'error',
+      });
+    }
+  };
+  const renameEnv = async (e: Env, name: string) => {
+    try {
+      await api(`/api-envs/${e.id}`, { name }, 'PUT');
+      setEnvs((cur) => cur.map((x) => (x.id === e.id ? { ...x, name } : x)));
+    } catch (er) {
+      toast({
+        message: (er as { code?: string }).code === 'env_exists' ? t('p_envExists') : t('ne_saveFail'),
+        tone: 'error',
+      });
+    }
+  };
+  const removeEnv = async (e: Env) => {
+    const ok = await confirm({
+      title: t('p_envDelTitle'),
+      body: t('p_envDelBody').replace('{x}', e.name),
+      confirmLabel: t('del'),
+      cancelLabel: t('tr_cancel'),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api(`/api-envs/${e.id}`, undefined, 'DELETE');
+      setEnvs((cur) => cur.filter((x) => x.id !== e.id));
+    } catch {
+      fail();
+    }
+  };
+  const formRows = act?.bodyType === 'form' ? parseFormBody(act.body) : [];
+  const bodyOut = (x: Req) =>
+    x.bodyType === 'form' ? encodeFormBody(parseFormBody(x.body), resolve) : resolve(x.body);
 
   const onUrl = (v: string) => {
     if (!act) return;
@@ -343,7 +536,7 @@ export function ApiView() {
         method: act.method,
         url: resolve(fullUrl(act)),
         headers,
-        body: act.method !== 'GET' && act.bodyType !== 'none' ? resolve(act.body) : undefined,
+        body: act.method !== 'GET' && act.bodyType !== 'none' ? bodyOut(act) : undefined,
       });
       if (r.ok) {
         let body = r.response.body;
@@ -392,8 +585,7 @@ export function ApiView() {
       .forEach((x) => parts.push(`-H '${resolve(x.k)}: ${resolve(x.v)}'`));
     if (act.authType === 'bearer') parts.push(`-H 'Authorization: Bearer ${resolve(act.auth.token)}'`);
     if (act.authType === 'basic') parts.push(`-u '${resolve(act.auth.user)}:****'`);
-    if (act.method !== 'GET' && act.bodyType !== 'none' && act.body)
-      parts.push(`--data '${resolve(act.body)}'`);
+    if (act.method !== 'GET' && act.bodyType !== 'none' && act.body) parts.push(`--data '${bodyOut(act)}'`);
     return parts.join(' \\\n  ');
   };
   const flash = (k: string) => {
@@ -571,16 +763,31 @@ export function ApiView() {
                   {t('createdAt')} {fmtStamp(act.createdAt)}
                 </span>
               </div>
-              <label className="kh-ap-env">
-                {t('p_env')}
-                <select value={env?.name ?? ''} onChange={(e) => setEnvName(e.target.value)}>
-                  {envs.map((e) => (
-                    <option key={e.id} value={e.name}>
-                      {e.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="kh-ap-env">
+                <label className="kh-ap-envlbl">
+                  {t('p_env')}
+                  <select
+                    value={env?.id ?? ''}
+                    title={scopeName}
+                    onChange={(e) => setEnvSel({ ...envSel, [scopeKey]: e.target.value })}
+                  >
+                    {scopeEnvs.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="kh-ap-envbtn"
+                  title={t('p_envsTitle')}
+                  aria-label={t('p_envsTitle')}
+                  onClick={() => setEnvMgr(true)}
+                >
+                  <Svg d={I.sliders} s={14} />
+                </button>
+              </div>
               <select
                 className="kh-em-select kh-ap-folder"
                 value={act.folderId ?? ''}
@@ -673,57 +880,15 @@ export function ApiView() {
             </div>
 
             {kvKey && (
-              <div className="kh-ap-kv">
-                {kvList.map((p, i) => (
-                  <div key={i} className="kh-ap-kvrow" style={{ opacity: p.on ? 1 : 0.45 }}>
-                    <button
-                      type="button"
-                      className="kh-ap-ck"
-                      data-on={p.on || undefined}
-                      aria-pressed={p.on}
-                      aria-label={p.k || t('p_key')}
-                      onClick={() => setKv(kvList.map((x, j) => (j === i ? { ...x, on: !x.on } : x)))}
-                    >
-                      {p.on && <Svg d={I.ok} s={12} />}
-                    </button>
-                    <input
-                      value={p.k}
-                      placeholder={t('p_key')}
-                      spellCheck={false}
-                      aria-label={t('p_key')}
-                      onChange={(e) =>
-                        setKv(kvList.map((x, j) => (j === i ? { ...x, k: e.target.value } : x)))
-                      }
-                    />
-                    <input
-                      value={p.v}
-                      placeholder={t('p_value')}
-                      spellCheck={false}
-                      aria-label={`${t('p_value')} ${p.k}`}
-                      onChange={(e) =>
-                        setKv(kvList.map((x, j) => (j === i ? { ...x, v: e.target.value } : x)))
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="kh-ap-rm"
-                      title={t('del')}
-                      aria-label={`${t('del')} ${p.k || t('p_key')}`}
-                      onClick={() => setKv(kvList.filter((_, j) => j !== i))}
-                    >
-                      <Svg d={I.x} s={13} />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="kh-ap-add"
-                  onClick={() => setKv([...kvList, { k: '', v: '', on: true }])}
-                >
-                  + {t('p_add')}
-                </button>
-                {kvKey === 'env' && <div className="kh-ap-hint">{t('p_envHint')}</div>}
-              </div>
+              <KvEditor
+                list={kvList}
+                onChange={setKv}
+                hint={
+                  kvKey === 'env' && env
+                    ? `${t('p_envScope').replace('{env}', env.name).replace('{scope}', scopeName)} ${t('p_envHint')}`
+                    : undefined
+                }
+              />
             )}
 
             {tab === 'body' && (
@@ -743,7 +908,14 @@ export function ApiView() {
                           ? headers.map((p) => (p === h ? { ...p, v: ct } : p))
                           : [...headers, { k: 'Content-Type', v: ct, on: true }];
                       }
-                      upd(act.id, { bodyType: v, headers }, 0);
+                      // the form body is kept as rows; leaving it gives the encoded text
+                      const body =
+                        v === 'form' && act.bodyType !== 'form'
+                          ? storeFormBody(act.body.trim().startsWith('{') ? [] : parseFormBody(act.body))
+                          : v !== 'form' && act.bodyType === 'form'
+                            ? encodeFormBody(parseFormBody(act.body))
+                            : act.body;
+                      upd(act.id, { bodyType: v, headers, body }, 0);
                     }}
                   >
                     <option value="none">{t('p_noBody')}</option>
@@ -753,28 +925,38 @@ export function ApiView() {
                     <option value="text">{t('ap_text')}</option>
                   </select>
                   <div style={{ flex: 1 }} />
-                  <button
-                    type="button"
-                    className="kh-ap-fmt"
-                    onClick={() => {
-                      try {
-                        upd(act.id, { body: JSON.stringify(JSON.parse(act.body), null, 2) }, 0);
-                      } catch {
-                        // not JSON: left as is
-                      }
-                    }}
-                  >
-                    {t('p_format')}
-                  </button>
+                  {act.bodyType !== 'form' && (
+                    <button
+                      type="button"
+                      className="kh-ap-fmt"
+                      onClick={() => {
+                        try {
+                          upd(act.id, { body: JSON.stringify(JSON.parse(act.body), null, 2) }, 0);
+                        } catch {
+                          // not JSON: left as is
+                        }
+                      }}
+                    >
+                      {t('p_format')}
+                    </button>
+                  )}
                 </div>
-                <textarea
-                  className="kh-ap-code"
-                  value={act.body}
-                  spellCheck={false}
-                  placeholder={t('p_bodyPh')}
-                  aria-label={t('p_body')}
-                  onChange={(e) => upd(act.id, { body: e.target.value })}
-                />
+                {act.bodyType === 'form' ? (
+                  <KvEditor
+                    list={formRows}
+                    onChange={(L) => upd(act.id, { body: storeFormBody(L) })}
+                    hint={t('p_formHint')}
+                  />
+                ) : (
+                  <textarea
+                    className="kh-ap-code"
+                    value={act.body}
+                    spellCheck={false}
+                    placeholder={t('p_bodyPh')}
+                    aria-label={t('p_body')}
+                    onChange={(e) => upd(act.id, { body: e.target.value })}
+                  />
+                )}
               </div>
             )}
 
@@ -895,6 +1077,16 @@ export function ApiView() {
                 </div>
               ))}
             <div className="kh-ap-hint kh-ap-proxy">{t('ap_proxyHint')}</div>
+            {envMgr && (
+              <EnvManager
+                scope={scopeName}
+                envs={scopeEnvs}
+                onClose={() => setEnvMgr(false)}
+                onCreate={createEnv}
+                onRename={renameEnv}
+                onRemove={removeEnv}
+              />
+            )}
           </div>
         ) : (
           <div className="kh-em-none">{t('p_noActive')}</div>

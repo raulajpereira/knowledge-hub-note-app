@@ -712,16 +712,44 @@ describe.skipIf(!enabled)('notes', () => {
     const [raw] = await admin`select auth_ct from api_requests where id = ${r.id}`;
     expect(String(raw!.auth_ct)).not.toContain('segredo');
 
-    const envs = await apip.listApiEnvs(a);
+    // global environments (requests without a folder) and the folder's own
+    const all = await apip.listApiEnvs(a);
+    const envs = all.filter((e) => !e.folderId);
     expect(envs.map((e) => e.name)).toEqual(['DEV', 'QAS', 'PRD']);
-    await apip.updateApiEnv(a, envs[0]!.id, [{ k: 'host', v: 'https://api.example.com', on: true }]);
-    expect((await apip.listApiEnvs(a))[0]!.vars[0]!.v).toBe('https://api.example.com');
+    expect(all.filter((e) => e.folderId === f.id).map((e) => e.name)).toEqual(['DEV', 'QAS', 'PRD']);
+    await apip.updateApiEnv(a, envs[0]!.id, {
+      vars: [{ k: 'host', v: 'https://api.example.com', on: true }],
+    });
+    expect((await apip.listApiEnvs(a)).find((e) => e.id === envs[0]!.id)!.vars[0]!.v).toBe(
+      'https://api.example.com',
+    );
     const [rawEnv] = await admin`select vars_ct from api_envs where id = ${envs[0]!.id}`;
     expect(String(rawEnv!.vars_ct)).not.toContain('example.com');
+    // a new folder starts with copies of the global environments
+    const g = await apip.createApiFolder(a, 'Banco SOL');
+    const gEnvs = (await apip.listApiEnvs(a)).filter((e) => e.folderId === g.id);
+    expect(gEnvs.map((e) => [e.name, e.vars[0]?.v])).toEqual([
+      ['DEV', 'https://api.example.com'],
+      ['QAS', ''],
+      ['PRD', ''],
+    ]);
+    // folder environments: add (same variable names, empty), rename, remove; one always stays
+    const sbx = await apip.createApiEnv(a, { name: 'Sandbox', folderId: g.id });
+    expect(sbx).toMatchObject({ folderId: g.id, vars: [{ k: 'host', v: '', on: true }] });
+    expect(await codeOf(apip.createApiEnv(a, { name: 'sandbox', folderId: g.id }))).toBe('env_exists');
+    expect(await codeOf(apip.updateApiEnv(a, sbx.id, { name: 'dev' }))).toBe('env_exists');
+    expect((await apip.updateApiEnv(a, sbx.id, { name: 'UAT' })).name).toBe('UAT');
+    for (const e of gEnvs) await apip.deleteApiEnv(a, e.id);
+    expect(await codeOf(apip.deleteApiEnv(a, sbx.id))).toBe('last_env');
+    await apip.deleteApiFolder(a, g.id);
+    const [left] = await admin`select count(*)::int as n from api_envs where folder_id = ${g.id}`;
+    expect(left!.n).toBe(0);
 
     expect(await apip.listApiRequests(b)).toEqual([]);
     expect(await codeOf(apip.updateApiRequest(b, r.id, { title: 'x' }))).toBe('not_found');
-    expect(await codeOf(apip.updateApiEnv(b, envs[0]!.id, []))).toBe('not_found');
+    expect(await codeOf(apip.updateApiEnv(b, envs[0]!.id, { vars: [] }))).toBe('not_found');
+    expect(await codeOf(apip.deleteApiEnv(b, envs[0]!.id))).toBe('not_found');
+    expect(await codeOf(apip.createApiEnv(b, { name: 'X', folderId: f.id }))).toBe('folder_not_found');
 
     const copy = await apip.duplicateApiRequest(a, r.id, ' (cópia)');
     expect(copy).toMatchObject({

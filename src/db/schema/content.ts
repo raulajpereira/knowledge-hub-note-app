@@ -492,6 +492,8 @@ export const apiEnvs = pgTable(
     id: id(),
     tenantId: tenantId(),
     ownerId: ownerId(),
+    /** the folder whose requests use it; null: the global ones (requests without a folder) */
+    folderId: uuid('folder_id').references(() => folders.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     /** encryptSecret(JSON KvRow[]) */
     varsCt: text('vars_ct').notNull(),
@@ -500,6 +502,7 @@ export const apiEnvs = pgTable(
   },
   (t) => [
     index('api_envs_owner_idx').on(t.tenantId, t.ownerId),
+    index('api_envs_folder_idx').on(t.folderId),
     check('api_envs_name_len', sql`char_length(${t.name}) between 1 and 40`),
   ],
 );

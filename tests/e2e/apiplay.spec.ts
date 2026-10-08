@@ -87,7 +87,7 @@ test('requests: create, edit URL and params, env variables, blocked proxy, Trash
   await page.getByLabel('Valor host').fill('https://api.example.com');
   await url.fill('{{host}}/odata/v2/User');
   await expect(page.locator('.kh-ap-resolved')).toHaveText('→ https://api.example.com/odata/v2/User');
-  await page.getByLabel('Ambiente').selectOption('QAS');
+  await page.getByRole('combobox', { name: 'Ambiente' }).selectOption('QAS');
   await expect(page.locator('.kh-ap-resolved')).toHaveText('→ /odata/v2/User');
 
   await page.waitForTimeout(900); // debounced saves
@@ -95,8 +95,63 @@ test('requests: create, edit URL and params, env variables, blocked proxy, Trash
   await page.locator('.kh-ap-item', { hasText: 'Utilizadores' }).click();
   await expect(page.getByLabel('Método')).toHaveValue('POST');
   await expect(url).toHaveValue('{{host}}/odata/v2/User');
-  await page.getByLabel('Ambiente').selectOption('DEV');
+  await page.getByRole('combobox', { name: 'Ambiente' }).selectOption('DEV');
   await expect(page.locator('.kh-ap-resolved')).toHaveText('→ https://api.example.com/odata/v2/User');
+
+  // x-www-form-urlencoded body: key / value rows, kept after reload
+  await page.getByRole('tab', { name: /Corpo/ }).click();
+  await page.locator('.kh-ap-btype').selectOption('form');
+  await page.getByRole('button', { name: '+ Adicionar' }).click();
+  await page.getByRole('textbox', { name: 'Chave', exact: true }).fill('grant_type');
+  await page.getByLabel('Valor grant_type').fill('client_credentials');
+
+  // each folder has its own environments, starting as copies of the global ones
+  await page.getByLabel('Nome da pasta').fill('SuccessFactors');
+  await page.getByRole('button', { name: '+ Nova Pasta' }).click();
+  const row = page.locator('.kh-em-folder', { hasText: 'SuccessFactors' });
+  const del = await row.getByRole('button', { name: 'Eliminar SuccessFactors' }).boundingBox();
+  const box = await row.boundingBox();
+  expect(box!.x + box!.width - (del!.x + del!.width)).toBeLessThan(60); // at the right, by the count
+  await page.getByRole('button', { name: 'Todos os Pedidos' }).click();
+  await page.locator('.kh-ap-item', { hasText: 'Utilizadores' }).click();
+  await page.getByLabel('Pasta', { exact: true }).selectOption({ label: 'SuccessFactors' });
+  await expect(page.locator('.kh-ap-resolved')).toHaveText('→ https://api.example.com/odata/v2/User');
+  await page.getByRole('tab', { name: /Variáveis · DEV/ }).click();
+  await expect(page.locator('.kh-ap-hint').first()).toContainText('Ambiente DEV · SuccessFactors');
+  await page.getByLabel('Valor host').fill('https://sf.example.com');
+  await expect(page.locator('.kh-ap-resolved')).toHaveText('→ https://sf.example.com/odata/v2/User');
+  await page.getByRole('button', { name: 'Gerir ambientes' }).click();
+  const mgr = page.getByRole('dialog', { name: 'Gerir ambientes' });
+  await expect(mgr.getByRole('textbox', { name: /Nome do ambiente/ })).toHaveCount(3);
+  await mgr.getByLabel('Novo ambiente (ex.: UAT)').fill('UAT');
+  await mgr.getByLabel('Novo ambiente (ex.: UAT)').press('Enter');
+  await expect(mgr.getByRole('textbox', { name: /Nome do ambiente/ })).toHaveCount(4);
+  await mgr.getByRole('button', { name: 'Eliminar PRD' }).click();
+  await page
+    .getByRole('dialog', { name: 'Eliminar ambiente?' })
+    .getByRole('button', { name: 'Eliminar' })
+    .click();
+  await expect(mgr.getByRole('textbox', { name: /Nome do ambiente/ })).toHaveCount(3);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('combobox', { name: 'Ambiente' }).locator('option')).toHaveText([
+    'DEV',
+    'QAS',
+    'UAT',
+  ]);
+  await expect(page.locator('.kh-ap-resolved')).toHaveText('→ /odata/v2/User'); // UAT, no host yet
+  // back without a folder: the global environments again
+  await page.getByLabel('Pasta', { exact: true }).selectOption({ label: 'Sem Pasta' });
+  await expect(page.getByRole('combobox', { name: 'Ambiente' }).locator('option')).toHaveText([
+    'DEV',
+    'QAS',
+    'PRD',
+  ]);
+
+  await page.waitForTimeout(900); // debounced saves
+  await page.reload();
+  await page.locator('.kh-ap-item', { hasText: 'Utilizadores' }).click();
+  await page.getByRole('tab', { name: /Corpo/ }).click();
+  await expect(page.getByLabel('Valor grant_type')).toHaveValue('client_credentials');
 
   await page.getByRole('button', { name: 'Duplicar' }).click();
   await expect(page.locator('.kh-ap-item')).toHaveCount(2);

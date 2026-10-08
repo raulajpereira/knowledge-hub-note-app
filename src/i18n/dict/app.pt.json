@@ -791,5 +791,16 @@
   "x_ty_report": "Report",
   "x_ty_variant": "Variante",
   "x_type": "Tipo",
-  "yourPhoto": "A sua foto"
+  "yourPhoto": "A sua foto",
+  "p_envsTitle": "Gerir ambientes",
+  "p_envName": "Nome do ambiente",
+  "p_envVars": "{n} variáveis",
+  "p_envNew": "Novo ambiente (ex.: UAT)",
+  "p_envsHint": "Cada pasta tem os seus ambientes e variáveis; os pedidos sem pasta usam os globais. Edite as variáveis no separador Variáveis.",
+  "p_envGlobal": "ambientes globais",
+  "p_envExists": "Já existe um ambiente com esse nome.",
+  "p_envDelTitle": "Eliminar ambiente?",
+  "p_envDelBody": "O ambiente «{x}» e as suas variáveis serão eliminados.",
+  "p_envScope": "Ambiente {env} · {scope}.",
+  "p_formHint": "Enviado como x-www-form-urlencoded; pode usar {{variáveis}} nas chaves e valores."
 }

@@ -549,3 +549,7 @@
   background: none;
   color: inherit;
 }
+/* rows whose name is a button: the count is their first span, not the name */
+.kh-em-folder > span.kh-em-count {
+  flex: none;
+}

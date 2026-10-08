@@ -791,5 +791,16 @@
   "x_ty_report": "Report",
   "x_ty_variant": "Variant",
   "x_type": "Type",
-  "yourPhoto": "Your Photo"
+  "yourPhoto": "Your Photo",
+  "p_envsTitle": "Manage environments",
+  "p_envName": "Environment name",
+  "p_envVars": "{n} variables",
+  "p_envNew": "New environment (e.g. UAT)",
+  "p_envsHint": "Each folder has its own environments and variables; requests without a folder use the global ones. Edit the variables in the Variables tab.",
+  "p_envGlobal": "global environments",
+  "p_envExists": "An environment with that name already exists.",
+  "p_envDelTitle": "Delete environment?",
+  "p_envDelBody": "The “{x}” environment and its variables will be deleted.",
+  "p_envScope": "Environment {env} · {scope}.",
+  "p_formHint": "Sent as x-www-form-urlencoded; {{variables}} can be used in keys and values."
 }
