@@ -220,7 +220,7 @@ export function TeamBar({ mg, manageOn }: { mg: Mg; manageOn?: boolean }) {
               )}
             >
               <span style={css(`width:8px;height:8px;border-radius:50%;background:${t.color};`)} />
-              {t.id === 'all' ? mg.tr(t.name) : t.name}
+              {mg.tr(t.name)}
             </button>
           );
         })}

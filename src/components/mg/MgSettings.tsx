@@ -32,7 +32,7 @@ export function MgSettingsTab() {
 function MgSettings() {
   const mg = useMg();
   const toast = useToast();
-  const { tr, lang, ROLE, SKN, LV, NL, lvIdx, P } = mg;
+  const { tr, lang, ROLE, SKN, LV, LVR, NL, lvIdx, P } = mg;
   const L = (i: number) => mgL(i, lang);
   const [nA, setNA] = useState('');
   const [nR, setNR] = useState('');
@@ -219,7 +219,7 @@ function MgSettings() {
               </span>
               <input
                 className="mg-in"
-                value={LV[l]}
+                value={LVR[l]}
                 maxLength={40}
                 aria-label={`${L(3)} ${l}`}
                 onChange={(e) => {

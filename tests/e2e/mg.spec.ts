@@ -216,6 +216,13 @@ test('skills, people and clients', async ({ page }) => {
       .filter({ visible: true })
       .first(),
   ).toBeVisible();
+  // saved on the server before the page is reloaded
+  await expect
+    .poll(async () => {
+      const r = (await mgData(page)).people.find((p) => p.name === 'Rui Martins')!;
+      return [r.status, r.statusNote];
+    })
+    .toEqual(['Suspenso', 'Baixa médica até 30/11']);
   await page.reload();
   await expect(page.getByLabel('Motivo / observações')).toHaveValue('Baixa médica até 30/11');
   // the list filters by status
@@ -267,6 +274,8 @@ test('allocations: new allocation from the panel, weekly override, dashboard and
   await page.getByRole('tab', { name: 'Timeline' }).click();
   await page.getByRole('button', { name: '+ Alocação' }).click();
   const panel = page.getByRole('complementary', { name: 'Nova Alocação' });
+  // still suspended from the people test (if not, the earlier save was lost)
+  expect((await mgData(page)).people.find((p) => p.name === 'Rui Martins')?.status).toBe('Suspenso');
   // name · cargo; suspended people are not offered for new allocations
   await expect(panel.getByLabel('Recurso').locator('option', { hasText: 'Rui Martins' })).toHaveCount(0);
   await panel.getByLabel('Recurso').selectOption({ label: 'Zé Novo · Developer ABAP' });

@@ -119,7 +119,9 @@ export function useMg() {
     const W = mgWeeks();
     const { wk, wi, dIso } = W;
     const S = D.settings;
-    const LV = S.levels ?? MG_LV;
+    // the level names as stored (Definições edits them) and as shown
+    const LVR = S.levels ?? MG_LV;
+    const LV = LVR.map((l) => tr(l));
     const NL = LV.length - 1;
     const LVS = LV.map((l) => (l ? l[0]!.toUpperCase() : ''));
     const LVC = LV.map((_, i) =>
@@ -218,7 +220,7 @@ export function useMg() {
       gTeam === 'all' ||
       pjById[pid]?.team === gTeam ||
       D.allocs.some((a) => a.project === pid && pById[a.person]?.team === gTeam);
-    const teamOpts = [{ v: '', l: 'Todas as equipas' }, ...TEAMS.map((x) => ({ v: x.id, l: x.name }))];
+    const teamOpts = [{ v: '', l: 'Todas as equipas' }, ...TEAMS.map((x) => ({ v: x.id, l: tr(x.name) }))];
     /** team colour and name of a person (prototype _decTeam) */
     const tOf = (p: MgPerson | undefined) => {
       const x = p ? tById[p.team] : undefined;
@@ -227,6 +229,7 @@ export function useMg() {
     return {
       ...W,
       LV,
+      LVR,
       NL,
       LVS,
       LVC,

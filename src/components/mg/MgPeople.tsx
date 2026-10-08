@@ -67,7 +67,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
         const n = (window.prompt(tr('Nome do novo nível de senioridade (ex.: Principal)')) || '').trim();
         if (!n) return;
         mg.upd((d) => {
-          d.settings.levels = [...(d.settings.levels ?? LV), n];
+          d.settings.levels = [...(d.settings.levels ?? mg.LVR), n];
           d.people.find((x) => x.id === sel.id)!.level = LV.length;
         });
       }
@@ -357,7 +357,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                 {
                   label: tr('Equipa'),
                   val: sel.team,
-                  opts: mg.TEAMS.map((x) => ({ v: x.id, l: x.name })),
+                  opts: mg.TEAMS.map((x) => ({ v: x.id, l: tr(x.name) })),
                   onChange: set('team'),
                 },
                 { label: tr('Área principal'), val: sel.area, opts: areaOpts, onChange: set('area') },
