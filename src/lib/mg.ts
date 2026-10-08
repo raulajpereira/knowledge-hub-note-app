@@ -178,6 +178,8 @@ export type MgPerson = {
   email: string;
   phone: string;
   av: string;
+  /** version of the photo ('' or absent = none; changed only by /mg/people/:id/photo) */
+  photo?: string;
   skills: Record<string, number>;
 };
 export type MgExpPart = { area: string; years: number };
@@ -313,6 +315,8 @@ export const MgSchemas = {
     email: line(200),
     phone: line(40),
     av: color,
+    // read-only here: sent back as loaded, ignored when saving
+    photo: z.string().max(40).optional(),
     skills: z.record(key, z.number().int().min(1).max(20)).refine((m) => Object.keys(m).length <= 100),
   }),
   projects: z.strictObject({

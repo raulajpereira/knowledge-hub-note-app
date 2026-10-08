@@ -45,7 +45,11 @@ async function login(page: Page) {
 
 test.beforeAll(async ({ browser }) => {
   const code = /KH-LIC-\d{6}/.exec(cli('codes:create', '--type', 'license', '--plan', 'PRO'))![0];
-  const page = await browser.newPage({ locale: 'pt-PT' });
+  // its own address for the registration limit (10 an hour per IP)
+  const page = await browser.newPage({
+    locale: 'pt-PT',
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.141' },
+  });
   await page.goto('register');
   await page.getByLabel('Nome').fill('Meetings Tester');
   await page.getByLabel('Email').fill(email);

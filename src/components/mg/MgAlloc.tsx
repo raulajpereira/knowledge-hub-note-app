@@ -13,6 +13,9 @@ import type { Mg } from './store';
 const W0 = -4;
 const N = 20;
 const GRID = '260px repeat(20,minmax(54px,1fr)) 104px';
+// Grelha Semanal / Dias: wider cells, room for the project of each allocation
+const GRID_CELLS = '260px repeat(20,minmax(108px,1fr)) 104px';
+const CHIP_H = 19;
 const STICKY =
   'background:linear-gradient(90deg,rgba(255,255,255,.09),rgba(255,255,255,.05));backdrop-filter:blur(28px) saturate(150%);border-right:1px solid rgba(255,255,255,.1);';
 const CELL = [
@@ -137,6 +140,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
   };
 
   const isDay = mode === 'day';
+  const grid = mode === 'timeline' ? GRID : GRID_CELLS;
   const weeks = Array.from({ length: N }, (_, i) => {
     if (isDay) {
       const w = Math.floor(i / 5);
@@ -283,10 +287,10 @@ export function MgAlloc({ mg }: { mg: Mg }) {
             'flex:1;min-height:0;overflow:auto;margin:0 12px 12px;border-radius:22px;background:rgba(18,12,9,.16);border:1px solid rgba(255,255,255,.1);',
           )}
         >
-          <div style={css('min-width:1400px;')}>
+          <div style={css(`min-width:${mode === 'timeline' ? 1400 : 2524}px;`)}>
             <div
               style={css(
-                `position:sticky;top:0;z-index:4;display:grid;grid-template-columns:${GRID};height:58px;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.1));backdrop-filter:blur(30px) saturate(160%);border-bottom:1px solid rgba(255,255,255,.14);`,
+                `position:sticky;top:0;z-index:4;display:grid;grid-template-columns:${grid};height:58px;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.1));backdrop-filter:blur(30px) saturate(160%);border-bottom:1px solid rgba(255,255,255,.14);`,
               )}
             >
               <span
@@ -358,13 +362,33 @@ export function MgAlloc({ mg }: { mg: Mg }) {
               for (let w = 0; w < 8; w++) sum += mg.loadW(p.id, w);
               const avg = Math.round(sum / 8);
               const tm = mg.tOf(p);
-              const h = mode === 'timeline' ? Math.max(60, 24 + Math.max(1, lanes.length) * 36 - 8) : 58;
+              // Grelha Semanal / Dias: hours of each project in each cell
+              const mine = D.allocs.filter((a) => a.person === p.id);
+              const cells =
+                mode === 'timeline'
+                  ? []
+                  : Array.from({ length: N }, (_, i) => {
+                      const w = isDay ? Math.floor(i / 5) : W0 + i;
+                      const by = new Map<string, number>();
+                      for (const a of mine) {
+                        const v = isDay ? mg.aDay(a, w, i % 5) : mg.aWeek(a, w);
+                        if (v) by.set(a.project, (by.get(a.project) ?? 0) + v);
+                      }
+                      return [...by]
+                        .map(([pid, hh]) => ({ pj: mg.pjById[pid], hh: Math.round(hh * 10) / 10 }))
+                        .sort((a, b) => b.hh - a.hh);
+                    });
+              const most = Math.max(0, ...cells.map((c) => c.length));
+              const h =
+                mode === 'timeline'
+                  ? Math.max(60, 24 + Math.max(1, lanes.length) * 36 - 8)
+                  : Math.max(58, 46 + most * (CHIP_H + 3));
               return (
                 <div
                   key={p.id}
                   className="mg-alrow"
                   style={css(
-                    `display:grid;grid-template-columns:${GRID};min-height:${h}px;border-bottom:1px solid rgba(255,255,255,.06);background:${ri % 2 ? 'rgba(255,255,255,.018)' : 'transparent'};`,
+                    `display:grid;grid-template-columns:${grid};min-height:${h}px;border-bottom:1px solid rgba(255,255,255,.06);background:${ri % 2 ? 'rgba(255,255,255,.018)' : 'transparent'};`,
                   )}
                 >
                   <span
@@ -477,12 +501,15 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                       const capX = isDay ? (+p.cap || 40) / 5 : p.cap;
                       const V = CELL[mg.band(hh, capX)];
                       const d = isDay ? (di === 0 ? 1 : 9) : +wk(w).slice(8, 10);
-                      const tip = `${p.name} · ${isDay ? dIso(w, di) : wLblY(wk(w))} · ${hh}h`;
+                      const tip = [
+                        `${p.name} · ${isDay ? dIso(w, di) : wLblY(wk(w))} · ${hh}h`,
+                        ...cells[i]!.map((c) => `${c.pj?.code ?? '—'} ${c.pj?.name ?? ''} · ${c.hh}h`),
+                      ].join('\n');
                       return (
                         <span
                           key={i}
                           style={css(
-                            `display:flex;align-items:center;justify-content:center;padding:9px 5px;border-left:1px solid ${d <= 7 && i ? 'rgba(255,255,255,.12)' : 'rgba(255,255,255,.04)'};`,
+                            `display:flex;align-items:stretch;justify-content:center;padding:9px 4px;border-left:1px solid ${d <= 7 && i ? 'rgba(255,255,255,.12)' : 'rgba(255,255,255,.04)'};`,
                           )}
                         >
                           <button
@@ -500,10 +527,24 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                               });
                             }}
                             style={css(
-                              `cursor:pointer;width:100%;height:38px;border:0;padding:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:${V[0]};box-shadow:${V[2]};font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;color:${V[1]};`,
+                              `cursor:pointer;width:100%;min-height:38px;height:100%;border:0;padding:${cells[i]!.length ? '5px 4px 6px' : '0'};border-radius:10px;display:flex;flex-direction:column;align-items:stretch;justify-content:${cells[i]!.length ? 'flex-start' : 'center'};gap:3px;background:${V[0]};box-shadow:${V[2]};font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;color:${V[1]};box-sizing:border-box;`,
                             )}
                           >
-                            {hh ? String(hh).replace('.', en ? '.' : ',') : ''}
+                            <span style={css('text-align:center;line-height:16px;')}>
+                              {hh ? String(hh).replace('.', en ? '.' : ',') : ''}
+                            </span>
+                            {cells[i]!.map(({ pj, hh: ph }) => (
+                              <span
+                                key={pj?.id ?? '?'}
+                                className="mg-alchip"
+                                style={css(
+                                  `height:${CHIP_H}px;background:${pj?.color ?? 'rgba(255,255,255,.4)'};`,
+                                )}
+                              >
+                                <span>{pj?.code ?? '—'}</span>
+                                <b>{String(ph).replace('.', en ? '.' : ',')}</b>
+                              </span>
+                            ))}
                           </button>
                         </span>
                       );

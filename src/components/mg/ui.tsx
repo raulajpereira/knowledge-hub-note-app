@@ -122,7 +122,7 @@ export function Split({
   );
 }
 
-/** Person avatar with the team outline (prototype _decTeam). */
+/** Person avatar with the team outline (prototype _decTeam); the photo when there is one. */
 export function Av({
   p,
   size,
@@ -140,17 +140,26 @@ export function Av({
   tc?: string;
   s?: string;
 }) {
+  const photo = p?.photo ? personPhoto(p.id, p.photo) : null;
   return (
     <span
       aria-hidden="true"
       style={css(
-        `width:${size}px;height:${size}px;flex:none;border-radius:50%;background:${avatarBg(av ?? p?.av) ?? 'rgba(255,255,255,.15)'};outline:2px solid ${tc ?? 'transparent'};outline-offset:2px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;${s}`,
+        `width:${size}px;height:${size}px;flex:none;border-radius:50%;background:${avatarBg(av ?? p?.av) ?? 'rgba(255,255,255,.15)'};outline:2px solid ${tc ?? 'transparent'};outline-offset:2px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;overflow:hidden;${s}`,
       )}
     >
-      {mgIni(name ?? p?.name ?? '?')}
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element -- private image streamed by the API
+        <img src={photo} alt="" style={css('width:100%;height:100%;object-fit:cover;display:block;')} />
+      ) : (
+        mgIni(name ?? p?.name ?? '?')
+      )}
     </span>
   );
 }
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+export const personPhoto = (id: string, v: string) => `${BASE}/api/v1/mg/people/${id}/photo?v=${v}`;
 
 export type Opt = { v: string; l: string };
 /** The prototype's select (chevron, dark options); `s` is its own style string. */

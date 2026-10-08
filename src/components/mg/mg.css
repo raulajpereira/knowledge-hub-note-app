@@ -107,3 +107,83 @@
   background: rgba(255, 255, 255, 0.12) !important;
   border-color: rgba(255, 255, 255, 0.22) !important;
 }
+/* Recursos: photo upload / remove on the person's avatar */
+.mg-photo {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+.mg-photo[aria-busy] > span:first-child {
+  opacity: 0.55;
+}
+.mg-photo__btn {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(42, 33, 28, 0.9);
+  background: #fbf8f5;
+  color: #2a211c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.mg-photo__up {
+  right: -6px;
+  bottom: -6px;
+}
+.mg-photo__rm {
+  right: -6px;
+  top: -6px;
+  background: rgba(42, 33, 28, 0.92);
+  color: #fbf8f5;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.mg-photo__up input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.mg-photo__up:focus-within,
+.mg-photo__rm:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+/* Alocações › Grelha Semanal / Dias: the project of each allocation in the cell */
+.mg-alchip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 5px;
+  border-radius: 6px;
+  color: #1f1a16;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.mg-alchip > span {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mg-alchip > b {
+  flex: none;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  opacity: 0.75;
+}

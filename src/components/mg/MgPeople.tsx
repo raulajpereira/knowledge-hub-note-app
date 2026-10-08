@@ -16,6 +16,7 @@ import { mgL } from '@/lib/mgText';
 import { CHEV, OPT, css } from './css';
 import { Av, Chip, Fields, Sel, Split, Trash, uid } from './ui';
 import type { Mg } from './store';
+import { PersonPhoto } from './PersonPhoto';
 
 // Recursos (prototype isPeople): people with role, team, area, seniority,
 // cost/price, capacity, skills, 12-week load and allocations.
@@ -264,7 +265,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
     <Split page="mg_people" list={side}>
       <div style={css('display:flex;flex-direction:column;gap:18px;padding:24px 26px 30px;')}>
         <div style={css('display:flex;align-items:center;gap:16px;min-width:0;')}>
-          <Av p={sel} size={56} fs={19} tc={t.tc} />
+          <PersonPhoto mg={mg} p={sel} size={56} fs={19} tc={t.tc} />
           <div style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;')}>
             <input
               value={sel.name}

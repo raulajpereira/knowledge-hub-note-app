@@ -1584,6 +1584,37 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await codeOf(svc.register({ ...reg, email: 'novo@example.pt' }, meta))).toBe('email_taken');
   });
 
+  it('management: the photo of a person is checked, kept in the tenant, untouched by ops, removable', async () => {
+    const mg = await import('@/server/content/mg');
+    const ph = await import('@/server/content/mgPhoto');
+    const a = await signedIn('mgp-a@example.pt');
+    const b = await signedIn('mgp-b@example.pt');
+    await mg.resetMgSample(a);
+    const d = await mg.loadMg(a);
+    const p = d.people[0]!;
+    expect(p.photo).toBe('');
+    expect(await codeOf(ph.putPersonPhoto(a, p.id, new TextEncoder().encode('<svg onload=x>')))).toBe(
+      'unsupported_image',
+    );
+    // another tenant can't see the person, so can't set or read the photo
+    expect(await codeOf(ph.putPersonPhoto(b, p.id, PNG))).toBe('not_found');
+    const v = await ph.putPersonPhoto(a, p.id, PNG);
+    expect(v.length).toBeGreaterThan(5);
+    expect((await ph.readPersonPhoto(a, p.id)).type).toBe('image/png');
+    expect(await codeOf(ph.readPersonPhoto(b, p.id))).toBe('not_found');
+    const d2 = await mg.loadMg(a);
+    const me = (x: typeof d2) => x.people.find((y) => y.id === p.id)!;
+    expect(me(d2).photo).toBe(v);
+    // saving the person (with whatever photo the browser holds) never changes it
+    await mg.applyMgOps(a, [{ op: 'put', c: 'people', v: { ...me(d2), name: 'Nova', photo: 'x' } }]);
+    expect(me(await mg.loadMg(a))).toMatchObject({ name: 'Nova', photo: v });
+    const keys = await admin.unsafe('select k from kh_storage_keys() k');
+    expect(keys.some((r) => String(r.k).endsWith(v))).toBe(true);
+    await ph.deletePersonPhoto(a, p.id);
+    expect(me(await mg.loadMg(a)).photo).toBe('');
+    expect(await codeOf(ph.readPersonPhoto(a, p.id))).toBe('not_found');
+  });
+
   it('management projects in tasks, issues and transports: own tenant only, cleared when deleted', async () => {
     const mg = await import('@/server/content/mg');
     const { createTask, updateTask } = await import('@/server/content/tasks');

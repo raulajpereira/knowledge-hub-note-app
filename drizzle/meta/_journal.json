@@ -239,6 +239,13 @@
       "when": 1791472351255,
       "tag": "0033_files",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791477658750,
+      "tag": "0034_mg_photo",
+      "breakpoints": true
     }
   ]
 }

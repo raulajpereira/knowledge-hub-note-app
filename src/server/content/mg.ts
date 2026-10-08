@@ -30,6 +30,7 @@ import {
   type MgTs,
 } from '@/lib/mg';
 import { asUser, type Tx } from './tenant';
+import { photoVersion } from './mgPhoto';
 
 // Management data of the tenant (D40). The screen loads everything once and
 // sends its changes as a batch of puts/deletes (POST /mg/ops) applied in one
@@ -88,6 +89,7 @@ export async function loadMg(auth: AuthContext): Promise<MgData> {
         email: p.email,
         phone: p.phone,
         av: p.av,
+        photo: photoVersion(p.photoKey),
         skills: p.skills as Record<string, number>,
       })),
       projects: pj.map((p) => ({
@@ -190,7 +192,8 @@ function toRow(c: MgCollection, v: unknown) {
     }
     case 'people': {
       const x = v as MgPerson;
-      const { id, team, expYears, ...rest } = x;
+      // the photo is never written through ops (only its own route)
+      const { id, team, expYears, photo: _photo, ...rest } = x;
       return {
         refs,
         row: {

@@ -28,6 +28,8 @@ type Store = {
   D: MgData;
   upd: (fn: (d: MgData) => void) => void;
   setAll: (d: MgData) => void;
+  /** a change the server already has (e.g. a photo uploaded through its own route): no ops */
+  local: (fn: (d: MgData) => void) => void;
 };
 const Ctx = createContext<Store | null>(null);
 
@@ -97,7 +99,20 @@ export function MgProvider({ children }: { children: React.ReactNode }) {
     setD(d);
   }, []);
 
-  const value = useMemo(() => (D ? { D, upd, setAll } : null), [D, upd, setAll]);
+  const local = useCallback((fn: (d: MgData) => void) => {
+    if (!cur.current) return;
+    const d = structuredClone(cur.current);
+    fn(d);
+    cur.current = d;
+    if (synced.current) {
+      const sy = structuredClone(synced.current);
+      fn(sy);
+      synced.current = sy;
+    }
+    setD(d);
+  }, []);
+
+  const value = useMemo(() => (D ? { D, upd, setAll, local } : null), [D, upd, setAll, local]);
   if (!value) return <div aria-busy="true" style={{ flex: 1 }} />;
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -110,7 +125,7 @@ export function useMgStore() {
 
 /** Derived values and helpers of the prototype's _rv(), for every page. */
 export function useMg() {
-  const { D, upd, setAll } = useMgStore();
+  const { D, upd, setAll, local } = useMgStore();
   const { lang } = useI18n();
   const router = useRouter();
   const [team, setTeam] = usePersistentState<string>('mg.team', 'all');
@@ -274,6 +289,6 @@ export function useMg() {
     [router],
   );
   const confirmTr = useCallback((s: string) => window.confirm(tr(s)), [tr]);
-  return { D, upd, setAll, lang, tr, nav, team, setTeam, cf: confirmTr, ...m };
+  return { D, upd, setAll, local, lang, tr, nav, team, setTeam, cf: confirmTr, ...m };
 }
 export type Mg = ReturnType<typeof useMg>;

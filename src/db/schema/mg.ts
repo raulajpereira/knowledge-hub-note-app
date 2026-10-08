@@ -87,6 +87,8 @@ export const mgPeople = pgTable(
     email: text('email').notNull().default(''),
     phone: text('phone').notNull().default(''),
     av: text('av').notNull(),
+    /** the person's photo in object storage (set only through /mg/people/:id/photo) */
+    photoKey: text('photo_key'),
     skills: jsonb('skills')
       .notNull()
       .default(sql`'{}'::jsonb`),

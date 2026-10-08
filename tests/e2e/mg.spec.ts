@@ -94,6 +94,7 @@ type Mg = {
     expYears: number | '';
     expSplit: Array<{ area: string; years: number }>;
     phone: string;
+    photo?: string;
   }>;
   clients: Array<{ name: string }>;
   settings: { levels?: string[] };
@@ -208,6 +209,8 @@ test('skills, people and clients', async ({ page }) => {
     .getByRole('button', { name: /Rui Martins/ })
     .first()
     .click();
+  // the panel switches person through the URL: edit only once it shows Rui
+  await expect(page.getByLabel('Nome', { exact: true })).toHaveValue('Rui Martins');
   await page.getByLabel('Estado', { exact: true }).selectOption('Suspenso');
   await page.getByLabel('Motivo / observações').fill('Baixa médica até 30/11');
   await expect(
@@ -225,6 +228,21 @@ test('skills, people and clients', async ({ page }) => {
     .toEqual(['Suspenso', 'Baixa médica até 30/11']);
   await page.reload();
   await expect(page.getByLabel('Motivo / observações')).toHaveValue('Baixa médica até 30/11');
+  // a photo in place of the initials, and removed again
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  await page
+    .getByLabel('Carregar foto')
+    .setInputFiles({ name: 'rui.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('.mg-photo img')).toBeVisible();
+  await expect
+    .poll(async () => !!(await mgData(page)).people.find((p) => p.name === 'Rui Martins')!.photo)
+    .toBe(true);
+  await page.getByRole('button', { name: 'Remover foto' }).click();
+  await expect(page.locator('.mg-photo img')).toHaveCount(0);
+  await expect(page.getByLabel('Carregar foto')).toBeAttached();
   // the list filters by status
   await page.getByLabel('Filtrar por estado').selectOption('Suspenso');
   await expect(page.getByText('1 pessoas')).toBeVisible();
@@ -306,7 +324,9 @@ test('allocations: new allocation from the panel, weekly override, dashboard and
   // weekly grid: override one week from the cell popover
   await page.getByRole('tab', { name: 'Grelha Semanal' }).click();
   await page.getByLabel('Filtrar pessoas…').fill('Zé Novo');
-  const cell = page.getByRole('button', { name: /^Zé Novo · .* · 16h$/ }).first();
+  const cell = page.getByRole('button', { name: /^Zé Novo · .* · 16h\s+E2E-01 .* · 16h$/ }).first();
+  // the cell says which project the hours are for
+  await expect(cell.locator('.mg-alchip')).toHaveText(/E2E-01\s*16/);
   await cell.click();
   const pop = page.getByRole('dialog', { name: 'Zé Novo' });
   await pop.getByLabel(/E2E-01/).fill('8');
