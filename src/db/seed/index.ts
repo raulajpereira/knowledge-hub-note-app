@@ -9,7 +9,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, sqlClient } from '@/db/client';
 import { admins, modules, planLimits, planModules, plans, tenantModules, tenants, users } from '@/db/schema';
 import { env } from '@/lib/env';
-import { FREE_LIMITS, MODULES, OWNER_PLAN, PLANS } from '@/server/licensing/catalog';
+import { CUSTOM_PLAN, FREE_LIMITS, MODULES, OWNER_PLAN, PLANS } from '@/server/licensing/catalog';
 import { sendSetupLink } from '@/server/auth/service';
 import { audit } from '@/server/audit';
 
@@ -53,6 +53,11 @@ export async function seedCatalogue() {
     }
     console.log(`[seed] plan ${p.code} created`);
   }
+  // the CUSTOM plan has no modules of its own (tenant_modules carry the chosen groups)
+  await db()
+    .insert(plans)
+    .values({ code: CUSTOM_PLAN, color: 'linear-gradient(135deg,#b8e0ff,#d8c4ff)', sort: 99 })
+    .onConflictDoNothing({ target: plans.code });
 }
 
 export async function seedSuperAdmin(): Promise<{ created: boolean }> {

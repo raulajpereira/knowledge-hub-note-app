@@ -39,6 +39,38 @@ const COPY: Record<string, Record<Lang, Copy>> = {
       foot: "If you weren't expecting this invitation, ignore this email.",
     },
   },
+  paymentReminder: {
+    pt: {
+      subject: 'Pagamento em atraso · KnowledgeHub',
+      title: 'Pagamento em atraso',
+      body: 'A subscrição {plan} de {client} tem um pagamento em atraso desde {date}. Para manter o acesso da equipa, regularize-o ou responda a este email se já o fez.',
+      cta: 'Abrir o KnowledgeHub',
+      foot: 'Se já tratou do pagamento, ignore este email.',
+    },
+    en: {
+      subject: 'Overdue payment · KnowledgeHub',
+      title: 'Overdue payment',
+      body: "The {plan} subscription of {client} has an overdue payment since {date}. To keep your team's access, please settle it or reply to this email if you already did.",
+      cta: 'Open KnowledgeHub',
+      foot: 'If you already took care of the payment, ignore this email.',
+    },
+  },
+  planRequest: {
+    pt: {
+      subject: 'Novo pedido de plano: {plan} · {client}',
+      title: 'Novo pedido de plano',
+      body: '{who} ({email}) de {client} pediu {plan} ({seats} lugares, {cycle}). {notes}',
+      cta: 'Abrir os Pedidos na consola',
+      foot: 'Recebe este email por ser administrador da Consola do KnowledgeHub.',
+    },
+    en: {
+      subject: 'New plan request: {plan} · {client}',
+      title: 'New plan request',
+      body: '{who} ({email}) from {client} requested {plan} ({seats} seats, {cycle}). {notes}',
+      cta: 'Open Requests in the console',
+      foot: 'You receive this email as an administrator of the KnowledgeHub Console.',
+    },
+  },
   verify: {
     pt: {
       subject: 'Confirme o seu email · KnowledgeHub',

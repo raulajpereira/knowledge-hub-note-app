@@ -35,7 +35,7 @@ export type AuthContext = {
     id: string;
     name: string;
     kind: 'pack' | 'individual';
-    status: 'trial' | 'active' | 'suspended' | 'canceled';
+    status: 'trial' | 'active' | 'past_due' | 'suspended' | 'canceled';
     planId: string | null;
     planCode: string | null;
     seats: number;

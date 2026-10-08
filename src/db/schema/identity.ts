@@ -1,6 +1,7 @@
 // Identity, tenants and licensing (DATA_MODEL.md §2, adjusted by
-// DECISIONS_AND_INFRA.md §7: no Stripe fields, no `past_due`, no `hosting`,
-// revocation keeps data 30 days via deleted_at).
+// DECISIONS_AND_INFRA.md §7: no Stripe fields, no `hosting`, revocation keeps
+// data 30 days via deleted_at). `past_due` is set by hand in the Admin Console
+// (sales happen outside the app).
 //
 // These tables are global (not tenant content): they are read before a
 // tenant is known (login by email, code redemption) and only ever touched by
@@ -82,16 +83,24 @@ export const planLimits = pgTable(
 );
 
 // ── Tenants ─────────────────────────────────────────────────────────────────
+export const TENANT_STATUSES = ['trial', 'active', 'past_due', 'suspended', 'canceled'] as const;
+export type TenantStatus = (typeof TENANT_STATUSES)[number];
 export const tenants = pgTable(
   'tenants',
   {
     id: id(),
     name: text('name').notNull(),
     kind: text('kind', { enum: ['pack', 'individual'] }).notNull(),
-    status: text('status', { enum: ['trial', 'active', 'suspended', 'canceled'] })
-      .notNull()
-      .default('active'),
+    status: text('status', { enum: TENANT_STATUSES }).notNull().default('active'),
     planId: uuid('plan_id').references(() => plans.id),
+    /** CUSTOM plan ("pacote individual"): the module groups bought (their modules go to tenant_modules) */
+    addonGroups: text('addon_groups')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** the client's contact (Admin Console "Admin do cliente"), before anyone registers */
+    contactName: text('contact_name'),
+    contactEmail: citext('contact_email'),
     billingCycle: text('billing_cycle', { enum: ['monthly', 'annual'] })
       .notNull()
       .default('monthly'),
@@ -306,3 +315,51 @@ export const userAssets = pgTable(
     check('user_assets_type_chk', sql`${t.contentType} in ('image/png','image/jpeg','image/webp')`),
   ],
 );
+
+// ── Admin Console: plan requests and settings ───────────────────────────────
+/**
+ * "Pedir este plano / Pedir mudança para X" and custom packages (Pricing):
+ * shown in the console's Pedidos, approved (applied to the tenant) or rejected.
+ */
+export const planRequests = pgTable(
+  'plan_requests',
+  {
+    id: id(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    kind: text('kind', { enum: ['plan', 'custom'] }).notNull(),
+    planId: uuid('plan_id').references(() => plans.id),
+    /** custom package: module groups */
+    groups: text('groups')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    seats: integer('seats').notNull().default(1),
+    cycle: text('cycle', { enum: ['monthly', 'annual'] })
+      .notNull()
+      .default('monthly'),
+    notes: text('notes').notNull().default(''),
+    status: text('status', { enum: ['new', 'approved', 'rejected'] })
+      .notNull()
+      .default('new'),
+    handledBy: uuid('handled_by').references(() => users.id, { onDelete: 'set null' }),
+    handledAt: timestamp('handled_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('plan_requests_status_idx').on(t.status, t.createdAt),
+    check('plan_requests_kind_chk', sql`${t.kind} in ('plan','custom')`),
+    check('plan_requests_status_chk', sql`${t.status} in ('new','approved','rejected')`),
+    check('plan_requests_cycle_chk', sql`${t.cycle} in ('monthly','annual')`),
+    check('plan_requests_seats_chk', sql`${t.seats} between 1 and 9999`),
+  ],
+);
+
+/** Console-wide settings (CUSTOM package prices per module group, its annual discount). */
+export const consoleSettings = pgTable('console_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

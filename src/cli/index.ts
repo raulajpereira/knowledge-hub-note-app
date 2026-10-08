@@ -1,4 +1,4 @@
-// Operator CLI until the Admin Console exists (Phase 10). On the VPS:
+// Operator CLI (the Admin Console does the same at /admin). On the VPS:
 //   docker compose run --rm migrate node dist/cli.mjs <command> [--flags]
 //
 //   codes:create --type license|invite [--plan PRO] [--seats 5]
@@ -7,15 +7,17 @@
 //   codes:pause|codes:resume|codes:revoke|codes:restore <KH-…-######>
 //   users:list
 //   tenants:module --email <owner@…> --add|--remove <module>   (add-ons: passwords, emails, issues…)
+//   admins:grant --email <…> --role admin|billing|support|readonly   (console access; 2FA required)
 //   superadmin:resend-setup
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db, sqlClient } from '@/db/client';
-import { codes, modules, plans, tenantModules, tenants, users } from '@/db/schema';
+import { admins, codes, modules, plans, tenantModules, tenants, users } from '@/db/schema';
 import { env } from '@/lib/env';
 import { createCode, pauseCode, restoreCode, resumeCode, revokeCode } from '@/server/licensing/codes';
 import { sendSetupLink } from '@/server/auth/service';
 import { normalizeCode } from '@/server/licensing/codeFormat';
 import { invalidateEntitlements } from '@/server/licensing/entitlements';
+import { audit } from '@/server/audit';
 
 function flags(argv: string[]) {
   const out: Record<string, string | true> = {};
@@ -133,6 +135,22 @@ async function main() {
           .where(and(eq(tenantModules.tenantId, u.tenantId), eq(tenantModules.moduleId, mod)));
       await invalidateEntitlements(u.tenantId);
       console.log(`\n  ${add ? '+' : '-'} ${mod} (tenant ${u.tenantId})\n`);
+      break;
+    }
+    case 'admins:grant': {
+      // console access for an existing account (the Manager does it in Administradores)
+      const email = str(f.email)?.toLowerCase();
+      const role = str(f.role) ?? 'support';
+      if (!email || !['admin', 'billing', 'support', 'readonly'].includes(role))
+        throw new Error('--email and --role admin|billing|support|readonly are required');
+      const [u] = await db().select({ id: users.id }).from(users).where(eq(users.email, email));
+      if (!u) throw new Error(`no user ${email}`);
+      await db()
+        .insert(admins)
+        .values({ userId: u.id, role: role as 'admin' | 'billing' | 'support' | 'readonly' })
+        .onConflictDoUpdate({ target: admins.userId, set: { role: role as 'admin', status: 'active' } });
+      await audit({ action: 'admin.grant', targetType: 'user', targetId: u.id, details: { email, role } });
+      console.log(`\n  ${email} → ${role}\n`);
       break;
     }
     case 'superadmin:resend-setup': {

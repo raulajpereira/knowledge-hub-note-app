@@ -6,11 +6,24 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 export type ApiFailure = { code: string; status: number; retryAfter?: number };
 
-export async function api<T = unknown>(
+export function api<T = unknown>(
   path: string,
   body?: unknown,
   method = body === undefined ? 'GET' : 'POST',
 ): Promise<T> {
+  return request<T>(`${BASE}/api/v1${path}`, body, method);
+}
+
+/** The Admin Console's API (`/api/admin/v1`). */
+export function adminApi<T = unknown>(
+  path: string,
+  body?: unknown,
+  method = body === undefined ? 'GET' : 'POST',
+): Promise<T> {
+  return request<T>(`${BASE}/api/admin/v1${path}`, body, method);
+}
+
+async function request<T>(url: string, body: unknown, method: string): Promise<T> {
   let res: Response;
   const payload = body === undefined ? undefined : JSON.stringify(body);
   const init: RequestInit = {
@@ -19,7 +32,6 @@ export async function api<T = unknown>(
     body: payload,
     credentials: 'same-origin',
   };
-  const url = `${BASE}/api/v1${path}`;
   // a save still in flight when the page is left or reloaded is not cancelled;
   // keepalive bodies share a 64 KB budget, so when it's full send it normally
   const keep = method !== 'GET' && payload !== undefined && payload.length < 60_000;

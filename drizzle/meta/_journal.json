@@ -169,6 +169,13 @@
       "when": 1791404893871,
       "tag": "0023_share_members_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791435280623,
+      "tag": "0024_console",
+      "breakpoints": true
     }
   ]
 }

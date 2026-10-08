@@ -1,38 +1,39 @@
-import { notFound } from 'next/navigation';
-import { eq } from 'drizzle-orm';
-import { db } from '@/db/client';
-import { admins } from '@/db/schema';
+import { notFound, redirect } from 'next/navigation';
 import { getAuth } from '@/server/auth/request';
-import { getLang } from '@/i18n/server';
-import { translate } from '@/i18n';
-import { AmbientBackground } from '@/components/ui';
-import { Placeholder } from '@/components/shell/Placeholder';
-import '@/components/shell/shell.css';
+import { adminOf } from '@/server/admin/guard';
+import { getEntitlements } from '@/server/licensing/entitlements';
+import { getPrefs } from '@/server/prefs';
+import { listAssets } from '@/server/assets';
+import { AdminShell } from '@/components/admin/AdminShell';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'KnowledgeHub · Admin' };
+export const metadata = { title: 'KnowledgeHub · Admin', robots: { index: false } };
 
-// Admin Console (Phase 10). Until then: active admins see a placeholder,
-// everyone else a 404 (the console's existence isn't advertised).
+// Admin Console (Admin Console.dc.html). Active console admins only — anyone
+// else gets a 404 (the console isn't advertised); the API checks the role of
+// every call again. Without 2FA the console asks for it first (SECURITY.md).
 export default async function AdminPage() {
   const auth = await getAuth();
-  if (!auth) notFound();
-  const [a] = await db().select().from(admins).where(eq(admins.userId, auth.user.id)).limit(1);
-  if (!a || a.status !== 'active') notFound();
-  const lang = await getLang();
+  if (!auth) redirect('/login?next=/admin');
+  const admin = await adminOf(auth);
+  if (!admin) notFound();
+  const [ent, prefs, assets] = await Promise.all([
+    getEntitlements(auth.tenant.id),
+    getPrefs(auth.user.id),
+    listAssets(auth.user.id),
+  ]);
   return (
-    <>
-      <AmbientBackground />
-      <main
-        className="kh-above"
-        style={{ height: '100vh', display: 'flex', padding: 20, boxSizing: 'border-box' }}
-      >
-        <Placeholder
-          icon="mg_overview"
-          title={translate(lang, 'shell_adminLbl')}
-          body={translate(lang, 'soon_body')}
-        />
-      </main>
-    </>
+    <AdminShell
+      me={{
+        id: auth.user.id,
+        name: auth.user.name,
+        email: auth.user.email,
+        role: admin.role,
+        totp: auth.user.totpEnabled,
+        assets,
+        modules: ent.modules,
+      }}
+      prefs={prefs}
+    />
   );
 }

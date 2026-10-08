@@ -186,5 +186,13 @@ export const FREE_LIMITS: Record<string, number> = {
   voice: 5,
 };
 
+/**
+ * "Pacote individual" (prototype CUSTOM): no modules of its own — the tenant's
+ * chosen module groups (tenants.addon_groups) are copied into tenant_modules.
+ */
+export const CUSTOM_PLAN = 'CUSTOM';
+export const groupModules = (grp: string) =>
+  MODULE_GROUPS.find((g) => g.grp === grp)?.modules.map(([id]) => id) ?? [];
+
 /** Plan given to the operator's own tenant (all modules). */
 export const OWNER_PLAN = 'ULTRA';

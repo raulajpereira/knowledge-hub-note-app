@@ -1,4 +1,21 @@
 [
+  ["^Pausar (KH-[A-Z]+-\\d{6})\\?$", "", "Pause $1?"],
+  ["^Revogar (KH-[A-Z]+-\\d{6})\\?$", "", "Revoke $1?"],
+  [
+    "^Os (\\d+) utilizadores associados ficam sem acesso; os dados mantêm-se\\.$",
+    "",
+    "The $1 linked users lose access; the data is kept."
+  ],
+  [
+    "^Os (\\d+) utilizadores associados e a licença de (.+) perdem o acesso já\\. Os dados ficam guardados 30 dias e pode restaurar até lá; depois são apagados\\.$",
+    "",
+    "The $1 linked users and the license of $2 lose access now. The data is kept for 30 days and you can restore it until then; after that it is deleted."
+  ],
+  [
+    "^Os (\\d+) utilizadores associados perdem o acesso já\\. Os dados ficam guardados 30 dias e pode restaurar até lá; depois são apagados\\.$",
+    "",
+    "The $1 linked users lose access now. The data is kept for 30 days and you can restore it until then; after that it is deleted."
+  ],
   ["^(\\d+) de (\\d+) lugares vendidos$", "", "$1 of $2 seats sold"],
   ["^nos últimos 7 dias, de (\\d+) registados$", "", "in the last 7 days, of $1 registered"],
   ["^(\\d+) em trial · (\\d+) cancelados$", "", "$1 on trial · $2 canceled"],
