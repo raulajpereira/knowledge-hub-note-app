@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { TX_SEED } from '../../src/lib/sap';
 
 // Phase 7 SAP: systems (list, cards, SAP GUI shortcut), transactions, header popup, settings,
 // transport requests and the Code Library SAP.
@@ -111,9 +112,10 @@ test('systems, transactions, header popup and SAP GUI settings', async ({ page, 
   await page.goto('app');
   await expect(page.getByRole('button', { name: /BSQ/ }).first()).toBeVisible();
 
-  // transaction library seeded from the prototype
+  // transaction library seeded with the standard catalogue (Basis, ABAP, HCM, MM, FI)
   await page.goto('app/tcodes');
-  await expect(page.getByText('23 transações')).toBeVisible();
+  await expect(page.getByText(`${TX_SEED.length} transações`)).toBeVisible();
+  await expect(page.getByRole('button', { name: /^ABAP/ })).toBeVisible();
   await page.getByRole('button', { name: 'Nova Transação' }).click();
   await page.getByLabel('Transação', { exact: true }).fill('zsd_price');
   await page.getByLabel('Descrição', { exact: true }).fill('Preços especiais');
@@ -121,17 +123,17 @@ test('systems, transactions, header popup and SAP GUI settings', async ({ page, 
   await page.getByLabel('Parâmetros').fill('VIEWNAME=ZV_SD_PRICE');
   await page.waitForTimeout(800);
   await page.reload();
-  await expect(page.getByText('24 transações')).toBeVisible();
+  await expect(page.getByText(`${TX_SEED.length + 1} transações`)).toBeVisible();
   await page.getByPlaceholder('Procurar transação, descrição, programa…').fill('preços');
   await expect(page.getByRole('row').filter({ hasText: 'ZSD_PRICE' })).toBeVisible();
 
   // header popup: search and Enter copies the code
   await page.getByRole('button', { name: 'SAP TCodes' }).click();
   const pop = page.getByRole('dialog', { name: 'SAP TCodes' });
-  await pop.getByLabel('Transação, programa, descrição, módulo…').fill('va0');
+  await pop.getByLabel('Transação, programa, descrição, módulo…').fill('me21');
   await pop.getByLabel('Transação, programa, descrição, módulo…').press('Enter');
   await expect(pop.getByText('✓ Copiado')).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('VA01');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('ME21N');
   await page.keyboard.press('Escape');
   await expect(pop).toHaveCount(0);
 

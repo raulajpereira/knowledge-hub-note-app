@@ -100,6 +100,9 @@ test('create, edit the HTML as versions, isolated preview, history, new tab, Tra
   const res = await page.request.get(`api/v1/artifacts/${id}/view`);
   expect(res.headers()['content-security-policy']).toContain('sandbox');
   expect(res.headers()['content-security-policy']).not.toContain('allow-same-origin');
+  // with the app's scrollbars (shown only while scrolling), closed before the page itself
+  const viewed = await res.text();
+  expect(viewed).toMatch(/<style data-kh-scrollbars>[^<]*<\/style><script data-kh-scrollbars>/);
 
   // left in Código, an artifact always opens again in Pré-visualizar
   await page.getByRole('radio', { name: 'Código' }).click();

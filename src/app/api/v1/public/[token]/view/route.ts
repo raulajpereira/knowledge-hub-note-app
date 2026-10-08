@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { handler } from '@/server/http';
 import { ApiError } from '@/server/errors';
+import { withAppScrollbars } from '@/lib/scrollbars';
 import { findLink, isUnlocked, publicArtifactHtml, unlockCookie } from '@/server/share/links';
 
 type Ctx = { params: Promise<{ token: string }> };
@@ -15,7 +16,7 @@ export const GET = handler(async (req: NextRequest, ctx: Ctx) => {
   if (!f || !isUnlocked(f, req.cookies.get(unlockCookie(f))?.value)) throw new ApiError(404, 'not_found');
   const html = await publicArtifactHtml(f);
   if (html === null) throw new ApiError(404, 'not_found');
-  return new NextResponse(html, {
+  return new NextResponse(withAppScrollbars(html), {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Content-Security-Policy':

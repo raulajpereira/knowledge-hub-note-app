@@ -13,6 +13,7 @@ export const envColor = (e: string) => ENV_C[e as SapEnv] ?? 'oklch(0.8 0 0)';
 
 export const TX_MODS: Record<string, string> = {
   BC: 'oklch(0.8 0.08 250)',
+  ABAP: 'oklch(0.83 0.11 205)',
   FI: 'oklch(0.82 0.12 150)',
   CO: 'oklch(0.82 0.1 180)',
   SD: 'oklch(0.82 0.12 60)',
@@ -27,32 +28,8 @@ export const TX_TYPES = ['dialog', 'report', 'param', 'variant', 'oo', 'area'] a
 export type TxType = (typeof TX_TYPES)[number];
 export const modColor = (m: string) => TX_MODS[m] ?? 'oklch(0.8 0.02 60)';
 
-/** Prototype TX_SEED: [code, description, module, program, type, params?]. */
-export const TX_SEED: Array<[string, string, string, string, TxType, string?]> = [
-  ['SE38', 'Editor ABAP', 'BC', 'RSABAPPROGRAM', 'report'],
-  ['SE80', 'Object Navigator', 'BC', '', 'dialog'],
-  ['SE11', 'ABAP Dictionary', 'BC', 'SAPMSRD0', 'dialog'],
-  ['SE37', 'Function Builder', 'BC', '', 'dialog'],
-  ['SE24', 'Class Builder', 'BC', '', 'dialog'],
-  ['SE16N', 'Browser de dados gerais', 'BC', '', 'dialog'],
-  ['SE09', 'Transport Organizer', 'BC', '', 'dialog'],
-  ['SE93', 'Manutenção de transações', 'BC', '', 'dialog'],
-  ['ST22', 'Análise de dumps ABAP', 'BC', '', 'dialog'],
-  ['ST05', 'Trace de performance (SQL)', 'BC', '', 'dialog'],
-  ['SM37', 'Visão geral de jobs', 'BC', '', 'dialog'],
-  ['SM30', 'Manutenção de tabelas/vistas', 'BC', 'SAPMSVMA', 'dialog'],
-  ['SU01', 'Manutenção de utilizadores', 'BC', 'SAPMSUU0', 'dialog'],
-  ['STMS', 'Transport Management System', 'BC', '', 'dialog'],
-  ['VA01', 'Criar ordem de venda', 'SD', 'SAPMV45A', 'dialog'],
-  ['VL01N', 'Criar entrega de saída', 'SD', 'SAPMV50A', 'dialog'],
-  ['VF01', 'Criar fatura', 'SD', 'SAPMV60A', 'dialog'],
-  ['ME21N', 'Criar pedido de compra', 'MM', 'SAPLMEGUI', 'dialog'],
-  ['MM01', 'Criar material', 'MM', 'SAPLMGMM', 'dialog'],
-  ['FB01', 'Lançar documento', 'FI', 'SAPMF05A', 'dialog'],
-  ['XK01', 'Criar fornecedor (central)', 'FI', 'SAPMF02K', 'dialog'],
-  ['PA30', 'Manter dados mestre HR', 'HCM', 'SAPMP50A', 'dialog'],
-  ['ZFI_TAXCFG', 'Manutenção config. fiscal', 'FI', 'SM30', 'param', 'VIEWNAME=ZV_FI_TAXCFG; UPDATE=X'],
-];
+/** The catalogue a tenant starts with: [code, description, module, program, type]. */
+export { TX_CATALOG as TX_SEED } from './sapTcodeCatalog';
 
 export type GuiSystem = {
   sid: string;

@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { TX_SEED } from '@/lib/sap';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import postgres from 'postgres';
@@ -884,14 +885,14 @@ describe.skipIf(!enabled)('notes', () => {
 
     // the prototype catalogue is given once per tenant; favourites start for the first user
     const tx1 = await sapSvc.listTcodes(a);
-    expect(tx1).toHaveLength(23);
+    expect(tx1).toHaveLength(TX_SEED.length);
     expect(
       tx1
         .filter((x) => x.fav)
         .map((x) => x.code)
         .sort(),
     ).toEqual(['SE09', 'SE16N', 'SE38', 'ST22']);
-    expect(await sapSvc.listTcodes(a)).toHaveLength(23);
+    expect(await sapSvc.listTcodes(a)).toHaveLength(TX_SEED.length);
     const se38 = tx1.find((x) => x.code === 'SE38')!;
     await sapSvc.touchTcode(a, se38.id, { use: true });
     await sapSvc.touchTcode(a, se38.id, { use: true });

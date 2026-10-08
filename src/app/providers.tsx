@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { I18nProvider, useI18n } from '@/i18n/client';
 import type { Lang } from '@/i18n';
 import { ConfirmProvider, ToastProvider } from '@/components/ui';
+import { watchScrollbars } from '@/lib/scrollbars';
 
 // Zod probes `new Function` to pick its fast path; the CSP forbids eval, so
 // the browser takes the plain path from the start (no blocked-eval report).
@@ -34,6 +35,8 @@ function UiProviders({ children }: { children: React.ReactNode }) {
 
 export function Providers({ lang, children }: { lang: Lang; children: React.ReactNode }) {
   useTimeZoneCookie();
+  // scrollbars appear while scrolling and fade away after (ui.css)
+  useEffect(() => watchScrollbars(document), []);
   return (
     <I18nProvider initialLang={lang}>
       <UiProviders>{children}</UiProviders>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { connectionText, envColor, modColor, sapShortcut, TX_SEED } from '@/lib/sap';
+import { connectionText, envColor, modColor, sapShortcut, TX_SEED, TX_TYPES } from '@/lib/sap';
 
 // SAP landscape helpers (ZNotes.dc.html gui() / copy()).
 const sys = {
@@ -50,12 +50,22 @@ describe('SAP GUI shortcut', () => {
   });
 });
 
-it('connection text, colours and the prototype catalogue', () => {
+it('connection text, colours and the transaction catalogue', () => {
   expect(
     connectionText({ ...sys, router: 'r' }, { host: 'Servidor', inst: 'Instância', mandt: 'Mandante' }),
   ).toBe('BSD - DEV\nSID: BSD\nServidor: 172.16.23.1\nInstância: 00\nMandante: 100\nSAProuter: r');
   expect(envColor('PRD')).toBe('oklch(0.72 0.17 25)');
   expect(envColor('X')).toBe('oklch(0.8 0 0)');
   expect(modColor('FI')).toBe('oklch(0.82 0.12 150)');
-  expect(TX_SEED).toHaveLength(23);
+  // the standard catalogue: no repeated codes, only known modules and types
+  const codes = TX_SEED.map((x) => x[0]);
+  expect(new Set(codes).size).toBe(codes.length);
+  expect(TX_SEED.length).toBeGreaterThan(400);
+  for (const [code, desc, mod, prog, type] of TX_SEED) {
+    expect(code).toMatch(/^[A-Z0-9_./-]{2,40}$/);
+    expect(desc.length).toBeGreaterThan(3);
+    expect(['BC', 'ABAP', 'HCM', 'MM', 'FI']).toContain(mod);
+    expect(prog).toMatch(/^[A-Z0-9_/]*$/);
+    expect(TX_TYPES).toContain(type);
+  }
 });

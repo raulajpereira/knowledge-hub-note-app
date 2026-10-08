@@ -247,14 +247,13 @@ async function seedTcodes(tx: Tx, auth: AuthContext) {
   const rows = await tx
     .insert(sapTcodes)
     .values(
-      TX_SEED.map(([code, description, module, program, type, params]) => ({
+      TX_SEED.map(([code, description, module, program, type]) => ({
         tenantId: auth.tenant.id,
         code,
         description,
         module,
         program,
         type,
-        params: params ?? '',
       })),
     )
     .returning({ id: sapTcodes.id, code: sapTcodes.code });
