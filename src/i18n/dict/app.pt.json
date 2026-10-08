@@ -802,5 +802,6 @@
   "p_envDelTitle": "Eliminar ambiente?",
   "p_envDelBody": "O ambiente «{x}» e as suas variáveis serão eliminados.",
   "p_envScope": "Ambiente {env} · {scope}.",
-  "p_formHint": "Enviado como x-www-form-urlencoded; pode usar {{variáveis}} nas chaves e valores."
+  "p_formHint": "Enviado como x-www-form-urlencoded; pode usar {{variáveis}} nas chaves e valores.",
+  "p_respResize": "Ajustar altura da resposta e dos cabeçalhos"
 }

@@ -802,5 +802,6 @@
   "p_envDelTitle": "Delete environment?",
   "p_envDelBody": "The “{x}” environment and its variables will be deleted.",
   "p_envScope": "Environment {env} · {scope}.",
-  "p_formHint": "Sent as x-www-form-urlencoded; {{variables}} can be used in keys and values."
+  "p_formHint": "Sent as x-www-form-urlencoded; {{variables}} can be used in keys and values.",
+  "p_respResize": "Resize the response and headers"
 }

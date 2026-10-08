@@ -599,3 +599,64 @@
 .kh-ap-envnew .kh-ap-add {
   align-self: center;
 }
+
+/* response: fills the panel; body and headers share the height (RespSplit) */
+.kh-ap-main[data-fill] {
+  min-height: 100%;
+  box-sizing: border-box;
+}
+.kh-ap-main[data-fill] > * {
+  flex-shrink: 0;
+}
+.kh-ap-main[data-fill] .kh-ap-resp {
+  flex: 1 0 420px;
+  min-height: 0;
+}
+.kh-ap-split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.kh-ap-resp .kh-ap-respbody {
+  margin: 0;
+  min-height: 0;
+  resize: none;
+  overflow: auto;
+}
+.kh-ap-respbody:focus-visible,
+.kh-ap-split .kh-ap-rh:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+.kh-ap-split .kh-ap-rh {
+  min-height: 0;
+  overflow: auto;
+}
+.kh-ap-rh > div:first-child > span {
+  margin-left: 6px;
+  font-weight: 500;
+  color: rgba(255, 248, 240, 0.5);
+}
+.kh-ap-splitter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: row-resize;
+  touch-action: none;
+  outline: none;
+}
+.kh-ap-splitter > span {
+  width: 48px;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  transition:
+    background 0.15s,
+    width 0.15s;
+}
+.kh-ap-splitter:hover > span,
+.kh-ap-splitter:focus-visible > span {
+  width: 72px;
+  background: rgba(255, 255, 255, 0.5);
+}

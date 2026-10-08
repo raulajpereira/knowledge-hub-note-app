@@ -82,6 +82,40 @@ test('requests: create, edit URL and params, env variables, blocked proxy, Trash
   await expect(page.getByRole('tab', { name: /Resposta/ })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.kh-ap-error')).toContainText('Endereço bloqueado');
 
+  // a response (proxy answer mocked): coloured body over the headers, the
+  // line between them moves with the keyboard and the pair fills the panel
+  await page.route('**/api/v1/api-requests/send', (r) =>
+    r.fulfill({
+      json: {
+        ok: true,
+        response: {
+          status: 200,
+          statusText: 'OK',
+          ms: 12,
+          truncated: false,
+          body: '{"name":"Ana","active":true}',
+          headers: [['content-type', 'application/json']],
+        },
+      },
+    }),
+  );
+  await page.getByRole('button', { name: 'Enviar' }).click();
+  const body = page.locator('.kh-ap-respbody');
+  await expect(body.locator('.kh-hl-s').first()).toHaveText('"name"');
+  await expect(page.locator('.kh-ap-rh')).toContainText('application/json');
+  const split = page.getByRole('separator', { name: 'Ajustar altura da resposta e dos cabeçalhos' });
+  await expect(split).toHaveAttribute('aria-valuenow', '70');
+  const h0 = (await body.boundingBox())!.height;
+  await split.focus();
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await expect(split).toHaveAttribute('aria-valuenow', '60');
+  expect((await body.boundingBox())!.height).toBeLessThan(h0);
+  const panel = (await page.locator('.kh-ap-read').boundingBox())!;
+  const rh = (await page.locator('.kh-ap-rh').boundingBox())!;
+  expect(panel.y + panel.height - (rh.y + rh.height)).toBeLessThan(80); // down to the bottom of the panel
+  await page.unroute('**/api/v1/api-requests/send');
+
   // {{variables}} from the selected environment
   await page.getByRole('tab', { name: /Variáveis · DEV/ }).click();
   await page.getByLabel('Valor host').fill('https://api.example.com');

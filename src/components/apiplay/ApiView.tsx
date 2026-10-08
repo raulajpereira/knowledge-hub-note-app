@@ -7,6 +7,7 @@ import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { Modal, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { encodeFormBody, parseFormBody, storeFormBody } from '@/lib/apiForm';
+import { codeHtml, guessLang } from '@/lib/codeHighlight';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
@@ -118,6 +119,76 @@ const I = {
   sliders:
     '<line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="9" cy="7" r="2.2"></circle><circle cx="15" cy="17" r="2.2"></circle>',
 };
+
+/** The response body's language: from its Content-Type, else a guess. */
+function respLang(headers: Array<[string, string]>, body: string): string | null {
+  const ct = (headers.find(([k]) => k.toLowerCase() === 'content-type')?.[1] ?? '').toLowerCase();
+  if (ct.includes('json')) return 'json';
+  if (ct.includes('html')) return 'html';
+  if (ct.includes('xml')) return 'xml';
+  if (ct.includes('javascript')) return 'javascript';
+  return guessLang(body);
+}
+// past this size the body is shown without colours (highlighting would stall the page)
+const HL_MAX = 400_000;
+
+/** Body over headers, the line between them dragged to share the height. */
+function RespSplit({
+  split,
+  onSplit,
+  top,
+  bottom,
+}: {
+  split: number;
+  onSplit: (v: number) => void;
+  top: React.ReactNode;
+  bottom: React.ReactNode;
+}) {
+  const { t } = useI18n();
+  const box = useRef<HTMLDivElement>(null);
+  const [live, setLive] = useState<number | null>(null);
+  const v = live ?? split;
+  const clamp = (x: number) => Math.min(0.88, Math.max(0.15, x));
+  return (
+    <div className="kh-ap-split" ref={box} style={{ gridTemplateRows: `${v}fr 12px ${1 - v}fr` }}>
+      {top}
+      <div
+        className="kh-ap-splitter"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label={t('p_respResize')}
+        aria-valuemin={15}
+        aria-valuemax={88}
+        aria-valuenow={Math.round(v * 100)}
+        tabIndex={0}
+        onPointerDown={(e) => {
+          const r = box.current?.getBoundingClientRect();
+          if (!r) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          const move = (ev: PointerEvent) => setLive(clamp((ev.clientY - r.top) / r.height));
+          const up = (ev: PointerEvent) => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+            setLive(null);
+            onSplit(clamp((ev.clientY - r.top) / r.height));
+          };
+          window.addEventListener('pointermove', move);
+          window.addEventListener('pointerup', up);
+        }}
+        onDoubleClick={() => onSplit(0.7)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowUp') onSplit(clamp(v - 0.05));
+          else if (e.key === 'ArrowDown') onSplit(clamp(v + 0.05));
+          else return;
+          e.preventDefault();
+        }}
+      >
+        <span />
+      </div>
+      {bottom}
+    </div>
+  );
+}
 
 /** Key / value rows with a switch each — Params, Headers, Variables and the form body. */
 function KvEditor({ list, onChange, hint }: { list: Kv[]; onChange: (L: Kv[]) => void; hint?: string }) {
@@ -270,6 +341,8 @@ export function ApiView() {
   // the chosen environment of each folder ('global': requests without a folder)
   const [envSel, setEnvSel] = usePersistentState<Record<string, string>>('api.envSel', {});
   const [envMgr, setEnvMgr] = useState(false);
+  // share of the response height given to the body (the rest: headers)
+  const [respSplit, setRespSplit] = usePersistentState<number>('api.respSplit', 0.7);
   const [tab, setTab] = useState<Tab>('params');
   const [items, setItems] = useState<Req[] | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -745,7 +818,7 @@ export function ApiView() {
 
       <section className="kh-em-read kh-ap-read">
         {act ? (
-          <div className="kh-ap-main">
+          <div className="kh-ap-main" data-fill={(tab === 'response' && rs?.ok) || undefined}>
             <div className="kh-ap-head">
               <div className="kh-ap-titles">
                 <input
@@ -1055,24 +1128,36 @@ export function ApiView() {
                   {!rs.ok && <div className="kh-ap-error">{rs.error}</div>}
                   {rs.ok && rs.truncated && <div className="kh-ap-hint">{t('ap_truncated')}</div>}
                   {rs.ok && (
-                    <textarea
-                      className="kh-ap-code"
-                      readOnly
-                      value={rs.body}
-                      spellCheck={false}
-                      aria-label={t('p_response')}
-                    />
-                  )}
-                  {rs.ok && rs.headers.length > 0 && (
-                    <div className="kh-ap-rh">
-                      <div>Headers</div>
-                      {rs.headers.map(([k, v], i) => (
-                        <div key={i}>
-                          <span>{k}</span>
-                          <span>{v}</span>
+                    <RespSplit
+                      split={respSplit}
+                      onSplit={setRespSplit}
+                      top={
+                        <pre className="kh-ap-code kh-ap-respbody" tabIndex={0} aria-label={t('p_response')}>
+                          {rs.body.length > HL_MAX ? (
+                            <code>{rs.body}</code>
+                          ) : (
+                            <code
+                              dangerouslySetInnerHTML={{
+                                __html: codeHtml(rs.body, respLang(rs.headers, rs.body)),
+                              }}
+                            />
+                          )}
+                        </pre>
+                      }
+                      bottom={
+                        <div className="kh-ap-rh" tabIndex={0} aria-label="Headers">
+                          <div>
+                            Headers <span>{rs.headers.length}</span>
+                          </div>
+                          {rs.headers.map(([k, v], i) => (
+                            <div key={i}>
+                              <span>{k}</span>
+                              <span>{v}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      }
+                    />
                   )}
                 </div>
               ))}
