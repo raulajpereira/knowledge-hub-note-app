@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const name = z.string().trim().min(1).max(80);
-export const ShareKindZ = z.enum(['notes', 'tasks', 'artifacts']);
+export const ShareKindZ = z.enum(['notes', 'tasks', 'artifacts', 'files']);
 export const FolderCreate = z
   .object({ kind: ShareKindZ, name, folderId: z.uuid().nullable().optional() })
   .strict();
@@ -19,4 +19,9 @@ export const MemberPatch = z
   .strict();
 export const PersonPatch = z.object({ email: z.email().max(254), paused: z.boolean() }).strict();
 /** module of each kind of shared folder */
-export const KIND_MODULE = { notes: 'notes', tasks: 'tasks', artifacts: 'artifacts' } as const;
+export const KIND_MODULE = {
+  notes: 'notes',
+  tasks: 'tasks',
+  artifacts: 'artifacts',
+  files: 'files',
+} as const;

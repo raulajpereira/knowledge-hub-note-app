@@ -49,6 +49,7 @@ export const trashItems = z.object({
           'email',
           'issue',
           'meeting',
+          'file',
           'artifact',
           'snippet',
           'request',

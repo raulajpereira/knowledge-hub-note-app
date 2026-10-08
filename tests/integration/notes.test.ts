@@ -104,7 +104,7 @@ describe.skipIf(!enabled)('notes', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, meetings, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, drive_files, meetings, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -674,6 +674,115 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.purgeTrash(a, [{ kind: 'meeting', id: m.id }]);
     expect((await meet.listMeetings(a)).map((x) => x.title)).toEqual(['Steering antigo']);
     expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
+  });
+
+  it('files: chunked upload, limits per user, private, shared folders, public link, Trash', async () => {
+    const drive = await import('@/server/content/drive');
+    const sh = await import('@/server/share/folders');
+    const links = await import('@/server/share/links');
+    const { UPLOAD_PART } = await import('@/lib/drive');
+    const a = await signedIn('fl-a@example.pt');
+    const b = await signedIn('fl-b@example.pt');
+    const read = async (p: Promise<{ stream: ReadableStream<Uint8Array> }>) =>
+      new Uint8Array(await new Response((await p).stream).arrayBuffer());
+    const send = async (auth: typeof a, name: string, data: Uint8Array, at: object = {}) => {
+      const s = await drive.startUpload(auth, { name, size: data.length, mime: 'text/html', ...at });
+      for (let n = 1; n <= s.parts; n++)
+        await drive.uploadPart(auth, s.uploadId, n, data.subarray((n - 1) * s.partSize, n * s.partSize));
+      return drive.completeUpload(auth, s.uploadId);
+    };
+
+    // two chunks; every chunk but the last has the exact part size; paths stripped from the name
+    const big = new Uint8Array(UPLOAD_PART + 1000).map((_, i) => i % 251);
+    const s = await drive.startUpload(a, { name: '../../etc/Relatório.pdf', size: big.length });
+    expect(s.parts).toBe(2);
+    expect(await codeOf(drive.uploadPart(a, s.uploadId, 1, big.subarray(0, 100)))).toBe('invalid_input');
+    expect(await codeOf(drive.uploadPart(b, s.uploadId, 1, big.subarray(0, UPLOAD_PART)))).toBe('not_found');
+    await drive.uploadPart(a, s.uploadId, 1, big.subarray(0, UPLOAD_PART));
+    expect(await codeOf(drive.completeUpload(a, s.uploadId))).toBe('upload_incomplete');
+    await drive.uploadPart(a, s.uploadId, 2, big.subarray(UPLOAD_PART));
+    const f = await drive.completeUpload(a, s.uploadId);
+    expect(f).toMatchObject({ name: 'Relatório.pdf', size: big.length, mine: true });
+    expect(Buffer.from(await read(drive.readDriveFile(a, f.id))).equals(Buffer.from(big))).toBe(true);
+    const part = await drive.readDriveFile(a, f.id, 'bytes=10-19');
+    expect(part).toMatchObject({ length: 10, range: `bytes 10-19/${big.length}` });
+    expect([...(await read(Promise.resolve(part)))]).toEqual([...big.subarray(10, 20)]);
+    expect(await codeOf(drive.readDriveFile(a, f.id, `bytes=${big.length}-`))).toBe('range_not_satisfiable');
+
+    // private: another user sees nothing
+    expect(await codeOf(drive.readDriveFile(b, f.id))).toBe('not_found');
+    expect((await drive.listDrive(b)).files).toEqual([]);
+    expect(await codeOf(drive.updateDriveFile(b, f.id, { name: 'x' }))).toBe('not_found');
+    expect(await codeOf(drive.trashDriveFile(b, f.id))).toBe('not_found');
+
+    // limits: defaults, then what the console sets for the person
+    const l0 = (await drive.listDrive(a)).limits;
+    expect(l0).toEqual({ used: big.length, quota: 1024 * 1024 * 1024, maxFile: 50 * 1024 * 1024 });
+    expect(await codeOf(drive.startUpload(a, { name: 'x.bin', size: 51 * 1024 * 1024 }))).toBe(
+      'file_too_large',
+    );
+    await admin.unsafe(`update users set files_quota_mb = 9, files_max_mb = 100 where id = '${a.user.id}'`);
+    expect(await codeOf(drive.startUpload(a, { name: 'x.bin', size: 51 * 1024 * 1024 }))).toBe(
+      'limit_reached',
+    );
+    expect(await codeOf(drive.startUpload(a, { name: 'x.bin', size: 101 * 1024 * 1024 }))).toBe(
+      'file_too_large',
+    );
+    await admin.unsafe(
+      `update users set files_quota_mb = null, files_max_mb = null where id = '${a.user.id}'`,
+    );
+    const usage = await admin.unsafe(`select used from kh_drive_usage(array['${a.user.id}']::uuid[])`);
+    expect(Number(usage[0]!.used)).toBe(big.length);
+
+    // folders (flat) and renaming
+    const fo = await drive.createDriveFolder(a, 'Contratos');
+    const t = await send(a, 'notas.txt', new TextEncoder().encode('linha 1'), { folderId: fo.id });
+    expect(t.folderId).toBe(fo.id);
+    expect((await drive.updateDriveFile(a, t.id, { name: 'a/b\\Atas.txt' })).name).toBe('Atas.txt');
+    await drive.deleteDriveFolder(a, fo.id);
+    expect((await drive.listDrive(a)).files.find((x) => x.id === t.id)?.folderId).toBeNull();
+
+    // shared folder of files: an edit member uploads into it and reads the owner's files there
+    const sf = await sh.createSharedFolder(a, { kind: 'files', name: 'Projeto Atlas' });
+    await sh.addMember(a, sf, 'fl-b@example.pt', { lang: 'pt' });
+    await drive.updateDriveFile(a, f.id, { sharedFolderId: sf });
+    const reach = await sh.reachableFolder(b, sf);
+    expect((await drive.listDrive(b, reach)).files.map((x) => [x.name, x.mine])).toEqual([
+      ['Relatório.pdf', false],
+    ]);
+    expect((await read(drive.readDriveFile(b, f.id))).length).toBe(big.length);
+    // read-only by default: no uploads, no moves
+    expect(await codeOf(drive.startUpload(b, { name: 'b.txt', size: 3, sharedFolderId: sf }))).toBe(
+      'forbidden',
+    );
+    expect(await codeOf(drive.updateDriveFile(b, f.id, { sharedFolderId: null }))).toBe('forbidden');
+    const m = (await sh.listSharedFolders(a)).find((x) => x.id === sf)!.members[0]!;
+    await sh.updateMember(a, m.id, { perm: 'edit' });
+    const bf = await send(b, 'b.txt', new TextEncoder().encode('abc'), { sharedFolderId: sf });
+    expect(bf.sharedFolderId).toBe(sf);
+    // the uploader's own space counts it, not the folder owner's
+    expect((await drive.listDrive(b)).limits.used).toBe(3);
+    expect((await drive.listDrive(a, await sh.reachableFolder(a, sf))).files).toHaveLength(2);
+
+    // public link: owner only; the public side streams the file as the owner
+    expect(await codeOf(links.createLink(b, 'file', f.id))).toBe('not_found');
+    const l = await links.createLink(a, 'file', f.id);
+    const found = (await links.findLink(l.url.split('/p/')[1]!))!;
+    expect(await links.publicItem(found, false)).toMatchObject({ type: 'file', title: 'Relatório.pdf' });
+    const pub = (await links.publicDriveFile(found, 'bytes=0-3'))!;
+    expect(pub).toMatchObject({ length: 4 });
+
+    // Trash: counted until purged; purge removes the object
+    expect((await notes.contentCounts(a, new Set(['files']))).files).toBe(2);
+    await drive.trashDriveFile(a, f.id);
+    expect(await links.publicItem(found, false)).toBeNull();
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toEqual([['file', 'Relatório.pdf']]);
+    expect((await drive.listDrive(a)).limits.used).toBe(big.length + 7);
+    await notes.restoreTrash(a, [{ kind: 'file', id: f.id }]);
+    await drive.trashDriveFile(a, f.id);
+    await notes.purgeTrash(a, [{ kind: 'file', id: f.id }]);
+    expect(await codeOf(drive.readDriveFile(a, f.id))).toBe('not_found');
+    expect((await drive.listDrive(a)).limits.used).toBe(7);
   });
 
   it('artifacts: private, a version per save, restore keeps history, folders, links, Trash', async () => {

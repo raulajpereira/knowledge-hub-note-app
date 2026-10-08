@@ -20,7 +20,7 @@ import { folders } from './content';
 
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
-export const SHARE_KINDS = ['notes', 'tasks', 'artifacts'] as const;
+export const SHARE_KINDS = ['notes', 'tasks', 'artifacts', 'files'] as const;
 export type ShareKind = (typeof SHARE_KINDS)[number];
 
 /** A read-only public link to a note or an artifact (token ≥ 128 bits, stored hashed). */
@@ -36,7 +36,7 @@ export const publicLinks = pgTable(
     ownerId: uuid('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    itemType: text('item_type', { enum: ['note', 'artifact'] }).notNull(),
+    itemType: text('item_type', { enum: ['note', 'artifact', 'file'] }).notNull(),
     itemId: uuid('item_id').notNull(),
     /** sha256(token), hex: the lookup key */
     tokenHash: text('token_hash').notNull().unique(),
@@ -52,7 +52,7 @@ export const publicLinks = pgTable(
     uniqueIndex('public_links_item_active')
       .on(t.ownerId, t.itemType, t.itemId)
       .where(sql`${t.revokedAt} is null`),
-    check('public_links_type_chk', sql`${t.itemType} in ('note','artifact')`),
+    check('public_links_type_chk', sql`${t.itemType} in ('note','artifact','file')`),
   ],
 );
 
@@ -82,7 +82,7 @@ export const sharedFolders = pgTable(
   (t) => [
     index('shared_folders_owner_idx').on(t.ownerId, t.kind),
     uniqueIndex('shared_folders_folder_uq').on(t.folderId),
-    check('shared_folders_kind_chk', sql`${t.kind} in ('notes','tasks','artifacts')`),
+    check('shared_folders_kind_chk', sql`${t.kind} in ('notes','tasks','artifacts','files')`),
     check('shared_folders_name_len', sql`char_length(${t.name}) between 1 and 80`),
   ],
 );

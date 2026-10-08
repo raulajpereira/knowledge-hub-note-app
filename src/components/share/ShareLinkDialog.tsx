@@ -8,7 +8,7 @@ import { ShareDialog, ShareHead } from './ShareDialog';
 
 export type PublicLink = {
   id: string;
-  itemType: 'note' | 'artifact';
+  itemType: 'note' | 'artifact' | 'file';
   itemId: string;
   title: string;
   url: string;
@@ -29,7 +29,7 @@ export function ShareLinkDialog({
   onClose,
   onChange,
 }: {
-  itemType: 'note' | 'artifact';
+  itemType: 'note' | 'artifact' | 'file';
   itemId: string;
   title: string;
   onClose: () => void;

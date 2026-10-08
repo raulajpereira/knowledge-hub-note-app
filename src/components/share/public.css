@@ -208,3 +208,17 @@
   font-size: 12px;
   color: rgba(255, 248, 240, 0.5);
 }
+
+/* a publicly linked file */
+.kh-pub__img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 220px);
+  margin: 0 auto;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+.kh-pub__nofile {
+  align-self: center;
+  text-align: center;
+}

@@ -20,7 +20,7 @@ export function SharingTab() {
   const { modules } = useShell();
   const { folders } = useSharedFolders();
   const own = folders.filter((f) => f.mine);
-  const kinds = (['notes', 'tasks', 'artifacts'] as const).filter((k) => modules.has(k));
+  const kinds = (['notes', 'tasks', 'artifacts', 'files'] as const).filter((k) => modules.has(k));
   const [nKind, setNKind] = useState<ShareKind>(kinds[0] ?? 'notes');
   const [nName, setNName] = useState('');
   const [people, setPeople] = useState<Person[]>([]);
@@ -153,7 +153,9 @@ export function SharingTab() {
         <div className="kh-sh-card__t">{t('sh_links')}</div>
         {links.map((l) => (
           <div key={l.id} className="kh-sh-link">
-            <span className="kh-sh-link__k">{t(l.itemType === 'note' ? 'sh_note' : 'sh_art')}</span>
+            <span className="kh-sh-link__k">
+              {t(l.itemType === 'note' ? 'sh_note' : l.itemType === 'file' ? 'sh_file' : 'sh_art')}
+            </span>
             <span className="kh-sh-mem__txt">
               <span className="kh-sh-mem__n">{l.title}</span>
               <span className="kh-sh-mem__e">

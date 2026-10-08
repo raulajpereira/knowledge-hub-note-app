@@ -1,5 +1,10 @@
 import { sql } from 'drizzle-orm';
-import { DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import {
+  AbortMultipartUploadCommand,
+  DeleteObjectsCommand,
+  ListMultipartUploadsCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { db } from '@/db/client';
 import { env } from '@/lib/env';
 import { s3 } from '@/lib/storage';
@@ -30,5 +35,27 @@ export async function sweepStorage(now = new Date()) {
       if (!page.IsTruncated) break;
       token = page.NextContinuationToken;
     }
-  return { removed };
+  // chunked uploads (Ficheiros) left unfinished for more than a day
+  let aborted = 0;
+  for (let km: string | undefined, um: string | undefined; ;) {
+    const page = await s3().send(
+      new ListMultipartUploadsCommand({
+        Bucket: bucket,
+        Prefix: 'tenants/',
+        KeyMarker: km,
+        UploadIdMarker: um,
+      }),
+    );
+    for (const u of page.Uploads ?? [])
+      if (u.Key && u.UploadId && (u.Initiated?.getTime() ?? 0) < now.getTime() - DAY) {
+        await s3()
+          .send(new AbortMultipartUploadCommand({ Bucket: bucket, Key: u.Key, UploadId: u.UploadId }))
+          .catch(() => {});
+        aborted++;
+      }
+    if (!page.IsTruncated) break;
+    km = page.NextKeyMarker;
+    um = page.NextUploadIdMarker;
+  }
+  return { removed, aborted };
 }

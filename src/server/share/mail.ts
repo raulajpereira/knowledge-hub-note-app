@@ -5,8 +5,8 @@ import { sendMail } from '@/server/mail/send';
 import type { ShareKind } from '@/db/schema';
 
 const KIND = {
-  pt: { notes: 'notas', tasks: 'tarefas', artifacts: 'artefactos' },
-  en: { notes: 'notes', tasks: 'tasks', artifacts: 'artifacts' },
+  pt: { notes: 'notas', tasks: 'tarefas', artifacts: 'artefactos', files: 'ficheiros' },
+  en: { notes: 'notes', tasks: 'tasks', artifacts: 'artifacts', files: 'files' },
 } as const;
 
 /** Tells a member a folder was shared with them, or invites an email without an account to sign up. */

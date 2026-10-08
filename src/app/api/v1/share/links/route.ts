@@ -4,10 +4,10 @@ import { requireContent } from '@/server/content/guard';
 import { requireModule } from '@/server/licensing/entitlements';
 import { createLink, linkFor, listLinks } from '@/server/share/links';
 
-const Item = z.object({ itemType: z.enum(['note', 'artifact']), itemId: z.uuid() }).strict();
-const mod = (t: 'note' | 'artifact') => (t === 'note' ? 'notes' : 'artifacts');
+const Item = z.object({ itemType: z.enum(['note', 'artifact', 'file']), itemId: z.uuid() }).strict();
+const mod = (t: 'note' | 'artifact' | 'file') => ({ note: 'notes', artifact: 'artifacts', file: 'files' })[t];
 
-/** GET /share/links — the caller's active public links; ?type=note|artifact&id= — the link of one item (or null). */
+/** GET /share/links — the caller's active public links; ?type=note|artifact|file&id= — the link of one item (or null). */
 export const GET = handler(async (req) => {
   const sp = new URL(req.url).searchParams;
   if (sp.has('type')) {

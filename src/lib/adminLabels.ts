@@ -24,6 +24,7 @@ const ACTIONS: Record<string, [string, string]> = {
   'user.register': ['Registou-se', 'Signed up'],
   'user.email_verified': ['Confirmou o email', 'Confirmed email'],
   'user.update': ['Alterou utilizador', 'Changed user'],
+  'user.files_limits': ['Alterou limites de ficheiros', 'Changed file limits'],
   'user.disable': ['Desativou utilizador', 'Disabled user'],
   'user.enable': ['Reativou utilizador', 'Reactivated user'],
   'user.pause': ['Pausou utilizador', 'Paused user'],

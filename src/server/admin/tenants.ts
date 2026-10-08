@@ -97,6 +97,10 @@ export type ClientUser = {
   createdAt: string;
   code: string | null;
   tenantId: string;
+  /** Ficheiros: limits set in the console (null = the defaults) and what is stored */
+  filesQuotaMb: number | null;
+  filesMaxMb: number | null;
+  filesUsed: number;
 };
 
 /** The people of some clients (members rows, client page, user page). */
@@ -114,11 +118,24 @@ export async function clientUsers(tenantIds: string[]): Promise<ClientUser[]> {
       createdAt: users.createdAt,
       code: codes.code,
       tenantId: users.tenantId,
+      filesQuotaMb: users.filesQuotaMb,
+      filesMaxMb: users.filesMaxMb,
     })
     .from(users)
     .leftJoin(codes, eq(codes.id, users.registeredWithCodeId))
     .where(inArray(users.tenantId, tenantIds))
     .orderBy(desc(sql`${users.roleInTenant} = 'admin'`), users.createdAt);
+  const usage = new Map<string, number>();
+  if (rows.length) {
+    const ids = sql.join(
+      rows.map((u) => sql`${u.id}`),
+      sql`, `,
+    );
+    const r = await db().execute<{ owner_id: string; used: string }>(
+      sql`SELECT owner_id, used FROM kh_drive_usage(ARRAY[${ids}]::uuid[])`,
+    );
+    for (const x of r) usage.set(x.owner_id, Number(x.used));
+  }
   return rows.map((u) => ({
     id: u.id,
     name: u.name,
@@ -130,6 +147,9 @@ export async function clientUsers(tenantIds: string[]): Promise<ClientUser[]> {
     createdAt: u.createdAt.toISOString(),
     code: u.code ?? null,
     tenantId: u.tenantId,
+    filesQuotaMb: u.filesQuotaMb,
+    filesMaxMb: u.filesMaxMb,
+    filesUsed: usage.get(u.id) ?? 0,
   }));
 }
 

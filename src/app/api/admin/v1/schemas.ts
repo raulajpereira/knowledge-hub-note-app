@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CODE_RE } from '@/server/licensing/codeFormat';
+import { FILES_MAX_MB_CAP, FILES_QUOTA_MB_CAP } from '@/lib/drive';
 
 export const codeParam = async (ctx: { params: Promise<{ code: string }> }) =>
   z
@@ -59,3 +60,10 @@ export const UserPatchZ = z
   .partial()
   .strict();
 export const AdminRoleZ = z.enum(['admin', 'billing', 'support', 'readonly']);
+
+export const FileLimitsZ = z
+  .object({
+    filesQuotaMb: z.number().int().min(1).max(FILES_QUOTA_MB_CAP).nullable(),
+    filesMaxMb: z.number().int().min(1).max(FILES_MAX_MB_CAP).nullable(),
+  })
+  .strict();

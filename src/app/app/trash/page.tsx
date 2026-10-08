@@ -12,7 +12,7 @@ export default async function TrashPage() {
   const auth = await getAuth();
   if (!auth) notFound();
   const [ent, lang] = await Promise.all([getEntitlements(auth.tenant.id), getLang()]);
-  if (!['notes', 'tasks', 'voice', 'meetings'].some((m) => ent.modules.includes(m)))
+  if (!['notes', 'tasks', 'voice', 'meetings', 'files'].some((m) => ent.modules.includes(m)))
     return (
       <Placeholder
         icon="notes"

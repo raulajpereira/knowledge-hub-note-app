@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi, isApiFailure } from '@/lib/client/api';
 import { actionLabel } from '@/lib/adminLabels';
+import { FILES_MAX_MB, FILES_MAX_MB_CAP, FILES_QUOTA_MB, FILES_QUOTA_MB_CAP, fmtBytes } from '@/lib/drive';
 import { useConfirm, useToast } from '@/components/ui';
 import { SEC_TITLE, SectionHead, Svg, useConsole } from './AdminShell';
 import { CodeDetail, CodeDone, type CodeRow } from './Codes';
@@ -56,6 +57,9 @@ export type CUser = {
   createdAt: string;
   code: string | null;
   tenantId: string;
+  filesQuotaMb: number | null;
+  filesMaxMb: number | null;
+  filesUsed: number;
 };
 type Plan = { id: string; code: string; color: string | null; price: number; disc: number };
 type Prices = { addon: Record<string, number>; customDisc: number };
@@ -921,6 +925,88 @@ export function ClientPage({ id, mode }: { id: string; mode: 'packs' | 'inds' })
 
 // ── User page ───────────────────────────────────────────────────────────────
 
+/** Ficheiros: quota and largest file for this person (empty = the defaults). */
+function FileLimits({ u, onSaved }: { u: CUser; onSaved: () => void }) {
+  const { A } = useA();
+  const { can } = useConsole();
+  const toast = useToast();
+  const w = can('clients', true);
+  const [q, setQ] = useState(u.filesQuotaMb?.toString() ?? '');
+  const [m, setM] = useState(u.filesMaxMb?.toString() ?? '');
+  const num = (s: string) => (s.trim() ? Math.round(Number(s)) : null);
+  const save = async () => {
+    const filesQuotaMb = num(q);
+    const filesMaxMb = num(m);
+    if (filesQuotaMb === u.filesQuotaMb && filesMaxMb === u.filesMaxMb) return;
+    const bad = (n: number | null, cap: number) => n !== null && !(Number.isFinite(n) && n >= 1 && n <= cap);
+    if (bad(filesQuotaMb, FILES_QUOTA_MB_CAP) || bad(filesMaxMb, FILES_MAX_MB_CAP)) {
+      toast({ message: A('Valor inválido.'), tone: 'error' });
+      return;
+    }
+    try {
+      await adminApi(`/users/${u.id}/files`, { filesQuotaMb, filesMaxMb }, 'PATCH');
+      toast({ message: A('Limites de ficheiros guardados.'), tone: 'success' });
+      onSaved();
+    } catch {
+      toast({ message: A('Não foi possível concluir a ação.'), tone: 'error' });
+    }
+  };
+  const quota = (u.filesQuotaMb ?? FILES_QUOTA_MB) * 1024 * 1024;
+  return (
+    <div className="kh-ad-card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{A('Ficheiros')}</h3>
+        <span className="kh-ad-td__sub">
+          {A('Vazio = valor base')} ({fmtBytes(FILES_QUOTA_MB * 1024 * 1024)} · {FILES_MAX_MB} MB{' '}
+          {A('por ficheiro')})
+        </span>
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 14,
+          alignItems: 'end',
+        }}
+      >
+        <Field label={A('Espaço (MB)')}>
+          <input
+            className="kh-ad-input"
+            type="number"
+            min={1}
+            max={FILES_QUOTA_MB_CAP}
+            disabled={!w}
+            value={q}
+            placeholder={String(FILES_QUOTA_MB)}
+            onChange={(e) => setQ(e.target.value)}
+            onBlur={() => void save()}
+          />
+        </Field>
+        <Field label={A('Tamanho máximo por ficheiro (MB)')}>
+          <input
+            className="kh-ad-input"
+            type="number"
+            min={1}
+            max={FILES_MAX_MB_CAP}
+            disabled={!w}
+            value={m}
+            placeholder={String(FILES_MAX_MB)}
+            onChange={(e) => setM(e.target.value)}
+            onBlur={() => void save()}
+          />
+        </Field>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <Bar
+            value={u.filesUsed}
+            max={quota}
+            label={`${A('Em uso')}: ${fmtBytes(u.filesUsed)} / ${fmtBytes(quota)}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function UserPage({
   clientId,
   userId,
@@ -1111,6 +1197,7 @@ export function UserPage({
                 </select>
               </Field>
             </div>
+            <FileLimits u={u} onSaved={load} />
             {ind && (
               <Subscription
                 key={JSON.stringify(c)}

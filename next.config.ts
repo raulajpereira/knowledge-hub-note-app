@@ -22,11 +22,17 @@ const nextConfig: NextConfig = {
       { source: '/:path*', headers: securityHeaders },
       // nothing frames the app, except its own sandboxed artifact views
       {
-        source: '/:path((?!api/v1/artifacts/[^/]+/view|api/v1/public/[^/]+/view).*)',
+        source:
+          '/:path((?!api/v1/artifacts/[^/]+/view|api/v1/public/[^/]+/view|api/v1/public/[^/]+/raw|api/v1/drive/[^/]+/raw).*)',
         headers: [{ key: 'X-Frame-Options', value: 'DENY' }],
       },
       {
         source: '/api/v1/:kind(artifacts|public)/:id/view',
+        headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
+      },
+      {
+        // file previews (PDF) shown inside the app
+        source: '/api/v1/:kind(drive|public)/:id/raw',
         headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
       },
     ];

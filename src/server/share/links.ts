@@ -4,7 +4,8 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { db } from '@/db/client';
 import { withTenant } from '@/db/tenant';
-import { artifacts, noteAttachments, notes, publicLinks } from '@/db/schema';
+import { artifacts, driveFiles, noteAttachments, notes, publicLinks } from '@/db/schema';
+import { readObject } from '@/server/content/drive';
 import { decryptSecret, encryptSecret, randomToken, safeEqual, sha256 } from '@/lib/crypto';
 import { env } from '@/lib/env';
 import { s3 } from '@/lib/storage';
@@ -20,7 +21,7 @@ import { docFileIds, type PMNode } from '@/server/content/doc';
 // encrypted for the owner to copy again; a password is hashed like account
 // passwords; a revoked or expired link is gone for good.
 
-export type LinkItem = 'note' | 'artifact';
+export type LinkItem = 'note' | 'artifact' | 'file';
 export type PublicLink = {
   id: string;
   itemType: LinkItem;
@@ -37,6 +38,13 @@ const hashOf = (token: string) => sha256(token).toString('hex');
 export const publicUrl = (token: string) => `${env().APP_URL.replace(/\/$/, '')}/p/${token}`;
 
 async function itemTitle(tx: Tx, type: LinkItem, id: string) {
+  if (type === 'file') {
+    const [f] = await tx
+      .select({ title: driveFiles.name, ownerId: driveFiles.ownerId })
+      .from(driveFiles)
+      .where(and(eq(driveFiles.id, id), isNull(driveFiles.deletedAt)));
+    return f;
+  }
   const t = type === 'note' ? notes : artifacts;
   const [r] = await tx
     .select({ title: t.title, ownerId: t.ownerId })
@@ -208,7 +216,8 @@ const asOwner = <T>(f: Found, fn: (tx: Tx) => Promise<T>) =>
 
 export type PublicItem =
   | { type: 'note'; title: string; doc: PMNode; updatedAt: string }
-  | { type: 'artifact'; title: string; description: string; updatedAt: string };
+  | { type: 'artifact'; title: string; description: string; updatedAt: string }
+  | { type: 'file'; title: string; size: number; updatedAt: string };
 
 /** The item behind a link, read as its owner (RLS), or null when it was deleted. */
 export async function publicItem(f: Found, countView: boolean): Promise<PublicItem | null> {
@@ -220,6 +229,15 @@ export async function publicItem(f: Found, countView: boolean): Promise<PublicIt
         .where(and(eq(notes.id, f.item_id), isNull(notes.deletedAt)));
       return n
         ? { type: 'note', title: n.title, doc: n.content as PMNode, updatedAt: n.updatedAt.toISOString() }
+        : null;
+    }
+    if (f.item_type === 'file') {
+      const [d] = await tx
+        .select({ name: driveFiles.name, size: driveFiles.size, updatedAt: driveFiles.updatedAt })
+        .from(driveFiles)
+        .where(and(eq(driveFiles.id, f.item_id), isNull(driveFiles.deletedAt)));
+      return d
+        ? { type: 'file', title: d.name, size: Number(d.size), updatedAt: d.updatedAt.toISOString() }
         : null;
     }
     const [a] = await tx
@@ -244,6 +262,19 @@ export async function publicArtifactHtml(f: Found): Promise<string | null> {
       .where(and(eq(artifacts.id, f.item_id), isNull(artifacts.deletedAt)));
     return a?.html ?? null;
   });
+}
+
+/** The linked file itself (streamed; byte ranges for audio/video). */
+export async function publicDriveFile(f: Found, range: string | null) {
+  if (f.item_type !== 'file') return null;
+  const d = await asOwner(f, async (tx) => {
+    const [r] = await tx
+      .select({ name: driveFiles.name, size: driveFiles.size, key: driveFiles.storageKey })
+      .from(driveFiles)
+      .where(and(eq(driveFiles.id, f.item_id), isNull(driveFiles.deletedAt)));
+    return r ?? null;
+  });
+  return d ? readObject(d.key, Number(d.size), d.name, range) : null;
 }
 
 /** An image of the linked note (only one its document shows). */

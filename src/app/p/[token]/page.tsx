@@ -6,6 +6,7 @@ import { Logo } from '@/components/brand/Logo';
 import { PublicPassword } from '@/components/share/PublicPassword';
 import { docHtml } from '@/server/share/render';
 import { findLink, isUnlocked, publicItem, unlockCookie } from '@/server/share/links';
+import { fmtBytes, previewKind } from '@/lib/drive';
 import '@/components/notes/notes.css';
 import '@/components/share/public.css';
 
@@ -107,6 +108,36 @@ export default async function PublicPage({ params }: { params: Promise<{ token: 
               }}
             />
           </article>
+        </main>
+      ) : item.type === 'file' ? (
+        <main className="kh-pub__main kh-pub__main--wide">
+          <div className="kh-pub__arthead">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h1 className="kh-pub__title">{item.title}</h1>
+              <p className="kh-pub__p">
+                {fmtBytes(item.size, lang)} · {t('sh_pubUpdated')} {when}
+              </p>
+            </div>
+            <a className="kh-pub__btn" href={`${BASE}/api/v1/public/${token}/raw?dl=1`}>
+              {t('fl_download')}
+            </a>
+          </div>
+          {(() => {
+            const src = `${BASE}/api/v1/public/${token}/raw`;
+            const k = previewKind(item.title);
+            if (k === 'pdf') return <iframe className="kh-pub__frame" src={src} title={item.title} />;
+            if (k === 'image')
+              return (
+                // eslint-disable-next-line @next/next/no-img-element -- a stored file, not a static asset
+                <img className="kh-pub__img" src={src} alt={item.title} />
+              );
+            if (k === 'video') return <video className="kh-pub__img" src={src} controls preload="metadata" />;
+            if (k === 'audio')
+              return <audio src={src} controls preload="metadata" style={{ width: '100%' }} />;
+            return (
+              <div className="kh-glass kh-glass--panel kh-pub__card kh-pub__nofile">{t('fl_noPreview')}</div>
+            );
+          })()}
         </main>
       ) : (
         <main className="kh-pub__main kh-pub__main--wide">

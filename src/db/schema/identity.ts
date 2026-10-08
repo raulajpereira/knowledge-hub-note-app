@@ -155,6 +155,9 @@ export const users = pgTable(
     registeredWithCodeId: uuid('registered_with_code_id'),
     passwordChangedAt: timestamp('password_changed_at', { withTimezone: true }),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+    /** Ficheiros: space and largest file in MB set in the console (NULL = the defaults) */
+    filesQuotaMb: integer('files_quota_mb'),
+    filesMaxMb: integer('files_max_mb'),
     createdAt: createdAt(),
   },
   (t) => [index('users_tenant_idx').on(t.tenantId)],

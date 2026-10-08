@@ -11,6 +11,8 @@ export const NAV_ICON_PATHS: Record<string, string> = {
   tasks: '<rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8.5 12l2.5 2.5 4.5-5"></path>',
   meetings:
     '<rect x="5" y="4" width="14" height="17" rx="2.5"></rect><path d="M9 4V3h6v1"></path><line x1="9" y1="10" x2="15" y2="10"></line><line x1="9" y1="14" x2="15" y2="14"></line><line x1="9" y1="18" x2="12" y2="18"></line>',
+  files:
+    '<path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path><path d="M12 11v5"></path><path d="M9.5 13.5L12 11l2.5 2.5"></path>',
   passwords:
     '<rect x="5" y="11" width="14" height="10" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>',
   emails: '<rect x="3" y="5" width="18" height="14" rx="2.5"></rect><path d="M4 7l8 6 8-6"></path>',
@@ -88,6 +90,10 @@ export const NAV_DEFAULT = [
   {
     type: 'item',
     id: 'meetings',
+  },
+  {
+    type: 'item',
+    id: 'files',
   },
   {
     type: 'item',

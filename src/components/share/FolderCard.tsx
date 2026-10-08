@@ -22,7 +22,7 @@ const FOLDER_ICON = (
   </svg>
 );
 
-const KIND_LABEL = { notes: 'sh_notes', tasks: 'sh_tasks', artifacts: 'sh_arts' } as const;
+const KIND_LABEL = { notes: 'sh_notes', tasks: 'sh_tasks', artifacts: 'sh_arts', files: 'sh_files' } as const;
 const EMAIL = /^\S+@\S+\.\S+$/;
 
 export function membersLabel(t: (k: string) => string, n: number, none = 'sh_members0') {

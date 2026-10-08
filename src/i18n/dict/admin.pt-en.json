@@ -380,5 +380,12 @@
   "Motivo (vai no email a quem pediu)": "Reason (included in the email to the requester)",
   "Novo": "New",
   "Aprovado": "Approved",
-  "Recusado": "Rejected"
+  "Recusado": "Rejected",
+  "Ficheiros": "Files",
+  "Vazio = valor base": "Empty = default",
+  "por ficheiro": "per file",
+  "Espaço (MB)": "Storage (MB)",
+  "Tamanho máximo por ficheiro (MB)": "Largest file (MB)",
+  "Em uso": "In use",
+  "Limites de ficheiros guardados.": "File limits saved."
 }

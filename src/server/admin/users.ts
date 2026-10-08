@@ -82,6 +82,28 @@ export async function updateUser(ctx: AdminCtx, id: string, patch: UserPatch, ip
   await log(ctx, { ...u, email: set.email ?? u.email }, action, ip, { ...patch });
 }
 
+/**
+ * Ficheiros: quota and largest file for one person (null = the defaults). Unlike
+ * the rest of the page, an admin may raise their own; only the owner changes the owner's.
+ */
+export async function setFileLimits(
+  ctx: AdminCtx,
+  id: string,
+  limits: { filesQuotaMb: number | null; filesMaxMb: number | null },
+  ip: string | null,
+) {
+  const u = await loadUser(id);
+  if (u.id !== ctx.user.id) {
+    const [a] = await db().select({ role: admins.role }).from(admins).where(eq(admins.userId, u.id)).limit(1);
+    if (a?.role === 'owner') throw new ApiError(403, 'forbidden');
+  }
+  await db()
+    .update(users)
+    .set({ filesQuotaMb: limits.filesQuotaMb, filesMaxMb: limits.filesMaxMb })
+    .where(eq(users.id, id));
+  await log(ctx, u, 'user.files_limits', ip, limits);
+}
+
 /** "Repor password": the reset link by email (the console never sees or sets passwords). */
 export async function sendUserReset(ctx: AdminCtx, id: string, ip: string | null) {
   const u = await loadUser(id);

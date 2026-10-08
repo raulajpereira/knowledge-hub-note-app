@@ -8,6 +8,7 @@ import {
   folders,
   issues,
   meetings,
+  driveFiles,
   itemLinks,
   noteAttachments,
   notes,
@@ -29,6 +30,7 @@ import { purgeBoardsTx } from './whiteboards';
 import { purgeSystemsTx, purgeTcodesTx } from './sap';
 import { purgeTransportsTx } from './transports';
 import { purgeObjectsTx } from './codelib';
+import { purgeDriveFilesTx } from './drive';
 import { countRecords, purgeRecordsTx } from './functional';
 import { countSaved } from '@/server/news/saved';
 import { purgeApiRequestsTx } from './apiPlayground';
@@ -428,6 +430,7 @@ export type TrashKind =
   | 'email'
   | 'issue'
   | 'meeting'
+  | 'file'
   | 'artifact'
   | 'snippet'
   | 'request'
@@ -519,6 +522,10 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: meetings.id, title: meetings.title, deletedAt: meetings.deletedAt })
       .from(meetings)
       .where(isNotNull(meetings.deletedAt));
+    const dfs = await tx
+      .select({ id: driveFiles.id, title: driveFiles.name, deletedAt: driveFiles.deletedAt })
+      .from(driveFiles)
+      .where(isNotNull(driveFiles.deletedAt));
     const es = await tx
       .select({ id: emails.id, title: emails.subject, deletedAt: emails.deletedAt })
       .from(emails)
@@ -591,6 +598,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...is.map((x) => ({
         id: x.id,
         kind: 'issue' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...dfs.map((x) => ({
+        id: x.id,
+        kind: 'file' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -677,6 +691,8 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     if (iIds.length) await tx.update(issues).set({ deletedAt: null }).where(inArray(issues.id, iIds));
     const mIds = items.filter((i) => i.kind === 'meeting').map((i) => i.id);
     if (mIds.length) await tx.update(meetings).set({ deletedAt: null }).where(inArray(meetings.id, mIds));
+    const dIds = items.filter((i) => i.kind === 'file').map((i) => i.id);
+    if (dIds.length) await tx.update(driveFiles).set({ deletedAt: null }).where(inArray(driveFiles.id, dIds));
     const eIds = items.filter((i) => i.kind === 'email').map((i) => i.id);
     // an email whose folder was removed meanwhile comes back without a folder (FK set null)
     if (eIds.length) await tx.update(emails).set({ deletedAt: null }).where(inArray(emails.id, eIds));
@@ -740,6 +756,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let eIds: string[];
     let iIds: string[];
     let mIds: string[];
+    let dIds: string[];
     let aIds: string[];
     let sIds: string[];
     let bIds: string[];
@@ -786,6 +803,9 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       mIds = (await tx.select({ id: meetings.id }).from(meetings).where(isNotNull(meetings.deletedAt))).map(
         (r) => r.id,
       );
+      dIds = (
+        await tx.select({ id: driveFiles.id }).from(driveFiles).where(isNotNull(driveFiles.deletedAt))
+      ).map((r) => r.id);
       eIds = (await tx.select({ id: emails.id }).from(emails).where(isNotNull(emails.deletedAt))).map(
         (r) => r.id,
       );
@@ -811,6 +831,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
       iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
       mIds = items.filter((i) => i.kind === 'meeting').map((i) => i.id);
+      dIds = items.filter((i) => i.kind === 'file').map((i) => i.id);
       aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
       sIds = items.filter((i) => i.kind === 'snippet').map((i) => i.id);
       bIds = items.filter((i) => i.kind === 'board').map((i) => i.id);
@@ -919,6 +940,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       await unlinkAll(tx, 'issue', iIds);
       await tx.delete(issues).where(and(inArray(issues.id, iIds), isNotNull(issues.deletedAt)));
     }
+    await purgeDriveFilesTx(tx, dIds);
     if (mIds.length) {
       await unlinkAll(tx, 'meeting', mIds);
       await tx.delete(meetings).where(and(inArray(meetings.id, mIds), isNotNull(meetings.deletedAt)));
@@ -1335,6 +1357,14 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(issues)
         .where(and(isNull(issues.deletedAt), sql`${issues.status} <> 'done'`));
+      return r?.n ?? 0;
+    });
+  if (modules.has('files'))
+    out.files = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(driveFiles)
+        .where(isNull(driveFiles.deletedAt));
       return r?.n ?? 0;
     });
   if (modules.has('meetings'))

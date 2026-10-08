@@ -101,7 +101,11 @@ export function Sidebar() {
         </div>
       )}
 
-      {(modules.has('notes') || modules.has('tasks') || modules.has('voice') || modules.has('meetings')) && (
+      {(modules.has('notes') ||
+        modules.has('tasks') ||
+        modules.has('voice') ||
+        modules.has('meetings') ||
+        modules.has('files')) && (
         <Link scroll={false} href="/app/trash" className="kh-aside__btn" aria-current={current('/app/trash')}>
           <Icon name="trash" size={16} />
           <span style={{ flex: 1 }}>{t('nav_trash')}</span>

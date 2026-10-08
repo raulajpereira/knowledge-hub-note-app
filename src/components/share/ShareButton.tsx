@@ -39,7 +39,7 @@ export function ShareButton({
   variant,
   className,
 }: {
-  itemType: 'note' | 'artifact';
+  itemType: 'note' | 'artifact' | 'file';
   itemId: string;
   title: string;
   variant: 'pill' | 'round';

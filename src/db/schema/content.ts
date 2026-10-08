@@ -4,6 +4,7 @@
 // owner; shared folders widen notes/tasks/artifacts to their members (0022).
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   check,
   date,
@@ -41,7 +42,9 @@ export const folders = pgTable(
     id: id(),
     tenantId: tenantId(),
     ownerId: ownerId(),
-    kind: text('kind', { enum: ['notes', 'tasks', 'artifacts', 'passwords', 'emails', 'api'] }).notNull(),
+    kind: text('kind', {
+      enum: ['notes', 'tasks', 'artifacts', 'passwords', 'emails', 'api', 'files'],
+    }).notNull(),
     name: text('name').notNull(),
     color: text('color').notNull(),
     parentId: uuid('parent_id'),
@@ -51,7 +54,10 @@ export const folders = pgTable(
   },
   (t) => [
     index('folders_owner_kind_idx').on(t.tenantId, t.ownerId, t.kind),
-    check('folders_kind_chk', sql`${t.kind} in ('notes','tasks','artifacts','passwords','emails','api')`),
+    check(
+      'folders_kind_chk',
+      sql`${t.kind} in ('notes','tasks','artifacts','passwords','emails','api','files')`,
+    ),
     check('folders_name_len', sql`char_length(${t.name}) between 1 and 80`),
   ],
 );
@@ -324,6 +330,34 @@ export const emailAttachments = pgTable(
   (t) => [
     index('email_attachments_email_idx').on(t.emailId),
     check('email_attachments_name_len', sql`char_length(${t.name}) <= 300`),
+  ],
+);
+
+/** Ficheiros: files kept in object storage, in (flat) folders or shared folders. */
+export const driveFiles = pgTable(
+  'drive_files',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    folderId: uuid('folder_id').references(() => folders.id, { onDelete: 'set null' }),
+    sharedFolderId: uuid('shared_folder_id').references(() => sharedFolders.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    /** type declared at upload (shown only; previews use the type from the name) */
+    mime: text('mime').notNull().default('application/octet-stream'),
+    size: bigint('size', { mode: 'number' }).notNull(),
+    storageKey: text('storage_key').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('drive_files_owner_idx').on(t.tenantId, t.ownerId),
+    index('drive_files_folder_idx').on(t.folderId),
+    check(
+      'drive_files_len',
+      sql`char_length(${t.name}) between 1 and 255 and char_length(${t.mime}) <= 200 and ${t.size} >= 0`,
+    ),
   ],
 );
 
