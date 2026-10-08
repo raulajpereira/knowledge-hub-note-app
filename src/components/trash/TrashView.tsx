@@ -246,40 +246,44 @@ export function TrashView() {
       <div className="kh-tr__scroll">
         <div className="kh-tr__table" role="table">
           <div className="kh-tr__th" role="row">
-            <button
-              type="button"
-              className="kh-tr__ck"
-              data-on={allOn || undefined}
-              aria-label={t('tr_all')}
-              aria-pressed={allOn}
-              onClick={() =>
-                setSel(allOn ? sel.filter((id) => !ids.includes(id)) : [...new Set([...sel, ...ids])])
-              }
-            >
-              <Check on={allOn} />
-            </button>
-            <span>{t('tr_type')}</span>
-            <span>{t('tr_item')}</span>
-            <span>{t('tr_deleted')}</span>
-            <span>{t('tr_left')}</span>
-            <span />
+            <span role="columnheader" style={{ display: 'contents' }}>
+              <button
+                type="button"
+                className="kh-tr__ck"
+                data-on={allOn || undefined}
+                aria-label={t('tr_all')}
+                aria-pressed={allOn}
+                onClick={() =>
+                  setSel(allOn ? sel.filter((id) => !ids.includes(id)) : [...new Set([...sel, ...ids])])
+                }
+              >
+                <Check on={allOn} />
+              </button>
+            </span>
+            <span role="columnheader">{t('tr_type')}</span>
+            <span role="columnheader">{t('tr_item')}</span>
+            <span role="columnheader">{t('tr_deleted')}</span>
+            <span role="columnheader">{t('tr_left')}</span>
+            <span role="columnheader" />
           </div>
           {list.map((i) => {
             const k = key(i);
             const on = sel.includes(k);
             return (
               <div key={k} className="kh-tr__row" data-on={on || undefined} role="row">
-                <button
-                  type="button"
-                  className="kh-tr__ck"
-                  data-on={on || undefined}
-                  aria-label={titleOf(i)}
-                  aria-pressed={on}
-                  onClick={() => setSel(on ? sel.filter((x) => x !== k) : [...sel, k])}
-                >
-                  <Check on={on} />
-                </button>
-                <span>
+                <span role="cell" style={{ display: 'contents' }}>
+                  <button
+                    type="button"
+                    className="kh-tr__ck"
+                    data-on={on || undefined}
+                    aria-label={titleOf(i)}
+                    aria-pressed={on}
+                    onClick={() => setSel(on ? sel.filter((x) => x !== k) : [...sel, k])}
+                  >
+                    <Check on={on} />
+                  </button>
+                </span>
+                <span role="cell">
                   <span className="kh-tr__kind">
                     <span className="kh-tr__kic">
                       <NavIcon id={KINDS[i.kind].icon} />
@@ -287,16 +291,21 @@ export function TrashView() {
                     {t(KINDS[i.kind].label)}
                   </span>
                 </span>
-                <span className="kh-tr__t">{titleOf(i)}</span>
-                <span className="kh-tr__at">{fmt(i.deletedAt)}</span>
+                <span className="kh-tr__t" role="cell">
+                  {titleOf(i)}
+                </span>
+                <span className="kh-tr__at" role="cell">
+                  {fmt(i.deletedAt)}
+                </span>
                 <span
+                  role="cell"
                   className="kh-tr__left"
                   style={{ color: i.daysLeft <= 3 ? 'oklch(0.8 0.14 35)' : 'rgba(255,248,240,.7)' }}
                 >
                   {i.daysLeft}
                   {i.daysLeft === 1 ? t('tr_day') : t('tr_days')}
                 </span>
-                <span className="kh-tr__acts">
+                <span className="kh-tr__acts" role="cell">
                   <button
                     type="button"
                     title={t('tr_restore')}

@@ -26,7 +26,7 @@ export const daysTo = (iso: string | null) =>
   iso ? Math.round((Date.parse(iso) - Date.now()) / 86_400_000) : null;
 
 const hue = (s: string) => [...(s || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
-export const avColor = (s: string) => `oklch(0.55 0.09 ${hue(s)})`;
+export const avColor = (s: string) => `oklch(0.5 0.09 ${hue(s)})`;
 export const initials = (n: string) =>
   (n || '?')
     .split(/[\s.@]+/)
@@ -107,7 +107,14 @@ export function Bar({ value, max, label }: { value: number; max: number; label: 
       <span className="kh-ad-mono" style={{ fontSize: 12.5 }}>
         {label}
       </span>
-      <div className="kh-ad-bar" role="meter" aria-valuenow={value} aria-valuemin={0} aria-valuemax={max}>
+      <div
+        className="kh-ad-bar"
+        role="meter"
+        aria-label={label}
+        aria-valuenow={value}
+        aria-valuemin={0}
+        aria-valuemax={max}
+      >
         <div style={{ width: `${pct}%` }} />
       </div>
     </>

@@ -198,6 +198,7 @@ export function MgTime({ mg }: { mg: Mg }) {
       cs.map((c, i) => (
         <span
           key={i}
+          role="gridcell"
           style={css(
             `text-align:center;font-family:'Geist Mono',monospace;font-size:${kid ? 12 : 12.5}px;${kid ? '' : 'font-weight:600;'}color:${c.c};white-space:nowrap;`,
           )}
@@ -211,7 +212,7 @@ export function MgTime({ mg }: { mg: Mg }) {
           'flex:1;min-height:0;overflow:auto;margin:12px;border-radius:22px;background:rgba(18,12,9,.18);border:1px solid rgba(255,255,255,.1);',
         )}
       >
-        <div role="table" aria-label={L(48)} style={css(`min-width:${240 + N * 64 + 3 * 88 + 104}px;`)}>
+        <div role="treegrid" aria-label={L(48)} style={css(`min-width:${240 + N * 64 + 3 * 88 + 104}px;`)}>
           <div
             role="row"
             style={css(
@@ -259,6 +260,7 @@ export function MgTime({ mg }: { mg: Mg }) {
                   )}
                 >
                   <span
+                    role="rowheader"
                     style={css(
                       `position:sticky;left:0;z-index:1;height:100%;display:flex;align-items:center;gap:10px;padding:0 14px;min-width:0;${STICKY}`,
                     )}
@@ -322,6 +324,7 @@ export function MgTime({ mg }: { mg: Mg }) {
                         )}
                       >
                         <span
+                          role="rowheader"
                           style={css(
                             `position:sticky;left:0;z-index:1;height:100%;display:flex;align-items:center;gap:9px;padding:0 14px 0 44px;min-width:0;${STICKY}`,
                           )}
@@ -355,6 +358,7 @@ export function MgTime({ mg }: { mg: Mg }) {
             )}
           >
             <span
+              role="rowheader"
               style={css(
                 `position:sticky;left:0;height:100%;display:flex;align-items:center;padding:0 16px;font-size:12.5px;font-weight:600;${STICKY}`,
               )}
@@ -367,6 +371,7 @@ export function MgTime({ mg }: { mg: Mg }) {
             }).map((c, i) => (
               <span
                 key={i}
+                role="gridcell"
                 style={css(
                   `text-align:center;font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:700;color:${c.c};`,
                 )}
@@ -611,7 +616,10 @@ function PersonSheet({
                     `display:grid;grid-template-columns:${TSGRID};align-items:center;min-height:46px;border-bottom:1px solid rgba(255,255,255,.07);`,
                   )}
                 >
-                  <span style={css('display:flex;align-items:center;gap:8px;padding:0 14px;min-width:0;')}>
+                  <span
+                    role="rowheader"
+                    style={css('display:flex;align-items:center;gap:8px;padding:0 14px;min-width:0;')}
+                  >
                     <span
                       style={css(
                         `width:4px;height:22px;flex:none;border-radius:999px;background:${pj.color};`,
@@ -633,23 +641,25 @@ function PersonSheet({
                     </span>
                   </span>
                   {r.map((v, i) => (
-                    <input
-                      key={i}
-                      type="number"
-                      min={0}
-                      max={24}
-                      step={0.5}
-                      className="mg-in"
-                      aria-label={`${pj.code} · ${days[i]}`}
-                      value={v || ''}
-                      disabled={locked}
-                      onChange={(ev) => setCell(pr, i)(ev.target.value)}
-                      style={css(
-                        "justify-self:center;width:58px;height:32px;padding:0 6px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(18,12,9,.2);color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:13px;text-align:center;outline:none;box-sizing:border-box;",
-                      )}
-                    />
+                    <span key={i} role="cell" style={{ display: 'contents' }}>
+                      <input
+                        type="number"
+                        min={0}
+                        max={24}
+                        step={0.5}
+                        className="mg-in"
+                        aria-label={`${pj.code} · ${days[i]}`}
+                        value={v || ''}
+                        disabled={locked}
+                        onChange={(ev) => setCell(pr, i)(ev.target.value)}
+                        style={css(
+                          "justify-self:center;width:58px;height:32px;padding:0 6px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(18,12,9,.2);color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:13px;text-align:center;outline:none;box-sizing:border-box;",
+                        )}
+                      />
+                    </span>
                   ))}
                   <span
+                    role="cell"
                     style={css(
                       "text-align:center;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;",
                     )}

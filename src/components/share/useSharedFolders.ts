@@ -77,5 +77,5 @@ export const shIni = (n: string) =>
 export const shAv = (s: string) => {
   let h = 0;
   for (const c of s || '') h = (h * 31 + c.charCodeAt(0)) % 360;
-  return `oklch(0.58 0.1 ${h})`;
+  return `oklch(0.5 0.1 ${h})`;
 };

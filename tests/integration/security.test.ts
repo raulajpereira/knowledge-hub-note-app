@@ -134,6 +134,44 @@ describe.skipIf(!enabled)('account deletion and access rules', () => {
     expect(await codeOf(account.deleteAccount(mgr, { ip: null }))).toBe('manager_account');
   });
 
+  it('monitor: alerts the console admins once per change (and every 6 h), then the recovery', async () => {
+    const mon = await import('@/server/jobs/monitor');
+    const boss = await signedIn('boss@kh.pt');
+    await makeAdmin(boss.user.id, 'owner');
+    const health = async () => ({
+      ok: true,
+      version: 't',
+      checks: {
+        database: { ok: true, ms: 1 },
+        redis: { ok: true, ms: 1 },
+        storage: { ok: true, ms: 1 },
+      },
+      worker: { lastHeartbeatSecondsAgo: 5 },
+    });
+    const down = (async () => new Response('', { status: 502 })) as typeof fetch;
+    const up = (async () => new Response('{}', { status: 200 })) as typeof fetch;
+    const t0 = new Date();
+    let r = await mon.runMonitor(t0, { fetch: down, health });
+    expect(r).toMatchObject({ problems: { web: 'HTTP 502' }, alerted: true });
+    expect(await mails('monitorAlert')).toHaveLength(1);
+    r = await mon.runMonitor(new Date(t0.getTime() + 5 * 60_000), { fetch: down, health });
+    expect(r.alerted).toBe(false);
+    r = await mon.runMonitor(new Date(t0.getTime() + 7 * 3600_000), { fetch: down, health });
+    expect(r.alerted).toBe(true);
+    // 5xx in the last hour count as a problem too
+    const { countServerError } = await import('@/lib/serverErrors');
+    for (let i = 0; i < 21; i++) countServerError();
+    await new Promise((s) => setTimeout(s, 200));
+    expect((await mon.checkAll({ fetch: up, health })).errors).toMatch(/21 server errors/);
+    const { redis } = await import('@/lib/redis');
+    await redis().del(...(await redis().keys('kh:mon:5xx:*')));
+    r = await mon.runMonitor(new Date(t0.getTime() + 8 * 3600_000), { fetch: up, health });
+    expect(r).toMatchObject({ problems: {}, alerted: true });
+    expect(await mails('monitorRecovered')).toHaveLength(1);
+    r = await mon.runMonitor(new Date(t0.getTime() + 9 * 3600_000), { fetch: up, health });
+    expect(r.alerted).toBe(false);
+  });
+
   it('admin IP allowlist and captcha rules', async () => {
     const { ipAllowed } = await import('@/server/admin/guard');
     expect(ipAllowed('203.0.113.7', '')).toBe(true);

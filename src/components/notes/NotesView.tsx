@@ -143,12 +143,7 @@ function FoldersPanel({
             data-on={on || undefined}
             data-over={over === r.id || undefined}
             data-top={r.top || undefined}
-            role="button"
-            tabIndex={0}
             onClick={() => setFilter(r.id)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.target === e.currentTarget) setFilter(r.id);
-            }}
             onDragOver={(e) => {
               if (!dropOk || !e.dataTransfer.types.includes('application/x-kh-note')) return;
               e.preventDefault();
@@ -168,7 +163,7 @@ function FoldersPanel({
             <Svg d={P.folder} size={17} sw={1.8} />
             <span className="kh-nt-folder__dot" style={{ background: r.color }} />
             {marked && (
-              <span className="kh-sh-mark" title={shTip} aria-label={shTip}>
+              <span className="kh-sh-mark" role="img" title={shTip} aria-label={shTip}>
                 <Svg d={P.share} size={13} sw={2} />
               </span>
             )}
@@ -190,7 +185,17 @@ function FoldersPanel({
                 }}
               />
             ) : (
-              <span className="kh-nt-folder__name">{r.name}</span>
+              <button
+                type="button"
+                className="kh-rowbtn kh-nt-folder__name"
+                aria-current={on || undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFilter(r.id);
+                }}
+              >
+                {r.name}
+              </button>
             )}
             {r.f && editing !== r.id && (
               <div className="kh-nt-folder__acts">

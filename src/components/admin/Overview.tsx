@@ -200,16 +200,20 @@ export function Overview() {
                             key={`${c}-${it.clientId}-${it.requestId ?? ''}`}
                             className="kh-ad-att"
                             style={{ ['--c' as string]: CATS[c][1] }}
-                            role="button"
-                            tabIndex={0}
                             onClick={() => openClient(it)}
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' && e.target === e.currentTarget && openClient(it)
-                            }
                           >
                             <Avatar name={it.name} square />
                             <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span className="kh-ad-td__main">{it.name}</span>
+                              <button
+                                type="button"
+                                className="kh-rowbtn kh-ad-td__main"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openClient(it);
+                                }}
+                              >
+                                {it.name}
+                              </button>
                               <span className="kh-ad-td__sub">{detail(it)}</span>
                             </span>
                             <span className="kh-ad-when">{when(it)}</span>

@@ -125,6 +125,11 @@ crontab -e
 # 30 4 1 * *  /opt/knowledgehub-v2/infra/backup/restore-test.sh >> /var/log/kh-backup.log 2>&1
 ```
 
+## 6b. Monitorização (leve, sem serviços extra)
+- O **worker** verifica a cada 5 minutos a base de dados, o Redis, o MinIO, o endereço público (`APP_URL/api/health`), a fila de emails e os erros do servidor da última hora. Quando algo falha, envia email ao Manager e aos Administradores da consola (de novo a cada 6 h enquanto durar) e outro quando volta ao normal. Precisa do SMTP configurado (§5c).
+- Se o próprio worker parar, quem avisa é um monitor externo. Sugestão grátis: **UptimeRobot** (ou BetterStack) → novo monitor HTTP(s) para `https://knowledge-hub.cloud/v2/api/health?strict=1` (depois do corte, sem `/v2`), intervalo 5 min, alerta por email. Com `strict=1` a resposta é 503 também quando o worker não dá sinal há mais de 3 minutos.
+- Logs: `docker compose logs -f web` (pedidos com erro aparecem como `[api] unhandled MÉTODO /caminho`) e `docker compose logs -f worker` (`[monitor] problems: …`).
+
 ## 7. Corte final (v2 na raiz, v1 em `/v1`) — fazer em conjunto
 
 1. Backup da v1 (`mysqldump` + `server/uploads/`) e da v2 (`backup.sh`).

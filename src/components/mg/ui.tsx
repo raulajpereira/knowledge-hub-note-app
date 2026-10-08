@@ -7,6 +7,7 @@ import { mgIni, wLbl, wLblY, type MgPerson } from '@/lib/mg';
 import { CHEV, OPT, css } from './css';
 import type { Mg } from './store';
 import './mg.css';
+import { avatarBg } from '@/lib/avatarColor';
 
 // Shared pieces of the Management screens, styled 1:1 with Management.dc.html.
 
@@ -143,7 +144,7 @@ export function Av({
     <span
       aria-hidden="true"
       style={css(
-        `width:${size}px;height:${size}px;flex:none;border-radius:50%;background:${av ?? p?.av ?? 'rgba(255,255,255,.15)'};outline:2px solid ${tc ?? 'transparent'};outline-offset:2px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;${s}`,
+        `width:${size}px;height:${size}px;flex:none;border-radius:50%;background:${avatarBg(av ?? p?.av) ?? 'rgba(255,255,255,.15)'};outline:2px solid ${tc ?? 'transparent'};outline-offset:2px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;${s}`,
       )}
     >
       {mgIni(name ?? p?.name ?? '?')}

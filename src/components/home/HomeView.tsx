@@ -146,7 +146,7 @@ function Favicon({ domain }: { domain: string }) {
   );
 }
 
-export function HomeView() {
+export function HomeView({ initialHour }: { initialHour?: number | null } = {}) {
   const { t, lang } = useI18n();
   const { me, modules } = useShell();
   const prefsCtx = usePrefsContext()!;
@@ -164,7 +164,7 @@ export function HomeView() {
   const [quickEdit, setQuickEdit] = useState(false);
   const [scForm, setScForm] = useState<{ id: string | null; title: string; url: string } | null>(null);
   const [live, setLive] = useState<Record<string, number> | null>(null); // fractions while resizing
-  const [hour, setHour] = useState<number | null>(null);
+  const [hour, setHour] = useState<number | null>(initialHour ?? null);
   useEffect(() => setHour(new Date().getHours()), []);
   const router = useRouter();
 

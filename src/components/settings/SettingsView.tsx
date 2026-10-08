@@ -112,7 +112,7 @@ export function SettingsView() {
             style={dragW !== null ? { background: 'rgba(255,255,255,.75)' } : undefined}
           />
         </div>
-        <nav className="kh-set__nav" data-zs="" role="tablist" aria-orientation="vertical">
+        <nav className="kh-set__nav" data-zs="">
           <div style={{ padding: '0 10px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: '-.02em' }}>
               {t('settings')}
@@ -121,31 +121,38 @@ export function SettingsView() {
               {t('settingsSub')}
             </div>
           </div>
-          {tabs.map((x) => (
-            <button
-              key={x.id}
-              type="button"
-              role="tab"
-              className="kh-set__tab"
-              aria-selected={x.id === tab}
-              onClick={() => setTab(x.id)}
-            >
-              <svg
-                width="17"
-                height="17"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ flex: 'none', opacity: 0.9 }}
-                aria-hidden="true"
-                dangerouslySetInnerHTML={{ __html: x.icon }}
-              />
-              <span style={{ flex: 1 }}>{t(x.label)}</span>
-            </button>
-          ))}
+          <div
+            role="tablist"
+            aria-orientation="vertical"
+            aria-label={t('settings')}
+            style={{ display: 'contents' }}
+          >
+            {tabs.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                role="tab"
+                className="kh-set__tab"
+                aria-selected={x.id === tab}
+                onClick={() => setTab(x.id)}
+              >
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ flex: 'none', opacity: 0.9 }}
+                  aria-hidden="true"
+                  dangerouslySetInnerHTML={{ __html: x.icon }}
+                />
+                <span style={{ flex: 1 }}>{t(x.label)}</span>
+              </button>
+            ))}
+          </div>
         </nav>
         <div className="kh-set__body" data-zs="">
           <div className="kh-set__inner" role="tabpanel">

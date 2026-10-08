@@ -478,13 +478,20 @@ export function ApiView() {
                 className="kh-em-folder"
                 data-on={folder === f.id || undefined}
                 data-top={f.top || undefined}
-                role="button"
-                tabIndex={0}
                 onClick={() => setFolder(f.id)}
-                onKeyDown={(e) => e.key === 'Enter' && setFolder(f.id)}
               >
                 <Svg d={I.folder} s={17} />
-                <span>{f.name}</span>
+                <button
+                  type="button"
+                  className="kh-rowbtn kh-em-folder__name"
+                  aria-current={folder === f.id || undefined}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFolder(f.id);
+                  }}
+                >
+                  {f.name}
+                </button>
                 {!f.top && (
                   <button
                     type="button"

@@ -781,15 +781,7 @@ export function TasksView() {
               const over = !done && !!x.dueOn && x.dueOn < today;
               const tod = x.dueOn === today;
               return (
-                <div
-                  key={x.id}
-                  className="kh-tk-item"
-                  data-on={on || undefined}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => open(x.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && open(x.id)}
-                >
+                <div key={x.id} className="kh-tk-item" data-on={on || undefined} onClick={() => open(x.id)}>
                   <span
                     className="kh-tk-item__bar"
                     aria-hidden="true"
@@ -824,7 +816,17 @@ export function TasksView() {
                           <ShareIc size={12} />
                         </span>
                       )}
-                      <span>{x.title || t('t_newTitle')}</span>
+                      <button
+                        type="button"
+                        className="kh-rowbtn"
+                        aria-current={on || undefined}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          open(x.id);
+                        }}
+                      >
+                        {x.title || t('t_newTitle')}
+                      </button>
                     </div>
                     <div className="kh-tk-item__meta">
                       <span style={{ color: TYPE_C[x.type], fontWeight: 600, flex: 'none' }}>

@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { env } from '@/lib/env';
+import { countServerError } from '@/lib/serverErrors';
 
 import { ApiError } from './errors';
 
@@ -13,7 +14,7 @@ export function json<T>(data: T, init?: ResponseInit) {
   return NextResponse.json(data, { ...init, headers: { 'Cache-Control': 'no-store', ...init?.headers } });
 }
 
-export function errorResponse(err: unknown) {
+export function errorResponse(err: unknown, where?: string) {
   if (err instanceof ApiError) {
     return json({ error: { code: err.code, message: err.message, ...err.extra } }, { status: err.status });
   }
@@ -29,7 +30,8 @@ export function errorResponse(err: unknown) {
       { status: 400 },
     );
   }
-  console.error('[api] unhandled', err);
+  console.error(`[api] unhandled${where ? ` ${where}` : ''}`, err);
+  countServerError();
   return json({ error: { code: 'internal', message: 'Internal error' } }, { status: 500 });
 }
 
@@ -68,7 +70,7 @@ export function handler<C>(fn: (req: NextRequest, ctx: C) => Promise<Response>) 
       if (req.method !== 'GET' && req.method !== 'HEAD') assertSameOrigin(req);
       return await currentRequest.run({ method: req.method, path: req.nextUrl.pathname }, () => fn(req, ctx));
     } catch (err) {
-      return errorResponse(err);
+      return errorResponse(err, `${req.method} ${req.nextUrl.pathname}`);
     }
   };
 }

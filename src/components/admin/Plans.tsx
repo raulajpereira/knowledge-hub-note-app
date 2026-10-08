@@ -46,8 +46,11 @@ function NumberField({
   placeholder,
   onSave,
   width,
+  ariaLabel,
 }: {
   label: string;
+  /** when the visible label is empty (the name is next to the field) */
+  ariaLabel?: string;
   value: number | null;
   min: number;
   max: number;
@@ -83,6 +86,7 @@ function NumberField({
         value={v}
         placeholder={placeholder}
         disabled={disabled}
+        aria-label={ariaLabel}
         onChange={(e) => setV(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
@@ -264,6 +268,7 @@ export function Plans() {
                   >
                     <NumberField
                       label=""
+                      ariaLabel={`${p.code} · ${A('Período de experiência')} (${A('dias')})`}
                       value={p.trialDays}
                       min={1}
                       max={90}
@@ -455,6 +460,7 @@ export function Plans() {
                 </span>
                 <NumberField
                   label=""
+                  ariaLabel={`${A(g.pt)} · € / ${A('utilizador')} / ${A('mês')}`}
                   value={Number(d.addon[g.grp] ?? 0)}
                   min={0}
                   max={10000}

@@ -419,10 +419,7 @@ export function ArtifactsView() {
                   className="kh-em-folder"
                   data-on={folder === f.id || undefined}
                   data-top={top || undefined}
-                  role="button"
-                  tabIndex={0}
                   onClick={() => setFolder(f.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && setFolder(f.id)}
                   onDragOver={(e) => dragId && e.preventDefault()}
                   onDrop={(e) => {
                     if (!dragId) return;
@@ -433,11 +430,21 @@ export function ArtifactsView() {
                 >
                   <Svg d={I.folder} s={17} />
                   {marked && (
-                    <span className="kh-sh-mark" title={tip} aria-label={tip}>
+                    <span className="kh-sh-mark" role="img" title={tip} aria-label={tip}>
                       <Svg d={I.share} s={13} />
                     </span>
                   )}
-                  <span>{f.name}</span>
+                  <button
+                    type="button"
+                    className="kh-rowbtn kh-em-folder__name"
+                    aria-current={folder === f.id || undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFolder(f.id);
+                    }}
+                  >
+                    {f.name}
+                  </button>
                   {!top && sh.canShare && (!shf || shf.mine) && (
                     <button
                       type="button"

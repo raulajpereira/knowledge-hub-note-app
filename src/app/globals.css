@@ -87,3 +87,23 @@ textarea::placeholder {
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
+
+/* The keyboard/screen-reader target of a clickable row that also holds its
+   own action buttons (the row stays clickable with the mouse). */
+.kh-rowbtn {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: inherit;
+  min-width: 0;
+}
+.kh-rowbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}

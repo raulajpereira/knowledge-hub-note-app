@@ -9,6 +9,7 @@ import { deliverMail } from '@/server/mail/send';
 import type { MailMessage } from '@/server/mail/templates';
 import { runLicenseJob } from '@/server/jobs/licenses';
 import { sweepStorage } from '@/server/jobs/storage';
+import { runMonitor } from '@/server/jobs/monitor';
 
 type JobHandler = () => Promise<unknown>;
 
@@ -16,6 +17,8 @@ const handlers: Record<string, JobHandler> = {
   heartbeat: async () => {
     await redis().set(WORKER_HEARTBEAT_KEY, String(Date.now()), 'EX', 600);
   },
+  // services, public address, email queue and server errors → email the console admins
+  monitor: async () => runMonitor(),
   // trials and renewals → suspended, reminders, expired codes, purge of revoked data (30 days),
   // then files nothing points to any more
   licenses: async () => {
@@ -33,6 +36,12 @@ async function main() {
     'heartbeat',
     { every: 60_000 },
     { name: 'heartbeat', opts: { removeOnComplete: 100, removeOnFail: 500 } },
+  );
+
+  await queue(QUEUES.system).upsertJobScheduler(
+    'monitor',
+    { every: 5 * 60_000 },
+    { name: 'monitor', opts: { removeOnComplete: 50, removeOnFail: 200 } },
   );
 
   // every day at 03:17 (server time)

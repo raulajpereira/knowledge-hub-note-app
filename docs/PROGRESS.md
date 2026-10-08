@@ -337,11 +337,17 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - Revisão do checklist `SECURITY.md §9` e ASVS L2 em `docs/SECURITY_REVIEW.md`.
 - **Testes**: integração (eliminar conta: re-auth, individual, pack com passagem de admin, Manager; allowlist; captcha desligado sem chaves) e E2E (CSP com nonce em todos os scripts e diferente por pedido, sem enquadramento; eliminar conta pela interface).
 
+## Fase 11.2 — Monitorização, acessibilidade e desempenho (feito)
+- **Monitorização leve** (D50): job `monitor` no worker a cada 5 min — serviços, endereço público, fila de emails e erros 5xx da última hora (contados no Redis); email ao Manager/Administradores quando algo falha (de novo a cada 6 h) e quando recupera; enviado diretamente, não pela fila. `/api/health?strict=1` também falha quando o worker para (para um monitor externo, ver `DEPLOY.md §6b`). Os erros não tratados ficam no log com método e caminho.
+- **Acessibilidade (WCAG 2.1 AA, axe)**: 0 violações em ~48 ecrãs (app, consola, janelas). Corrigido: linhas clicáveis com botões dentro (pastas, tarefas, consola) — o nome passa a ser o botão real; navegação das Definições; tabelas do Lixo e da Folha de Tempos com papéis corretos; barras de utilização e campos dos Pacotes com nome; marcas de partilha; contraste das iniciais dos avatares (luminosidade limitada a 0.5) e do botão de esvaziar o Lixo; diálogos de confirmação com nome e descrição. Spec E2E `a11y.spec.ts` mantém isto.
+- **Desempenho (Lighthouse)**: desktop — login 100, Início 100, Notas 99, Tarefas 100, Management 99 (LCP 0,7–1,0 s, CLS ≈ 0); acessibilidade 100. Mobile (4G simulado) — login 94, Início 82 (LCP limitado pela troca para a fonte web). A saudação do Início passa a vir no HTML do servidor (hora local por cookie de fuso horário); favicons sem ícone respondem 204 (sem erros na consola); o Zod no browser corre sem a sonda de `eval` que a CSP bloqueava.
+- **Testes**: integração (monitor: alerta uma vez por mudança, repete a 6 h, contagem de 5xx, recuperação) e E2E (axe em login/registo/reposição e 10 ecrãs + Conta).
+
 ## O que falta / depende do utilizador
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
 - Caixa SMTP da Hostinger para envio (`no-reply@knowledge-hub.cloud`).
-- Uptime Kuma / Sentry: adiados para a Fase 11 (memória do KVM 1).
+- Monitor externo grátis para `/api/health?strict=1` (UptimeRobot ou semelhante) — `DEPLOY.md §6b`.
 
 ## Decisões tomadas
 | # | Decisão | Origem |

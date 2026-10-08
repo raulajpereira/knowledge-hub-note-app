@@ -101,6 +101,38 @@ const COPY: Record<string, Record<Lang, Copy>> = {
       foot: 'Thank you for using KnowledgeHub.',
     },
   },
+  monitorAlert: {
+    pt: {
+      subject: 'Alerta · KnowledgeHub com problemas',
+      title: 'Algo não está a funcionar',
+      body: 'A verificação automática encontrou estes problemas:\n{list}\nVolta a avisar a cada 6 horas enquanto durarem, e quando ficarem resolvidos.',
+      cta: 'Abrir a consola',
+      foot: 'Recebe este email por ser administrador da consola.',
+    },
+    en: {
+      subject: 'Alert · KnowledgeHub has problems',
+      title: 'Something is not working',
+      body: 'The automatic check found these problems:\n{list}\nYou will be told again every 6 hours while they last, and when they are solved.',
+      cta: 'Open the console',
+      foot: 'You receive this email as a console administrator.',
+    },
+  },
+  monitorRecovered: {
+    pt: {
+      subject: 'Resolvido · KnowledgeHub voltou ao normal',
+      title: 'Tudo a funcionar',
+      body: 'Os problemas detetados pela verificação automática já não se verificam.',
+      cta: 'Abrir a consola',
+      foot: 'Recebe este email por ser administrador da consola.',
+    },
+    en: {
+      subject: 'Resolved · KnowledgeHub is back to normal',
+      title: 'All working',
+      body: 'The problems found by the automatic check are gone.',
+      cta: 'Open the console',
+      foot: 'You receive this email as a console administrator.',
+    },
+  },
   accountDeleted: {
     pt: {
       subject: 'A sua conta foi eliminada · KnowledgeHub',
@@ -220,7 +252,7 @@ export function renderMail(
     <div style="font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:24px">Knowledge<span style="color:#1f7ae0">Hub</span></div>
     <div style="background:#fff;border-radius:24px;padding:32px;border:1px solid #e8dfd5">
       <h1 style="margin:0 0 12px;font-size:22px;letter-spacing:-.02em">${esc(c.title)}</h1>
-      <p style="margin:0;font-size:15px;line-height:1.6">${esc(c.body)}</p>
+      <p style="margin:0;font-size:15px;line-height:1.6">${esc(c.body).replace(/\n/g, '<br>')}</p>
       ${button}
     </div>
     <p style="font-size:12px;line-height:1.5;color:#7a6e66;margin:20px 8px 0">${esc(c.foot)}</p>
