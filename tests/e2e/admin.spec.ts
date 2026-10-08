@@ -130,6 +130,16 @@ test('console: 2FA gate, overview, generate and pause a code, audit and CSV', as
   const csv = fs.readFileSync((await dl.path())!, 'utf8');
   expect(csv).toContain('Pausou código');
   expect(csv).toContain(newCode);
+
+  // top right: lock and back to the app (the section header used to sit over them)
+  await page.getByRole('button', { name: 'Bloquear', exact: true }).click();
+  const lock = page.getByRole('dialog', { name: /bloqueado/ });
+  await expect(lock).toBeVisible();
+  await lock.getByPlaceholder('Password').fill(password);
+  await lock.getByRole('button', { name: 'Desbloquear' }).click();
+  await expect(lock).toHaveCount(0);
+  await page.getByRole('link', { name: 'Voltar à App' }).click();
+  await page.waitForURL(/\/app$/);
 });
 
 async function adminLogin(page: import('@playwright/test').Page) {

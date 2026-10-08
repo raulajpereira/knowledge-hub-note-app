@@ -220,6 +220,8 @@
   position: absolute;
   top: 22px;
   right: 24px;
+  /* above the section header (.kh-ad-head comes later and is positioned) */
+  z-index: 5;
   display: flex;
   gap: 8px;
 }
