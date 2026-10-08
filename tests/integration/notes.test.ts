@@ -104,7 +104,7 @@ describe.skipIf(!enabled)('notes', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE ai_messages, ai_chats, ai_settings, public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, drive_files, meetings, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE user_templates, ai_messages, ai_chats, ai_settings, public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, drive_files, meetings, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -805,6 +805,71 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.purgeTrash(a, [{ kind: 'file', id: f.id }]);
     expect(await codeOf(drive.readDriveFile(a, f.id))).toBe('not_found');
     expect((await drive.listDrive(a)).limits.used).toBe(7);
+  });
+
+  it('templates: private saved templates, validated; meeting and Functional records created from one', async () => {
+    const tp = await import('@/server/content/templates');
+    const meet = await import('@/server/content/meetings');
+    const { builtinTemplates } = await import('@/lib/templates');
+    const a = await signedIn('tpl-a@example.pt');
+    const b = await signedIn('tpl-b@example.pt');
+    const body = {
+      title: 'Daily',
+      participants: ['Ana'],
+      topics: 'Ontem:\nHoje:',
+      review: ['Bloqueios'],
+      todos: ['Atualizar plano'],
+    };
+    const saved = await tp.saveTemplate(a, { kind: 'meeting', name: 'A minha daily', body });
+    expect(saved).toMatchObject({ kind: 'meeting', name: 'A minha daily', own: true });
+    expect((await tp.listTemplates(a, 'meeting')).map((x) => x.name)).toEqual(['A minha daily']);
+    expect(await tp.listTemplates(a, 'fn_cut')).toEqual([]);
+    // private to the owner
+    expect(await tp.listTemplates(b, 'meeting')).toEqual([]);
+    expect(await codeOf(tp.deleteTemplate(b, saved.id))).toBe('not_found');
+    // the body is checked against its kind (no extra keys, no client ids in a Functional template)
+    expect(await codeOf(tp.saveTemplate(a, { kind: 'meeting', name: 'x', body: { ...body, evil: 1 } }))).toBe(
+      'invalid_input',
+    );
+    expect(
+      await codeOf(
+        tp.saveTemplate(a, {
+          kind: 'fn_cut',
+          name: 'x',
+          body: { title: 'c', code: '', f: { client: '0190a0a0-0000-7000-8000-000000000000' }, rows: [] },
+        }),
+      ),
+    ).toBe('invalid_input');
+    // a meeting record straight from the template
+    const m = await meet.createMeeting(a, {
+      title: body.title,
+      heldOn: '2026-05-04',
+      participants: body.participants,
+      topics: body.topics,
+      review: [{ t: 'Bloqueios', done: false }],
+      todos: [{ t: 'Atualizar plano', done: false }],
+    });
+    expect(m).toMatchObject({
+      participants: ['Ana'],
+      topics: 'Ontem:\nHoje:',
+      todos: [{ t: 'Atualizar plano', done: false }],
+    });
+    // a cutover runbook from the ready-made template: code and rows kept, rows checked by the page schema
+    const run = builtinTemplates('fn_cut', 'pt')[0]!.body as {
+      title: string;
+      code: string;
+      f: object;
+      rows: object[];
+    };
+    const rec = await fn.createRecord(a, 'fn_cut', run);
+    expect(rec.code).toBe('Go-live');
+    expect(rec.rows.length).toBe(run.rows.length);
+    expect(rec.rows.every((r) => r.st === 'todo')).toBe(true);
+    expect(await codeOf(fn.createRecord(a, 'fn_cut', { title: 'x', rows: [{ act: 'a', st: 'bad' }] }))).toBe(
+      'invalid_input',
+    );
+    await tp.deleteTemplate(a, saved.id);
+    expect(await tp.listTemplates(a, 'meeting')).toEqual([]);
   });
 
   it('ai assistant: own key encrypted, checked with the provider, private chats with sources', async () => {

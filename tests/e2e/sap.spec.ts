@@ -131,6 +131,8 @@ test('systems, transactions, header popup and SAP GUI settings', async ({ page, 
   await page.getByRole('button', { name: 'SAP TCodes' }).click();
   const pop = page.getByRole('dialog', { name: 'SAP TCodes' });
   await pop.getByLabel('Transação, programa, descrição, módulo…').fill('me21');
+  // the list loads after the popup opens: Enter copies the first result only once it is there
+  await expect(pop.getByText('ME21N', { exact: true }).first()).toBeVisible();
   await pop.getByLabel('Transação, programa, descrição, módulo…').press('Enter');
   await expect(pop.getByText('✓ Copiado')).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('ME21N');

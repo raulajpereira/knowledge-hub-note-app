@@ -22,7 +22,7 @@ export const GET = handler(async (req) => {
 });
 
 export const POST = handler(async (req) => {
-  const { page, title, f } = await body(req, FnCreate);
+  const { page, title, f, code, rows } = await body(req, FnCreate);
   const auth = await requireContent(page);
-  return json({ record: await createRecord(auth, page, { title, f }) }, { status: 201 });
+  return json({ record: await createRecord(auth, page, { title, f, code, rows }) }, { status: 201 });
 });

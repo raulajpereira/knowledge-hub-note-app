@@ -755,5 +755,19 @@
   "ai_errOutput": "A resposta da IA não veio no formato esperado. Tente de novo.",
   "ai_noAudioErr": "O fornecedor escolhido não transcreve áudio (só Groq ou OpenAI).",
   "ai_emptyAudio": "A gravação não tem texto para transcrever.",
-  "ai_audioBig": "A gravação é demasiado grande para transcrever (máx. 25 MB)."
+  "ai_audioBig": "A gravação é demasiado grande para transcrever (máx. 25 MB).",
+  "tp_title": "Modelos",
+  "tp_builtin": "Modelos SAP",
+  "tp_mine": "Os meus modelos",
+  "tp_none": "Ainda não tem modelos. Use \"Guardar como modelo\" num registo para o ver aqui.",
+  "tp_delT": "Eliminar este modelo?",
+  "tp_save": "Guardar como modelo",
+  "tp_saveSub": "Fica em \"Os meus modelos\" para criar outros iguais. Clientes, projetos, pessoas e datas não são guardados.",
+  "tp_saveBtn": "Guardar modelo",
+  "tp_name": "Nome do modelo",
+  "tp_saved": "Modelo guardado",
+  "tp_err": "Não foi possível guardar o modelo.",
+  "tp_phasesT": "Substituir as fases?",
+  "tp_phasesB": "As fases atuais do projeto são substituídas pelas do modelo, a partir da semana de início.",
+  "tp_apply": "Aplicar modelo"
 }

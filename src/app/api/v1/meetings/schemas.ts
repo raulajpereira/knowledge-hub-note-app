@@ -9,6 +9,11 @@ export const MeetingCreate = z.object({
   startTime: time.optional(),
   endTime: time.optional(),
   folderId: z.uuid().nullable().optional(),
+  // from a template (Modelos)
+  participants: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
+  topics: z.string().max(100_000).optional(),
+  review: items.optional(),
+  todos: items.optional(),
 });
 
 export const MeetingPatch = z.object({

@@ -6,3 +6,4 @@ export * from './sap';
 export * from './mg';
 export * from './share';
 export * from './ai';
+export * from './templates';

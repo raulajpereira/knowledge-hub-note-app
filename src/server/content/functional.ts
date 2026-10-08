@@ -93,9 +93,9 @@ function parse(page: FnPage, p: { st?: string; f?: unknown; rows?: unknown }) {
 export async function createRecord(
   auth: AuthContext,
   page: FnPage,
-  input: { title: string; f?: unknown },
+  input: { title: string; f?: unknown; code?: string; rows?: unknown },
 ): Promise<FnRecord> {
-  const { f } = parse(page, { f: input.f ?? {} });
+  const { f, rows } = parse(page, { f: input.f ?? {}, rows: input.rows ?? [] });
   return asUser(auth, async (tx) => {
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
@@ -110,8 +110,10 @@ export async function createRecord(
         createdBy: auth.user.id,
         page,
         title: input.title,
+        code: input.code ?? '',
         st: FN[page].st[0]![0],
         f: f ?? {},
+        rows: rows ?? [],
       })
       .returning(cols);
     return toRecord(r!);

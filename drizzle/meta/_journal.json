@@ -260,6 +260,13 @@
       "when": 1791492652404,
       "tag": "0036_ai_assistant",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791494905464,
+      "tag": "0037_user_templates",
+      "breakpoints": true
     }
   ]
 }

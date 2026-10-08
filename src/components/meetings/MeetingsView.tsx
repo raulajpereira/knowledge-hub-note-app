@@ -11,6 +11,8 @@ import { Connections } from '@/components/content/Connections';
 import { AiButton } from '@/components/ai/AiButton';
 import { AiText } from '@/components/ai/AiText';
 import { aiError, useAi } from '@/components/ai/useAi';
+import { SaveTemplateButton, TemplateButton } from '@/components/templates/Templates';
+import type { MeetingTpl } from '@/lib/templates';
 import '../emails/emails.css';
 import '../artifacts/artifacts.css';
 import './meetings.css';
@@ -264,12 +266,18 @@ export function MeetingsView() {
     return out;
   }, [list, loc]);
 
-  const create = async () => {
+  const create = async (tpl?: MeetingTpl) => {
     try {
       const { meeting } = await api<{ meeting: Meeting }>('/meetings', {
-        title: t('mt_newTitle'),
+        title: tpl?.title.trim() || t('mt_newTitle'),
         heldOn: today(),
         folderId: folder === 'all' ? null : folder,
+        ...(tpl && {
+          participants: tpl.participants,
+          topics: tpl.topics,
+          review: tpl.review.map((x) => ({ t: x, done: false })),
+          todos: tpl.todos.map((x) => ({ t: x, done: false })),
+        }),
       });
       setItems((cur) => [meeting, ...(cur ?? [])]);
       setQ('');
@@ -384,6 +392,7 @@ export function MeetingsView() {
               aria-label={t('mt_search')}
             />
           </label>
+          <TemplateButton kind="meeting" compact onPick={(tpl) => void create(tpl.body as MeetingTpl)} />
           <button
             type="button"
             className="kh-mt-new"
@@ -523,6 +532,18 @@ export function MeetingsView() {
                   setItems((cur) => cur && cur.map((x) => (x.id === act.id ? { ...x, title: v } : x)));
                   if (v.trim()) upd(act.id, { title: v });
                 }}
+              />
+              <SaveTemplateButton
+                kind="meeting"
+                compact
+                defaultName={act.title}
+                body={() => ({
+                  title: act.title,
+                  participants: act.participants,
+                  topics: act.topics,
+                  review: act.review.map((x) => x.t),
+                  todos: act.todos.map((x) => x.t),
+                })}
               />
               <button
                 type="button"

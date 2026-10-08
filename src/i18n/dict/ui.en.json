@@ -755,5 +755,19 @@
   "ai_errOutput": "The AI answer didn't come in the expected format. Try again.",
   "ai_noAudioErr": "The chosen provider doesn't transcribe audio (Groq or OpenAI only).",
   "ai_emptyAudio": "The recording has no speech to transcribe.",
-  "ai_audioBig": "The recording is too large to transcribe (max 25 MB)."
+  "ai_audioBig": "The recording is too large to transcribe (max 25 MB).",
+  "tp_title": "Templates",
+  "tp_builtin": "SAP templates",
+  "tp_mine": "My templates",
+  "tp_none": "No templates yet. Use \"Save as template\" on a record to see it here.",
+  "tp_delT": "Delete this template?",
+  "tp_save": "Save as template",
+  "tp_saveSub": "It goes to \"My templates\" to create more like it. Clients, projects, people and dates are not saved.",
+  "tp_saveBtn": "Save template",
+  "tp_name": "Template name",
+  "tp_saved": "Template saved",
+  "tp_err": "The template couldn't be saved.",
+  "tp_phasesT": "Replace the phases?",
+  "tp_phasesB": "The project's current phases are replaced by the template's, from the start week.",
+  "tp_apply": "Apply template"
 }

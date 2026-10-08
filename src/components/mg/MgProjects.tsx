@@ -7,6 +7,10 @@ import { mgL } from '@/lib/mgText';
 import { CHEV, OPT, css } from './css';
 import { Av, Chip, Dialog, Fields, Split, Trash, uid } from './ui';
 import type { Mg } from './store';
+import { useConfirm } from '@/components/ui';
+import { useI18n } from '@/i18n/client';
+import { SaveTemplateButton, TemplateButton } from '@/components/templates/Templates';
+import type { ProjectTpl } from '@/lib/templates';
 
 const PHC = [
   'oklch(0.72 0.1 240 / .55)',
@@ -46,6 +50,8 @@ export function mgNewProject(mg: Mg, p: Partial<MgProject>): MgProject {
 // phases on a timeline, the allocated team and the resource requests.
 export function MgProjects({ mg }: { mg: Mg }) {
   const sp = useSearchParams();
+  const confirm = useConfirm();
+  const { t: tx } = useI18n();
   const { D, tr, lang, LV, SKN, wi, wk } = mg;
   const L = (i: number) => mgL(i, lang);
   const [q, setQ] = useState('');
@@ -203,6 +209,29 @@ export function MgProjects({ mg }: { mg: Mg }) {
   const s0 = wi(sel.from);
   const e0 = wi(sel.to);
   const span = Math.max(1, e0 - s0 + 1);
+  /** Modelos: replace the phases, one after the other from the project's first week (the end follows). */
+  const applyPhases = async (tpl: ProjectTpl) => {
+    if (
+      sel.phases.length &&
+      !(await confirm({
+        title: tx('tp_phasesT'),
+        body: tx('tp_phasesB'),
+        confirmLabel: tx('tp_apply'),
+        cancelLabel: tx('tr_cancel'),
+      }))
+    )
+      return;
+    mg.upd((d) => {
+      const pr = d.projects.find((x) => x.id === sel.id)!;
+      let w = s0;
+      pr.phases = tpl.phases.map((ph) => {
+        const from = w;
+        w += ph.weeks;
+        return { name: ph.name, from: wk(from), to: wk(w - 1) };
+      });
+      pr.to = wk(Math.max(e0, w - 1));
+    });
+  };
   const team = D.allocs.filter(
     (a) =>
       a.project === sel.id && wi(a.to) >= -2 && (mg.gTeam === 'all' || mg.pById[a.person]?.team === mg.gTeam),
@@ -364,6 +393,20 @@ export function MgProjects({ mg }: { mg: Mg }) {
         <div style={css('display:flex;flex-direction:column;gap:10px;')}>
           <div style={css('display:flex;align-items:center;gap:10px;')}>
             <span style={css('font-size:16px;font-weight:600;margin-right:auto;')}>{L(31)}</span>
+            <TemplateButton kind="project" onPick={(tpl) => void applyPhases(tpl.body as ProjectTpl)} />
+            {sel.phases.length > 0 && (
+              <SaveTemplateButton
+                kind="project"
+                compact
+                defaultName={sel.name}
+                body={() => ({
+                  phases: sel.phases.map((ph) => ({
+                    name: ph.name,
+                    weeks: Math.max(1, Math.min(104, wi(ph.to) - wi(ph.from) + 1)),
+                  })),
+                })}
+              />
+            )}
             <button
               type="button"
               onClick={() =>

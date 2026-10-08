@@ -124,6 +124,13 @@ export const FnCreate = z.strictObject({
     .max(300)
     .regex(/^[^\r\n]*$/),
   f: z.record(z.string(), z.unknown()).optional(),
+  // from a template (Modelos)
+  code: z
+    .string()
+    .max(120)
+    .regex(/^[^\r\n]*$/)
+    .optional(),
+  rows: z.array(z.record(z.string(), z.unknown())).max(500).optional(),
 });
 export const FnPatchInput = z.strictObject({
   title: z

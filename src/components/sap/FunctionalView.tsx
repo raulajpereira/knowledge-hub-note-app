@@ -21,6 +21,8 @@ import { refreshCounts } from '@/components/shell/counts';
 import { useWhen } from '@/components/content/useWhen';
 import { AiButton } from '@/components/ai/AiButton';
 import { aiError, useAi } from '@/components/ai/useAi';
+import { SaveTemplateButton, TemplateButton } from '@/components/templates/Templates';
+import { fnToTpl, type FnTpl } from '@/lib/templates';
 import './functional.css';
 
 // Funcional SAP — SapFunctional.dc.html: Processos, Testes, Migração de
@@ -203,13 +205,18 @@ export function FunctionalView({ page }: { page: FnPage }) {
   }, [list, page, projects, t]);
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  const create = async () => {
-    const f: Record<string, FnVal> = {};
+  const create = async (tpl?: FnTpl) => {
+    const f: Record<string, FnVal> = { ...tpl?.f };
     if (fMod) f.module = fMod;
     if (fCli) f.client = fCli;
     if (fProj) f.project = fProj;
     try {
-      const { record } = await api<{ record: Rec }>('/sap/functional', { page, title: t('fn_newTitle'), f });
+      const { record } = await api<{ record: Rec }>('/sap/functional', {
+        page,
+        title: tpl?.title.trim() || t('fn_newTitle'),
+        f,
+        ...(tpl && { code: tpl.code, rows: tpl.rows }),
+      });
       base.current.set(record.id, record.updatedAt);
       setItems((cur) => [record, ...(cur ?? [])]);
       setQ('');
@@ -333,6 +340,7 @@ export function FunctionalView({ page }: { page: FnPage }) {
               <h1>{tr(P.title)}</h1>
               <span>{tr(P.sub)}</span>
             </div>
+            <TemplateButton kind={page} compact onPick={(tpl) => void create(tpl.body as FnTpl)} />
             <button
               type="button"
               className="kh-fn-new"
@@ -523,6 +531,12 @@ export function FunctionalView({ page }: { page: FnPage }) {
                   </option>
                 ))}
               </select>
+              <SaveTemplateButton
+                kind={page}
+                compact
+                defaultName={sel.title}
+                body={() => fnToTpl(page, sel)}
+              />
               <button
                 type="button"
                 className="kh-fn-del"

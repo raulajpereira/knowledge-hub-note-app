@@ -62,7 +62,17 @@ export async function listMeetings(
 
 export async function createMeeting(
   auth: AuthContext,
-  input: { title: string; heldOn: string; startTime?: string; endTime?: string; folderId?: string | null },
+  input: {
+    title: string;
+    heldOn: string;
+    startTime?: string;
+    endTime?: string;
+    folderId?: string | null;
+    participants?: string[];
+    topics?: string;
+    review?: MeetingItem[];
+    todos?: MeetingItem[];
+  },
 ): Promise<Meeting> {
   return asUser(auth, async (tx) => {
     const [{ n }] = (await tx
@@ -80,6 +90,10 @@ export async function createMeeting(
         heldOn: input.heldOn,
         startTime: input.startTime ?? '',
         endTime: input.endTime ?? '',
+        participants: input.participants ?? [],
+        topics: input.topics ?? '',
+        review: input.review ?? [],
+        todos: input.todos ?? [],
       })
       .returning(cols);
     return toMeeting(r!);
