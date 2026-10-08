@@ -195,7 +195,6 @@ export function CodelibView() {
     [path, router, sp],
   );
 
-
   // ── Saving (debounced per object, `base` = updatedAt it was edited from) ──
   const send = useCallback(
     async (id: string, patch: Patch, force = false) => {

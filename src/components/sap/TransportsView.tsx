@@ -7,7 +7,14 @@ import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
 import { envColor } from '@/lib/sap';
-import { Popover, ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
+import {
+  Popover,
+  ResizableTable,
+  useConfirm,
+  usePersistentState,
+  useToast,
+  type Column,
+} from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
 import { SidePanel } from './SidePanel';
 import './sap.css';
