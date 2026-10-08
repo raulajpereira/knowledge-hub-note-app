@@ -51,6 +51,15 @@ export const serverEnvSchema = z.object({
   TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),
 
+  // Who runs the service (Termos / Privacidade / landing). Until LEGAL_REVIEWED
+  // is true the legal pages say they are a provisional version.
+  LEGAL_ENTITY_NAME: z.string().optional(),
+  LEGAL_ENTITY_NIF: z.string().optional(),
+  LEGAL_ENTITY_ADDRESS: z.string().optional(),
+  LEGAL_CONTACT_EMAIL: z.string().optional(),
+  LEGAL_UPDATED_AT: z.string().optional(),
+  LEGAL_REVIEWED: bool.default(false),
+
   // Admin Console only from these client IPs/CIDRs (comma separated; empty = any).
   ADMIN_IP_ALLOWLIST: z.string().optional(),
 

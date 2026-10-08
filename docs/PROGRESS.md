@@ -16,7 +16,7 @@ Branch `v2` (órfão, sem histórico da v1). Fases conforme
 | 8 — Management | ✅ feito (8.1 · 8.2 · 8.3) |
 | 9 — Partilha | ✅ feito (9.1 · 9.2 · 9.3) |
 | 10 — Admin Console + pedidos de plano | ✅ feito (10.1 · 10.2 · 10.3) |
-| 11 — Hardening e lançamento | ⏳ |
+| 11 — Hardening e lançamento | ✅ feito (11.1 · 11.2 · 11.3); falta o corte e o que depende do utilizador |
 
 ## Fase 0 — feito
 - Next.js 15 (App Router, output standalone) + React 19 + TypeScript strict, Tailwind 4 com os tokens de design em CSS variables (`src/app/globals.css`), fontes Geist, logótipo (`src/components/brand/Logo.tsx`).
@@ -343,7 +343,17 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - **Desempenho (Lighthouse)**: desktop — login 100, Início 100, Notas 99, Tarefas 100, Management 99 (LCP 0,7–1,0 s, CLS ≈ 0); acessibilidade 100. Mobile (4G simulado) — login 94, Início 82 (LCP limitado pela troca para a fonte web). A saudação do Início passa a vir no HTML do servidor (hora local por cookie de fuso horário); favicons sem ícone respondem 204 (sem erros na consola); o Zod no browser corre sem a sonda de `eval` que a CSP bloqueava.
 - **Testes**: integração (monitor: alerta uma vez por mudança, repete a 6 h, contagem de 5xx, recuperação) e E2E (axe em login/registo/reposição e 10 ecrãs + Conta).
 
+## Fase 11.3 — Landing page e páginas legais (feito)
+- **Landing** na raiz para quem não tem sessão (ecrã novo, sem protótipo — D50): linguagem visual da app (gradiente quente, vidro, cartões), herói com uma imagem estática da app (conteúdo fictício), módulos, **planos com os preços reais** do catálogo (grupos incluídos, desconto anual, trial), pacote personalizado, "Porquê o KnowledgeHub?", segurança e chamada final; PT/EN; responsiva. Com sessão, a raiz continua a ir para `/app`. Screenshots `fase-11/01–03, 07`.
+- **Termos de Utilização** e **Política de Privacidade** (`/terms`, `/privacy`, PT/EN): rascunho escrito para o funcionamento real (vendas fora da app, alojamento na UE, cofre E2E, 30 dias após revogação, auditoria 2 anos, só cookies necessários, subcontratantes, direitos e CNPD). Os dados da entidade vêm de `LEGAL_*` no `.env`; enquanto `LEGAL_REVIEWED=false` mostram "Versão provisória". O registo liga para ambos. Screenshots `fase-11/04–06`.
+- **Retenção da auditoria**: o job diário apaga entradas com mais de 2 anos através de `kh_purge_audit()` (migração `0026`; a app continua sem poder apagar/alterar a auditoria; recusa prazos inferiores a 1 ano).
+- `robots.txt`: só a landing e as páginas legais são indexáveis.
+- **Testes**: E2E (landing com os planos e ligação ao login; termos/privacidade PT/EN com aviso provisório; ligações no registo; axe nas páginas públicas) e integração (purga da auditoria no job).
+
 ## O que falta / depende do utilizador
+- Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
+- Opcional: chaves Cloudflare Turnstile e `ADMIN_IP_ALLOWLIST` no `.env`.
+- Corte final (v2 na raiz, v1 em `/v1`, `DEPLOY.md §7`) — quando quiser, em conjunto.
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
 - Caixa SMTP da Hostinger para envio (`no-reply@knowledge-hub.cloud`).

@@ -215,7 +215,10 @@ describe.skipIf(!enabled)('plans, requests and license job', () => {
     await admin.unsafe(
       `update codes set status = 'revoked', revoked_at = '${iso(-31 * DAY)}' where id = (select registered_with_code_id from users where id = '${old.user.id}')`,
     );
+    await admin.unsafe(`insert into audit_log (at, action) values (now() - interval '3 years', 'old.entry')`);
     const out = await runLicenseJob();
+    expect(await admin.unsafe(`select 1 from audit_log where action = 'old.entry'`)).toHaveLength(0);
+    expect(out.auditPurged).toBeGreaterThanOrEqual(1);
     const st = async (id: string) =>
       (await admin.unsafe(`select status from tenants where id = '${id}'`))[0]?.status;
     expect(await st(trial.tenant.id)).toBe('suspended');

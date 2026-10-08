@@ -23,8 +23,8 @@ async function axe(page: Page, where: string) {
   expect(found).toEqual([]);
 }
 
-test('sign-in pages', async ({ page }) => {
-  for (const p of ['login', 'register', 'reset-password']) {
+test('public pages', async ({ page }) => {
+  for (const p of ['./', 'terms', 'privacy', 'login', 'register', 'reset-password']) {
     await page.goto(p);
     await page.waitForLoadState('networkidle');
     await axe(page, p);

@@ -16,10 +16,12 @@ import { sendMail } from '@/server/mail/send';
 //    just passed makes it "Em atraso" first, so it shows in Precisa de atenção;
 //  - reminders 7, 3 and 1 days before a renewal;
 //  - codes past their date become "expired";
-//  - what was revoked more than 30 days ago is deleted for good (D45), files included.
+//  - what was revoked more than 30 days ago is deleted for good (D45), files included;
+//  - audit entries older than 2 years are removed (SECURITY.md §8 retention).
 
 const DAY = 86_400_000;
 const GRACE_DAYS = 7;
+const AUDIT_RETENTION_DAYS = 730;
 
 async function removePrefix(prefix: string) {
   const bucket = env().S3_BUCKET;
@@ -43,7 +45,7 @@ async function adminsOf(tenantId: string, fallback: string | null) {
 }
 
 export async function runLicenseJob(now = new Date()) {
-  const out = { suspended: 0, pastDue: 0, reminders: 0, codesExpired: 0, purged: 0 };
+  const out = { suspended: 0, pastDue: 0, reminders: 0, codesExpired: 0, purged: 0, auditPurged: 0 };
   const t = now.getTime();
   const paid = sql`exists (select 1 from ${plans} p where p.id = ${tenants.planId} and p.price_month_per_user > 0)`;
 
@@ -184,5 +186,10 @@ export async function runLicenseJob(now = new Date()) {
     });
   }
   out.purged = goneTenants.length + people.length;
+
+  const [ap] = await db().execute<{ n: number }>(
+    sql`select kh_purge_audit(${new Date(t - AUDIT_RETENTION_DAYS * DAY).toISOString()}::timestamptz) as n`,
+  );
+  out.auditPurged = Number(ap?.n ?? 0);
   return out;
 }

@@ -144,6 +144,25 @@ export function RegisterForm({ initialCode, invitedEmail }: { initialCode?: stri
           {t('reg_submit')}
         </Button>
       )}
+      {!done && (
+        <span className="kh-auth__legal">
+          {t('reg_legal')
+            .split(/(\{terms\}|\{privacy\})/)
+            .map((part, i) =>
+              part === '{terms}' ? (
+                <Link key={i} href="/terms" target="_blank">
+                  {t('reg_terms')}
+                </Link>
+              ) : part === '{privacy}' ? (
+                <Link key={i} href="/privacy" target="_blank">
+                  {t('reg_privacy')}
+                </Link>
+              ) : (
+                part
+              ),
+            )}
+        </span>
+      )}
       <span className="kh-auth__foot">
         {t('reg_hasAcc')} <Link href="/login">{t('reg_toLogin')}</Link>
       </span>

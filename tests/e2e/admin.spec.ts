@@ -147,6 +147,7 @@ async function adminLogin(page: import('@playwright/test').Page) {
 }
 
 test('console: new pack with its license, subscription edits, suspend', async ({ page }) => {
+  test.setTimeout(90_000); // adminLogin may wait up to 30 s for a fresh TOTP window
   await adminLogin(page);
 
   const name = `Pack E2E ${Date.now()}`;
