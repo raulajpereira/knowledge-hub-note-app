@@ -9,7 +9,7 @@ import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { tagTint } from '@/lib/tags';
-import { Popover, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Popover, useConfirm, usePersistentState, useToast, TagInput } from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
@@ -99,7 +99,6 @@ export function ArtifactsView() {
   const [draft, setDraft] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [newFolder, setNewFolder] = useState('');
-  const [newTag, setNewTag] = useState('');
   const [histOpen, setHistOpen] = useState(false);
   const histBtn = useRef<HTMLButtonElement>(null);
   const [copied, setCopied] = useState(false);
@@ -151,7 +150,6 @@ export function ArtifactsView() {
     setDraft(null);
     setHistOpen(false);
     setMode('preview');
-    setNewTag('');
     if (!activeId) return setFull(null);
     let live = true;
     api<{ artifact: Full }>(`/artifacts/${activeId}`)
@@ -672,6 +670,7 @@ export function ArtifactsView() {
                     anchor={histBtn}
                     onClose={() => setHistOpen(false)}
                     className="kh-ar-hist"
+                    maxHeight={360}
                     width={300}
                     role="dialog"
                     aria-label={t('a_history')}
@@ -725,19 +724,14 @@ export function ArtifactsView() {
                 </span>
               ))}
               {!ro && (
-                <input
+                <TagInput
+                  key={full.id}
                   className="kh-ar-newtag"
-                  value={newTag}
-                  maxLength={40}
+                  exclude={full.tags}
                   placeholder={`+ ${t('a_tag')}`}
                   aria-label={t('a_tag')}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== 'Enter') return;
-                    const v = newTag.trim();
-                    setNewTag('');
-                    if (v && !full.tags.includes(v) && full.tags.length < 30)
-                      void patch(full.id, { tags: [...full.tags, v] });
+                  onAdd={(v) => {
+                    if (full.tags.length < 30) void patch(full.id, { tags: [...full.tags, v] });
                   }}
                 />
               )}

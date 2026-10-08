@@ -310,17 +310,35 @@ test('tags page: tags with counts, rename', async ({ page }) => {
   await page.goto('app/notes');
   await page.locator('.kh-nt-card', { hasText: 'Go-live' }).first().click();
   await page.getByRole('button', { name: '+ Etiqueta' }).click();
-  await page.getByLabel('Nova etiqueta').fill('Go-live');
+  await page.getByRole('combobox', { name: 'Nova etiqueta' }).fill('Go-live');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.kh-nt-tag', { hasText: 'Go-live' })).toBeVisible();
+  // Enter leaves the box open, empty, for the next tag
+  await expect(page.getByRole('combobox', { name: 'Nova etiqueta' })).toHaveValue('');
+  await page.getByRole('combobox', { name: 'Nova etiqueta' }).fill('Fase 2');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.kh-nt-tag', { hasText: 'Fase 2' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(600);
+  // another note: typing suggests the tags already used in the app
+  await page.locator('.kh-nt-card').filter({ hasNotText: 'Go-live' }).first().click();
+  await page.getByRole('button', { name: '+ Etiqueta' }).click();
+  await page.getByRole('combobox', { name: 'Nova etiqueta' }).fill('go-l');
+  await expect(page.getByRole('listbox', { name: 'Nova etiqueta' }).getByRole('option')).toHaveText([
+    'Go-live',
+  ]);
+  await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await expect(page.locator('.kh-nt-tag', { hasText: 'Go-live' })).toBeVisible();
   await page.waitForTimeout(600);
   await page.goto('app/tags');
   const row = page.locator('.kh-tg__row', { hasText: 'Go-live' });
-  await expect(row).toContainText('1 nota');
+  await expect(row).toContainText('2 notas');
   await row.getByRole('button', { name: 'Renomear Go-live' }).click();
   await page.getByRole('textbox', { name: 'Renomear' }).fill('Arranque');
   await page.keyboard.press('Enter');
-  await expect(page.locator('.kh-tg__row', { hasText: 'Arranque' })).toContainText('1 nota');
+  await expect(page.locator('.kh-tg__row', { hasText: 'Arranque' })).toContainText('2 notas');
   await expect(page.locator('.kh-tg__row', { hasText: 'Go-live' })).toHaveCount(0);
 });
 

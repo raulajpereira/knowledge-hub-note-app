@@ -81,6 +81,12 @@ test('snippets: create, files, highlighting, related with back, favourites, Tras
   await page.getByLabel('Linguagem').selectOption('typescript');
   await expect(page.getByLabel('Nome do ficheiro')).toHaveValue('file2.ts');
   await page.getByRole('button', { name: 'Favorito', exact: true }).click();
+  const tags = page.getByRole('combobox', { name: 'Tags' });
+  await tags.fill('utils');
+  await tags.press('Enter');
+  await tags.fill('async');
+  await tags.press('Enter');
+  await expect(page.locator('.kh-dl-tag')).toHaveText(['utils×', 'async×']);
 
   await page.getByRole('button', { name: 'Novo Snippet' }).click();
   dialog = page.getByRole('dialog');
@@ -88,6 +94,11 @@ test('snippets: create, files, highlighting, related with back, favourites, Tras
   await dialog.getByLabel('Linguagem').selectOption('sql');
   await dialog.getByLabel('Tipo').selectOption('query');
   await dialog.getByRole('button', { name: 'Criar' }).click();
+  // the tags already used are suggested
+  await expect(page.locator('.kh-dl-title')).toHaveValue('Top N por grupo');
+  await page.getByRole('combobox', { name: 'Tags' }).fill('UT');
+  await page.getByRole('option', { name: 'utils' }).click();
+  await expect(page.locator('.kh-dl-tag')).toHaveText(['utils×']);
   await page.getByLabel('+ Relacionar snippet').selectOption({ label: 'Função debounce · JavaScript' });
   await page.locator('.kh-dl-rel').getByRole('button', { name: 'Função debounce', exact: true }).click();
   await expect(page.getByLabel('Nome do ficheiro')).toHaveValue('funcao-debounce.js');
@@ -101,6 +112,7 @@ test('snippets: create, files, highlighting, related with back, favourites, Tras
   await expect(page.locator('.kh-dl-item')).toHaveCount(1);
   await page.locator('.kh-dl-item').click();
   await expect(page.getByRole('tab')).toHaveCount(2);
+  await expect(page.locator('.kh-dl-tag')).toHaveText(['utils×', 'async×']);
   await expect(page.locator('.kh-dl-rel')).toContainText('Top N por grupo');
 
   await page.getByRole('button', { name: 'Eliminar snippet' }).click();

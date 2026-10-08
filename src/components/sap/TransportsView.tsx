@@ -631,6 +631,7 @@ export function TransportsView() {
                     align="left"
                     onClose={() => setFOpen(null)}
                     className="kh-ot-menu"
+                    maxHeight={340}
                     width={250}
                     role="listbox"
                     aria-multiselectable

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { JSONContent } from '@tiptap/react';
 import { useI18n } from '@/i18n/client';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { useConfirm, usePersistentState, useToast, TagInput } from '@/components/ui';
 import { isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { usePref } from '@/components/shell/PrefsProvider';
@@ -426,13 +426,7 @@ function NoteList({
 function TagsRow({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
   const { t } = useI18n();
   const [adding, setAdding] = useState(false);
-  const [val, setVal] = useState('');
-  const add = () => {
-    const v = val.trim().slice(0, 40);
-    setVal('');
-    setAdding(false);
-    if (v && !tags.includes(v)) onChange([...tags, v]);
-  };
+  // Enter adds the tag and leaves the box open for the next one
   return (
     <div className="kh-nt-tags">
       {tags.map((tg) => (
@@ -447,25 +441,17 @@ function TagsRow({ tags, onChange }: { tags: string[]; onChange: (tags: string[]
           </button>
         </span>
       ))}
-      {adding ? (
-        <input
+      {adding && tags.length < 30 ? (
+        <TagInput
           className="kh-nt-tag kh-nt-tag--input"
           autoFocus
-          value={val}
+          exclude={tags}
           placeholder={t('ne_tagPh')}
           aria-label={t('ne_tagPh')}
-          maxLength={40}
-          onChange={(e) => setVal(e.target.value)}
-          onBlur={add}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              add();
-            } else if (e.key === 'Escape') {
-              setVal('');
-              setAdding(false);
-            }
-          }}
+          onAdd={(v) => onChange([...tags, v])}
+          commitOnBlur
+          onBlur={() => setAdding(false)}
+          onEscape={() => setAdding(false)}
         />
       ) : (
         tags.length < 30 && (

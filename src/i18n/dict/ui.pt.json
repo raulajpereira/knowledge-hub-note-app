@@ -217,7 +217,7 @@
   "dl_del": "Eliminar snippet",
   "dl_type": "Tipo",
   "dl_tags": "Tags",
-  "dl_tagsPh": "ex.: utils, async, api",
+  "dl_tagsPh": "Escreva e prima Enter",
   "dl_descPh": "Descrição, notas de uso, dependências…",
   "dl_addFile": "Adicionar ficheiro",
   "dl_download": "Descarregar ficheiro",

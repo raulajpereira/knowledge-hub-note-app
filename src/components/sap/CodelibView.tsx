@@ -30,7 +30,7 @@ import {
   type Row,
   type Val,
 } from '@/lib/codelib';
-import { Popover, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Popover, useConfirm, usePersistentState, useToast, TagInput } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
@@ -158,7 +158,6 @@ export function CodelibView() {
   const [sel, setSel] = useState<{ oid: string; nid: string | null; k: string | null } | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [newTag, setNewTag] = useState('');
   const [hist, setHist] = useState<Hist[]>([]);
   const [histAt, setHistAt] = useState<{ a: string; n: string | null } | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
@@ -186,7 +185,6 @@ export function CodelibView() {
   const open = useCallback(
     (id: string | null, nid: string | null = null, k: string | null = null) => {
       setSel(id ? { oid: id, nid, k } : null);
-      setNewTag('');
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('o', id);
       else next.delete('o');
@@ -459,12 +457,6 @@ export function CodelibView() {
             },
       ),
     );
-  };
-  const addTag = () => {
-    const v = newTag.trim().slice(0, 40);
-    if (!o || !v) return;
-    upd(o.id, { tags: [...new Set([...o.tags, v])].slice(0, 30) }, 0);
-    setNewTag('');
   };
   const download = () => {
     if (!o) return;
@@ -761,13 +753,12 @@ export function CodelibView() {
                     </button>
                   </span>
                 ))}
-                <input
-                  value={newTag}
-                  maxLength={40}
+                <TagInput
+                  key={o.id}
+                  exclude={o.tags}
                   placeholder={`+ ${t('a_tag')}`}
                   aria-label={t('a_tag')}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addTag()}
+                  onAdd={(v) => upd(o.id, { tags: [...new Set([...o.tags, v])].slice(0, 30) }, 0)}
                 />
               </div>
             </div>

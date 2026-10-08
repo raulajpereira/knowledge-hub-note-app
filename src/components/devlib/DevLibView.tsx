@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { DEV_LANGS, DEV_TYPES, highlight, langOf, type DevLang, type DevType } from '@/lib/devlib';
-import { Modal, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Modal, TagInput, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import './devlib.css';
 
@@ -48,7 +48,6 @@ export function DevLibView() {
   const [fileId, setFileId] = useState<string | null>(null);
   const [hist, setHist] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-  const [tagsText, setTagsText] = useState<string | null>(null);
   const [nw, setNw] = useState<{ title: string; lang: string; type: DevType; err: string } | null>(null);
   const pending = useRef(new Map<string, { patch: Patch; tm: ReturnType<typeof setTimeout> }>());
   const sectionRef = useRef<HTMLElement>(null);
@@ -65,7 +64,6 @@ export function DevLibView() {
       setHist((h) => (push && selId ? [...h, selId] : push ? h : []));
       setFileId(null);
       setCopied(false);
-      setTagsText(null);
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('s', id);
       else next.delete('s');
@@ -464,7 +462,6 @@ export function DevLibView() {
                   onClick={() => {
                     setHist((h) => h.slice(0, -1));
                     setFileId(null);
-                    setTagsText(null);
                     const next = new URLSearchParams(sp.toString());
                     next.set('s', prev.id);
                     router.replace(`${path}?${next}`, { scroll: false });
@@ -558,26 +555,33 @@ export function DevLibView() {
                   ))}
                 </select>
               </label>
-              <label className="kh-dl-field kh-dl-field--wide">
+              <div className="kh-dl-field kh-dl-field--wide">
                 <span>{t('dl_tags')}</span>
-                <input
-                  value={tagsText ?? sel.tags.join(', ')}
-                  placeholder={t('dl_tagsPh')}
-                  onChange={(e) => {
-                    setTagsText(e.target.value);
-                    const tags = [
-                      ...new Set(
-                        e.target.value
-                          .split(',')
-                          .map((x) => x.trim().slice(0, 40))
-                          .filter(Boolean),
-                      ),
-                    ].slice(0, 30);
-                    upd(sel.id, { tags });
-                  }}
-                  onBlur={() => setTagsText(null)}
-                />
-              </label>
+                <div className="kh-dl-tagbox">
+                  {sel.tags.map((tg) => (
+                    <span key={tg} className="kh-dl-tag">
+                      {tg}
+                      <button
+                        type="button"
+                        aria-label={`${t('del')} ${tg}`}
+                        onClick={() => upd(sel.id, { tags: sel.tags.filter((x) => x !== tg) })}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {sel.tags.length < 30 && (
+                    <TagInput
+                      key={sel.id}
+                      exclude={sel.tags}
+                      placeholder={sel.tags.length ? '' : t('dl_tagsPh')}
+                      aria-label={t('dl_tags')}
+                      onAdd={(v) => upd(sel.id, { tags: [...sel.tags, v] })}
+                      commitOnBlur
+                    />
+                  )}
+                </div>
+              </div>
             </div>
             <textarea
               className="kh-dl-desc"

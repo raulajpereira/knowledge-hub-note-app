@@ -157,9 +157,6 @@
 .kh-ar-histwrap {
   position: relative;
 }
-.kh-ar-hist {
-  max-height: 360px;
-}
 .kh-ar-hist__t {
   padding: 8px 10px 6px;
   font-size: 12px;

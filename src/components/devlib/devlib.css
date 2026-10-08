@@ -390,6 +390,56 @@
 .kh-dl-field--wide {
   grid-column: span 2;
 }
+.kh-dl-tagbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(18, 12, 9, 0.22);
+  box-sizing: border-box;
+}
+.kh-dl-tagbox:focus-within {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+.kh-dl-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 12px;
+  color: #fbf8f5;
+}
+.kh-dl-tag > button {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.7;
+}
+.kh-dl-tag > button:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.16);
+}
+.kh-dl-field .kh-dl-tagbox input {
+  flex: 1;
+  min-width: 120px;
+  width: auto;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+}
 .kh-dl-field input {
   height: 36px;
   padding: 0 12px;

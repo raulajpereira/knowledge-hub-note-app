@@ -16,6 +16,7 @@ export function Popover({
   onClose,
   className,
   width,
+  maxHeight,
   children,
   ...aria
 }: {
@@ -24,7 +25,10 @@ export function Popover({
   onClose: () => void;
   className?: string;
   width?: number;
+  /** cap on the height (it never goes past the bottom of the window) */
+  maxHeight?: number;
   children: React.ReactNode;
+  id?: string;
   role?: string;
   'aria-label'?: string;
   'aria-multiselectable'?: boolean;
@@ -84,7 +88,7 @@ export function Popover({
         left: pos.left,
         right: pos.right,
         width,
-        maxHeight: `calc(100vh - ${Math.round(pos.top) + 16}px)`,
+        maxHeight: `min(${maxHeight ? `${maxHeight}px` : '100vh'}, calc(100vh - ${Math.round(pos.top) + 16}px))`,
       }}
     >
       {children}
