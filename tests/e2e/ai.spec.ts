@@ -104,7 +104,14 @@ test('set up a key, ask with sources, organise a meeting record', async ({ page 
   // kept in the history
   await panel.getByRole('button', { name: 'Conversas anteriores' }).click();
   await expect(panel.locator('.kh-ai__chat')).toContainText('O que decidimos sobre o payroll?');
-  await panel.getByRole('button', { name: 'Fechar' }).click();
+  // the floating button (no longer in the header) and Ctrl/⌘+J open and close the panel
+  await expect(page.locator('.kh-hdr').getByRole('button', { name: 'Assistente IA' })).toHaveCount(0);
+  await page.keyboard.press('ControlOrMeta+j');
+  await expect(panel).toBeHidden();
+  await page.keyboard.press('ControlOrMeta+j');
+  await expect(panel).toBeVisible();
+  await page.locator('.kh-ai-fab').click();
+  await expect(panel).toBeHidden();
 
   // a meeting record: notes → summary, points to review, actions
   await page.goto('app/meetings');

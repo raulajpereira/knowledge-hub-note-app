@@ -11,6 +11,7 @@ import { AboutModal } from './AboutModal';
 import { AccountModal } from './AccountModal';
 import { ActivityModal } from './ActivityModal';
 import { AiPanel } from '@/components/ai/AiPanel';
+import { AiFab } from '@/components/ai/AiFab';
 import { Header } from './Header';
 import { LockScreen } from './LockScreen';
 import { PrefsProvider, usePref, usePrefsContext } from './PrefsProvider';
@@ -47,6 +48,8 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [actOpen, setActOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const toggleAi = useCallback(() => setAiOpen((o) => !o), []);
+  const closeAi = useCallback(() => setAiOpen(false), []);
   const [query, setQuery] = useState('');
 
   // Locked state survives a reload in this tab (prototype kv.locked in sessionStorage).
@@ -137,12 +140,7 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
       />
       <div className="kh-shell kh-above" aria-hidden={locked || undefined} inert={locked || undefined}>
         <div className="kh-shell__grid">
-          <Header
-            onActivity={() => setActOpen((o) => !o)}
-            activityOpen={actOpen}
-            onAi={() => setAiOpen((o) => !o)}
-            aiOpen={aiOpen}
-          />
+          <Header onActivity={() => setActOpen((o) => !o)} activityOpen={actOpen} />
           <div
             className="kh-main"
             style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${width}px minmax(0,1fr)` }}
@@ -178,7 +176,8 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
       <AccountModal open={accOpen} onClose={() => setAccOpen(false)} />
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />
-      <AiPanel open={aiOpen} onClose={() => setAiOpen(false)} />
+      <AiPanel open={aiOpen} onClose={closeAi} />
+      {!locked && !focus && <AiFab open={aiOpen} onToggle={toggleAi} />}
       {locked && (
         <LockScreen name={me.user.name} email={me.user.email} photoV={me.assets.avatar} onUnlock={unlock} />
       )}

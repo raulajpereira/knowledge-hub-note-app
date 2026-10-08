@@ -27,17 +27,7 @@ function useClock(lang: string) {
   };
 }
 
-export function Header({
-  onActivity,
-  activityOpen,
-  onAi,
-  aiOpen,
-}: {
-  onActivity: () => void;
-  activityOpen: boolean;
-  onAi: () => void;
-  aiOpen: boolean;
-}) {
+export function Header({ onActivity, activityOpen }: { onActivity: () => void; activityOpen: boolean }) {
   const { t, lang } = useI18n();
   const [tcOpen, setTcOpen] = useState(false);
   const { modules, me, focus, toggleFocus, lock, query, setQuery } = useShell();
@@ -116,19 +106,6 @@ export function Header({
         >
           <Icon name="whiteboard" />
         </Link>
-      )}
-      {modules.has('ai') && (
-        <button
-          type="button"
-          onClick={onAi}
-          title={t('ai_panel')}
-          aria-label={t('ai_panel')}
-          aria-expanded={aiOpen}
-          className="kh-hdr__btn kh-hdr__glass kh-hdr__ai"
-          data-on={aiOpen}
-        >
-          <Icon name="spark" />
-        </button>
       )}
       <button
         type="button"
