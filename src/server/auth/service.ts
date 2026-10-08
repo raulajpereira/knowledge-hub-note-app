@@ -80,6 +80,12 @@ export async function sendSetupLink(userId: string, email: string, lang: Lang) {
   await sendMail(renderMail('setup', lang, email, appLink(`/reset-password?token=${token}`)));
 }
 
+/** "Repor password" from the Admin Console: the same reset link the user would ask for. */
+export async function sendResetLink(userId: string, email: string, lang: Lang) {
+  const token = await issueToken(userId, 'reset', RESET_TTL);
+  await sendMail(renderMail('reset', lang, email, appLink(`/reset-password?token=${token}`)));
+}
+
 // ── Register ────────────────────────────────────────────────────────────────
 export async function register(
   input: { name: string; email: string; password: string; code?: string },

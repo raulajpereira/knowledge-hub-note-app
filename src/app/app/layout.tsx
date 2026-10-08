@@ -40,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       planCode: auth.tenant.planCode,
       renewAt: auth.tenant.renewAt?.toISOString() ?? null,
       trialEndsAt: auth.tenant.trialEndsAt?.toISOString() ?? null,
+      status: auth.tenant.status,
     },
     modules: ent.modules,
     admin: admin[0]?.status === 'active' ? { role: admin[0].role } : null,

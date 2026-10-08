@@ -1,4 +1,10 @@
 [
+  ["^Suspender (.+)\\?$", "", "Suspend $1?"],
+  [
+    "^Os (\\d+) utilizadores passam a só leitura até ser reativado\\.$",
+    "",
+    "The $1 users become read-only until it is reactivated."
+  ],
   ["^Pausar (KH-[A-Z]+-\\d{6})\\?$", "", "Pause $1?"],
   ["^Revogar (KH-[A-Z]+-\\d{6})\\?$", "", "Revoke $1?"],
   [

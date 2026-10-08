@@ -1,5 +1,6 @@
 'use client';
 
+import { cloneElement, useId } from 'react';
 import { useI18n } from '@/i18n/client';
 
 // Building blocks of the Admin Console (prototype table, chips, drawer).
@@ -215,12 +216,14 @@ export function Chips<V extends string>({
   );
 }
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/** Label + control, linked by id (the label's text alone is the control's name). */
+export function Field({ label, children }: { label: string; children: React.ReactElement<{ id?: string }> }) {
+  const id = useId();
   return (
-    <label className="kh-ad-field">
-      <span>{label}</span>
-      {children}
-    </label>
+    <div className="kh-ad-field">
+      <label htmlFor={id}>{label}</label>
+      {cloneElement(children, { id })}
+    </div>
   );
 }
 

@@ -6,13 +6,19 @@ import path from 'node:path';
 
 // Fase 10.1 Admin Console: 2FA gate, Visão Geral, Códigos (generate, detail,
 // pause) and Auditoria with the CSV export.
-test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 } });
+// its own client IP: sign-ups are limited per IP (10/h) and the suite registers many people
+test.use({
+  locale: 'pt-PT',
+  viewport: { width: 1440, height: 900 },
+  extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.120' },
+});
 test.describe.configure({ mode: 'serial' });
 
 const outbox = process.env.MAIL_OUTBOX_DIR;
 test.skip(!outbox, 'MAIL_OUTBOX_DIR is not set');
 
 const email = `console-${Date.now()}@example.com`;
+let secret = '';
 const password = 'Console-Strong-Pass-1';
 const cli = (...args: string[]) =>
   execFileSync('npx', ['tsx', 'src/cli/index.ts', ...args], { encoding: 'utf8' });
@@ -81,6 +87,7 @@ test('console: 2FA gate, overview, generate and pause a code, audit and CSV', as
   const setup = (await (await page.request.post(`${base}/api/v1/auth/2fa/setup`, { data: {} })).json()) as {
     secret: string;
   };
+  secret = setup.secret;
   expect(
     (await page.request.post(`${base}/api/v1/auth/2fa/enable`, { data: { code: totp(setup.secret) } })).ok(),
   ).toBe(true);
@@ -122,4 +129,43 @@ test('console: 2FA gate, overview, generate and pause a code, audit and CSV', as
   const csv = fs.readFileSync((await dl.path())!, 'utf8');
   expect(csv).toContain('Pausou código');
   expect(csv).toContain(newCode);
+});
+
+test('console: new pack with its license, subscription edits, suspend', async ({ page }) => {
+  await page.goto('login');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  // the same TOTP window can't be used twice: wait for the next one if needed
+  const box = page.locator('input[autocomplete="one-time-code"]');
+  await box.waitFor();
+  await new Promise((r) => setTimeout(r, 30_000 - (Date.now() % 30_000) + 500));
+  await box.fill(totp(secret));
+  await page.locator('button[type=submit]').click();
+  await page.waitForURL(/\/app$/);
+
+  const name = `Pack E2E ${Date.now()}`;
+  await page.goto('admin?s=packs');
+  await page.getByRole('button', { name: '+ Novo pack' }).click();
+  await page.getByLabel('Nome da empresa (ou da pessoa)').fill(name);
+  await page.getByLabel('Email do admin').fill('admin@pack-e2e.pt');
+  await page.getByLabel('Pacote', { exact: true }).selectOption('SAP');
+  await page.getByLabel('Lugares').fill('12');
+  await page.getByRole('button', { name: 'Criar e gerar licença' }).click();
+  await expect(page.locator('.kh-ad-codebox span')).toHaveText(/^KH-LIC-\d{6}$/);
+  await page.getByRole('button', { name: 'Concluir' }).click();
+
+  await page.locator('.kh-ad-tr', { hasText: name }).first().click();
+  await expect(page.getByRole('heading', { name })).toBeVisible();
+  await expect(page.getByText('0 / 12')).toBeVisible();
+  const seats = page.getByLabel(/^Lugares/);
+  await seats.fill('15');
+  await seats.blur();
+  await expect(page.getByText('0 / 15')).toBeVisible();
+  await page.getByRole('button', { name: 'Suspender cliente' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Suspender' }).click();
+  await expect(page.getByRole('button', { name: 'Reativar cliente' })).toBeVisible();
+  await page.locator('.kh-ad-chip', { hasText: 'Atividade' }).click();
+  await expect(page.locator('.kh-ad-tr', { hasText: 'Suspendeu cliente' })).toBeVisible();
+  await expect(page.locator('.kh-ad-tr', { hasText: 'Criou cliente' })).toBeVisible();
 });

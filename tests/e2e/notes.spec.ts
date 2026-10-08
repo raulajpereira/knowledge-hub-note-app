@@ -337,7 +337,14 @@ test('shared folders: new shared folder, invite by email, create in it, Definiç
   await expect(page.getByRole('button', { name: 'Retomar' })).toHaveCount(0);
 });
 
-test('the invited person signs up without a license (FREE) and finds the shared folder', async ({ page }) => {
+test('the invited person signs up without a license (FREE) and finds the shared folder', async ({
+  browser,
+}) => {
+  // another client IP: sign-ups are limited per IP
+  const page = await browser.newPage({
+    locale: 'pt-PT',
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.121' },
+  });
   await page.goto(`register?invite=1&email=${encodeURIComponent(who)}`);
   await expect(page.getByText('não precisa de licença')).toBeVisible();
   await expect(page.getByLabel('Licença')).toHaveCount(0);

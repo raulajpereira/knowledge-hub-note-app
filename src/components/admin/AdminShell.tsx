@@ -18,6 +18,8 @@ import { useA } from './ui';
 import { Overview } from './Overview';
 import { Codes } from './Codes';
 import { Audit } from './Audit';
+import { ClientList, ClientPage, UserPage } from './Clients';
+import { Admins } from './Admins';
 import './admin.css';
 
 export type AdminRole = 'owner' | 'admin' | 'billing' | 'support' | 'readonly';
@@ -72,7 +74,7 @@ const SEC_AREA: Record<Section, Area> = {
   audit: 'audit',
 };
 /** Sections built so far (the rest arrive with Fases 10.2/10.3). */
-const READY: Section[] = ['overview', 'codes', 'audit'];
+const READY: Section[] = ['overview', 'packs', 'inds', 'codes', 'admins', 'audit'];
 
 const ICONS: Record<Section, string> = {
   overview:
@@ -399,6 +401,15 @@ function Console({ me }: { me: AdminMe }) {
                 </button>
               </div>
               {sec === 'overview' && <Overview />}
+              {(sec === 'packs' || sec === 'inds') &&
+                (sp.get('u') && sp.get('c') ? (
+                  <UserPage key={sp.get('u')} clientId={sp.get('c')!} userId={sp.get('u')!} mode={sec} />
+                ) : sp.get('c') ? (
+                  <ClientPage key={sp.get('c')} id={sp.get('c')!} mode={sec} />
+                ) : (
+                  <ClientList key={sec} mode={sec} />
+                ))}
+              {sec === 'admins' && <Admins />}
               {sec === 'codes' && <Codes />}
               {sec === 'audit' && <Audit />}
             </main>

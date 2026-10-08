@@ -512,5 +512,6 @@
   "sh_noneFolder": "None",
   "sh_roBanner": "Read-only — shared by {who}",
   "sh_newSharedTip": "New shared folder",
-  "sh_noSharedFolder": "No shared folder"
+  "sh_noSharedFolder": "No shared folder",
+  "shell_suspended": "Account suspended: you can see your data but not change it. Contact us to reactivate it."
 }

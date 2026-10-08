@@ -163,6 +163,11 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
           <Ticker />
         </div>
       </div>
+      {me.tenant.status === 'suspended' && (
+        <div className="kh-suspended" role="status">
+          {t('shell_suspended')}
+        </div>
+      )}
       <AccountModal open={accOpen} onClose={() => setAccOpen(false)} />
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />

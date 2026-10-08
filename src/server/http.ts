@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { env } from '@/lib/env';
@@ -57,12 +58,15 @@ export function assertSameOrigin(req: NextRequest) {
   if (!host || originHost !== host) throw new ApiError(403, 'bad_origin');
 }
 
+/** The request being handled (method and path), for checks deep in the call (suspended = read-only). */
+export const currentRequest = new AsyncLocalStorage<{ method: string; path: string }>();
+
 /** Wraps a route handler: origin check for mutations + uniform errors. */
 export function handler<C>(fn: (req: NextRequest, ctx: C) => Promise<Response>) {
   return async (req: NextRequest, ctx: C) => {
     try {
       if (req.method !== 'GET' && req.method !== 'HEAD') assertSameOrigin(req);
-      return await fn(req, ctx);
+      return await currentRequest.run({ method: req.method, path: req.nextUrl.pathname }, () => fn(req, ctx));
     } catch (err) {
       return errorResponse(err);
     }

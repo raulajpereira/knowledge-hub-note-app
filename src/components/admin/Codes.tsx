@@ -391,7 +391,7 @@ function NewCode({ onDone }: { onDone: () => void }) {
 type CodeUser = { id: string; name: string; email: string; status: string };
 
 /** Detail of a code: users, number of users, validity; pause, resume, +30 days, revoke, restore. */
-function CodeDetail({ row, onChanged }: { row: CodeRow; onChanged: () => void }) {
+export function CodeDetail({ row, onChanged }: { row: CodeRow; onChanged: () => void }) {
   const { A } = useA();
   const { can, drawer } = useConsole();
   const toast = useToast();

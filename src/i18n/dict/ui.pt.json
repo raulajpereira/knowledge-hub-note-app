@@ -512,5 +512,6 @@
   "sh_noneFolder": "Nenhuma",
   "sh_roBanner": "Só leitura — partilhado por {who}",
   "sh_newSharedTip": "Nova pasta partilhada",
-  "sh_noSharedFolder": "Sem pasta partilhada"
+  "sh_noSharedFolder": "Sem pasta partilhada",
+  "shell_suspended": "Conta suspensa: pode consultar os seus dados, mas não alterá-los. Contacte-nos para reativar."
 }

@@ -63,6 +63,12 @@ export async function redeemCode(tx: Tx, codeStr: string, registrant: { name: st
 
   if (tenantId) {
     if ((await seatsLeft(tx, tenantId)) <= 0) throw new ApiError(400, 'code_no_seats');
+    // a client created in the Admin Console: its first person becomes its admin
+    const [{ n }] = (await tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.tenantId, tenantId))) as [{ n: number }];
+    if (n === 0) role = 'admin';
   } else {
     const planId = c.planId ?? (await planIdByCode(tx, 'FREE'));
     const [plan] = await tx.select().from(plans).where(eq(plans.id, planId)).limit(1);

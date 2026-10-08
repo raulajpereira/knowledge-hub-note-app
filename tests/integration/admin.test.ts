@@ -216,4 +216,131 @@ describe.skipIf(!enabled)('admin console', () => {
     expect(csv.startsWith('﻿"Quando (ISO)";"Quem"')).toBe(true);
     expect(csv).toContain('"X;""y"""');
   });
+
+  it('clients: new pack → first sign-up is its admin; subscription edits, custom groups, suspend = read-only', async () => {
+    const boss = await signedIn('boss@kh.pt');
+    await makeAdmin(boss.user.id, 'owner');
+    const ctx = await guard.checkAdmin(
+      { ...boss, user: { ...boss.user, totpEnabled: true } },
+      'clients',
+      true,
+    );
+    const { id, code } = await tenantsSvc.createClient(
+      ctx,
+      {
+        name: 'Atlântico Retail',
+        contactName: 'Marta',
+        contactEmail: 'marta@atl.pt',
+        plan: 'SAP',
+        cycle: 'annual',
+        seats: 3,
+        start: 'trial',
+      },
+      null,
+    );
+    const [t0] = await admin.unsafe(`select status, kind, trial_ends_at from tenants where id = '${id}'`);
+    expect(t0).toMatchObject({ status: 'trial', kind: 'pack' });
+    expect(t0!.trial_ends_at).not.toBeNull();
+    await svc.register({ name: 'Marta', email: 'marta@atl.pt', password: 'Correct-Horse-9', code }, meta);
+    await svc.register({ name: 'Rui', email: 'rui@atl.pt', password: 'Correct-Horse-9', code }, meta);
+    const people = await tenantsSvc.clientUsers([id]);
+    expect(people.map((u) => [u.email, u.role])).toEqual([
+      ['marta@atl.pt', 'admin'],
+      ['rui@atl.pt', 'member'],
+    ]);
+    // invite for the free seat only
+    const inv = await tenantsSvc.inviteToClient(ctx, id, null);
+    expect((await acodes.listCodes()).find((c) => c.code === inv)).toMatchObject({
+      maxUses: 1,
+      type: 'invite',
+    });
+    // CUSTOM plan: its groups become modules; leaving it takes them away
+    const ent = await import('@/server/licensing/entitlements');
+    await tenantsSvc.updateClient(ctx, id, { plan: 'CUSTOM', addonGroups: ['mgmt'] }, null);
+    let mods = (await ent.computeEntitlements(id)).modules;
+    expect(mods).toEqual(expect.arrayContaining(['notes', 'calendar', 'mg_teams', 'mg_time']));
+    expect(mods).not.toContain('codelib');
+    await tenantsSvc.updateClient(ctx, id, { addonGroups: ['dev'] }, null);
+    mods = (await ent.computeEntitlements(id)).modules;
+    expect(mods).toEqual(expect.arrayContaining(['artifacts', 'devlib']));
+    expect(mods).not.toContain('mg_teams');
+    await tenantsSvc.updateClient(ctx, id, { plan: 'PRO' }, null);
+    mods = (await ent.computeEntitlements(id)).modules;
+    expect(mods).not.toContain('devlib');
+    // one seat makes it an individual client
+    await tenantsSvc.updateClient(ctx, id, { seats: 1 }, null);
+    const [t1] = await admin.unsafe(`select kind from tenants where id = '${id}'`);
+    expect(t1!.kind).toBe('individual');
+    // suspended: reads stay, writes are refused (but not sign-in, account or console)
+    await tenantsSvc.updateClient(ctx, id, { status: 'suspended' }, null);
+    const vf = (await fs.readdir(outbox)).filter((f) => f.includes('-verify-') && f.includes('marta@atl.pt'));
+    const vm = JSON.parse(await fs.readFile(path.join(outbox, vf.at(-1)!), 'utf8')) as { text: string };
+    await svc.verifyEmail(/token=([A-Za-z0-9_-]+)/.exec(vm.text)![1]!);
+    const lg = await svc.login({ email: 'marta@atl.pt', password: 'Correct-Horse-9', remember: false }, meta);
+    if (!('token' in lg)) throw new Error('2FA not expected');
+    const marta = (await session.resolveSession(lg.token))!;
+    expect(marta.tenant.status).toBe('suspended');
+    const { currentRequest } = await import('@/server/http');
+    const { assertWritable } = await import('@/server/auth/request');
+    const run = (method: string, path: string) =>
+      codeOf(Promise.resolve().then(() => currentRequest.run({ method, path }, () => assertWritable(marta))));
+    expect(await run('GET', '/v2/api/v1/notes')).toBe('ok');
+    expect(await run('POST', '/v2/api/v1/notes')).toBe('tenant_suspended');
+    expect(await run('PATCH', '/v2/api/v1/me/prefs')).toBe('ok');
+    expect(await run('POST', '/v2/api/v1/auth/logout')).toBe('ok');
+    const acts = await aaudit.queryAudit({
+      from: new Date(Date.now() - 3600_000),
+      to: new Date(Date.now() + 60_000),
+      tenantId: id,
+    });
+    expect(acts.map((a) => a.action)).toEqual(
+      expect.arrayContaining(['tenant.create', 'tenant.update', 'tenant.custom', 'tenant.suspend']),
+    );
+  });
+
+  it('users and admins: disable ends sessions, email change needs confirming, delete; admins never touch the Manager', async () => {
+    const usersSvc = await import('@/server/admin/users');
+    const adminsSvc = await import('@/server/admin/admins');
+    const boss = await signedIn('boss@kh.pt');
+    await makeAdmin(boss.user.id, 'owner');
+    const ctx = await guard.checkAdmin({ ...boss, user: { ...boss.user, totpEnabled: true } }, 'users', true);
+    const ana = await signedIn('ana@kh.pt');
+    await usersSvc.updateUser(ctx, ana.user.id, { status: 'disabled' }, null);
+    expect(await session.resolveSession('x'.repeat(43))).toBeNull();
+    const [s] = await admin.unsafe(
+      `select count(*)::int n from sessions where user_id = '${ana.user.id}' and revoked_at is null`,
+    );
+    expect(s!.n).toBe(0);
+    await usersSvc.updateUser(ctx, ana.user.id, { status: 'active', email: 'ana.nova@kh.pt' }, null);
+    const [u] = await admin.unsafe(`select email, email_verified_at from users where id = '${ana.user.id}'`);
+    expect(u).toMatchObject({ email: 'ana.nova@kh.pt', email_verified_at: null });
+    expect(
+      (await fs.readdir(outbox)).some((f) => f.includes('-verify-') && f.includes('ana.nova@kh.pt')),
+    ).toBe(true);
+    await usersSvc.sendUserReset(ctx, ana.user.id, null);
+    expect(
+      (await fs.readdir(outbox)).some((f) => f.includes('-reset-') && f.includes('ana.nova@kh.pt')),
+    ).toBe(true);
+    // the Manager and oneself are off limits
+    expect(await codeOf(usersSvc.updateUser(ctx, boss.user.id, { name: 'x' }, null))).toBe('forbidden');
+    // deleting the only person of an individual client removes the client
+    await usersSvc.deleteUser(ctx, ana.user.id, null);
+    const [gone] = await admin.unsafe(`select count(*)::int n from tenants where id = '${ana.tenant.id}'`);
+    expect(gone!.n).toBe(0);
+
+    // Administradores
+    const bia = await signedIn('bia@kh.pt');
+    await adminsSvc.grantAdmin(ctx, 'BIA@kh.pt', 'billing');
+    expect(await codeOf(adminsSvc.grantAdmin(ctx, 'bia@kh.pt', 'support'))).toBe('already_admin');
+    expect(await codeOf(adminsSvc.grantAdmin(ctx, 'ninguem@kh.pt', 'support'))).toBe('no_account');
+    await adminsSvc.updateAdmin(ctx, bia.user.id, { role: 'support', status: 'paused' });
+    expect((await adminsSvc.listAdmins()).find((a) => a.email === 'bia@kh.pt')).toMatchObject({
+      role: 'support',
+      status: 'paused',
+    });
+    expect(await codeOf(adminsSvc.updateAdmin(ctx, boss.user.id, { role: 'readonly' }))).toBe('forbidden');
+    expect(await codeOf(adminsSvc.removeAdmin(ctx, boss.user.id))).toBe('forbidden');
+    await adminsSvc.removeAdmin(ctx, bia.user.id);
+    expect((await adminsSvc.listAdmins()).map((a) => a.email)).toEqual(['boss@kh.pt']);
+  });
 });
