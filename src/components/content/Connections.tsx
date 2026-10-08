@@ -14,7 +14,7 @@ import './content.css';
 // With `transports`, a second card "Ordens de Transporte" (cr_*) links SAP
 // transport requests, with their stage as a badge.
 
-export type ItemType = 'note' | 'task' | 'voice' | 'issue' | 'artifact' | 'code' | 'transport';
+export type ItemType = 'note' | 'task' | 'voice' | 'issue' | 'meeting' | 'artifact' | 'code' | 'transport';
 type Stage = 'mod' | 'rel' | 'qas' | 'prd' | 'junk';
 type Link = { type: ItemType; id: string; title: string; sub?: string; stage?: Stage };
 type Candidate = Link & { sub: string; at: string };
@@ -24,6 +24,7 @@ export const ITEM_DOT: Record<ItemType, string> = {
   task: 'oklch(0.8 0.13 30)',
   voice: 'oklch(0.76 0.12 300)',
   issue: 'oklch(0.78 0.11 240)',
+  meeting: 'oklch(0.82 0.1 120)',
   artifact: 'oklch(0.8 0.1 160)',
   code: 'oklch(0.84 0.1 245)',
   transport: 'oklch(0.82 0.11 210)',
@@ -33,6 +34,7 @@ const ITEM_KIND: Record<ItemType, string> = {
   task: 'k_task',
   voice: 'k_voice',
   issue: 'k_issue',
+  meeting: 'k_meeting',
   artifact: 'k_art',
   code: 'k_code',
   transport: 'k_tr',
@@ -50,6 +52,7 @@ export const itemHref = (type: ItemType, id: string) =>
     task: `/app/tasks?t=${id}`,
     voice: `/app/voice?v=${id}`,
     issue: `/app/issues?i=${id}`,
+    meeting: `/app/meetings?m=${id}`,
     artifact: `/app/artifacts?a=${id}`,
     code: `/app/codelib?o=${id}`,
     transport: `/app/transports?o=${id}`,

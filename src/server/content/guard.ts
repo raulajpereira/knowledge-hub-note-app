@@ -48,6 +48,7 @@ export const trashItems = z.object({
           'voice',
           'email',
           'issue',
+          'meeting',
           'artifact',
           'snippet',
           'request',
@@ -63,7 +64,16 @@ export const trashItems = z.object({
     )
     .max(500),
 });
-export const LINK_TYPES = ['note', 'task', 'voice', 'issue', 'artifact', 'code', 'transport'] as const;
+export const LINK_TYPES = [
+  'note',
+  'task',
+  'voice',
+  'issue',
+  'meeting',
+  'artifact',
+  'code',
+  'transport',
+] as const;
 export const itemRef = z.object({
   type: z.enum(LINK_TYPES),
   id: z.uuid(),
@@ -75,6 +85,7 @@ export const moduleOfType = (type: (typeof LINK_TYPES)[number]) =>
     task: 'tasks',
     voice: 'voice',
     issue: 'issues',
+    meeting: 'meetings',
     artifact: 'artifacts',
     code: 'codelib',
     transport: 'transports',

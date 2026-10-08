@@ -21,7 +21,11 @@ export type NoteItem = {
   updatedAt: string;
 };
 export type Note = Omit<NoteItem, 'summary'> & { content: unknown };
-export type LinkItem = { type: 'note' | 'task' | 'voice' | 'issue' | 'artifact'; id: string; title: string };
+export type LinkItem = {
+  type: 'note' | 'task' | 'voice' | 'issue' | 'meeting' | 'artifact';
+  id: string;
+  title: string;
+};
 export type Candidate = LinkItem & { sub: string };
 
 export const notesApi = {

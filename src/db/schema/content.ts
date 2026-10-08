@@ -327,6 +327,46 @@ export const emailAttachments = pgTable(
   ],
 );
 
+/** Meeting minutes ("Atas de Reunião"): when, subject, who, and the minutes. */
+export type MeetingItem = { t: string; done: boolean };
+export const meetings = pgTable(
+  'meetings',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    title: text('title').notNull(),
+    heldOn: date('held_on', { mode: 'string' }).notNull(),
+    /** 'HH:MM' or '' */
+    startTime: text('start_time').notNull().default(''),
+    endTime: text('end_time').notNull().default(''),
+    /** free names (people may be outside the app) */
+    participants: text('participants')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** temas discutidos */
+    topics: text('topics').notNull().default(''),
+    /** pontos a rever / coisas a fazer */
+    review: jsonb('review').$type<MeetingItem[]>().notNull().default([]),
+    todos: jsonb('todos').$type<MeetingItem[]>().notNull().default([]),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    index('meetings_owner_idx').on(t.tenantId, t.ownerId, t.heldOn),
+    check(
+      'meetings_len',
+      sql`char_length(${t.title}) between 1 and 300 and char_length(${t.topics}) <= 100000 and cardinality(${t.participants}) <= 100 and pg_column_size(${t.review}) <= 200000 and pg_column_size(${t.todos}) <= 200000`,
+    ),
+    check(
+      'meetings_time_chk',
+      sql`${t.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$|^$' and ${t.endTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$|^$'`,
+    ),
+  ],
+);
+
 /** Project issues ("Tarefas de Projeto", prototype isIssues): table + Kanban by status. */
 export const ISSUE_STATUSES = ['open', 'progress', 'waiting', 'done'] as const;
 export const ISSUE_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;

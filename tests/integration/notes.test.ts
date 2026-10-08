@@ -104,7 +104,7 @@ describe.skipIf(!enabled)('notes', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE public_links, share_members, share_people, shared_folders, mg_requests, mg_timesheets, mg_allocs, mg_projects, mg_people, mg_teams, mg_settings, news_saved, sap_fn_records, sap_objects, sap_transports, sap_tcode_usage, sap_tcodes, sap_system_favs, sap_systems, mg_clients, whiteboard_images, whiteboards, api_envs, api_requests, snippets, artifact_versions, artifacts, meetings, issues, email_attachments, emails, vault_items, vault_keys, item_links, voice_notes, task_subtasks, tasks, note_attachments, notes, folders, user_assets, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -607,6 +607,72 @@ describe.skipIf(!enabled)('notes', () => {
     await iss.trashIssue(a, i1.id);
     await notes.purgeTrash(a, [{ kind: 'issue', id: i1.id }]);
     expect((await iss.listIssues(a)).map((x) => x.title)).toEqual(['Autorizações F110']);
+    expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
+  });
+
+  it('meetings: private minutes, links to notes/tasks/issues, upcoming count, Trash', async () => {
+    const meet = await import('@/server/content/meetings');
+    const a = await signedIn('meet-a@example.pt');
+    const b = await signedIn('meet-b@example.pt');
+    const m = await meet.createMeeting(a, {
+      title: 'Kick-off Atlas',
+      heldOn: '2099-01-15',
+      startTime: '09:30',
+    });
+    expect(m).toMatchObject({ heldOn: '2099-01-15', startTime: '09:30', endTime: '', participants: [] });
+    const past = await meet.createMeeting(a, { title: 'Steering antigo', heldOn: '2020-03-02' });
+
+    // private to its owner
+    expect(await meet.listMeetings(b)).toEqual([]);
+    expect(await codeOf(meet.updateMeeting(b, m.id, { title: 'x' }))).toBe('not_found');
+
+    const up = await meet.updateMeeting(a, m.id, {
+      endTime: '10:30',
+      participants: ['Bia Santos', 'Luís Costa (cliente)'],
+      topics: 'Âmbito da fase 2',
+      review: [{ t: 'Validar rubricas', done: false }],
+      todos: [{ t: 'Plano de testes', done: true }],
+    });
+    expect(up).toMatchObject({
+      endTime: '10:30',
+      participants: ['Bia Santos', 'Luís Costa (cliente)'],
+      todos: [{ t: 'Plano de testes', done: true }],
+    });
+    // a bad time is refused by the database too
+    expect(await codeOf(meet.updateMeeting(a, m.id, { startTime: '25:00' }))).not.toBe('ok');
+    expect((await meet.listMeetings(a)).map((x) => x.title)).toEqual(['Kick-off Atlas', 'Steering antigo']);
+
+    // links to a note, a task and an issue
+    const n = await notes.createNote(a, { title: 'Notas do kick-off' });
+    const t = await tasksSvc.createTask(a, { title: 'Plano de testes' });
+    const i = await iss.createIssue(a, { title: 'Ambiente QAS em baixo' });
+    for (const x of [
+      { type: 'note' as const, id: n.id },
+      { type: 'task' as const, id: t.id },
+      { type: 'issue' as const, id: i.id },
+    ])
+      await notes.linkItems(a, { type: 'meeting', id: m.id }, x);
+    expect((await notes.linksOf(a, { type: 'meeting', id: m.id })).map((x) => x.type).sort()).toEqual([
+      'issue',
+      'note',
+      'task',
+    ]);
+    expect((await notes.linksOf(a, { type: 'task', id: t.id })).map((x) => [x.type, x.title])).toEqual([
+      ['meeting', 'Kick-off Atlas'],
+    ]);
+    // the badge counts the upcoming ones
+    expect((await notes.contentCounts(a, new Set(['meetings']))).meetings).toBe(1);
+
+    await meet.trashMeeting(a, past.id);
+    expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual([
+      'meeting',
+      'Steering antigo',
+    ]);
+    await notes.restoreTrash(a, [{ kind: 'meeting', id: past.id }]);
+    expect(await meet.listMeetings(a)).toHaveLength(2);
+    await meet.trashMeeting(a, m.id);
+    await notes.purgeTrash(a, [{ kind: 'meeting', id: m.id }]);
+    expect((await meet.listMeetings(a)).map((x) => x.title)).toEqual(['Steering antigo']);
     expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
   });
 

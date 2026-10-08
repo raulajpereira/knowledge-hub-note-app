@@ -18,17 +18,21 @@ type Prio = 'low' | 'medium' | 'high';
 type Task = { id: string; title: string; priority: Prio; dueOn: string | null; doneAt: string | null };
 type IssueStatus = 'open' | 'progress' | 'waiting' | 'done';
 type Issue = { id: string; title: string; status: IssueStatus; dueOn: string | null };
+type Meeting = { id: string; title: string; heldOn: string; startTime: string; endTime: string };
 type Item = {
-  kind: 'task' | 'issue';
+  kind: 'task' | 'issue' | 'meeting';
   id: string;
   due: string;
   title: string;
   done: boolean;
   c: string;
-  /** priority (tasks) or status (issues) label key */
+  /** priority (tasks) or status (issues) label key; the time (meetings) */
   meta: string;
 };
 const IC = 'oklch(0.76 0.12 245)';
+const MC = 'oklch(0.82 0.1 120)';
+const KIND_L = { task: 'c_task', issue: 'c_issue', meeting: 'k_meeting' } as const;
+const HREF = { task: '/app/tasks?t=', issue: '/app/issues?i=', meeting: '/app/meetings?m=' } as const;
 
 const PRI: Record<Prio, string> = {
   high: 'oklch(0.78 0.14 45)',
@@ -63,6 +67,7 @@ export function CalendarView() {
   const { modules } = useShell();
   const hasTasks = modules.has('tasks');
   const hasIssues = modules.has('issues');
+  const hasMeetings = modules.has('meetings');
   const loc = lang === 'en' ? 'en-GB' : 'pt-PT';
   const en = lang === 'en';
   const today = isoD(new Date());
@@ -70,6 +75,7 @@ export function CalendarView() {
   const [mode, setMode] = usePersistentState<'month' | 'week'>('cal.mode', 'month');
   const [showT, setShowT] = usePersistentState('cal.tasks', true);
   const [showI, setShowI] = usePersistentState('cal.issues', true);
+  const [showM, setShowM] = usePersistentState('cal.meetings', true);
   const [showDone, setShowDone] = usePersistentState('cal.done', false);
   const [panelW, setPanelW] = usePersistentState('cal.panel', 340);
   const [livePanel, setLivePanel] = useState<number | null>(null);
@@ -80,6 +86,7 @@ export function CalendarView() {
   const [draft, setDraft] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const gridRO = useRef<ResizeObserver | null>(null);
 
   const load = useCallback(() => {
@@ -91,7 +98,11 @@ export function CalendarView() {
       api<{ issues: Issue[] }>('/issues')
         .then((r) => setIssues(r.issues))
         .catch(() => {});
-  }, [hasTasks, hasIssues]);
+    if (hasMeetings)
+      api<{ meetings: Meeting[] }>('/meetings')
+        .then((r) => setMeetings(r.meetings))
+        .catch(() => {});
+  }, [hasTasks, hasIssues, hasMeetings]);
   useEffect(load, [load]);
 
   // Grid → dots instead of chips when the calendar gets narrow (prototype cNarrow).
@@ -154,13 +165,26 @@ export function CalendarView() {
               meta: `s_${x.status}`,
             }))
         : []),
+      ...(showM
+        ? meetings.map((x) => ({
+            kind: 'meeting' as const,
+            id: x.id,
+            due: x.heldOn,
+            title: x.startTime ? `${x.startTime} ${x.title}` : x.title,
+            done: false,
+            c: MC,
+            meta: x.startTime ? `${x.startTime}${x.endTime ? `–${x.endTime}` : ''}` : '',
+          }))
+        : []),
     ],
-    [tasks, issues, showT, showI, showDone],
+    [tasks, issues, meetings, showT, showI, showM, showDone],
   );
   const byDay = useMemo(() => {
     const m: Record<string, Item[]> = {};
     for (const x of items) (m[x.due] ??= []).push(x);
-    for (const k of Object.keys(m)) m[k]!.sort((a, b) => Number(a.done) - Number(b.done));
+    // meetings first, by time; then the rest, open before done
+    const rank = (x: Item) => (x.kind === 'meeting' ? `0${x.meta || '99'}` : `1${Number(x.done)}`);
+    for (const k of Object.keys(m)) m[k]!.sort((a, b) => rank(a).localeCompare(rank(b)));
     return m;
   }, [items]);
 
@@ -195,10 +219,20 @@ export function CalendarView() {
       load();
     }
   };
+  const moveMeeting = async (id: string, heldOn: string) => {
+    setMeetings((cur) => cur.map((x) => (x.id === id ? { ...x, heldOn } : x)));
+    try {
+      await api(`/meetings/${id}`, { heldOn }, 'PATCH');
+    } catch {
+      toast({ message: t('ne_saveFail'), tone: 'error' });
+      load();
+    }
+  };
   const move = (ref: string, due: string) => {
     const [kind, id] = ref.split(':');
     if (!id) return;
     if (kind === 'issue') void moveIssue(id, due);
+    else if (kind === 'meeting') void moveMeeting(id, due);
     else void patchTask(id, { dueOn: due });
   };
 
@@ -244,9 +278,10 @@ export function CalendarView() {
   const selDate = at12(sel);
   const dd = Math.round((+new Date(`${sel}T00:00:00`) - +new Date(`${today}T00:00:00`)) / 86_400_000);
   const selItems = byDay[sel] ?? [];
-  const open = (x: Item) =>
-    router.push(x.kind === 'issue' ? `/app/issues?i=${x.id}` : `/app/tasks?t=${x.id}`);
-  const colorOf = (x: Item) => (!x.done && x.due < today ? LATE : x.c);
+  const open = (x: Item) => router.push(`${HREF[x.kind]}${x.id}`);
+  // a meeting is never late
+  const late = (x: Item) => x.kind !== 'meeting' && !x.done && x.due < today;
+  const colorOf = (x: Item) => (late(x) ? LATE : x.c);
   const pw = livePanel ?? panelW;
 
   const onPanelDown = (e: React.PointerEvent) => {
@@ -340,6 +375,19 @@ export function CalendarView() {
               <span className="kh-cal__n">{issues.filter((x) => x.dueOn && x.status !== 'done').length}</span>
             </button>
           )}
+          {hasMeetings && (
+            <button
+              type="button"
+              className="kh-cal__chip"
+              data-on={showM || undefined}
+              aria-pressed={showM}
+              onClick={() => setShowM(!showM)}
+            >
+              <span style={{ background: MC }} />
+              {t('cal_meetings')}
+              <span className="kh-cal__n">{meetings.filter((x) => x.heldOn >= today).length}</span>
+            </button>
+          )}
           <button
             type="button"
             className="kh-cal__chip"
@@ -423,7 +471,7 @@ export function CalendarView() {
                     key={x.id}
                     className="kh-cal__item"
                     draggable
-                    title={`${t(x.kind === 'issue' ? 'c_issue' : 'c_task')} · ${x.title}`}
+                    title={`${t(KIND_L[x.kind])} · ${x.title}`}
                     style={{
                       background: tint(colorOf(x), 0.2),
                       borderLeftColor: colorOf(x),
@@ -510,7 +558,7 @@ export function CalendarView() {
         )}
         <div className="kh-cal__selitems">
           {selItems.map((x) => {
-            const late = !x.done && x.due < today;
+            const isLate = late(x);
             const c = colorOf(x);
             return (
               <div
@@ -562,8 +610,18 @@ export function CalendarView() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <rect x="4" y="4" width="16" height="5" rx="1.5" />
-                      <path d="M5 9v10h14V9" />
+                      {x.kind === 'meeting' ? (
+                        <>
+                          <rect x="5" y="4" width="14" height="17" rx="2.5" />
+                          <line x1="9" y1="10" x2="15" y2="10" />
+                          <line x1="9" y1="14" x2="15" y2="14" />
+                        </>
+                      ) : (
+                        <>
+                          <rect x="4" y="4" width="16" height="5" rx="1.5" />
+                          <path d="M5 9v10h14V9" />
+                        </>
+                      )}
                     </svg>
                   </span>
                 )}
@@ -575,10 +633,10 @@ export function CalendarView() {
                   </span>
                   <span className="kh-cal__selmeta">
                     <span style={{ background: tint(c, 0.3) }}>
-                      {t(x.kind === 'issue' ? 'c_issue' : 'c_task')}
-                      {late ? ` · ${t('c_late')}` : ''}
+                      {t(KIND_L[x.kind])}
+                      {isLate ? ` · ${t('c_late')}` : ''}
                     </span>
-                    {t(x.meta)}
+                    {x.kind === 'meeting' ? x.meta : t(x.meta)}
                   </span>
                 </div>
               </div>
@@ -605,10 +663,14 @@ export function CalendarView() {
                 <span>{t('c_sumIssues')}</span>
               </div>
             )}
+            {hasMeetings && (
+              <div>
+                <span style={{ color: MC }}>{inRange.filter((x) => x.kind === 'meeting').length}</span>
+                <span>{t('cal_sumMeetings')}</span>
+              </div>
+            )}
             <div>
-              <span style={{ color: 'oklch(0.75 0.17 28)' }}>
-                {inRange.filter((x) => !x.done && x.due < today).length}
-              </span>
+              <span style={{ color: 'oklch(0.75 0.17 28)' }}>{inRange.filter(late).length}</span>
               <span>{t('c_sumLate')}</span>
             </div>
           </div>

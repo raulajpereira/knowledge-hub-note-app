@@ -20,6 +20,7 @@ type Item = {
     | 'voice'
     | 'email'
     | 'issue'
+    | 'meeting'
     | 'artifact'
     | 'snippet'
     | 'request'
@@ -40,6 +41,7 @@ const KINDS: Record<Item['kind'], { label: string; icon: string }> = {
   voice: { label: 'tr_k_voice', icon: 'voice' },
   email: { label: 'h_k_mail', icon: 'emails' },
   issue: { label: 'k_issue', icon: 'issues' },
+  meeting: { label: 'k_meeting', icon: 'meetings' },
   artifact: { label: 'k_art', icon: 'artifacts' },
   snippet: { label: 'tr_k_snip', icon: 'devlib' },
   request: { label: 'tr_k_req', icon: 'api' },

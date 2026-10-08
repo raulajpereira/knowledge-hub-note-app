@@ -7,6 +7,7 @@ import {
   emails,
   folders,
   issues,
+  meetings,
   itemLinks,
   noteAttachments,
   notes,
@@ -426,6 +427,7 @@ export type TrashKind =
   | 'voice'
   | 'email'
   | 'issue'
+  | 'meeting'
   | 'artifact'
   | 'snippet'
   | 'request'
@@ -513,6 +515,10 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: issues.id, title: issues.title, deletedAt: issues.deletedAt })
       .from(issues)
       .where(isNotNull(issues.deletedAt));
+    const ms = await tx
+      .select({ id: meetings.id, title: meetings.title, deletedAt: meetings.deletedAt })
+      .from(meetings)
+      .where(isNotNull(meetings.deletedAt));
     const es = await tx
       .select({ id: emails.id, title: emails.subject, deletedAt: emails.deletedAt })
       .from(emails)
@@ -585,6 +591,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...is.map((x) => ({
         id: x.id,
         kind: 'issue' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...ms.map((x) => ({
+        id: x.id,
+        kind: 'meeting' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -662,6 +675,8 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     if (aIds.length) await tx.update(artifacts).set({ deletedAt: null }).where(inArray(artifacts.id, aIds));
     const iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
     if (iIds.length) await tx.update(issues).set({ deletedAt: null }).where(inArray(issues.id, iIds));
+    const mIds = items.filter((i) => i.kind === 'meeting').map((i) => i.id);
+    if (mIds.length) await tx.update(meetings).set({ deletedAt: null }).where(inArray(meetings.id, mIds));
     const eIds = items.filter((i) => i.kind === 'email').map((i) => i.id);
     // an email whose folder was removed meanwhile comes back without a folder (FK set null)
     if (eIds.length) await tx.update(emails).set({ deletedAt: null }).where(inArray(emails.id, eIds));
@@ -724,6 +739,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     let vIds: string[];
     let eIds: string[];
     let iIds: string[];
+    let mIds: string[];
     let aIds: string[];
     let sIds: string[];
     let bIds: string[];
@@ -767,6 +783,9 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       iIds = (await tx.select({ id: issues.id }).from(issues).where(isNotNull(issues.deletedAt))).map(
         (r) => r.id,
       );
+      mIds = (await tx.select({ id: meetings.id }).from(meetings).where(isNotNull(meetings.deletedAt))).map(
+        (r) => r.id,
+      );
       eIds = (await tx.select({ id: emails.id }).from(emails).where(isNotNull(emails.deletedAt))).map(
         (r) => r.id,
       );
@@ -791,6 +810,7 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
       tIds = items.filter((i) => i.kind === 'task').map((i) => i.id);
       vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
       iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
+      mIds = items.filter((i) => i.kind === 'meeting').map((i) => i.id);
       aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
       sIds = items.filter((i) => i.kind === 'snippet').map((i) => i.id);
       bIds = items.filter((i) => i.kind === 'board').map((i) => i.id);
@@ -898,6 +918,10 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     if (iIds.length) {
       await unlinkAll(tx, 'issue', iIds);
       await tx.delete(issues).where(and(inArray(issues.id, iIds), isNotNull(issues.deletedAt)));
+    }
+    if (mIds.length) {
+      await unlinkAll(tx, 'meeting', mIds);
+      await tx.delete(meetings).where(and(inArray(meetings.id, mIds), isNotNull(meetings.deletedAt)));
     }
     if (tIds.length) {
       await unlinkAll(tx, 'task', tIds);
@@ -1071,6 +1095,7 @@ const LINKABLE = {
   task: { table: tasks, title: tasks.title, at: tasks.createdAt },
   voice: { table: voiceNotes, title: voiceNotes.title, at: voiceNotes.createdAt },
   issue: { table: issues, title: issues.title, at: issues.createdAt },
+  meeting: { table: meetings, title: meetings.title, at: meetings.createdAt },
   artifact: { table: artifacts, title: artifacts.title, at: artifacts.updatedAt },
   code: { table: sapObjects, title: sapObjects.name, at: sapObjects.updatedAt },
   transport: { table: sapTransports, title: sapTransports.trkorr, at: sapTransports.createdAt },
@@ -1157,7 +1182,7 @@ export async function linkCandidates(
   auth: AuthContext,
   ref: ItemRef,
   query: string,
-  types: LinkType[] = ['note', 'task', 'voice', 'issue', 'artifact'],
+  types: LinkType[] = ['note', 'task', 'voice', 'issue', 'meeting', 'artifact'],
 ) {
   const like = `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return asUser(auth, async (tx) => {
@@ -1310,6 +1335,15 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(issues)
         .where(and(isNull(issues.deletedAt), sql`${issues.status} <> 'done'`));
+      return r?.n ?? 0;
+    });
+  if (modules.has('meetings'))
+    out.meetings = await asUser(auth, async (tx) => {
+      // the upcoming ones (today or later)
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(meetings)
+        .where(and(isNull(meetings.deletedAt), sql`${meetings.heldOn} >= current_date`));
       return r?.n ?? 0;
     });
   if (modules.has('emails'))
