@@ -5,7 +5,7 @@ import { useI18n } from '@/i18n/client';
 import { useAi } from './useAi';
 import './ai.css';
 
-// Assistente IA: the floating button (bottom right, above the news ticker).
+// Assistente IA: the floating button (bottom right, in the footer row beside the news ticker).
 // Opens and closes the side panel; Ctrl/⌘+J does the same.
 
 const SPARK =
@@ -43,8 +43,8 @@ export function AiFab({ open, onToggle }: { open: boolean; onToggle: () => void 
       onClick={onToggle}
     >
       <svg
-        width="22"
-        height="22"
+        width="20"
+        height="20"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

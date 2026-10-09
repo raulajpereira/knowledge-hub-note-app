@@ -3,8 +3,8 @@
   position: fixed;
   top: 96px;
   right: 22px;
-  /* above the floating button */
-  bottom: 136px;
+  /* above the footer row (news ticker + the button) */
+  bottom: 62px;
   z-index: 60;
   width: min(460px, calc(100vw - 32px));
   display: flex;
@@ -502,14 +502,15 @@ a.kh-ai-cite:hover {
   font-weight: 600;
 }
 
-/* the floating button (bottom right, above the news ticker) */
+/* the floating button: bottom right, in the footer row next to the news
+   ticker (which leaves room for it), so it never covers page controls */
 .kh-ai-fab {
   position: fixed;
-  right: 30px;
-  bottom: 70px;
+  right: 20px;
+  bottom: 8px;
   z-index: 61;
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -553,4 +554,8 @@ a.kh-ai-cite:hover {
   .kh-ai-fab {
     transition: none;
   }
+}
+/* the news ticker leaves the corner to the button */
+.kh-shell[data-ai-fab] .kh-ticker {
+  margin-right: 56px;
 }

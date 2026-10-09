@@ -138,7 +138,12 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
         blur={look.bg.blur}
         dim={look.bg.dim}
       />
-      <div className="kh-shell kh-above" aria-hidden={locked || undefined} inert={locked || undefined}>
+      <div
+        className="kh-shell kh-above"
+        data-ai-fab={(modules.has('ai') && !focus) || undefined}
+        aria-hidden={locked || undefined}
+        inert={locked || undefined}
+      >
         <div className="kh-shell__grid">
           <Header onActivity={() => setActOpen((o) => !o)} activityOpen={actOpen} />
           <div
