@@ -6,6 +6,8 @@ import { ApiError } from '@/server/errors';
 import { audit } from '@/server/audit';
 import { revokeAllSessions } from '@/server/auth/session';
 import { sendResetLink, sendVerification } from '@/server/auth/service';
+import { sendMail } from '@/server/mail/send';
+import { renderMail } from '@/server/mail/templates';
 import type { AdminCtx } from './guard';
 
 // The console's user page: edit, disable / reactivate, pause, send a password
@@ -21,8 +23,9 @@ async function loadUser(id: string) {
 
 async function guardTarget(ctx: AdminCtx, u: typeof users.$inferSelect) {
   if (u.id === ctx.user.id) throw new ApiError(403, 'forbidden');
+  // console admins are managed in Administradores; only the owner may touch them here
   const [a] = await db().select({ role: admins.role }).from(admins).where(eq(admins.userId, u.id)).limit(1);
-  if (a?.role === 'owner') throw new ApiError(403, 'forbidden');
+  if (a && (a.role === 'owner' || ctx.admin.role !== 'owner')) throw new ApiError(403, 'forbidden');
 }
 
 const log = (
@@ -55,6 +58,9 @@ export async function updateUser(ctx: AdminCtx, id: string, patch: UserPatch, ip
   const set: Partial<typeof users.$inferInsert> = {};
   if (patch.name !== undefined) set.name = patch.name;
   if (patch.email !== undefined && patch.email.toLowerCase() !== u.email.toLowerCase()) {
+    // changing where the account's emails (password resets) go is an account
+    // takeover in the wrong hands: owner and administrator roles only
+    if (ctx.admin.role !== 'owner' && ctx.admin.role !== 'admin') throw new ApiError(403, 'forbidden');
     const email = patch.email.toLowerCase();
     const [taken] = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
     if (taken) throw new ApiError(409, 'email_taken');
@@ -70,6 +76,8 @@ export async function updateUser(ctx: AdminCtx, id: string, patch: UserPatch, ip
   if (set.email) {
     await revokeAllSessions(id);
     await sendVerification(id, set.email, u.lang);
+    // the old address is told, so a change nobody asked for doesn't go unnoticed
+    await sendMail(renderMail('emailChanged', u.lang, u.email, undefined, { email: set.email }));
   }
   const action =
     patch.status === 'disabled'

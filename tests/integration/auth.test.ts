@@ -265,6 +265,14 @@ describe.skipIf(!enabled)('auth, codes and entitlements', () => {
     });
     const done = await svc.completeTwoFactor({ challenge, code: totp.totp(secret) }, meta);
     expect(await session.resolveSession(done.token)).not.toBeNull();
+    // the same code can't be used again (replay of a seen code)
+    const again = await svc.login({ email: 't@z.pt', password: 'Correct-Horse-9', remember: false }, meta);
+    await expect(
+      svc.completeTwoFactor(
+        { challenge: (again as { challenge: string }).challenge, code: totp.totp(secret) },
+        meta,
+      ),
+    ).rejects.toMatchObject({ code: 'bad_2fa_code' });
 
     const s2 = await svc.login({ email: 't@z.pt', password: 'Correct-Horse-9', remember: false }, meta);
     const ch2 = (s2 as { challenge: string }).challenge;

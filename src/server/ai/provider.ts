@@ -2,6 +2,7 @@ import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import { aiProvider, type AiProviderId } from '@/lib/ai';
 import { ApiError } from '@/server/errors';
+import { isLoopback } from '@/lib/env';
 
 // One way to talk to every provider: a chat that streams text, the list of
 // models a key can use, and speech-to-text where the provider has it. Claude
@@ -12,9 +13,17 @@ export type AiMsg = { role: 'user' | 'assistant'; content: string };
 
 const TIMEOUT = 120_000;
 
-/** Tests point every OpenAI-compatible provider at a local fake (server env only, never set in production). */
+/**
+ * Tests point every provider at a local fake (server env only, never set in
+ * production). Only a loopback address is honoured, so a stray value can never
+ * send people's keys to another host.
+ */
+function testBase() {
+  const u = process.env.AI_TEST_BASE_URL;
+  return u && isLoopback(u) ? u : undefined;
+}
 function baseOf(p: AiProviderId) {
-  return process.env.AI_TEST_BASE_URL || aiProvider(p)!.base;
+  return testBase() || aiProvider(p)!.base;
 }
 
 function fail(status: number): never {
@@ -29,7 +38,7 @@ function anthropic(cfg: { apiKey: string }) {
     apiKey: cfg.apiKey,
     maxRetries: 1,
     timeout: TIMEOUT,
-    ...(process.env.AI_TEST_BASE_URL ? { baseURL: process.env.AI_TEST_BASE_URL } : {}),
+    ...(testBase() ? { baseURL: testBase() } : {}),
   });
 }
 

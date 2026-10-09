@@ -277,6 +277,8 @@ export async function completeUpload(auth: AuthContext, id: string): Promise<Dri
   }
   try {
     return await asSharer(auth, async (tx) => {
+      // one upload completes at a time per person, so two can't both pass the quota
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'kh-drive:' + auth.user.id}))`);
       const lim = await limitsTx(tx, auth);
       if (lim.used + p.size > lim.quota)
         throw new ApiError(403, 'limit_reached', undefined, { resource: 'files_storage', max: lim.quota });

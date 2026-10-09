@@ -113,16 +113,16 @@ export function LockScreen({
               setPass(e.target.value);
               setErr('');
             }}
-            placeholder="Password"
+            placeholder={t('login_password')}
             autoComplete="current-password"
             aria-invalid={Boolean(err) || undefined}
-            aria-label="Password"
+            aria-label={t('login_password')}
           />
           <button
             type="button"
             className="kh-lock__eye"
             onClick={() => setShow((s) => !s)}
-            aria-label="Password"
+            aria-label={t('login_eye')}
           >
             <Icon name={show ? 'eyeOff' : 'eye'} size={18} sw={1.9} />
           </button>

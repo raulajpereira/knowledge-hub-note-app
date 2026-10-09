@@ -38,7 +38,6 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      APP_URL: http://127.0.0.1:3100/v2
       DATABASE_ADMIN_URL: postgres://kh_owner:owner@localhost:5432/knowledgehub
       DATABASE_URL: postgres://kh_app:ci-app@localhost:5432/knowledgehub
       TEST_DATABASE_ADMIN_URL: postgres://kh_owner:owner@localhost:5432/knowledgehub
@@ -56,6 +55,8 @@ jobs:
         run: |
           bp="$KH_BASE_PATH"; [ "$bp" = "/" ] && bp=""
           echo "NEXT_PUBLIC_BASE_PATH=$bp" >> "$GITHUB_ENV"
+          # email links (verify, reset, share) follow the same base path as the build
+          echo "APP_URL=http://127.0.0.1:3100$bp" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

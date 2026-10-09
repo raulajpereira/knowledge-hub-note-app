@@ -63,8 +63,10 @@ const SYSTEM = {
 };
 
 /**
- * Starts a turn: keeps the question, finds the sources and returns what the
- * provider needs; `finish` keeps the answer once it has streamed.
+ * Starts a turn: finds the sources and returns what the provider needs.
+ * `finish` keeps the question and the answer together (once); `fail` undoes a
+ * new conversation when the provider refused the first answer, so errors leave
+ * no half turns behind.
  */
 export async function startTurn(
   auth: AuthContext,
@@ -72,8 +74,9 @@ export async function startTurn(
 ) {
   const question = input.message.trim();
   const ctx = await buildContext(auth, question, input.today);
-  const { chatId, history } = await asUser(auth, async (tx) => {
+  const { chatId, history, created } = await asUser(auth, async (tx) => {
     let id = input.chatId;
+    let created = false;
     if (id) {
       const [c] = await tx.select({ id: aiChats.id }).from(aiChats).where(eq(aiChats.id, id));
       if (!c) throw new ApiError(404, 'not_found');
@@ -88,6 +91,7 @@ export async function startTurn(
         })
         .returning({ id: aiChats.id });
       id = c!.id;
+      created = true;
     }
     const prev = await tx
       .select({ role: aiMessages.role, content: aiMessages.content })
@@ -95,15 +99,12 @@ export async function startTurn(
       .where(and(eq(aiMessages.chatId, id)))
       .orderBy(desc(aiMessages.createdAt))
       .limit(10);
-    await tx.insert(aiMessages).values({
-      tenantId: auth.tenant.id,
-      ownerId: auth.user.id,
-      chatId: id,
-      role: 'user',
-      content: question,
-    });
-    return { chatId: id, history: prev.reverse() as AiMsg[] };
+    // providers want user/assistant turns in order, starting with the user
+    const history = prev.reverse() as AiMsg[];
+    while (history[0]?.role === 'assistant') history.shift();
+    return { chatId: id, history, created };
   });
+  let done = false;
   const lang = auth.user.lang === 'en' ? 'en' : 'pt';
   const parts = [
     ctx.blocks.length
@@ -121,16 +122,36 @@ export async function startTurn(
     sources: ctx.sources,
     system: SYSTEM[lang](auth.user.name, input.today),
     messages: [...history, { role: 'user' as const, content: parts.join('\n\n') }],
-    finish: (answer: string) =>
-      asUser(auth, (tx) =>
-        tx.insert(aiMessages).values({
-          tenantId: auth.tenant.id,
-          ownerId: auth.user.id,
-          chatId,
-          role: 'assistant',
-          content: answer.slice(0, 200_000) || '…',
-          sources: ctx.sources,
-        }),
-      ),
+    finish: async (answer: string) => {
+      if (done) return;
+      done = true;
+      const at = Date.now();
+      await asUser(auth, (tx) =>
+        tx.insert(aiMessages).values([
+          {
+            tenantId: auth.tenant.id,
+            ownerId: auth.user.id,
+            chatId,
+            role: 'user',
+            content: question,
+            createdAt: new Date(at),
+          },
+          {
+            tenantId: auth.tenant.id,
+            ownerId: auth.user.id,
+            chatId,
+            role: 'assistant',
+            content: answer.slice(0, 200_000) || '…',
+            sources: ctx.sources,
+            createdAt: new Date(at + 1),
+          },
+        ]),
+      );
+    },
+    fail: async () => {
+      done = true;
+      if (created)
+        await asUser(auth, (tx) => tx.delete(aiChats).where(eq(aiChats.id, chatId))).catch(() => {});
+    },
   };
 }

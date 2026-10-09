@@ -195,8 +195,15 @@ describe.skipIf(!enabled)('notes', () => {
     expect(copyIds).toHaveLength(2);
     expect((await notes.readFile(ana, copyIds[0]!))?.mime).toBe('image/png');
 
-    // Removing an image from the document deletes its file (only that one).
+    // Removing an image from the document keeps it until the daily job (a stale
+    // autosave must not delete an image being uploaded or used by a newer version)…
     await notes.updateNote(ana, n.id, { content: docWith(`/api/v1/files/${id2}`) });
+    expect(await notes.readFile(ana, id1)).not.toBeNull();
+    const { pruneNoteImages } = await import('@/server/jobs/trash');
+    expect(await pruneNoteImages()).toBe(0); // added less than a day ago
+    // …which drops it a day later (only that one)
+    await admin`update note_attachments set created_at = now() - interval '2 days'`;
+    expect(await pruneNoteImages()).toBe(1);
     expect(await notes.readFile(ana, id1)).toBeNull();
     expect(await notes.readFile(ana, id2)).not.toBeNull();
     expect(await notes.readFile(ana, copyIds[0]!)).not.toBeNull();
@@ -228,7 +235,16 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.restoreTrash(ana, [{ kind: 'folder', id: f.id }]);
     expect((await notes.getNote(ana, a.id)).folderId).toBe(f.id);
 
+    // a stale Trash view purging a note that was restored meanwhile: nothing happens
+    await notes.purgeTrash(ana, [{ kind: 'note', id: a.id }]);
+    expect((await notes.getNote(ana, a.id)).title).toBe('FOR ALL ENTRIES');
+
     await notes.trashNote(ana, loose.id);
+    // expired after 30 days: the daily job empties it as the person would
+    await admin`update notes set deleted_at = now() - interval '31 days' where id = ${loose.id}`;
+    const { expireTrash } = await import('@/server/jobs/trash');
+    expect((await expireTrash()).purged).toBeGreaterThanOrEqual(1);
+    expect(await notes.listTrash(ana)).toEqual([]);
     await notes.purgeTrash(ana, 'all');
     expect(await notes.listTrash(ana)).toEqual([]);
     expect(await codeOf(notes.getNote(ana, loose.id))).toBe('not_found');
@@ -793,6 +809,11 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await links.publicItem(found, false)).toMatchObject({ type: 'file', title: 'Relatório.pdf' });
     const pub = (await links.publicDriveFile(found, 'bytes=0-3'))!;
     expect(pub).toMatchObject({ length: 4 });
+    // the link stops working while its owner is disabled
+    await admin`update users set status = 'disabled' where email = 'fl-a@example.pt'`;
+    expect(await links.findLink(l.url.split('/p/')[1]!)).toBeNull();
+    await admin`update users set status = 'active' where email = 'fl-a@example.pt'`;
+    expect(await links.findLink(l.url.split('/p/')[1]!)).not.toBeNull();
 
     // Trash: counted until purged; purge removes the object
     expect((await notes.contentCounts(a, new Set(['files']))).files).toBe(2);

@@ -572,10 +572,10 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
         )}
 
         {/* Password */}
-        <div className="kh-card">
+        <div className="kh-acc-card">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span className="kh-card__title">{t('acc_pwTitle')}</span>
-            <span className="kh-card__sub">{t('acc_pwSub')}</span>
+            <span className="kh-acc-card__title">{t('acc_pwTitle')}</span>
+            <span className="kh-acc-card__sub">{t('acc_pwSub')}</span>
           </div>
           <input
             className="kh-in"
@@ -586,6 +586,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
               setPwMsg(null);
             }}
             placeholder={t('acc_cur')}
+            aria-label={t('acc_cur')}
             autoComplete="current-password"
           />
           <input
@@ -597,6 +598,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
               setPwMsg(null);
             }}
             placeholder={t('acc_new')}
+            aria-label={t('acc_new')}
             autoComplete="new-password"
           />
           {next && (
@@ -613,6 +615,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
               setPwMsg(null);
             }}
             placeholder={t('acc_conf')}
+            aria-label={t('acc_conf')}
             autoComplete="new-password"
             aria-invalid={mismatch || undefined}
           />
@@ -647,18 +650,18 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
         </div>
 
         {/* 2FA */}
-        <div className="kh-card">
+        <div className="kh-acc-card">
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span className="kh-card__title">{t('acc_2faTitle')}</span>
-              <span className="kh-card__sub">{t('acc_2faSub')}</span>
+              <span className="kh-acc-card__title">{t('acc_2faTitle')}</span>
+              <span className="kh-acc-card__sub">{t('acc_2faSub')}</span>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={totpOn || Boolean(setup)}
-              aria-label="2FA"
-              title="2FA"
+              aria-label={t('acc_2faTitle')}
+              title={t('acc_2faTitle')}
               className="kh-switch"
               onClick={toggle2fa}
             />
@@ -795,11 +798,11 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
         </div>
 
         {/* Sessions */}
-        <div className="kh-card">
+        <div className="kh-acc-card">
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span className="kh-card__title">{t('acc_sessTitle')}</span>
-              <span className="kh-card__sub">{t('acc_sessSub')}</span>
+              <span className="kh-acc-card__title">{t('acc_sessTitle')}</span>
+              <span className="kh-acc-card__sub">{t('acc_sessSub')}</span>
             </div>
             {sessions?.some((s) => !s.current) && (
               <button type="button" className="kh-chip-sm" onClick={endOthers}>
@@ -892,6 +895,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             value={offPass}
             onChange={(e) => setOffPass(e.target.value)}
             placeholder={t('acc_cur')}
+            aria-label={t('acc_cur')}
             autoComplete="current-password"
             data-autofocus=""
           />
@@ -900,6 +904,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             value={offCode}
             onChange={(e) => setOffCode(e.target.value.replace(/\s/g, '').slice(0, 8))}
             placeholder={t('acc_2faOffCode')}
+            aria-label={t('acc_2faOffCode')}
             inputMode="numeric"
             style={{ fontFamily: 'var(--font-mono)', letterSpacing: '.2em' }}
           />

@@ -162,34 +162,50 @@ export async function runLicenseJob(now = new Date()) {
           ),
         )
     : [];
-  for (const p of people) {
-    await removePrefix(`users/${p.id}/`).catch(() => {});
-    await db().delete(users).where(eq(users.id, p.id));
-    const [left] = await db()
-      .select({ n: sql<number>`count(*)::int` })
-      .from(users)
-      .where(and(eq(users.tenantId, p.tenantId), ne(users.id, p.id)));
-    const [tk] = await db().select({ kind: tenants.kind }).from(tenants).where(eq(tenants.id, p.tenantId));
-    if (left!.n === 0 && tk?.kind === 'individual') goneTenants.push({ id: p.tenantId, name: '' });
-  }
-  for (const g of goneTenants) {
-    const members = await db().select({ id: users.id }).from(users).where(eq(users.tenantId, g.id));
-    for (const m of members) await removePrefix(`users/${m.id}/`).catch(() => {});
-    await removePrefix(`tenants/${g.id}/`).catch(() => {});
-    await db().delete(tenants).where(eq(tenants.id, g.id));
-    await audit({
-      action: 'tenant.purged',
-      actorKind: 'system',
-      targetType: 'tenant',
-      targetId: g.id,
-      details: { name: g.name },
-    });
-  }
-  out.purged = goneTenants.length + people.length;
+  // one person or client that can't be removed today must not stop the rest
+  let purged = 0;
+  for (const p of people)
+    try {
+      await removePrefix(`users/${p.id}/`).catch(() => {});
+      await db().delete(users).where(eq(users.id, p.id));
+      purged++;
+      const [left] = await db()
+        .select({ n: sql<number>`count(*)::int` })
+        .from(users)
+        .where(and(eq(users.tenantId, p.tenantId), ne(users.id, p.id)));
+      const [tk] = await db().select({ kind: tenants.kind }).from(tenants).where(eq(tenants.id, p.tenantId));
+      if (left!.n === 0 && tk?.kind === 'individual' && !goneTenants.some((g) => g.id === p.tenantId))
+        goneTenants.push({ id: p.tenantId, name: '' });
+    } catch (e) {
+      console.error('[licenses] purge person failed', p.id, e);
+    }
+  for (const g of goneTenants)
+    try {
+      const members = await db().select({ id: users.id }).from(users).where(eq(users.tenantId, g.id));
+      for (const m of members) await removePrefix(`users/${m.id}/`).catch(() => {});
+      await removePrefix(`tenants/${g.id}/`).catch(() => {});
+      await db().delete(tenants).where(eq(tenants.id, g.id));
+      purged++;
+      await audit({
+        action: 'tenant.purged',
+        actorKind: 'system',
+        targetType: 'tenant',
+        targetId: g.id,
+        details: { name: g.name },
+      });
+    } catch (e) {
+      console.error('[licenses] purge client failed', g.id, e);
+    }
+  out.purged = purged;
 
-  const [ap] = await db().execute<{ n: number }>(
-    sql`select kh_purge_audit(${new Date(t - AUDIT_RETENTION_DAYS * DAY).toISOString()}::timestamptz) as n`,
-  );
+  const [ap] = await db()
+    .execute<{ n: number }>(
+      sql`select kh_purge_audit(${new Date(t - AUDIT_RETENTION_DAYS * DAY).toISOString()}::timestamptz) as n`,
+    )
+    .catch((e: unknown) => {
+      console.error('[licenses] audit retention failed', e);
+      return [];
+    });
   out.auditPurged = Number(ap?.n ?? 0);
   return out;
 }

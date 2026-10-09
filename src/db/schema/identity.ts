@@ -11,6 +11,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigserial,
   boolean,
+  bigint,
   check,
   customType,
   index,
@@ -152,6 +153,8 @@ export const users = pgTable(
     photoKey: text('photo_key'),
     totpSecretEnc: text('totp_secret_enc'), // AES-256-GCM with ENCRYPTION_KEY
     totpEnabledAt: timestamp('totp_enabled_at', { withTimezone: true }),
+    /** last accepted TOTP time step: a code can't be used twice */
+    totpLastStep: bigint('totp_last_step', { mode: 'number' }),
     registeredWithCodeId: uuid('registered_with_code_id'),
     passwordChangedAt: timestamp('password_changed_at', { withTimezone: true }),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),

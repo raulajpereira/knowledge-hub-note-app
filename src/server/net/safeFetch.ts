@@ -41,13 +41,42 @@ export function isPrivateAddress(ip: string): boolean {
     );
   }
   if (fam === 6) {
-    const a = ip.toLowerCase();
-    if (a === '::' || a === '::1') return true;
-    const mapped = a.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (mapped) return isPrivateAddress(mapped[1]!);
-    return /^(fc|fd|fe[89ab]|ff)/.test(a) || a.startsWith('64:ff9b:') || a.startsWith('2001:db8');
+    const h = v6Hextets(ip);
+    if (!h) return true;
+    // IPv4 inside IPv6 (mapped ::ffff:a.b.c.d — also written ::ffff:7f00:1 —,
+    // compatible ::a.b.c.d, NAT64 64:ff9b::/96): judge the IPv4 address
+    const v4 = (hi: number, lo: number) => `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+    const zero = (n: number) => h.slice(0, n).every((x) => x === 0);
+    if (zero(5) && h[5] === 0xffff) return isPrivateAddress(v4(h[6]!, h[7]!));
+    if (zero(6)) return true; // ::, ::1 and the deprecated ::a.b.c.d
+    if (h[0] === 0x64 && h[1] === 0xff9b && h.slice(2, 6).every((x) => x === 0))
+      return isPrivateAddress(v4(h[6]!, h[7]!));
+    // only global unicast (2000::/3), minus documentation, Teredo and 6to4
+    if ((h[0]! & 0xe000) !== 0x2000) return true;
+    if (h[0] === 0x2001 && (h[1] === 0x0db8 || h[1] === 0)) return true;
+    if (h[0] === 0x2002) return true;
+    return false;
   }
   return true;
+}
+
+/** The 8 hextets of an IPv6 address (null if malformed). */
+function v6Hextets(ip: string): number[] | null {
+  let a = ip.toLowerCase().replace(/%.*$/, '');
+  const dotted = a.match(/(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) {
+    const n = v4ToInt(dotted[1]!);
+    a = a.slice(0, -dotted[1]!.length) + `${(n >>> 16).toString(16)}:${(n & 0xffff).toString(16)}`;
+  }
+  const [head, tail, extra] = a.split('::');
+  if (extra !== undefined) return null;
+  const hs = head ? head.split(':') : [];
+  const ts = tail !== undefined && tail ? tail.split(':') : [];
+  const fill = tail === undefined ? 0 : 8 - hs.length - ts.length;
+  if (fill < 0) return null;
+  const all = [...hs, ...Array<string>(fill).fill('0'), ...ts];
+  if (all.length !== 8 || all.some((x) => !/^[0-9a-f]{1,4}$/.test(x))) return null;
+  return all.map((x) => parseInt(x, 16));
 }
 
 const guardedLookup: LookupFunction = (hostname, options, callback) => {

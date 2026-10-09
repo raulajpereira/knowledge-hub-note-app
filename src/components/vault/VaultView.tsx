@@ -570,7 +570,12 @@ export function VaultView() {
     if (!ok) return;
     const tm = timers.current.get(it.id);
     if (tm) clearTimeout(tm);
-    await api(`/vault/items/${it.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/vault/items/${it.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     setItems((L) => L.filter((x) => x.id !== it.id));
     setActive(null);
     refreshCounts();

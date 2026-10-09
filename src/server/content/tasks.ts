@@ -177,6 +177,10 @@ export type TaskPatch = Partial<{
  */
 export async function updateTask(auth: AuthContext, id: string, patch: TaskPatch) {
   return asSharer(auth, async (tx) => {
+    // one change at a time per task: two "done" clicks (or devices) can't both
+    // see it open and schedule the next occurrence twice
+    if (patch.done !== undefined)
+      await tx.select({ id: tasks.id }).from(tasks).where(eq(tasks.id, id)).for('update');
     const cur = await loadTask(tx, id, auth.user.id);
     const { done, ...fields } = patch;
     // a member edits the task itself; its project, shared folder and pin stay the owner's

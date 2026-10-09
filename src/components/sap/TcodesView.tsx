@@ -80,11 +80,18 @@ export function TcodesView() {
   }, [fail]);
   useEffect(() => {
     const m = timers.current;
-    return () => {
+    // leaving or reloading the page sends what is still waiting for the debounce
+    const hide = () => {
       for (const [id, p] of m) {
         clearTimeout(p.tm);
+        m.delete(id);
         void api(`/sap/tcodes/${id}`, p.patch, 'PATCH').catch(() => {});
       }
+    };
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      hide();
     };
   }, []);
 
@@ -329,8 +336,8 @@ export function TcodesView() {
               <button
                 type="button"
                 className="kh-sap-ico kh-sap-ico--x"
-                title={t('close')}
-                aria-label={t('close')}
+                title={t('ui_close')}
+                aria-label={t('ui_close')}
                 onClick={() => open(null)}
               >
                 <Svg d='<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>' />

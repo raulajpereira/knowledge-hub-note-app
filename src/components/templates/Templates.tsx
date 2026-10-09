@@ -44,6 +44,7 @@ export function TemplateButton({
 }) {
   const { t, lang } = useI18n();
   const confirm = useConfirm();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [side, setSide] = useState<'left' | 'right'>('left');
   const [own, setOwn] = useState<Tpl[] | null>(null);
@@ -72,7 +73,9 @@ export function TemplateButton({
       danger: true,
     });
     if (!ok) return;
-    await api(`/templates/${tpl.id}`, undefined, 'DELETE').catch(() => {});
+    await api(`/templates/${tpl.id}`, undefined, 'DELETE').catch(() =>
+      toast({ message: t('ui_delFail'), tone: 'error' }),
+    );
     load();
   };
 
@@ -223,7 +226,7 @@ export function SaveTemplateButton({
         >
           <Input
             size="md"
-            autoFocus
+            data-autofocus
             value={name}
             maxLength={120}
             aria-label={t('tp_name')}

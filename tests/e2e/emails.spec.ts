@@ -104,6 +104,9 @@ test('import .eml and .msg, read the sanitized body, star, folder, task, Trash',
   await expect(page.locator('.kh-em-meta')).toContainText('Raul Pereira <raul@example.pt>');
   await page.getByRole('button', { name: 'Eliminar', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Mover para o Lixo' }).click();
+  // that email leaves the list once the server has it in the Trash (navigating
+  // earlier would cancel the request)
+  await expect(page.locator('.kh-em-item', { hasText: 'SAP S/4HANA' })).toHaveCount(0);
   await expect(page.locator('.kh-em-item')).toHaveCount(1);
   await page.goto('app/trash');
   await expect(page.getByText('Plano de cutover — SAP S/4HANA')).toBeVisible();

@@ -648,7 +648,7 @@
   backdrop-filter: blur(var(--glass-blur-user, 4px));
 }
 .kh-wb-dim--peek {
-  z-index: 55;
+  z-index: 200; /* Modal scale, above the AI button */
   padding: 24px;
   background: rgba(20, 14, 10, 0.12);
   backdrop-filter: blur(var(--glass-blur-user, 6px));

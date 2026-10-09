@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '@/lib/client/api';
-import { useToast } from '@/components/ui';
+import { onActivateKey, useToast } from '@/components/ui';
 import { SEC_TITLE, SectionHead, useConsole } from './AdminShell';
 import { Avatar, Chips, eur, useA } from './ui';
 
@@ -200,7 +200,10 @@ export function Overview() {
                             key={`${c}-${it.clientId}-${it.requestId ?? ''}`}
                             className="kh-ad-att"
                             style={{ ['--c' as string]: CATS[c][1] }}
+                            role="button"
+                            tabIndex={0}
                             onClick={() => openClient(it)}
+                            onKeyDown={onActivateKey(() => openClient(it))}
                           >
                             <Avatar name={it.name} square />
                             <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>

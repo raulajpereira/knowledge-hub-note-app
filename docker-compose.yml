@@ -8,14 +8,18 @@
 
 name: knowledgehub
 
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://kh_app:${KH_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  # web and worker run as kh_app (Row Level Security); they never get the owner's
+  # credentials, even if .env has DATABASE_ADMIN_URL (only `migrate` uses it)
+  DATABASE_ADMIN_URL: ''
+  REDIS_URL: redis://redis:6379
+  S3_ENDPOINT: http://minio:9000
+
 x-app: &app
   env_file: .env
-  environment:
-    NODE_ENV: production
-    DATABASE_URL: postgres://kh_app:${KH_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    DATABASE_ADMIN_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    REDIS_URL: redis://redis:6379
-    S3_ENDPOINT: http://minio:9000
+  environment: *app-env
   restart: unless-stopped
   depends_on:
     postgres: { condition: service_healthy }
@@ -44,8 +48,14 @@ services:
     command: ['node', 'dist/migrate.mjs']
     restart: 'no'
     profiles: ['tools']
+    environment:
+      <<: *app-env
+      # migrations and the seed run as the table owner
+      DATABASE_ADMIN_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     depends_on:
       postgres: { condition: service_healthy }
+      # the seed's first-access email goes through the queue
+      redis: { condition: service_healthy }
 
   postgres:
     image: postgres:16-alpine

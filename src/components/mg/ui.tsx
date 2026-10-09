@@ -295,7 +295,7 @@ export function Dialog({
     <div
       onClick={onClose}
       style={css(
-        'position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;padding:24px;',
+        'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;',
       )}
     >
       {/* the dim blur is a sibling, not a parent: a backdrop-filter parent would stop the dialog's own blur */}

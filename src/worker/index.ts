@@ -10,6 +10,7 @@ import type { MailMessage } from '@/server/mail/templates';
 import { runLicenseJob } from '@/server/jobs/licenses';
 import { sweepStorage } from '@/server/jobs/storage';
 import { runMonitor } from '@/server/jobs/monitor';
+import { expireTrash, pruneNoteImages } from '@/server/jobs/trash';
 
 type JobHandler = () => Promise<unknown>;
 
@@ -22,10 +23,15 @@ const handlers: Record<string, JobHandler> = {
   // trials and renewals → suspended, reminders, expired codes, purge of revoked data (30 days),
   // then files nothing points to any more
   licenses: async () => {
-    const r = await runLicenseJob();
-    const files = await sweepStorage().catch((e: unknown) => ({ error: String(e) }));
-    console.log('[worker] licenses', JSON.stringify({ ...r, files }));
-    return { ...r, files };
+    // each step on its own: one failing must not stop the others
+    const step = <T>(f: () => Promise<T>) => f().catch((e: unknown) => ({ error: String(e) }));
+    const r = await step(runLicenseJob);
+    const trash = await step(expireTrash);
+    const noteImages = await step(pruneNoteImages);
+    const files = await step(() => sweepStorage());
+    const out = { licenses: r, trash, noteImages, files };
+    console.log('[worker] licenses', JSON.stringify(out));
+    return out;
   },
 };
 

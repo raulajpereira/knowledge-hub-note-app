@@ -164,7 +164,7 @@ test('boards: draw, write, undo, app item popup, save, conflict, several boards,
   await expect(name).toHaveValue('Remoto');
 
   await page.getByRole('button', { name: 'Quadros' }).click();
-  await list.getByRole('button', { name: 'Eliminar Remoto' }).click();
+  await list.getByRole('button', { name: 'Eliminar Remoto', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Mover para o Lixo' }).click();
   await expect(name).toHaveValue('Quadro sem título 2');
   await page.goto('app/trash');

@@ -8,7 +8,7 @@ import { DEFAULT_SAP_NEWS_SOURCES, SAP_NEWS_COLORS } from '@/lib/news';
 import type { SapNewsSource } from '@/lib/prefs';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { refreshCounts } from '@/components/shell/counts';
-import { useToast } from '@/components/ui';
+import { onActivateKey, useToast } from '@/components/ui';
 import './news.css';
 
 // SAP News — SapNews.dc.html: cards from the user's SAP feeds (read on the
@@ -355,7 +355,15 @@ export function NewsView() {
             const sv = isSaved(x);
             return (
               <article key={x.link} className="kh-nw-card">
-                <div className="kh-nw-img" style={{ background: ph(x.src) }} onClick={() => setReading(x)}>
+                <div
+                  className="kh-nw-img"
+                  style={{ background: ph(x.src) }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={x.title}
+                  onClick={() => setReading(x)}
+                  onKeyDown={onActivateKey(() => setReading(x))}
+                >
                   {x.img ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={x.img} alt="" loading="lazy" referrerPolicy="no-referrer" />
@@ -478,7 +486,11 @@ export function NewsView() {
                   <div
                     className="kh-nw-sthumb"
                     style={{ background: ph(x.src) }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={x.title}
                     onClick={() => setReading(x)}
+                    onKeyDown={onActivateKey(() => setReading(x))}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {x.img && <img src={x.img} alt="" referrerPolicy="no-referrer" />}

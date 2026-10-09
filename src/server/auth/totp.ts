@@ -56,10 +56,16 @@ export function totp(secretB32: string, at = Date.now(), step = 30): string {
 
 /** Accepts the current code and ±1 step (clock drift). */
 export function verifyTotp(secretB32: string, code: string, at = Date.now(), step = 30): boolean {
-  if (!/^\d{6}$/.test(code)) return false;
+  return totpStep(secretB32, code, at, step) !== null;
+}
+
+/** The time step a valid code belongs to (null if invalid): sign-in refuses a step already used. */
+export function totpStep(secretB32: string, code: string, at = Date.now(), step = 30): number | null {
+  if (!/^\d{6}$/.test(code)) return null;
   const secret = base32Decode(secretB32);
   const counter = Math.floor(at / 1000 / step);
-  return [-1, 0, 1].some((d) => hotp(secret, counter + d) === code);
+  for (const d of [-1, 0, 1]) if (hotp(secret, counter + d) === code) return counter + d;
+  return null;
 }
 
 export function otpauthUri(secretB32: string, account: string, issuer = 'KnowledgeHub'): string {

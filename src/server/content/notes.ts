@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import {
   apiRequests,
@@ -47,7 +47,7 @@ import { folderError } from './folderError';
 
 export { folderError };
 import { safeFetchBytes } from '@/server/net/safeFetch';
-import { docChecklist, docFileIds, docText, FILE_SRC, validateDoc, type PMNode } from './doc';
+import { docChecklist, docText, FILE_SRC, validateDoc, type PMNode } from './doc';
 
 type Tx = Parameters<Parameters<typeof asUser>[1]>[0];
 
@@ -325,7 +325,6 @@ export async function updateNote(
   },
 ) {
   const set: Partial<typeof notes.$inferInsert> = { updatedAt: new Date() };
-  let fileIds: string[] | null = null;
   if (input.title !== undefined) set.title = input.title;
   if (input.tags !== undefined)
     set.tags = [...new Set(input.tags.map((t) => t.trim()).filter(Boolean))].slice(0, 30);
@@ -336,7 +335,6 @@ export async function updateNote(
     const d = validateDoc(input.content);
     set.content = d;
     set.contentText = docText(d).slice(0, 200_000);
-    fileIds = docFileIds(d);
   }
   // Favourite toggles and moves don't count as edits for "Atualizada".
   if (input.title === undefined && input.content === undefined && input.tags === undefined)
@@ -359,22 +357,9 @@ export async function updateNote(
       .returning(listCols)
       .catch(folderError);
     if (!r.length) throw new ApiError(404, 'not_found');
-    // Images removed from the note are deleted from storage (only those of this note).
-    if (fileIds) {
-      const gone = await tx
-        .delete(noteAttachments)
-        .where(
-          and(
-            eq(noteAttachments.noteId, id),
-            fileIds.length ? notInArray(noteAttachments.id, fileIds) : sql`true`,
-          ),
-        )
-        .returning({ key: noteAttachments.storageKey });
-      for (const g of gone)
-        await s3()
-          .send(new DeleteObjectCommand({ Bucket: env().S3_BUCKET, Key: g.key }))
-          .catch(() => {});
-    }
+    // Images removed from the note are not deleted here: a stale autosave could
+    // remove one still being uploaded or used by a newer version. The daily job
+    // drops the attachments no note points to any more (kh_prune_note_attachments).
     return toItem(r[0] as ListRow, auth.user.id);
   });
 }
@@ -722,6 +707,22 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
   });
 }
 
+/** The ids of `ids` that are in the Trash (deletedAt set) and visible under RLS. */
+async function onlyTrashed(
+  tx: Tx,
+  table: typeof notes | typeof tasks | typeof voiceNotes | typeof issues | typeof meetings | typeof folders,
+  ids: string[],
+): Promise<string[]> {
+  if (!ids.length) return ids;
+  const t = table as typeof notes;
+  return (
+    await tx
+      .select({ id: t.id })
+      .from(t)
+      .where(and(inArray(t.id, ids), isNotNull(t.deletedAt)))
+  ).map((r) => r.id);
+}
+
 async function unlinkAll(tx: Tx, type: string, ids: string[]) {
   await tx
     .delete(itemLinks)
@@ -733,7 +734,9 @@ async function unlinkAll(tx: Tx, type: string, ids: string[]) {
     );
 }
 
-async function purgeNotesTx(tx: Tx, ids: string[]) {
+async function purgeNotesTx(tx: Tx, ids0: string[]) {
+  // only notes that are really in the Trash (a stale Trash view must never destroy a restored note)
+  const ids = await onlyTrashed(tx, notes, ids0);
   if (!ids.length) return;
   const files = await tx
     .delete(noteAttachments)
@@ -747,7 +750,11 @@ async function purgeNotesTx(tx: Tx, ids: string[]) {
       .catch(() => {});
 }
 
-export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKind; id: string }> | 'all') {
+export async function purgeTrash(
+  auth: AuthContext,
+  items: Array<{ kind: TrashKind; id: string }> | 'all',
+  opts: { system?: boolean } = {},
+) {
   await asUser(auth, async (tx) => {
     let nIds: string[];
     let fIds: string[];
@@ -825,12 +832,38 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
           .where(and(eq(folders.kind, 'notes'), isNotNull(folders.deletedAt)))
       ).map((r) => r.id);
     } else {
-      fIds = items.filter((i) => i.kind === 'folder').map((i) => i.id);
-      nIds = items.filter((i) => i.kind === 'note').map((i) => i.id);
-      tIds = items.filter((i) => i.kind === 'task').map((i) => i.id);
-      vIds = items.filter((i) => i.kind === 'voice').map((i) => i.id);
-      iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
-      mIds = items.filter((i) => i.kind === 'meeting').map((i) => i.id);
+      // re-checked against the database: only what is really in the Trash is purged
+      // (links are removed before the rows, so a live item must never get this far)
+      fIds = await onlyTrashed(
+        tx,
+        folders,
+        items.filter((i) => i.kind === 'folder').map((i) => i.id),
+      );
+      nIds = await onlyTrashed(
+        tx,
+        notes,
+        items.filter((i) => i.kind === 'note').map((i) => i.id),
+      );
+      tIds = await onlyTrashed(
+        tx,
+        tasks,
+        items.filter((i) => i.kind === 'task').map((i) => i.id),
+      );
+      vIds = await onlyTrashed(
+        tx,
+        voiceNotes,
+        items.filter((i) => i.kind === 'voice').map((i) => i.id),
+      );
+      iIds = await onlyTrashed(
+        tx,
+        issues,
+        items.filter((i) => i.kind === 'issue').map((i) => i.id),
+      );
+      mIds = await onlyTrashed(
+        tx,
+        meetings,
+        items.filter((i) => i.kind === 'meeting').map((i) => i.id),
+      );
       dIds = items.filter((i) => i.kind === 'file').map((i) => i.id);
       aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
       sIds = items.filter((i) => i.kind === 'snippet').map((i) => i.id);
@@ -963,7 +996,11 @@ export async function purgeTrash(auth: AuthContext, items: Array<{ kind: TrashKi
     if (fIds.length)
       await tx.delete(folders).where(and(inArray(folders.id, fIds), isNotNull(folders.deletedAt)));
   });
-  await audit({ action: 'trash.purged', actorUserId: auth.user.id, tenantId: auth.tenant.id });
+  await audit({
+    action: opts.system ? 'trash.expired' : 'trash.purged',
+    actorUserId: opts.system ? null : auth.user.id,
+    tenantId: auth.tenant.id,
+  });
 }
 
 // ── Images in notes ────────────────────────────────────────────────────────

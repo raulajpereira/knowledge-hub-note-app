@@ -123,6 +123,7 @@ export function EmailsView() {
   const [busy, setBusy] = useState(false);
   const [taskFlash, setTaskFlash] = useState(false);
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notesPending = useRef<{ id: string; v: string } | null>(null);
   const activeId = sp.get('m');
 
   const open = useCallback(
@@ -214,8 +215,27 @@ export function EmailsView() {
     const id = full.id;
     setFull({ ...full, notes: v });
     if (notesTimer.current) clearTimeout(notesTimer.current);
-    notesTimer.current = setTimeout(() => void patch(id, { notes: v }), 600);
+    notesPending.current = { id, v };
+    notesTimer.current = setTimeout(() => {
+      notesPending.current = null;
+      void patch(id, { notes: v });
+    }, 600);
   };
+  useEffect(() => {
+    // leaving or reloading the page (or the module) sends notes still waiting for the debounce
+    const hide = () => {
+      if (notesTimer.current) clearTimeout(notesTimer.current);
+      notesTimer.current = null;
+      const p = notesPending.current;
+      notesPending.current = null;
+      if (p) void api(`/emails/${p.id}`, { notes: p.v }, 'PATCH').catch(() => {});
+    };
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      hide();
+    };
+  }, []);
   const toTask = async () => {
     if (!full) return;
     try {
@@ -241,7 +261,12 @@ export function EmailsView() {
       danger: true,
     });
     if (!ok) return;
-    await api(`/emails/${full.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/emails/${full.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     const idx = list.findIndex((x) => x.id === full.id);
     const rest = list.filter((x) => x.id !== full.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== full.id));
@@ -261,7 +286,12 @@ export function EmailsView() {
     }
   };
   const removeFolder = async (f: Folder) => {
-    await api(`/emails/folders/${f.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/emails/folders/${f.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     setFolders((cur) => cur.filter((x) => x.id !== f.id));
     setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: null } : x)));
     setFull((cur) => (cur && cur.folderId === f.id ? { ...cur, folderId: null } : cur));

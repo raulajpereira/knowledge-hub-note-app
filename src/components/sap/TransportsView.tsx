@@ -151,11 +151,18 @@ export function TransportsView() {
   }, [fail]);
   useEffect(() => {
     const m = timers.current;
-    return () => {
+    // leaving or reloading the page sends what is still waiting for the debounce
+    const hide = () => {
       for (const [id, p] of m) {
         clearTimeout(p.tm);
+        m.delete(id);
         void api(`/sap/transports/${id}`, p.patch, 'PATCH').catch(() => {});
       }
+    };
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      hide();
     };
   }, []);
 
@@ -198,6 +205,8 @@ export function TransportsView() {
       replace(r.transport);
       if (s === 'prd' || s === 'junk') refreshCounts();
     } catch {
+      // put the step back the way it was
+      setItems((cur) => cur && cur.map((y) => (y.id === x.id ? { ...y, [col]: x[col] } : y)));
       fail();
     }
   };

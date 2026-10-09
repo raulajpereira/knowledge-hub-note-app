@@ -52,6 +52,12 @@ export function Modal({
   const id = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const [depth, setDepth] = useState(0);
+  // Latest onClose without re-running the focus effect: callers often pass an
+  // inline arrow, and re-running would steal focus back on every render.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -69,7 +75,7 @@ export function Modal({
       if (stack[stack.length - 1] !== id) return;
       if (e.key === 'Escape' && dismissible) {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
       } else if (e.key === 'Tab' && panelRef.current) {
         // Keep focus inside the top-most layer.
         const items = [...panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
@@ -93,7 +99,7 @@ export function Modal({
       if (!stack.length) document.body.style.overflow = overflow;
       previous?.focus?.();
     };
-  }, [open, id, dismissible, onClose]);
+  }, [open, id, dismissible]);
 
   if (!open || typeof document === 'undefined') return null;
 

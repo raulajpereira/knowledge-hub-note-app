@@ -6,7 +6,14 @@ import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
 import { connectionText, envColor, sapShortcut, SAP_ENVS, type SapEnv } from '@/lib/sap';
-import { ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
+import {
+  onActivateKey,
+  ResizableTable,
+  useConfirm,
+  usePersistentState,
+  useToast,
+  type Column,
+} from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
 import { downloadShortcut, SidePanel } from './SidePanel';
 import './sap.css';
@@ -124,11 +131,18 @@ export function SystemsView() {
   };
   useEffect(() => {
     const m = timers.current;
-    return () => {
+    // leaving or reloading the page sends what is still waiting for the debounce
+    const hide = () => {
       for (const [id, p] of m) {
         clearTimeout(p.tm);
+        m.delete(id);
         void api(`/sap/systems/${id}`, p.patch, 'PATCH').catch(() => {});
       }
+    };
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      hide();
     };
   }, []);
 
@@ -404,7 +418,10 @@ export function SystemsView() {
                       key={x.id}
                       className="kh-sap-card"
                       data-on={x.id === activeId || undefined}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => open(x.id)}
+                      onKeyDown={onActivateKey(() => open(x.id))}
                       style={{
                         background: `linear-gradient(160deg,${envColor(x.env).replace(')', ' / .16)')},rgba(255,255,255,.04))`,
                       }}

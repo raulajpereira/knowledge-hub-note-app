@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseServerEnv } from '@/lib/env';
+import { basePathMismatch, parseServerEnv, placeholderVars } from '@/lib/env';
 
 const valid = {
   APP_URL: 'https://knowledge-hub.cloud/v2',
@@ -35,6 +35,36 @@ describe('parseServerEnv', () => {
   });
 
   it('allows an empty base path (served from the root)', () => {
-    expect(parseServerEnv({ ...valid, NEXT_PUBLIC_BASE_PATH: '' }).NEXT_PUBLIC_BASE_PATH).toBe('');
+    expect(
+      parseServerEnv({ ...valid, APP_URL: 'https://knowledge-hub.cloud', NEXT_PUBLIC_BASE_PATH: '' })
+        .NEXT_PUBLIC_BASE_PATH,
+    ).toBe('');
+  });
+
+  it('APP_URL should use the same base path as the build (email links)', () => {
+    expect(basePathMismatch({ ...valid, NEXT_PUBLIC_BASE_PATH: '' })).toMatch(/differs/);
+    expect(basePathMismatch({ ...valid, APP_URL: 'https://knowledge-hub.cloud/v2/' })).toBeNull();
+    expect(
+      basePathMismatch({ APP_URL: 'https://knowledge-hub.cloud', NEXT_PUBLIC_BASE_PATH: '' }),
+    ).toBeNull();
+  });
+
+  it('finds .env.example placeholders (warned in production)', () => {
+    const weak = { ...valid, S3_SECRET_KEY: 'change-me-minio' };
+    expect(placeholderVars(parseServerEnv(weak))).toEqual(['S3_SECRET_KEY']);
+    expect(placeholderVars(parseServerEnv(valid))).toEqual([]);
+  });
+
+  it('AI_TEST_BASE_URL only accepts a loopback address', () => {
+    expect(parseServerEnv({ ...valid, AI_TEST_BASE_URL: 'http://127.0.0.1:4010' }).AI_TEST_BASE_URL).toBe(
+      'http://127.0.0.1:4010',
+    );
+    expect(() => parseServerEnv({ ...valid, AI_TEST_BASE_URL: 'https://evil.example/v1' })).toThrow(
+      /AI_TEST_BASE_URL/,
+    );
+  });
+
+  it('an empty DATABASE_ADMIN_URL (web and worker containers) means none', () => {
+    expect(parseServerEnv({ ...valid, DATABASE_ADMIN_URL: '' }).DATABASE_ADMIN_URL).toBeUndefined();
   });
 });

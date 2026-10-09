@@ -595,13 +595,14 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
   const fld = isD ? 'dov' : 'ovr';
   return createPortal(
     <>
-      <div onClick={onClose} style={css('position:fixed;inset:0;z-index:56;')} />
+      <div onClick={onClose} style={css('position:fixed;inset:0;z-index:200;')} />
       <div
         role="dialog"
+        aria-modal="true"
         aria-label={p.name}
         onKeyDown={(e) => e.key === 'Escape' && onClose()}
         style={css(
-          `position:fixed;left:${Math.min(window.innerWidth - 300, Math.max(10, c.x - 140))}px;top:${Math.min(window.innerHeight - 280, c.y)}px;z-index:57;width:280px;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.12)),rgba(34,27,23,.4);backdrop-filter:blur(var(--glass-blur-user, 36px)) saturate(170%);border:1px solid rgba(255,255,255,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 18px 50px rgba(0,0,0,.35);color:#fbf8f5;line-height:normal;`,
+          `position:fixed;left:${Math.min(window.innerWidth - 300, Math.max(10, c.x - 140))}px;top:${Math.min(window.innerHeight - 280, c.y)}px;z-index:201;width:280px;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.12)),rgba(34,27,23,.4);backdrop-filter:blur(var(--glass-blur-user, 36px)) saturate(170%);border:1px solid rgba(255,255,255,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 18px 50px rgba(0,0,0,.35);color:#fbf8f5;line-height:normal;`,
         )}
       >
         <div style={css('display:flex;flex-direction:column;gap:2px;')}>

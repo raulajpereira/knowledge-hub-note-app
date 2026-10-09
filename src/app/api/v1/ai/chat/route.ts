@@ -26,7 +26,11 @@ export const POST = handler(async (req) => {
   const turn = await startTurn(auth, input);
   const it = streamChat(cfg, { system: turn.system, messages: turn.messages, maxTokens: 4096 });
   // the first chunk is awaited here, so a bad key or model is a normal JSON error
-  const first = await it.next();
+  // (and the conversation is left as it was)
+  const first = await it.next().catch(async (e: unknown) => {
+    await turn.fail();
+    throw e;
+  });
   let answer = first.done ? '' : first.value;
   const enc = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -49,7 +53,9 @@ export const POST = handler(async (req) => {
       }
     },
     async cancel() {
+      // the reader left: keep what arrived and close the provider's stream
       await turn.finish(answer).catch(() => {});
+      await it.return(undefined).catch(() => {});
     },
   });
   if (first.done) await turn.finish(answer);

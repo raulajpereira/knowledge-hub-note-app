@@ -13,3 +13,4 @@ export { Select, type SelectOption } from './Select';
 export { ToastProvider, useToast, type ToastTone } from './Toast';
 export { Checkbox, Message, Segmented, Switch } from './Toggles';
 export { usePersistentState } from './usePersistentState';
+export { onActivateKey } from './a11y';

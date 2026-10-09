@@ -197,6 +197,20 @@ const COPY: Record<string, Record<Lang, Copy>> = {
       foot: "If you didn't ask for this, ignore this email — your password won't change.",
     },
   },
+  emailChanged: {
+    pt: {
+      subject: 'O email da sua conta foi alterado · KnowledgeHub',
+      title: 'Email da conta alterado',
+      body: 'A administração do KnowledgeHub alterou o email da sua conta para {email}. A partir de agora entre com esse endereço.',
+      foot: 'Se não pediu esta alteração, responda a este email de imediato.',
+    },
+    en: {
+      subject: 'Your account email was changed · KnowledgeHub',
+      title: 'Account email changed',
+      body: 'The KnowledgeHub administration changed your account email to {email}. From now on, sign in with that address.',
+      foot: "If you didn't ask for this change, reply to this email right away.",
+    },
+  },
   changed: {
     pt: {
       subject: 'A sua password foi alterada · KnowledgeHub',

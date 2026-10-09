@@ -291,7 +291,12 @@ export function DriveView() {
     }
   };
   const removeFolder = async (f: Folder) => {
-    await api(`/drive/folders/${f.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/drive/folders/${f.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     setFolders((cur) => cur.filter((x) => x.id !== f.id));
     setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: null } : x)));
     if (folder === f.id) setFolder('all');
@@ -324,7 +329,12 @@ export function DriveView() {
     if (!ok) return;
     const idx = list.findIndex((x) => x.id === active.id);
     const rest = list.filter((x) => x.id !== active.id);
-    await api(`/drive/${active.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/drive/${active.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     setItems((cur) => cur && cur.filter((x) => x.id !== active.id));
     setShItems((cur) => cur && cur.filter((x) => x.id !== active.id));
     open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);

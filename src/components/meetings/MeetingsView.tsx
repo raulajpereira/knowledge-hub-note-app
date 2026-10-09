@@ -224,8 +224,14 @@ export function MeetingsView() {
   );
   useEffect(() => {
     const map = timers.current;
-    return () => {
+    // leaving or reloading the page sends what is still waiting for the debounce
+    const hide = () => {
       for (const id of [...map.keys()]) flush(id);
+    };
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      hide();
     };
   }, [flush]);
   const upd = (id: string, p: Patch, delay = 500) => {
@@ -305,7 +311,12 @@ export function MeetingsView() {
     const tm = timers.current.get(act.id);
     if (tm) clearTimeout(tm.tm);
     timers.current.delete(act.id);
-    await api(`/meetings/${act.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/meetings/${act.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     const idx = list.findIndex((x) => x.id === act.id);
     const rest = list.filter((x) => x.id !== act.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== act.id));

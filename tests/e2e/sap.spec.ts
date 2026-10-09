@@ -74,9 +74,13 @@ test('systems, transactions, header popup and SAP GUI settings', async ({ page, 
   // Definições › SAP GUI: start transaction used by every shortcut
   await page.goto('app/settings');
   await page.getByRole('tab', { name: 'SAP GUI' }).click();
+  // prefs are saved debounced: wait for the save itself, not a fixed time
+  const saved = page.waitForResponse(
+    (r) => r.url().includes('/api/v1/me/prefs') && r.request().method() !== 'GET' && r.ok(),
+  );
   await page.getByLabel('Transação inicial').fill('se38');
   await expect(page.getByLabel('Transação inicial')).toHaveValue('SE38');
-  await page.waitForTimeout(800); // prefs are saved debounced
+  await saved;
 
   await page.goto('app/systems');
   await expect(page.getByText('Sem sistemas para este filtro.')).toBeVisible();

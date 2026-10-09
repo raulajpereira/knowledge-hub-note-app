@@ -8,7 +8,7 @@ import { useWhen } from '@/components/content/useWhen';
 import { envColor, modColor, sapShortcut } from '@/lib/sap';
 import { downloadShortcut } from '@/components/sap/SidePanel';
 import { copyTcode } from '@/components/sap/TcodesView';
-import { usePersistentState } from '@/components/ui';
+import { usePersistentState, useToast } from '@/components/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePref, usePrefsContext } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
@@ -148,6 +148,7 @@ function Favicon({ domain }: { domain: string }) {
 
 export function HomeView({ initialHour }: { initialHour?: number | null } = {}) {
   const { t, lang } = useI18n();
+  const toast = useToast();
   const { me, modules } = useShell();
   const prefsCtx = usePrefsContext()!;
   const [saved, setHome] = usePref<HomePrefs | undefined>('home', undefined);
@@ -418,7 +419,10 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
   const MON = lang === 'en' ? MON_EN : MON_PT;
   const completeTask = async (id: string) => {
     setData((d) => ({ ...d, tasks: d.tasks?.filter((x) => x.id !== id) }));
-    await api(`/tasks/${id}`, { done: true }, 'PATCH').catch(() => {});
+    // on failure the reload below brings the task back
+    await api(`/tasks/${id}`, { done: true }, 'PATCH').catch(() =>
+      toast({ message: t('ne_saveFail'), tone: 'error' }),
+    );
     loadData();
     refreshCounts();
   };

@@ -173,7 +173,12 @@ export function IssuesView() {
       danger: true,
     });
     if (!ok) return;
-    await api(`/issues/${x.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/issues/${x.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     setItems((cur) => cur && cur.filter((y) => y.id !== x.id));
     open(null);
     refreshCounts();

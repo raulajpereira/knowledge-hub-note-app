@@ -1180,6 +1180,9 @@
 .kh-cl-gsel:hover {
   border-color: rgba(255, 255, 255, 0.16);
 }
+.kh-cl-gsel:focus-visible {
+  border-color: var(--kh-field-focus);
+}
 .kh-cl-gin:focus {
   border-color: rgba(255, 255, 255, 0.4);
   background: rgba(18, 12, 9, 0.3);

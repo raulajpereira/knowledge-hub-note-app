@@ -35,10 +35,16 @@ export function PrefsProvider({ initial, children }: { initial: Prefs; children:
       body: JSON.stringify(patch),
       credentials: 'same-origin',
       keepalive,
-    }).catch(() => {
-      // offline: keep the edit for the next flush
-      pending.current = { ...patch, ...pending.current };
-    });
+    })
+      .then((res) => {
+        // a rejected patch (400/413/…) would fail again forever, so only
+        // transient refusals are kept for retry
+        if (!res.ok && (res.status >= 500 || [401, 408, 429].includes(res.status))) throw new Error();
+      })
+      .catch(() => {
+        // offline / server error: keep the edit for the next flush
+        pending.current = { ...patch, ...pending.current };
+      });
   }, []);
 
   const setPref = useCallback(

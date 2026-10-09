@@ -7,6 +7,15 @@ const bool = z
   .optional()
   .transform((v) => v === 'true' || v === '1');
 
+export function isLoopback(url: string) {
+  try {
+    const h = new URL(url).hostname.replace(/^\[|\]$/g, '');
+    return h === 'localhost' || h === '::1' || /^127\.\d+\.\d+\.\d+$/.test(h);
+  } catch {
+    return false;
+  }
+}
+
 export const serverEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   APP_URL: z.url(),
@@ -18,7 +27,8 @@ export const serverEnvSchema = z.object({
   // Runtime connection: the unprivileged kh_app role, so Row Level Security
   // applies. Migrations use DATABASE_ADMIN_URL (table owner) instead.
   DATABASE_URL: z.url(),
-  DATABASE_ADMIN_URL: z.url().optional(),
+  // empty in the web and worker containers (docker-compose.yml): only `migrate` has it
+  DATABASE_ADMIN_URL: z.preprocess((v) => (v === '' ? undefined : v), z.url().optional()),
   REDIS_URL: z.url(),
 
   S3_ENDPOINT: z.url(),
@@ -68,7 +78,33 @@ export const serverEnvSchema = z.object({
 
   SUPERADMIN_EMAIL: z.email().optional(),
   SUPERADMIN_NAME: z.string().optional(),
+
+  // Storage sweep only reports what it would delete (first days after a move).
+  STORAGE_SWEEP_DRY_RUN: bool.default(false),
+
+  // Tests only: every OpenAI-compatible AI call goes to this local fake.
+  // Never set in production — and only a loopback address is accepted, so a
+  // stray value can't send people's AI keys anywhere.
+  AI_TEST_BASE_URL: z
+    .url()
+    .refine((u) => isLoopback(u), 'must be a loopback address (tests only)')
+    .optional(),
 });
+
+/** APP_URL's path differs from the base path the app is built for (email links would break). */
+export function basePathMismatch(e: { APP_URL: string; NEXT_PUBLIC_BASE_PATH: string }): string | null {
+  const path = new URL(e.APP_URL).pathname.replace(/\/+$/, '');
+  return path === e.NEXT_PUBLIC_BASE_PATH
+    ? null
+    : `APP_URL path "${path || '/'}" differs from NEXT_PUBLIC_BASE_PATH "${e.NEXT_PUBLIC_BASE_PATH || '/'}"`;
+}
+
+/** .env.example placeholders left in a production configuration (warned at start-up). */
+export function placeholderVars(e: Record<string, unknown>): string[] {
+  return Object.entries(e)
+    .filter(([, v]) => typeof v === 'string' && /change-me/i.test(v))
+    .map(([k]) => k);
+}
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
@@ -79,6 +115,14 @@ export function parseServerEnv(source: Record<string, string | undefined>): Serv
   if (!result.success) {
     const issues = result.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
+  }
+  // the placeholders of .env.example must not stay in production: loud warning
+  // (not a refusal to start, so an old .env can't take the site down on deploy)
+  const mismatch = basePathMismatch(result.data);
+  if (mismatch) console.error(`[env] WARNING: ${mismatch} — email links would point elsewhere`);
+  if (result.data.NODE_ENV === 'production') {
+    const weak = placeholderVars(result.data);
+    if (weak.length) console.error(`[env] WARNING: ${weak.join(', ')} still use a "change-me" placeholder`);
   }
   return result.data;
 }

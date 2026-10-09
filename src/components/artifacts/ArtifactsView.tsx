@@ -258,7 +258,12 @@ export function ArtifactsView() {
       danger: true,
     });
     if (!ok) return;
-    await api(`/artifacts/${full.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/artifacts/${full.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     const idx = list.findIndex((x) => x.id === full.id);
     const rest = list.filter((x) => x.id !== full.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== full.id));
@@ -279,7 +284,12 @@ export function ArtifactsView() {
     }
   };
   const removeFolder = async (f: Folder) => {
-    await api(`/artifacts/folders/${f.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/artifacts/folders/${f.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     setFolders((cur) => cur.filter((x) => x.id !== f.id));
     setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: null } : x)));
     if (folder === f.id) setFolder('all');
@@ -673,6 +683,7 @@ export function ArtifactsView() {
                     maxHeight={360}
                     width={300}
                     role="dialog"
+                    aria-modal="true"
                     aria-label={t('a_history')}
                   >
                     <div className="kh-ar-hist__t">{t('a_history')}</div>

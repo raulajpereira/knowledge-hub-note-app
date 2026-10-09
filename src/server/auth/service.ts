@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { authTokens, codeRedemptions, codes, recoveryCodes, tenants, users } from '@/db/schema';
 import { decryptSecret, encryptSecret, randomToken, safeEqual, sha256 } from '@/lib/crypto';
@@ -21,7 +21,7 @@ import {
   revokeAllSessions,
   type AuthContext,
 } from './session';
-import { newRecoveryCodes, newTotpSecret, otpauthUri, verifyTotp } from './totp';
+import { newRecoveryCodes, newTotpSecret, otpauthUri, totpStep, verifyTotp } from './totp';
 
 export type RequestMeta = { ip: string | null; userAgent: string | null; lang: Lang };
 
@@ -238,8 +238,24 @@ async function consumeRecoveryCode(userId: string, code: string): Promise<boolea
     .where(and(eq(recoveryCodes.userId, userId), isNull(recoveryCodes.usedAt)));
   const hit = rows.find((r) => safeEqual(r.codeHash, hash));
   if (!hit) return false;
-  await db().update(recoveryCodes).set({ usedAt: new Date() }).where(eq(recoveryCodes.id, hit.id));
-  return true;
+  // only the request that marks it used wins (two at once can't both use one code)
+  const won = await db()
+    .update(recoveryCodes)
+    .set({ usedAt: new Date() })
+    .where(and(eq(recoveryCodes.id, hit.id), isNull(recoveryCodes.usedAt)))
+    .returning({ id: recoveryCodes.id });
+  return won.length > 0;
+}
+
+/** A TOTP code counts once: its time step must be newer than the last one accepted. */
+async function claimTotpStep(userId: string, step: number | null): Promise<boolean> {
+  if (step === null) return false;
+  const r = await db()
+    .update(users)
+    .set({ totpLastStep: step })
+    .where(and(eq(users.id, userId), or(isNull(users.totpLastStep), lt(users.totpLastStep, step))))
+    .returning({ id: users.id });
+  return r.length > 0;
 }
 
 export async function completeTwoFactor(
@@ -256,7 +272,7 @@ export async function completeTwoFactor(
   const code = input.code.replace(/\s+/g, '');
   const ok =
     !!u?.totpSecretEnc &&
-    (verifyTotp(decryptSecret(u.totpSecretEnc), code) ||
+    ((await claimTotpStep(userId, totpStep(decryptSecret(u.totpSecretEnc), code))) ||
       (code.length > 6 && (await consumeRecoveryCode(userId, code))));
   if (!u || !ok) {
     const locked = await twoFaLock.fail(userId);

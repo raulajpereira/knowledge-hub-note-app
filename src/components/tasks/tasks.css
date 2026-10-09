@@ -629,6 +629,9 @@ fieldset.kh-tk-detail:disabled .kh-tk-donebtn {
   background-repeat: no-repeat;
   background-position: right 11px center;
 }
+.kh-tk-shsel:focus-visible {
+  border-color: var(--kh-field-focus);
+}
 .kh-tk-shsel option {
   color: #2a211c;
 }

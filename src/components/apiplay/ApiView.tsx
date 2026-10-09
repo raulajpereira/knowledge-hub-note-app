@@ -390,8 +390,14 @@ export function ApiView() {
   );
   useEffect(() => {
     const map = timers.current;
-    return () => {
+    // leaving or reloading the page sends what is still waiting for the debounce
+    const hide = () => {
       for (const id of [...map.keys()]) flush(id);
+    };
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      hide();
     };
   }, [flush]);
   const upd = (id: string, p: Partial<Req>, delay = 500) => {
@@ -471,7 +477,12 @@ export function ApiView() {
     const tm = timers.current.get(act.id);
     if (tm) clearTimeout(tm.tm);
     timers.current.delete(act.id);
-    await api(`/api-requests/${act.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/api-requests/${act.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     const idx = list.findIndex((x) => x.id === act.id);
     const rest = list.filter((x) => x.id !== act.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== act.id));
@@ -493,7 +504,12 @@ export function ApiView() {
     }
   };
   const removeFolder = async (f: Folder) => {
-    await api(`/api-requests/folders/${f.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/api-requests/folders/${f.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     setFolders((cur) => cur.filter((x) => x.id !== f.id));
     setEnvs((cur) => cur.filter((e) => e.folderId !== f.id));
     setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: null } : x)));

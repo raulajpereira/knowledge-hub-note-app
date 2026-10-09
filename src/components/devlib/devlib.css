@@ -130,6 +130,9 @@
   background-position: right 10px center;
   background-size: 10px;
 }
+.kh-dl-sel:focus-visible {
+  border-color: var(--kh-field-focus);
+}
 .kh-dl-sel option {
   background-color: #2b2c33;
   color: #f4f2f0;

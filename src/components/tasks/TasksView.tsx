@@ -7,7 +7,7 @@ import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { fmtDue, localDay } from '@/lib/tasks';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { onActivateKey, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
@@ -643,7 +643,12 @@ export function TasksView() {
       danger: true,
     });
     if (!ok) return;
-    await api(`/tasks/${task.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/tasks/${task.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     const idx = list.findIndex((x) => x.id === task.id);
     const rest = list.filter((x) => x.id !== task.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== task.id));
@@ -804,7 +809,15 @@ export function TasksView() {
               const over = !done && !!x.dueOn && x.dueOn < today;
               const tod = x.dueOn === today;
               return (
-                <div key={x.id} className="kh-tk-item" data-on={on || undefined} onClick={() => open(x.id)}>
+                <div
+                  key={x.id}
+                  className="kh-tk-item"
+                  data-on={on || undefined}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => open(x.id)}
+                  onKeyDown={onActivateKey(() => open(x.id))}
+                >
                   <span
                     className="kh-tk-item__bar"
                     aria-hidden="true"

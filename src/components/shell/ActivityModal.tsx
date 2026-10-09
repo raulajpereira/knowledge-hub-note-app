@@ -47,9 +47,21 @@ export function ActivityModal({
   return (
     <Modal open={open} onClose={onClose} title={t('activity')} closeLabel={t('i_close')}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-        <input type="date" className="kh-date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <input
+          type="date"
+          className="kh-date"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          aria-label={t('act_fromDate')}
+        />
         <span style={{ fontSize: 14, color: 'rgba(255,248,240,.65)' }}>{t('actTo')}</span>
-        <input type="date" className="kh-date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <input
+          type="date"
+          className="kh-date"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          aria-label={t('act_toDate')}
+        />
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {presets.map(([label, a, b]) => (

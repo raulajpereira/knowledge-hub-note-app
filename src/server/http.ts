@@ -30,9 +30,25 @@ export function errorResponse(err: unknown, where?: string) {
       { status: 400 },
     );
   }
+  // database refusals the services didn't map themselves: a clear 4xx, not a 500
+  const pg = pgCode(err);
+  if (pg === '23505')
+    return json({ error: { code: 'conflict', message: 'Already exists' } }, { status: 409 });
+  if (pg === '42501') return json({ error: { code: 'forbidden', message: 'Not allowed' } }, { status: 403 });
+  if (pg === '23503')
+    return json({ error: { code: 'invalid_reference', message: 'Unknown reference' } }, { status: 400 });
   console.error(`[api] unhandled${where ? ` ${where}` : ''}`, err);
   countServerError();
   return json({ error: { code: 'internal', message: 'Internal error' } }, { status: 500 });
+}
+
+/** The SQLSTATE of a Postgres error (also when wrapped by the query builder). */
+function pgCode(err: unknown): string | undefined {
+  for (let e = err as { code?: unknown; cause?: unknown } | undefined, i = 0; e && i < 4; i++) {
+    if (typeof e.code === 'string' && /^[0-9A-Z]{5}$/.test(e.code)) return e.code;
+    e = e.cause as typeof e;
+  }
+  return undefined;
 }
 
 /** Client IP as seen by the reverse proxy (Nginx / Caddy set X-Real-IP). */

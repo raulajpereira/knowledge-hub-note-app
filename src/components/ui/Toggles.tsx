@@ -43,9 +43,7 @@ export function Switch({ checked, onChange, label, className, ...rest }: SwitchP
       className={cx('kh-switch', className)}
       onClick={() => onChange(!checked)}
       {...rest}
-    >
-      <span className="kh-switch__knob" />
-    </button>
+    />
   );
 }
 

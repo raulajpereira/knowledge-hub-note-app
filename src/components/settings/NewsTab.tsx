@@ -145,7 +145,7 @@ export function NewsTab() {
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder="https://…/rss"
-          aria-label="URL"
+          aria-label={t('p_url')}
           spellCheck={false}
         />
         <button

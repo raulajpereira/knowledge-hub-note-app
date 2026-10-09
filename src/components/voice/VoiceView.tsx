@@ -687,7 +687,12 @@ export function VoiceView() {
       danger: true,
     });
     if (!ok) return;
-    await api(`/voice/${active.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/voice/${active.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     const idx = list.findIndex((x) => x.id === active.id);
     const rest = list.filter((x) => x.id !== active.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== active.id));

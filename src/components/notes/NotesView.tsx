@@ -796,6 +796,11 @@ export function NotesView() {
       });
       if ('favorite' in p.patch) void loadFolders();
     } catch (e) {
+      // keep the unsaved fields (newer edits win) so the next flush retries them
+      // (re-read: an edit made while the request was in flight may have set it)
+      const cur = pending.current as typeof p | null;
+      if (!cur) pending.current = { id: p.id, patch: p.patch, timer: null };
+      else if (cur.id === p.id) cur.patch = { ...p.patch, ...cur.patch };
       toast({
         message: t(isApiFailure(e) && e.code === 'doc_too_large' ? 'ne_imgBig' : 'ne_saveFail'),
         tone: 'error',
@@ -868,7 +873,12 @@ export function NotesView() {
     });
     if (!ok) return;
     pending.current = null;
-    await notesApi.trash(note.id).catch(() => {});
+    try {
+      await notesApi.trash(note.id);
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     const idx = items.findIndex((x) => x.id === note.id);
     const rest = items.filter((x) => x.id !== note.id);
     setItems(rest);

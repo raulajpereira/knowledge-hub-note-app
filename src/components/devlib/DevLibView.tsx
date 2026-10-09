@@ -110,8 +110,14 @@ export function DevLibView() {
   );
   useEffect(() => {
     const map = pending.current;
-    return () => {
+    // leaving or reloading the page sends what is still waiting for the debounce
+    const hide = () => {
       for (const id of [...map.keys()]) void flush(id);
+    };
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      hide();
     };
   }, [flush]);
   const upd = (id: string, p: Patch, delay = 500) => {
@@ -201,7 +207,12 @@ export function DevLibView() {
     const tm = pending.current.get(sel.id);
     if (tm) clearTimeout(tm.tm);
     pending.current.delete(sel.id);
-    await api(`/snippets/${sel.id}`, undefined, 'DELETE').catch(() => {});
+    try {
+      await api(`/snippets/${sel.id}`, undefined, 'DELETE');
+    } catch {
+      toast({ message: t('ui_delFail'), tone: 'error' });
+      return;
+    }
     setItems(
       (cur) =>
         cur &&

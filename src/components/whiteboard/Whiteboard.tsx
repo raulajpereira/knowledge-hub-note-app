@@ -2,7 +2,7 @@
 
 import { Component, type ReactNode } from 'react';
 import { api, isApiFailure } from '@/lib/client/api';
-import type { ConfirmOptions } from '@/components/ui';
+import { onActivateKey, type ConfirmOptions } from '@/components/ui';
 import {
   isBox,
   isLine,
@@ -2276,7 +2276,10 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
                     key={x.id}
                     className="kh-wb-brow"
                     data-on={x.id === b.id || undefined}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => this.setActive(x.id)}
+                    onKeyDown={onActivateKey(() => this.setActive(x.id))}
                   >
                     <div className="kh-wb-brow__pv">{this.preview(x)}</div>
                     <div className="kh-wb-brow__txt">

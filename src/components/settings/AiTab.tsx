@@ -102,7 +102,7 @@ export function AiTab() {
               type="button"
               role="switch"
               aria-checked={ai.enabled}
-              aria-label={t('ai_on')}
+              aria-label={t('ai_title')}
               className="kh-toggle"
               onClick={() => void save(!ai.enabled)}
             />

@@ -475,35 +475,33 @@ textarea.kh-input--md {
 
 /* Switch (Definições). */
 .kh-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
   flex: none;
-  width: 38px;
-  height: 22px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
   cursor: pointer;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  transition: background 0.15s;
-}
-.kh-switch__knob {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: rgba(255, 248, 240, 0.8);
-  margin-left: 0;
-  transition: margin 0.15s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  padding: 0;
 }
 .kh-switch[aria-checked='true'] {
-  background: #fbf8f5;
-  border-color: #fbf8f5;
+  background: oklch(0.72 0.15 150);
 }
-.kh-switch[aria-checked='true'] .kh-switch__knob {
-  background: #2a211c;
-  margin-left: 16px;
+.kh-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fbf8f5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: left 0.18s;
+}
+.kh-switch[aria-checked='true']::after {
+  left: 23px;
 }
 .kh-switch:disabled {
   opacity: 0.5;

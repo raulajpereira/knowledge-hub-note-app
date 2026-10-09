@@ -78,10 +78,11 @@ export function useReauth() {
             setErr('');
           }}
           autoComplete="current-password"
-          placeholder="Password"
+          placeholder={t('login_password')}
+          aria-label={t('login_password')}
           data-autofocus=""
           invalid={Boolean(err)}
-          toggleLabel="Password"
+          toggleLabel={t('login_eye')}
         />
         {err && <span style={{ fontSize: 12.5, color: 'var(--kh-error-text)' }}>{err}</span>}
         <div className="kh-modal__foot">
