@@ -110,6 +110,16 @@ test('write a record, a task from a to-do, on the Calendar, Trash', async ({ pag
     ),
   });
   await expect(page.locator('.kh-mt-doc img[src*="/api/v1/meetings/files/"]')).toHaveCount(1);
+  // an image of the app copied with "Copy image" arrives as its full address: stored again, not refused
+  await page.locator('.kh-mt-doc .ProseMirror p').first().click();
+  await page.keyboard.press('End');
+  await page.locator('.kh-mt-doc .ProseMirror').evaluate((el) => {
+    const src = el.querySelector('img')!.src;
+    const dt = new DataTransfer();
+    dt.setData('text/html', `<!--StartFragment--><img src="${src}"/><!--EndFragment-->`);
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  await expect(page.locator('.kh-mt-doc img[src*="/api/v1/meetings/files/"]')).toHaveCount(2);
   await page.getByRole('button', { name: '+ Ponto' }).click();
   await page.getByLabel('Pontos a rever 1').fill('Validar rubricas');
   await page.getByRole('button', { name: '+ Ação' }).click();
@@ -132,7 +142,7 @@ test('write a record, a task from a to-do, on the Calendar, Trash', async ({ pag
     '09:30–10:30 · 2 pessoas',
   );
   await expect(page.getByLabel('Temas discutidos')).toHaveText('Âmbito da fase 2 e calendário do go-live.');
-  await expect(page.locator('.kh-mt-doc img[src*="/api/v1/meetings/files/"]')).toHaveCount(1);
+  await expect(page.locator('.kh-mt-doc img[src*="/api/v1/meetings/files/"]')).toHaveCount(2);
   await expect(page.getByLabel('Coisas a fazer 2')).toHaveValue('Enviar ata ao cliente');
 
   // on the Calendar, on its day, with the time

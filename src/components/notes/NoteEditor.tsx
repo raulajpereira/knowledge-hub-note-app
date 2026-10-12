@@ -254,7 +254,11 @@ export function useNoteEditor({
           if (!ed) return false;
           const cd = event.clipboardData;
           const files = [...(cd?.files ?? [])].filter((f) => f.type.startsWith('image/'));
-          if (files.length && !cd?.getData('text/html')) {
+          // a copied image comes as the bitmap plus an <img> with its address: the bitmap is the reliable part
+          const html = cd?.getData('text/html') ?? '';
+          const onlyImages =
+            !html || !new DOMParser().parseFromString(html, 'text/html').body.textContent?.trim();
+          if (files.length && onlyImages) {
             event.preventDefault();
             void uploadFiles(ed, files);
             return true;

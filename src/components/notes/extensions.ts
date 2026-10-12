@@ -27,7 +27,15 @@ export const NoteImage = Image.extend({
       src: {
         default: null,
         parseHTML: (el) => {
-          const src = el.getAttribute('src') ?? '';
+          let src = el.getAttribute('src') ?? '';
+          // "Copy image" puts the full address on the clipboard: the app's own images go back to their path
+          try {
+            const u = new URL(src, window.location.href);
+            if (/^https?:$/.test(u.protocol) && u.origin === window.location.origin && !u.search)
+              src = u.pathname;
+          } catch {
+            /* not a URL */
+          }
           return BASE && src.startsWith(BASE) && STORED.test(src.slice(BASE.length))
             ? src.slice(BASE.length)
             : src;
