@@ -11,15 +11,21 @@ export const GET = handler(async (req) => {
   const folder = sp.get('folder');
   const sh = sp.get('shared');
   const shared = sh ? await reachableFolder(auth, z.uuid().parse(sh)) : undefined;
-  if (shared && shared.kind !== 'notes') return json({ notes: [] });
-  return json({
-    notes: await listNotes(auth, {
-      shared,
-      folder: folder ? z.uuid().parse(folder) : undefined,
-      fav: sp.get('fav') === '1',
-      search: sp.get('q')?.trim().slice(0, 200) || undefined,
-    }),
+  if (shared && shared.kind !== 'notes') return json({ notes: [], next: null });
+  // pages of 200, newest first; `next` is the cursor for the following page
+  const PAGE = 200;
+  const list = await listNotes(auth, {
+    shared,
+    folder: folder ? z.uuid().parse(folder) : undefined,
+    fav: sp.get('fav') === '1',
+    search: sp.get('q')?.trim().slice(0, 200) || undefined,
+    after: sp.get('after')?.slice(0, 80) || undefined,
+    limit: PAGE + 1,
   });
+  const more = list.length > PAGE;
+  const notes = more ? list.slice(0, PAGE) : list;
+  const last = notes.at(-1);
+  return json({ notes, next: more && last ? `${last.updatedAt}|${last.id}` : null });
 });
 
 export const POST = handler(async (req) => {

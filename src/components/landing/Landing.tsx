@@ -151,8 +151,7 @@ export function Landing({ plans, entity }: { plans: LandingPlan[]; entity: Entit
 
 /** A small, static picture of the app (fictional content): sidebar, a note and tasks. */
 function Preview() {
-  const { lang } = useI18n();
-  const en = lang === 'en';
+  const { t } = useI18n();
   return (
     <div className="kh-lp-prev" aria-hidden="true">
       <div className="kh-lp-prev__side">
@@ -164,23 +163,19 @@ function Preview() {
       </div>
       <div className="kh-lp-prev__body">
         <div className="kh-lp-prev__card kh-lp-prev__note">
-          <b>{en ? 'Cutover plan · wave 2' : 'Plano de cutover · vaga 2'}</b>
-          <span>
-            {en ? 'Freeze transports on Friday 18:00.' : 'Congelar ordens de transporte na sexta às 18h.'}
-          </span>
-          <span>
-            {en ? 'Data migration dry-run: 3 objects left.' : 'Ensaio da migração: faltam 3 objetos.'}
-          </span>
+          <b>{t('lp_prevNote')}</b>
+          <span>{t('lp_prevNote1')}</span>
+          <span>{t('lp_prevNote2')}</span>
           <span className="kh-lp-prev__tags">
             <i>SAP</i>
-            <i>{en ? 'Project' : 'Projeto'}</i>
+            <i>{t('lp_prevTag')}</i>
           </span>
         </div>
         <div className="kh-lp-prev__card">
           {[
-            [en ? 'Review FI interface mapping' : 'Rever mapeamento da interface FI', true],
-            [en ? 'Prepare UAT scripts' : 'Preparar guiões de UAT', false],
-            [en ? 'Allocate team for March' : 'Alocar equipa para março', false],
+            [t('lp_prevTask1'), true],
+            [t('lp_prevTask2'), false],
+            [t('lp_prevTask3'), false],
           ].map(([l, done]) => (
             <span key={String(l)} className="kh-lp-prev__task" data-done={done || undefined}>
               <i />

@@ -10,7 +10,7 @@ export type Member = {
   email: string;
   name: string;
   perm: 'read' | 'edit';
-  status: 'invited' | 'active';
+  status: 'invited' | 'pending' | 'active';
   paused: boolean;
   personPaused: boolean;
 };

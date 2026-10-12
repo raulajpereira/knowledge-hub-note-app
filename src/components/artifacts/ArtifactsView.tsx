@@ -80,7 +80,7 @@ const I = {
 const SH = 'sh:';
 
 export function ArtifactsView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -330,7 +330,7 @@ export function ArtifactsView() {
       (!query || [a.title, a.description, ...a.tags].some((v) => v.toLowerCase().includes(query))),
   );
   const fmtStamp = (iso: string) =>
-    new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', {
+    new Date(iso).toLocaleString(t('locale'), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -352,7 +352,7 @@ export function ArtifactsView() {
 
   return (
     <div
-      className="kh-em"
+      className="kh-em kh-page-card"
       style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
     >
       {!focus && (

@@ -26,7 +26,35 @@ export const TX_MODS: Record<string, string> = {
 export const TX_MOD_IDS = Object.keys(TX_MODS);
 export const TX_TYPES = ['dialog', 'report', 'param', 'variant', 'oo', 'area'] as const;
 export type TxType = (typeof TX_TYPES)[number];
-export const modColor = (m: string) => TX_MODS[m] ?? 'oklch(0.8 0.02 60)';
+
+/**
+ * Transaction modules are open-ended: the built-in ones above plus any the
+ * tenant types in (stored upper-case, single spaces, 1–20 letters, digits,
+ * spaces, "-" or "_").
+ */
+export const TX_MOD_MAX = 20;
+export const TX_MOD_RE = /^[\p{L}\p{N}_-](?:[\p{L}\p{N} _-]{0,18}[\p{L}\p{N}_-])?$/u;
+export const normTxMod = (m: string) => m.trim().replace(/\s+/g, ' ').toUpperCase();
+/** The typed text as a module name, or null when it is not a valid one. */
+export const parseTxMod = (m: string) => {
+  const v = normTxMod(m);
+  return TX_MOD_RE.test(v) ? v : null;
+};
+/** The built-in modules first, then the tenant's own (alphabetical). */
+export const txModules = (used: Iterable<string>) => {
+  const extra = new Set<string>();
+  for (const m of used) if (m && !(m in TX_MODS)) extra.add(m);
+  return [...TX_MOD_IDS, ...[...extra].sort((a, b) => a.localeCompare(b))];
+};
+/** Built-ins keep their colour; any other module gets a stable hue from its name. */
+export const modColor = (m: string) => {
+  const c = TX_MODS[m];
+  if (c) return c;
+  if (!m) return 'oklch(0.8 0.02 60)';
+  let h = 0x811c9dc5;
+  for (let i = 0; i < m.length; i++) h = Math.imul(h ^ m.charCodeAt(i), 0x01000193) >>> 0;
+  return `oklch(0.8 0.11 ${h % 360})`;
+};
 
 /** The catalogue a tenant starts with: [code, description, module, program, type]. */
 export { TX_CATALOG as TX_SEED } from './sapTcodeCatalog';

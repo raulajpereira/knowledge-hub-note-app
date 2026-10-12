@@ -91,7 +91,7 @@ const PEN = '<path d="M4 20h4L19 9l-4-4L4 16z"></path>';
 const DOT = '<circle cx="12" cy="12" r="3"></circle>';
 
 export function TransportsView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const when = useWhen();
@@ -138,7 +138,6 @@ export function TransportsView() {
     };
   }, [fOpen]);
   const fail = useCallback(() => toast({ message: t('ne_saveFail'), tone: 'error' }), [toast, t]);
-  const en = lang === 'en';
 
   useEffect(() => {
     void api<{ transports: Transport[]; systems: Sys[]; clients: Client[] }>('/sap/transports')
@@ -399,13 +398,13 @@ export function TransportsView() {
     [
       'client',
       t('s_customer'),
-      [{ v: '', l: en ? 'No client' : 'Sem cliente' }, ...clients.map((c) => ({ v: c.id, l: c.name }))],
+      [{ v: '', l: t('ot_noClient') }, ...clients.map((c) => ({ v: c.id, l: c.name }))],
     ],
     [
       'proj',
       t('c_project'),
       [
-        { v: '', l: en ? 'No project' : 'Sem projeto' },
+        { v: '', l: t('ot_noProject') },
         ...projects
           .filter((p) => !fOn('client') || filters.client!.includes(p.client))
           .map((p) => ({ v: p.id, l: projectLabel(p), dot: p.color })),
@@ -588,7 +587,7 @@ export function TransportsView() {
               sel.length === 1
                 ? (opts.find((o) => o.v === sel[0])?.l ?? '')
                 : sel.length
-                  ? `${sel.length}${en ? ' selected' : ' selecionados'}`
+                  ? t('ot_selN').replace('{n}', String(sel.length))
                   : '';
             return (
               <div key={k} className="kh-ot-f">
@@ -672,7 +671,7 @@ export function TransportsView() {
           })}
           {nAct > 0 && (
             <button type="button" className="kh-ot-clear" onClick={() => setFilters({})}>
-              {en ? 'Clear filters' : 'Limpar filtros'}
+              {t('ot_clearF')}
             </button>
           )}
           <span className="kh-ot-count">

@@ -3,7 +3,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Registos Reuniões: records with participants, topics, checklists, a task from a to-do, Calendar, Trash.
+// Registos Reuniões: records with participants, topics (with an image), checklists, a task from a
+// to-do, a link to another record, Calendar, Trash.
 test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 } });
 test.describe.configure({ mode: 'serial' });
 
@@ -95,6 +96,20 @@ test('write a record, a task from a to-do, on the Calendar, Trash', async ({ pag
   await page.getByRole('button', { name: 'Eliminar Pedro Almeida' }).click();
 
   await page.getByLabel('Temas discutidos').fill('Âmbito da fase 2 e calendário do go-live.');
+  // the topics are the Notes editor: an image is stored with the record
+  await page
+    .getByRole('toolbar', { name: 'Formatação dos temas' })
+    .getByRole('button', { name: 'Imagem' })
+    .click();
+  await page.locator('.kh-mt-doc input[type=file]').setInputFiles({
+    name: 'quadro.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  });
+  await expect(page.locator('.kh-mt-doc img[src*="/api/v1/meetings/files/"]')).toHaveCount(1);
   await page.getByRole('button', { name: '+ Ponto' }).click();
   await page.getByLabel('Pontos a rever 1').fill('Validar rubricas');
   await page.getByRole('button', { name: '+ Ação' }).click();
@@ -116,7 +131,8 @@ test('write a record, a task from a to-do, on the Calendar, Trash', async ({ pag
   await expect(page.locator('.kh-mt-item', { hasText: 'Kick-off Atlas' })).toContainText(
     '09:30–10:30 · 2 pessoas',
   );
-  await expect(page.getByLabel('Temas discutidos')).toHaveValue('Âmbito da fase 2 e calendário do go-live.');
+  await expect(page.getByLabel('Temas discutidos')).toHaveText('Âmbito da fase 2 e calendário do go-live.');
+  await expect(page.locator('.kh-mt-doc img[src*="/api/v1/meetings/files/"]')).toHaveCount(1);
   await expect(page.getByLabel('Coisas a fazer 2')).toHaveValue('Enviar ata ao cliente');
 
   // on the Calendar, on its day, with the time
@@ -137,9 +153,14 @@ test('write a record, a task from a to-do, on the Calendar, Trash', async ({ pag
   await page.getByLabel('Tema da reunião').fill('Workshop Payroll');
   await expect(page.getByLabel('Pasta', { exact: true })).toHaveValue(/.+/);
   await expect(atlas.locator('.kh-em-count')).toHaveText('1');
+  // a link to another meeting record (never itself), shown in both
+  await page.getByLabel('Pesquisar itens para ligar…').fill('Kick-off');
+  await page.getByRole('option', { name: /Kick-off Atlas/ }).click();
+  await expect(page.locator('.kh-cx__link', { hasText: 'Kick-off Atlas' })).toBeVisible();
   await page.locator('.kh-em-folder', { hasText: 'Todos os registos' }).click();
   await expect(page.locator('.kh-mt-item')).toHaveCount(2);
   await page.locator('.kh-mt-item', { hasText: 'Kick-off Atlas' }).click();
+  await expect(page.locator('.kh-cx__link', { hasText: 'Workshop Payroll' })).toBeVisible();
   await page.getByLabel('Pasta', { exact: true }).selectOption({ label: 'Projeto Atlas' });
   await expect(atlas.locator('.kh-em-count')).toHaveText('2');
   // deleting the folder keeps its records

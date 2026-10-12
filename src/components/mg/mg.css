@@ -138,7 +138,9 @@
 .mg-photo__rm {
   right: -6px;
   top: -6px;
-  background: rgba(42, 33, 28, 0.92);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12));
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
   color: #fbf8f5;
   border-color: rgba(255, 255, 255, 0.25);
 }

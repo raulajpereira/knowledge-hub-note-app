@@ -586,8 +586,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
 }
 
 function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
-  const { D, lang, tr, wk, dIso } = mg;
-  const en = lang === 'en';
+  const { D, tr, wk, dIso } = mg;
   const p = mg.pById[c.pid]!;
   const isD = c.di != null;
   const cov = D.allocs.filter((a) => a.person === p.id && mg.inW(a, c.w));
@@ -608,7 +607,7 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
         <div style={css('display:flex;flex-direction:column;gap:2px;')}>
           <span style={css('font-size:14px;font-weight:600;')}>{p.name}</span>
           <span style={css('font-size:12px;color:rgba(255,248,240,.8);')}>
-            {isD ? key.split('-').reverse().join('/') : `${en ? 'Week of ' : 'Semana de '}${wLblY(key)}`}
+            {isD ? key.split('-').reverse().join('/') : tr(`Semana de ${wLblY(key)}`)}
           </span>
         </div>
         {cov.map((a) => {
@@ -649,8 +648,8 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
               {changed && (
                 <button
                   type="button"
-                  title={en ? 'Reset' : 'Repor'}
-                  aria-label={en ? 'Reset' : 'Repor'}
+                  title={tr('Repor')}
+                  aria-label={tr('Repor')}
                   onClick={() =>
                     mg.upd((d) => {
                       const x = d.allocs.find((y) => y.id === a.id)!;
@@ -669,7 +668,7 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
         })}
         {!cov.length && (
           <span style={css('font-size:12.5px;color:rgba(255,248,240,.75);')}>
-            {en ? 'No allocation in this period.' : 'Sem alocações neste período.'}
+            {tr('Sem alocações neste período.')}
           </span>
         )}
       </div>
@@ -703,7 +702,7 @@ function AllocPanel({
   pDown: (e: React.PointerEvent) => void;
   pReset: () => void;
 }) {
-  const { D, lang, wk, wi, dIso } = mg;
+  const { D, lang, tr, wk, wi, dIso } = mg;
   const en = lang === 'en';
   const set = (p: Partial<Modal>) => setM({ ...m, ...p });
   const mask = m.mask;
@@ -735,15 +734,15 @@ function AllocPanel({
         .reduce((s, a) => s + mg.aWeek(a, w), 0);
       peak = Math.max(peak, other + perWeek);
     }
-  const WD = en ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] : ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
+  const WD = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map((d) => tr(d));
   const fmtD = (s: string) => (s ? s.split('-').reverse().join('/') : '—');
   const hf = (n: number) => `${(Math.round(n * 10) / 10).toString().replace('.', en ? '.' : ',')}h`;
   const sum: Array<[string, string, string]> = [
-    [en ? 'Ends on' : 'Termina a', fmtD(last), '#fbf8f5'],
-    ['Total', `${hf(total)} · ${dates.length}${en ? ' days' : ' dias'}`, '#fbf8f5'],
-    [en ? 'Per week' : 'Por semana', hf(perWeek), '#fbf8f5'],
+    [tr('Termina a'), fmtD(last), '#fbf8f5'],
+    ['Total', `${hf(total)} · ${tr('{n} dias').replace('{n}', String(dates.length))}`, '#fbf8f5'],
+    [tr('Por semana'), hf(perWeek), '#fbf8f5'],
     [
-      en ? 'Peak weekly load' : 'Carga semanal máxima',
+      tr('Carga semanal máxima'),
       `${hf(peak)} / ${cap}h`,
       peak > cap ? 'oklch(0.84 0.14 30)' : peak >= cap * 0.9 ? 'oklch(0.86 0.13 150)' : 'oklch(0.86 0.12 85)',
     ],
@@ -775,7 +774,7 @@ function AllocPanel({
     });
     setM(null);
   };
-  const title = m.id ? (en ? 'Edit Allocation' : 'Editar Alocação') : en ? 'New Allocation' : 'Nova Alocação';
+  const title = m.id ? tr('Editar Alocação') : tr('Nova Alocação');
   return (
     <aside
       aria-label={title}
@@ -807,7 +806,7 @@ function AllocPanel({
         <span style={css('flex:1;font-size:18px;font-weight:600;letter-spacing:-.01em;')}>{title}</span>
         <button
           type="button"
-          aria-label={en ? 'Close' : 'Fechar'}
+          aria-label={tr('Fechar')}
           onClick={() => setM(null)}
           style={css(
             'width:32px;height:32px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;',
@@ -822,7 +821,7 @@ function AllocPanel({
         )}
       >
         <label style={css('display:flex;flex-direction:column;gap:6px;')}>
-          <span style={css(LBL)}>{en ? 'Resource' : 'Recurso'}</span>
+          <span style={css(LBL)}>{tr('Recurso')}</span>
           <Sel
             value={m.person}
             onChange={(v) => set({ person: v, fn: '' })}
@@ -830,18 +829,18 @@ function AllocPanel({
               (o) => o.v === m.person || isAvailable(mg.pById[o.v] ?? { status: 'Ativo' }),
             )}
             s={SEL}
-            label={en ? 'Resource' : 'Recurso'}
+            label={tr('Recurso')}
             pos="right 12px center"
           />
         </label>
         <label style={css('display:flex;flex-direction:column;gap:6px;')}>
-          <span style={css(LBL)}>{en ? 'Project' : 'Projeto'}</span>
+          <span style={css(LBL)}>{tr('Projeto')}</span>
           <Sel
             value={m.project}
             onChange={(v) => set({ project: v })}
             opts={mg.projOpt}
             s={SEL}
-            label={en ? 'Project' : 'Projeto'}
+            label={tr('Projeto')}
             pos="right 12px center"
           />
         </label>
@@ -852,33 +851,33 @@ function AllocPanel({
               'padding:10px 14px;border-radius:14px;background:oklch(0.7 0.14 50 / .16);border:1px solid oklch(0.78 0.14 55 / .4);font-size:12.5px;line-height:1.45;',
             )}
           >
-            {en
-              ? `${pr.name} is ${mg.tr(pr.status).toLowerCase()}${pr.statusNote ? ` — ${pr.statusNote}` : ''}.`
-              : `${pr.name} está ${pr.status.toLowerCase()}${pr.statusNote ? ` — ${pr.statusNote}` : ''}.`}
+            {tr('{x} está {s}.')
+              .replace('{x}', pr.name)
+              .replace('{s}', `${tr(pr.status).toLowerCase()}${pr.statusNote ? ` — ${pr.statusNote}` : ''}`)}
           </div>
         )}
         <div style={css('display:flex;flex-direction:column;gap:6px;')}>
           <label htmlFor="mg-al-fn" style={css(LBL)}>
-            {en ? 'Role in the project' : 'Função no projeto'}
+            {tr('Função no projeto')}
           </label>
           <input
             id="mg-al-fn"
             value={m.fn}
             maxLength={120}
-            placeholder={en ? 'E.g. FI lead, ABAP developer…' : 'Ex.: Líder FI, Programador ABAP…'}
+            placeholder={tr('Ex.: Líder FI, Programador ABAP…')}
             onChange={(e) => set({ fn: e.target.value })}
             style={css(INP)}
           />
           {pr && Object.keys(pr.skills).length > 0 && (
             <div
               role="group"
-              aria-label={en ? "The person's skills" : 'Competências da pessoa'}
+              aria-label={tr('Competências da pessoa')}
               style={css('display:flex;flex-wrap:wrap;gap:6px;')}
             >
               {Object.entries(pr.skills)
                 .sort((a, b) => b[1] - a[1])
                 .map(([k, lv]) => {
-                  const name = mg.tr(mg.SKN[k] ?? k);
+                  const name = tr(mg.SKN[k] ?? k);
                   const on = m.fn.trim() === name;
                   return (
                     <button
@@ -902,7 +901,7 @@ function AllocPanel({
         </div>
         <div style={css('display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px;')}>
           <label style={css('display:flex;flex-direction:column;gap:6px;min-width:0;')}>
-            <span style={css(LBL)}>{en ? 'Start date' : 'Data de início'}</span>
+            <span style={css(LBL)}>{tr('Data de início')}</span>
             <input
               type="date"
               value={m.start}
@@ -911,7 +910,7 @@ function AllocPanel({
             />
           </label>
           <label style={css('display:flex;flex-direction:column;gap:6px;min-width:0;')}>
-            <span style={css(LBL)}>{en ? 'Hours per day' : 'Horas por dia'}</span>
+            <span style={css(LBL)}>{tr('Horas por dia')}</span>
             <input
               type="number"
               min={0.5}
@@ -926,7 +925,7 @@ function AllocPanel({
           </label>
         </div>
         <div style={css('display:flex;flex-direction:column;gap:6px;')}>
-          <span style={css(LBL)}>{en ? 'Number of working days' : 'Número de dias úteis'}</span>
+          <span style={css(LBL)}>{tr('Número de dias úteis')}</span>
           <span style={css('display:flex;align-items:center;gap:8px;')}>
             <button
               type="button"
@@ -940,7 +939,7 @@ function AllocPanel({
               type="number"
               min={1}
               max={400}
-              aria-label={en ? 'Number of working days' : 'Número de dias úteis'}
+              aria-label={tr('Número de dias úteis')}
               value={m.days}
               onChange={(e) => set({ days: e.target.value })}
               style={css(
@@ -958,7 +957,7 @@ function AllocPanel({
           </span>
         </div>
         <div style={css('display:flex;flex-direction:column;gap:6px;')}>
-          <span style={css(LBL)}>{en ? 'Working days' : 'Dias da semana'}</span>
+          <span style={css(LBL)}>{tr('Dias da semana')}</span>
           <div style={css('display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;')}>
             {WD.map((l, i) => {
               const on = !!mask[i];
@@ -1008,10 +1007,10 @@ function AllocPanel({
             )}
           >
             {tooLong
-              ? en
-                ? 'The period is too long (at most 160 weeks).'
-                : 'O período é demasiado longo (máximo 160 semanas).'
-              : `${en ? `This allocation puts ${pr?.name ?? ''} above capacity (` : `Esta alocação deixa ${pr?.name ?? ''} acima da capacidade (`}${hf(peak)} / ${cap}h).`}
+              ? tr('O período é demasiado longo (máximo 160 semanas).')
+              : tr('Esta alocação deixa {x} acima da capacidade ({h}).')
+                  .replace('{x}', pr?.name ?? '')
+                  .replace('{h}', `${hf(peak)} / ${cap}h`)}
           </div>
         )}
       </div>
@@ -1031,7 +1030,7 @@ function AllocPanel({
               'height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,170,150,.4);background:transparent;color:#ffc9b8;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;',
             )}
           >
-            {en ? 'Remove' : 'Remover'}
+            {tr('Remover')}
           </button>
         )}
         <span style={css('flex:1;')} />
@@ -1042,7 +1041,7 @@ function AllocPanel({
             'height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fbf8f5;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;',
           )}
         >
-          {en ? 'Cancel' : 'Cancelar'}
+          {tr('Cancelar')}
         </button>
         <button
           type="button"
@@ -1052,7 +1051,7 @@ function AllocPanel({
             'height:40px;padding:0 18px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;',
           )}
         >
-          {en ? 'Save' : 'Guardar'}
+          {tr('Guardar')}
         </button>
       </div>
     </aside>

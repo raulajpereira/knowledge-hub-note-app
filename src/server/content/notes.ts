@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import {
   apiRequests,
   artifacts,
@@ -42,7 +42,7 @@ import { audit } from '@/server/audit';
 import { assertWithinLimit } from '@/server/licensing/entitlements';
 import { sniffImage } from '@/server/assets';
 import type { AuthContext } from '@/server/auth/session';
-import { asSharer, asUser } from './tenant';
+import { asSharer, asUser, lockLimit, removeFilesAfterCommit } from './tenant';
 import { folderError } from './folderError';
 
 export { folderError };
@@ -191,6 +191,7 @@ export async function duplicateFolder(auth: AuthContext, id: string, copySuffix:
       .select()
       .from(notes)
       .where(and(eq(notes.folderId, id), isNull(notes.deletedAt)));
+    await lockLimit(tx, auth.tenant.id, 'notes');
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(notes)
@@ -232,7 +233,15 @@ export async function duplicateFolder(auth: AuthContext, id: string, copySuffix:
 // ── Notes ──────────────────────────────────────────────────────────────────
 export async function listNotes(
   auth: AuthContext,
-  q: { folder?: string; fav?: boolean; search?: string; shared?: { id: string; folderId: string | null } },
+  q: {
+    folder?: string;
+    fav?: boolean;
+    search?: string;
+    shared?: { id: string; folderId: string | null };
+    /** the next page starts after this note (cursor "updatedAt|id" from the previous page) */
+    after?: string;
+    limit?: number;
+  },
 ) {
   // a shared folder's list runs with the share scope (the notes of every member)
   return (q.shared ? asSharer : asUser)(auth, async (tx) => {
@@ -255,12 +264,21 @@ export async function listNotes(
         )!,
       );
     }
+    if (q.after) {
+      const [at, id] = q.after.split('|');
+      const d = new Date(at ?? '');
+      if (!Number.isNaN(d.getTime()) && id && /^[0-9a-f-]{36}$/i.test(id))
+        // compared at millisecond precision, like the cursor (the column keeps microseconds)
+        conds.push(
+          sql`(date_trunc('milliseconds', ${notes.updatedAt}), ${notes.id}) < (${d.toISOString()}::timestamptz, ${id}::uuid)`,
+        );
+    }
     const rows = await tx
       .select(listCols)
       .from(notes)
       .where(and(...conds))
-      .orderBy(desc(notes.updatedAt))
-      .limit(500);
+      .orderBy(desc(sql`date_trunc('milliseconds', ${notes.updatedAt})`), desc(notes.id))
+      .limit(Math.min(q.limit ?? 500, 500));
     return rows.map((r) => toItem(r as ListRow, auth.user.id));
   });
 }
@@ -292,6 +310,7 @@ export async function createNote(
   input: { folderId?: string | null; title?: string; sharedFolderId?: string | null },
 ) {
   return asUser(auth, async (tx) => {
+    await lockLimit(tx, auth.tenant.id, 'notes');
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(notes)
@@ -371,6 +390,7 @@ export async function duplicateNote(auth: AuthContext, id: string, copySuffix: s
       .from(notes)
       .where(and(eq(notes.id, id), isNull(notes.deletedAt)));
     if (!src) throw new ApiError(404, 'not_found');
+    await lockLimit(tx, auth.tenant.id, 'notes');
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(notes)
@@ -744,10 +764,10 @@ async function purgeNotesTx(tx: Tx, ids0: string[]) {
     .returning({ key: noteAttachments.storageKey });
   await unlinkAll(tx, 'note', ids);
   await tx.delete(notes).where(inArray(notes.id, ids));
-  for (const f of files)
-    await s3()
-      .send(new DeleteObjectCommand({ Bucket: env().S3_BUCKET, Key: f.key }))
-      .catch(() => {});
+  removeFilesAfterCommit(
+    tx,
+    files.map((f) => f.key),
+  );
 }
 
 export async function purgeTrash(
@@ -988,10 +1008,10 @@ export async function purgeTrash(
         .delete(voiceNotes)
         .where(and(inArray(voiceNotes.id, vIds), isNotNull(voiceNotes.deletedAt)))
         .returning({ key: voiceNotes.storageKey });
-      for (const g of gone)
-        await s3()
-          .send(new DeleteObjectCommand({ Bucket: env().S3_BUCKET, Key: g.key }))
-          .catch(() => {});
+      removeFilesAfterCommit(
+        tx,
+        gone.map((g) => g.key),
+      );
     }
     if (fIds.length)
       await tx.delete(folders).where(and(inArray(folders.id, fIds), isNotNull(folders.deletedAt)));
@@ -1291,7 +1311,18 @@ export async function linkCandidates(
             sub: more.get(r.id)?.sub ?? '',
           });
     }
-    return out.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
+    out.sort((a, b) => b.at.localeCompare(a.at));
+    if (query.trim()) return out.slice(0, 8);
+    // nothing typed: a few recent ones of every type (more of the item's own
+    // type), so e.g. other meeting records are always offered for a meeting
+    const per = new Map<string, number>();
+    return out
+      .filter((x) => {
+        const n = (per.get(x.type) ?? 0) + 1;
+        per.set(x.type, n);
+        return n <= (x.type === ref.type ? 6 : 3);
+      })
+      .slice(0, 24);
   });
 }
 
@@ -1349,14 +1380,6 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .where(isNull(sapObjects.deletedAt));
       return r?.n ?? 0;
     });
-  if (modules.has('tcodes'))
-    out.tcodes = await asUser(auth, async (tx) => {
-      const [r] = await tx
-        .select({ n: sql<number>`count(*)::int` })
-        .from(sapTcodes)
-        .where(isNull(sapTcodes.deletedAt));
-      return r?.n ?? 0;
-    });
   if (modules.has('systems'))
     out.systems = await asUser(auth, async (tx) => {
       const [r] = await tx
@@ -1406,11 +1429,11 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
     });
   if (modules.has('meetings'))
     out.meetings = await asUser(auth, async (tx) => {
-      // the upcoming ones (today or later)
+      // all the records (like the other pages' counters)
       const [r] = await tx
         .select({ n: sql<number>`count(*)::int` })
         .from(meetings)
-        .where(and(isNull(meetings.deletedAt), sql`${meetings.heldOn} >= current_date`));
+        .where(isNull(meetings.deletedAt));
       return r?.n ?? 0;
     });
   if (modules.has('emails'))

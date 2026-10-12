@@ -27,31 +27,36 @@ export async function seedCatalogue() {
       },
     });
 
+  // each plan with its modules and limits in one transaction: a failure can't
+  // leave a plan without modules that later runs would skip
   for (const [i, p] of PLANS.entries()) {
-    const created = await db()
-      .insert(plans)
-      .values({
-        code: p.code,
-        color: p.color,
-        priceMonthPerUser: String(p.price),
-        annualDiscountPct: p.annualDiscountPct,
-        sort: i,
-        isPopular: p.code === 'PRO',
-      })
-      .onConflictDoNothing({ target: plans.code })
-      .returning({ id: plans.id });
-    if (!created[0]) continue;
-    await db()
-      .insert(planModules)
-      .values(p.modules.map((moduleId) => ({ planId: created[0]!.id, moduleId })));
-    if (p.code === 'FREE') {
-      await db()
-        .insert(planLimits)
-        .values(
-          Object.entries(FREE_LIMITS).map(([resource, max]) => ({ planId: created[0]!.id, resource, max })),
-        );
-    }
-    console.log(`[seed] plan ${p.code} created`);
+    const made = await db().transaction(async (tx) => {
+      const created = await tx
+        .insert(plans)
+        .values({
+          code: p.code,
+          color: p.color,
+          priceMonthPerUser: String(p.price),
+          annualDiscountPct: p.annualDiscountPct,
+          sort: i,
+          isPopular: p.code === 'PRO',
+        })
+        .onConflictDoNothing({ target: plans.code })
+        .returning({ id: plans.id });
+      if (!created[0]) return false;
+      await tx
+        .insert(planModules)
+        .values(p.modules.map((moduleId) => ({ planId: created[0]!.id, moduleId })));
+      if (p.code === 'FREE') {
+        await tx
+          .insert(planLimits)
+          .values(
+            Object.entries(FREE_LIMITS).map(([resource, max]) => ({ planId: created[0]!.id, resource, max })),
+          );
+      }
+      return true;
+    });
+    if (made) console.log(`[seed] plan ${p.code} created`);
   }
   // the CUSTOM plan has no modules of its own (tenant_modules carry the chosen groups)
   await db()

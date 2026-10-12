@@ -36,3 +36,10 @@ export async function pruneNoteImages() {
   const [r] = await db().execute<{ n: number }>(sql`select kh_prune_note_attachments() as n`);
   return r?.n ?? 0;
 }
+
+/** The same for meeting records' topics and for whiteboards (their files go with the storage sweep). */
+export async function pruneOtherImages() {
+  const [m] = await db().execute<{ n: number }>(sql`select kh_prune_meeting_attachments() as n`);
+  const [w] = await db().execute<{ n: number }>(sql`select kh_prune_whiteboard_images() as n`);
+  return { meetings: m?.n ?? 0, whiteboards: w?.n ?? 0 };
+}

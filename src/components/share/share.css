@@ -428,6 +428,9 @@ select.kh-sh-input {
 .kh-sh-mem__e [data-st='invited'] {
   color: oklch(0.84 0.12 245);
 }
+.kh-sh-mem__e [data-st='pending'] {
+  color: oklch(0.86 0.1 300);
+}
 .kh-sh-sel {
   height: 30px;
   padding: 0 24px 0 10px;

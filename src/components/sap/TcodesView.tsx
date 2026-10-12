@@ -5,9 +5,10 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
-import { modColor, TX_MOD_IDS, TX_MODS, TX_TYPES, type TxType } from '@/lib/sap';
+import { modColor, TX_TYPES, txModules, type TxType } from '@/lib/sap';
 import { ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
+import { ModuleCombo } from './ModuleCombo';
 import { SidePanel } from './SidePanel';
 import './sap.css';
 
@@ -130,7 +131,7 @@ export function TcodesView() {
   const create = async () => {
     try {
       const { tcode } = await api<{ tcode: Tcode }>('/sap/tcodes', {
-        module: mod !== 'all' && mod !== 'fav' ? mod : 'BC',
+        module: fMod !== 'all' && fMod !== 'fav' ? fMod : 'BC',
       });
       refreshCounts();
       setItems((cur) => [tcode, ...(cur ?? [])]);
@@ -161,17 +162,23 @@ export function TcodesView() {
   };
 
   const all = items ?? [];
+  // built-in modules first, then the ones the tenant created; chips only for those in use
+  const mods = txModules(all.map((x) => x.module));
+  const modN = new Map<string, number>();
+  for (const x of all) modN.set(x.module, (modN.get(x.module) ?? 0) + 1);
+  const usedMods = mods.filter((m) => modN.has(m));
+  // a remembered module filter whose transactions are all gone shows everything
+  const fMod = mod === 'all' || mod === 'fav' || !items || modN.has(mod) ? mod : 'all';
   const query = q.trim().toLowerCase();
   const list = all
     .filter(
       (x) =>
-        (mod === 'all' || (mod === 'fav' ? x.fav : x.module === mod)) &&
+        (fMod === 'all' || (fMod === 'fav' ? x.fav : x.module === fMod)) &&
         (type === 'all' || x.type === type) &&
         (!query ||
           [x.code, x.description, x.program, x.module, x.notes].join(' ').toLowerCase().includes(query)),
     )
     .sort((a, b) => Number(b.fav) - Number(a.fav) || a.code.localeCompare(b.code));
-  const usedMods = TX_MOD_IDS.filter((m) => all.some((x) => x.module === m));
   const act = all.find((x) => x.id === activeId) ?? null;
   const typeLabel = (k: string) => t(`x_ty_${k}`);
   const starBtn = (x: Tcode, big = false) => (
@@ -248,8 +255,8 @@ export function TcodesView() {
     <button
       key={id}
       type="button"
-      data-on={mod === id || undefined}
-      aria-pressed={mod === id}
+      data-on={fMod === id || undefined}
+      aria-pressed={fMod === id}
       onClick={() => setMod(id)}
     >
       <span className="kh-sap-sq" style={{ background: dot }} />
@@ -292,7 +299,7 @@ export function TcodesView() {
         <div className="kh-sap-chips">
           {chip('all', t('x_all'), 'rgba(255,248,240,.5)', all.length)}
           {chip('fav', `★ ${t('x_favs')}`, 'oklch(0.86 0.13 85)', all.filter((x) => x.fav).length)}
-          {usedMods.map((m) => chip(m, m, TX_MODS[m]!, all.filter((x) => x.module === m).length))}
+          {usedMods.map((m) => chip(m, m, modColor(m), modN.get(m)!))}
           <div style={{ flex: 1 }} />
           <select
             className="kh-sap-select kh-tx-typef"
@@ -366,18 +373,12 @@ export function TcodesView() {
             <div className="kh-sap-grid2">
               <label className="kh-sap-fld kh-tx-fld">
                 <span>{t('x_mod')}</span>
-                <select
-                  className="kh-sap-select"
-                  aria-label={t('x_mod')}
+                <ModuleCombo
+                  key={act.id}
                   value={act.module}
-                  onChange={(e) => upd(act.id, { module: e.target.value }, 0)}
-                >
-                  {TX_MOD_IDS.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
+                  options={mods}
+                  onChange={(m) => upd(act.id, { module: m }, 0)}
+                />
               </label>
               <label className="kh-sap-fld kh-tx-fld">
                 <span>{t('x_type')}</span>

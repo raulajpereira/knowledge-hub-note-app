@@ -87,8 +87,7 @@ export function accessProblem(row: {
 }): AccessProblem | null {
   if (row.userStatus === 'disabled') return 'user_disabled';
   if (row.userStatus === 'paused') return 'user_paused';
-  // The code is the more specific cause (a revoked license also marks its tenant deleted).
-  if (row.codeStatus === 'revoked') return 'code_revoked';
+  // A paused code cuts access; a revoked one only stops new sign-ups.
   if (row.codeStatus === 'paused') return 'code_paused';
   if (row.tenantDeletedAt) return 'tenant_deleted';
   if (row.tenantStatus === 'canceled') return 'tenant_canceled';

@@ -75,9 +75,6 @@
 /* ── Request panel ─────────────────────────────────────────────────────── */
 .kh-ap-read {
   overflow: auto;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 24px 60px rgba(0, 0, 0, 0.22);
 }
 .kh-ap-main {
   display: flex;
@@ -152,7 +149,7 @@
 }
 .kh-ap-env option,
 .kh-ap-method option {
-  background-color: #2b2c33;
+  background-color: var(--kh-option-bg);
   color: #f4f2f0;
 }
 .kh-ap-folder {

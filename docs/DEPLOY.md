@@ -103,7 +103,7 @@ kh codes:create --type invite                      # conta individual FREE
 kh codes:list
 kh codes:pause KH-LIC-123456   # corta o acesso já, mantém os dados
 kh codes:resume KH-LIC-123456
-kh codes:revoke KH-LIC-123456  # corta o acesso, dados mantidos 30 dias
+kh codes:revoke KH-LIC-123456  # deixa de aceitar novos registos (quem já entrou mantém o acesso)
 kh codes:restore KH-LIC-123456
 kh users:list
 ```

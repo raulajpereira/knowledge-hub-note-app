@@ -33,7 +33,7 @@ type Patch = Partial<Pick<Snippet, 'title' | 'type' | 'tags' | 'fav' | 'descript
 const COL = { def: 340, min: 240 };
 
 export function DevLibView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -162,7 +162,7 @@ export function DevLibView() {
   const hl = useMemo(() => (fa && L ? `${highlight(code, L)}\n` : ''), [code, L, fa]);
   const prev = hist.length ? D.find((x) => x.id === hist[hist.length - 1]) : undefined;
   const fmt = (iso: string) =>
-    new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', {
+    new Date(iso).toLocaleString(t('locale'), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

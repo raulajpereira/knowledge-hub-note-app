@@ -74,7 +74,7 @@ function Check({ on }: { on: boolean }) {
 }
 
 export function TrashView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const confirm = useConfirm();
   const toast = useToast();
   const [items, setItems] = useState<Item[] | null>(null);
@@ -108,7 +108,7 @@ export function TrashView() {
     all.filter((i) => keys.includes(key(i))).map((i) => ({ kind: i.kind, id: i.id }));
   const titleOf = (i: Item | undefined) => i?.title || t('ne_untitled');
   const fmt = (iso: string) =>
-    new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', {
+    new Date(iso).toLocaleString(t('locale'), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

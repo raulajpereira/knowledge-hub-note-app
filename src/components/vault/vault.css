@@ -172,19 +172,10 @@
 
 /* ── Vault ───────────────────────────────────────────────────────────────── */
 .kh-pw {
-  flex: 1;
+  /* one glass card (.kh-page-card): list · details panel */
   display: flex;
   flex-direction: row;
-  min-height: 0;
-  min-width: 0;
-  border-radius: 30px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-  backdrop-filter: blur(var(--glass-blur-user, 30px)) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 24px 60px rgba(0, 0, 0, 0.22);
 }
 .kh-pw-main {
   flex: 1;
@@ -439,8 +430,8 @@
   z-index: 2;
   height: 46px;
   border-radius: 21px 21px 0 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
-  backdrop-filter: blur(var(--glass-blur-user, 30px)) saturate(160%);
+  background: var(--kh-sticky-bg);
+  backdrop-filter: var(--kh-sticky-filter);
   border: 1px solid rgba(255, 255, 255, 0.18);
   font-size: 11px;
   font-weight: 600;
@@ -566,9 +557,9 @@
 }
 
 /* ── Side panel ──────────────────────────────────────────────────────────── */
-.kh-pw .kh-handle {
-  top: 10px;
-  bottom: 10px;
+/* the handle sits centred on the panel's divider line */
+.kh-pw > .kh-handle {
+  margin: 0 -8px;
 }
 .kh-pw-panel {
   max-width: 78%;
@@ -576,8 +567,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin-left: 14px;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid var(--kh-divider);
   background: rgba(18, 12, 9, 0.12);
 }
 .kh-pw-ph {

@@ -284,6 +284,7 @@ export async function createClient(
       contactEmail: input.contactEmail,
     })
     .returning({ id: tenants.id });
+  // the client and its first code go together: no client left without a way in
   const code = await createCode({
     type: 'license',
     planCode: input.plan,
@@ -291,6 +292,9 @@ export async function createClient(
     expiresAt: new Date(now + 30 * DAY),
     tenantId: t!.id,
     createdBy: ctx.user.id,
+  }).catch(async (e: unknown) => {
+    await db().delete(tenants).where(eq(tenants.id, t!.id));
+    throw e;
   });
   await audit({
     action: 'tenant.create',

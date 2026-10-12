@@ -1,32 +1,33 @@
-/* Emails — ZNotes.dc.html `isMail`, values 1:1. */
+/* Emails — ZNotes.dc.html `isMail`, values 1:1.
+   Also the frame of Meetings, Artifacts, Files and the API playground: ONE
+   glass card (.kh-page-card) with the folders/list column and the reader
+   split by a thin line (Management › Resources). */
 .kh-em {
-  position: relative;
-  flex: 1;
-  min-height: 0;
   display: grid;
-  gap: 16px;
+  grid-template-rows: minmax(0, 1fr);
+}
+/* the column handle sits centred on the divider line */
+.kh-em > .kh-handle {
+  margin: 0 -8px;
 }
 .kh-em-side {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 14px;
   min-height: 0;
   min-width: 0;
   overflow: auto;
+  border-right: 1px solid var(--kh-divider);
 }
 .kh-em-top {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 16px 14px 12px;
 }
-.kh-em-search,
-.kh-em-folders,
-.kh-em-list,
-.kh-em-read {
+.kh-em-search {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-  backdrop-filter: blur(var(--glass-blur-user, 30px)) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.16);
 }
 .kh-em-search {
@@ -76,6 +77,7 @@
 }
 .kh-em-msg {
   flex-shrink: 0;
+  margin: 0 14px 12px;
   padding: 10px 14px;
   border-radius: 16px;
   font-size: 13px;
@@ -93,11 +95,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 10px;
-  border-radius: 28px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 24px 60px rgba(0, 0, 0, 0.22);
+  padding: 0 10px 12px;
+  border-bottom: 1px solid var(--kh-divider);
 }
 .kh-em-folder {
   flex-shrink: 0;
@@ -188,7 +187,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 0 4px;
+  padding: 12px 14px 0;
 }
 .kh-em-filters button {
   white-space: nowrap;
@@ -223,11 +222,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
-  border-radius: 28px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 24px 60px rgba(0, 0, 0, 0.22);
+  padding: 12px 10px;
 }
 .kh-em-item {
   flex-shrink: 0;
@@ -301,7 +296,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border-radius: 28px;
+  border-radius: var(--radius-panel) 0 0 var(--radius-panel);
   border: 2px dashed rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(var(--glass-blur-user, 12px));
@@ -316,11 +311,7 @@
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  border-radius: 30px;
   overflow: hidden;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 24px 60px rgba(0, 0, 0, 0.22);
 }
 .kh-em-read__in {
   flex: 1;
@@ -421,7 +412,7 @@
   background-size: 12px;
 }
 .kh-em-select option {
-  background-color: #2b2c33;
+  background-color: var(--kh-option-bg);
   color: #f4f2f0;
 }
 .kh-em-att {
@@ -552,4 +543,20 @@
 /* rows whose name is a button: the count is their first span, not the name */
 .kh-em-folder > span.kh-em-count {
   flex: none;
+}
+
+/* narrow screens: the list column stacks above the reader, still one card */
+@media (max-width: 900px) {
+  .kh-em.kh-page-card {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+  }
+  .kh-em > .kh-handle,
+  .kh-em > .kh-mt-handle {
+    display: none;
+  }
+  .kh-em-side {
+    border-right: 0;
+    border-bottom: 1px solid var(--kh-divider);
+  }
 }

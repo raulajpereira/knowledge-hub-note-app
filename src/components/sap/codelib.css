@@ -38,7 +38,7 @@
   max-width: calc(100% - 520px);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: 1px solid var(--kh-divider, rgba(255, 255, 255, 0.1));
 }
 .kh-cl-lhead {
   flex-shrink: 0;
@@ -312,27 +312,25 @@
   font-size: 14px;
   color: rgba(255, 248, 240, 0.6);
 }
+/* the grip on the thin line between columns (as in Management › Resources) */
 .kh-cl-handle {
-  width: 10px;
+  width: 14px;
   flex: none;
-  margin: 0 -5px;
+  margin: 0 -7px;
   position: relative;
   z-index: 5;
   cursor: col-resize;
   display: flex;
+  align-items: center;
   justify-content: center;
   touch-action: none;
 }
-.kh-cl-handle:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
 .kh-cl-handle > span {
-  width: 2px;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.12);
-}
-.kh-cl-handle--tree > span {
-  background: rgba(255, 255, 255, 0.1);
+  width: 4px;
+  height: 48px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .kh-cl-handle[data-drag] > span {
   background: rgba(255, 255, 255, 0.75);
@@ -542,7 +540,7 @@
   gap: 10px;
   padding: 14px 10px 16px;
   box-sizing: border-box;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid var(--kh-divider, rgba(255, 255, 255, 0.1));
 }
 .kh-cl-tree > * {
   flex-shrink: 0;
@@ -876,7 +874,9 @@
   position: sticky;
   left: 0;
   z-index: 3;
-  background: linear-gradient(90deg, rgba(64, 50, 43, 0.96), rgba(56, 44, 38, 0.96));
+  background: var(--kh-sticky-col-bg);
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
   box-shadow:
     inset -1px 0 0 rgba(255, 255, 255, 0.16),
     inset 1px 0 0 rgba(255, 255, 255, 0.28);
@@ -1030,8 +1030,8 @@
 }
 .kh-cl-sel option,
 .kh-cl-gsel option {
-  background: #3a2e28;
-  color: #fbf8f5;
+  background: var(--kh-option-bg, #2b2622);
+  color: var(--kh-option-fg, #fbf8f5);
 }
 .kh-cl-sw {
   width: 38px;
@@ -1117,7 +1117,9 @@
   display: grid;
   align-items: center;
   height: 40px;
-  background: linear-gradient(180deg, rgba(86, 70, 62, 0.97), rgba(70, 56, 49, 0.97));
+  background: var(--kh-sticky-bg);
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 .kh-cl-thead > span {

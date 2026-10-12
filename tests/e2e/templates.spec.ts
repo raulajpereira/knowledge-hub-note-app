@@ -76,7 +76,7 @@ test('meeting record from a ready-made template; save, reuse and delete my own',
   await expect(menu.getByText('Ainda não tem modelos.', { exact: false })).toBeVisible();
   await menu.getByRole('menuitem', { name: /Comité de Direção \(Steering\)/ }).click();
   await expect(page.getByLabel('Tema da reunião')).toHaveValue('Comité de Direção');
-  await expect(page.locator('.kh-mt-topics')).toHaveValue(/Estado geral \(RAG/);
+  await expect(page.getByLabel('Temas discutidos')).toContainText('Estado geral (RAG');
   await expect.poll(() => values(page)).toContain('Agendar o próximo comité');
 
   await page.getByRole('button', { name: 'Guardar como modelo' }).click();

@@ -210,11 +210,14 @@ describe.skipIf(!enabled)('plans, requests and license job', () => {
     );
     const c = await codesSvc.createCode({ type: 'license', planCode: 'PRO', maxUses: 1 });
     await admin.unsafe(`update codes set expires_at = '${iso(-DAY)}' where code = '${c.code}'`);
-    // a revoked invite 31 days ago: its person and their individual client go
-    const old = await signedIn('old@kh.pt', 'PRO');
+    // a revoked code only stops new sign-ups: whoever used it stays
+    const kept = await signedIn('kept@kh.pt', 'PRO');
     await admin.unsafe(
-      `update codes set status = 'revoked', revoked_at = '${iso(-31 * DAY)}' where id = (select registered_with_code_id from users where id = '${old.user.id}')`,
+      `update codes set status = 'revoked', revoked_at = '${iso(-31 * DAY)}' where id = (select registered_with_code_id from users where id = '${kept.user.id}')`,
     );
+    // a client deleted in the console 31 days ago goes for good
+    const old = await signedIn('old@kh.pt', 'PRO');
+    await admin.unsafe(`update tenants set deleted_at = '${iso(-31 * DAY)}' where id = '${old.tenant.id}'`);
     await admin.unsafe(`insert into audit_log (at, action) values (now() - interval '3 years', 'old.entry')`);
     const out = await runLicenseJob();
     expect(await admin.unsafe(`select 1 from audit_log where action = 'old.entry'`)).toHaveLength(0);
@@ -228,6 +231,8 @@ describe.skipIf(!enabled)('plans, requests and license job', () => {
     expect(await st(free.tenant.id)).toBe('active'); // free plans never fall behind
     expect(await st(old.tenant.id)).toBeUndefined();
     expect(await admin.unsafe(`select 1 from users where id = '${old.user.id}'`)).toHaveLength(0);
+    expect(await st(kept.tenant.id)).toBe('active');
+    expect(await admin.unsafe(`select 1 from users where id = '${kept.user.id}'`)).toHaveLength(1);
     const [cs] = await admin.unsafe(`select status from codes where code = '${c.code}'`);
     expect(cs!.status).toBe('expired');
     expect(out).toMatchObject({ suspended: 2, pastDue: 1, codesExpired: 1 });

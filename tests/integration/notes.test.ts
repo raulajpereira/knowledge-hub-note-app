@@ -28,6 +28,14 @@ const docWith = (...srcs: string[]) => ({
   ],
 });
 
+/** The invited person accepts the invitation to a shared folder (it's pending until then). */
+async function acceptInvite(who: import('@/server/auth/session').AuthContext, folderId: string) {
+  const sh = await import('@/server/share/folders');
+  const inv = (await sh.listInvites(who)).find((i) => i.folderId === folderId);
+  if (!inv) throw new Error('no invitation');
+  await sh.answerInvite(who, inv.id, true);
+}
+
 describe.skipIf(!enabled)('notes', () => {
   let svc: typeof import('@/server/auth/service');
   let codesSvc: typeof import('@/server/licensing/codes');
@@ -207,6 +215,24 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await notes.readFile(ana, id1)).toBeNull();
     expect(await notes.readFile(ana, id2)).not.toBeNull();
     expect(await notes.readFile(ana, copyIds[0]!)).not.toBeNull();
+  });
+
+  it('list pages with a cursor, newest first, no repeats or gaps', async () => {
+    const ana = await signedIn('ana@pages.pt');
+    const made = [];
+    for (let i = 0; i < 5; i++) made.push(await notes.createNote(ana, { title: `P${i}` }));
+    const seen: string[] = [];
+    let after: string | undefined;
+    for (let guard = 0; guard < 5; guard++) {
+      const page = await notes.listNotes(ana, { after, limit: 2 });
+      seen.push(...page.map((x) => x.title));
+      if (page.length < 2) break;
+      const last = page.at(-1)!;
+      after = `${last.updatedAt}|${last.id}`;
+    }
+    expect(seen).toEqual(['P4', 'P3', 'P2', 'P1', 'P0']);
+    // a malformed cursor is ignored (first page)
+    expect((await notes.listNotes(ana, { after: 'x|y', limit: 1 })).map((x) => x.title)).toEqual(['P4']);
   });
 
   it('Trash: notebook with its notes, restore, purge', async () => {
@@ -626,7 +652,7 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
   });
 
-  it('meetings: private records, folders, links to notes/tasks/issues, upcoming count, Trash', async () => {
+  it('meetings: private records, folders, topics document with images, links (also between meetings), count, Trash', async () => {
     const meet = await import('@/server/content/meetings');
     const a = await signedIn('meet-a@example.pt');
     const b = await signedIn('meet-b@example.pt');
@@ -656,6 +682,33 @@ describe.skipIf(!enabled)('notes', () => {
     });
     // a bad time is refused by the database too
     expect(await codeOf(meet.updateMeeting(a, m.id, { startTime: '25:00' }))).not.toBe('ok');
+
+    // topics as a document with images stored with the record; `topics` keeps its plain text
+    expect((await meet.getMeeting(a, m.id)).topicsDoc).toBeNull();
+    expect(await codeOf(meet.addMeetingImage(b, m.id, PNG))).toBe('not_found');
+    expect(await codeOf(meet.addMeetingImage(a, m.id, new TextEncoder().encode('<svg onload=x>')))).toBe(
+      'unsupported_image',
+    );
+    const img = await meet.addMeetingImage(a, m.id, PNG);
+    expect((await meet.readMeetingFile(a, img))?.mime).toBe('image/png');
+    expect(await meet.readMeetingFile(b, img)).toBeNull();
+    const withImg = await meet.updateMeeting(a, m.id, {
+      topicsDoc: docWith(`/api/v1/meetings/files/${img}`),
+    });
+    expect(withImg.topics).toBe('Agendar o job Z_HR_SF na SM37');
+    expect((await meet.getMeeting(a, m.id)).topicsDoc).toEqual(docWith(`/api/v1/meetings/files/${img}`));
+    expect(await codeOf(meet.getMeeting(b, m.id))).toBe('not_found');
+    // only its own kind of image: no notes' files, no outside hosts, no scripts
+    for (const src of [`/api/v1/files/${img}`, 'https://evil.example/x.png', 'javascript:alert(1)'])
+      expect(await codeOf(meet.updateMeeting(a, m.id, { topicsDoc: docWith(src) }))).toBe('doc_invalid');
+    // and a note never takes a meeting's image
+    const nImg = await notes.createNote(a, { title: 'n' });
+    expect(
+      await codeOf(notes.updateNote(a, nImg.id, { content: docWith(`/api/v1/meetings/files/${img}`) })),
+    ).toBe('doc_invalid');
+    // text only (AI from a voice note, templates): the document is built from it by the page
+    await meet.updateMeeting(a, m.id, { topics: 'Âmbito da fase 2' });
+    expect(await meet.getMeeting(a, m.id)).toMatchObject({ topics: 'Âmbito da fase 2', topicsDoc: null });
     expect((await meet.listMeetings(a)).meetings.map((x) => x.title)).toEqual([
       'Kick-off Atlas',
       'Steering antigo',
@@ -698,8 +751,24 @@ describe.skipIf(!enabled)('notes', () => {
     expect((await notes.linksOf(a, { type: 'task', id: t.id })).map((x) => [x.type, x.title])).toEqual([
       ['meeting', 'Kick-off Atlas'],
     ]);
-    // the badge counts the upcoming ones
-    expect((await notes.contentCounts(a, new Set(['meetings']))).meetings).toBe(1);
+    // between meeting records: offered by the search (never itself), shown in both
+    const cand = await notes.linkCandidates(a, { type: 'meeting', id: m.id }, '', ['meeting']);
+    expect(cand.map((x) => x.title)).toEqual(['Steering antigo']);
+    await notes.linkItems(a, { type: 'meeting', id: past.id }, { type: 'meeting', id: m.id });
+    expect((await notes.linksOf(a, { type: 'meeting', id: m.id })).map((x) => x.type).sort()).toEqual([
+      'issue',
+      'meeting',
+      'note',
+      'task',
+    ]);
+    expect((await notes.linksOf(a, { type: 'meeting', id: past.id })).map((x) => [x.type, x.title])).toEqual([
+      ['meeting', 'Kick-off Atlas'],
+    ]);
+    expect(
+      await codeOf(notes.linkItems(a, { type: 'meeting', id: m.id }, { type: 'meeting', id: m.id })),
+    ).toBe('invalid_input');
+    // the badge counts all the records
+    expect((await notes.contentCounts(a, new Set(['meetings']))).meetings).toBe(2);
 
     await meet.trashMeeting(a, past.id);
     expect((await notes.listTrash(a)).map((x) => [x.kind, x.title])).toContainEqual([
@@ -712,6 +781,9 @@ describe.skipIf(!enabled)('notes', () => {
     await notes.purgeTrash(a, [{ kind: 'meeting', id: m.id }]);
     expect((await meet.listMeetings(a)).meetings.map((x) => x.title)).toEqual(['Steering antigo']);
     expect(await notes.linksOf(a, { type: 'task', id: t.id })).toEqual([]);
+    expect(await notes.linksOf(a, { type: 'meeting', id: past.id })).toEqual([]);
+    // its images go with it (the storage sweep removes the files)
+    expect(await meet.readMeetingFile(a, img)).toBeNull();
   });
 
   it('files: chunked upload, limits per user, private, shared folders, public link, Trash', async () => {
@@ -783,6 +855,7 @@ describe.skipIf(!enabled)('notes', () => {
     // shared folder of files: an edit member uploads into it and reads the owner's files there
     const sf = await sh.createSharedFolder(a, { kind: 'files', name: 'Projeto Atlas' });
     await sh.addMember(a, sf, 'fl-b@example.pt', { lang: 'pt' });
+    await acceptInvite(b, sf);
     await drive.updateDriveFile(a, f.id, { sharedFolderId: sf });
     const reach = await sh.reachableFolder(b, sf);
     expect((await drive.listDrive(b, reach)).files.map((x) => [x.name, x.mine])).toEqual([
@@ -1689,8 +1762,16 @@ describe.skipIf(!enabled)('notes', () => {
     const c = await signedIn('sf-c@example.pt');
     expect(a.tenant.id).not.toBe(b.tenant.id);
     const sf = await sh.createSharedFolder(a, { kind: 'notes', name: 'Projeto X' });
-    // someone with an account is added at once; an unknown email needs an invite first
-    expect((await sh.addMember(a, sf, 'SF-B@example.pt', { lang: 'pt' })).status).toBe('added');
+    // someone with an account gets an invitation to accept; an unknown email needs an invite first
+    const added = await sh.addMember(a, sf, 'SF-B@example.pt', { lang: 'pt' });
+    expect(added).toMatchObject({ status: 'added', member: { status: 'pending' } });
+    // nothing is visible until the person accepts
+    expect(await sh.reachableFolder(b, sf).catch(() => null)).toBeNull();
+    expect((await sh.listInvites(b)).map((i) => [i.folderName, i.kind])).toEqual([['Projeto X', 'notes']]);
+    // only the invited person can answer it
+    expect(await codeOf(sh.answerInvite(c, (await sh.listInvites(b))[0]!.id, true))).toBe('not_found');
+    await acceptInvite(b, sf);
+    expect(await sh.listInvites(b)).toEqual([]);
     expect((await sh.addMember(a, sf, 'sf-b@example.pt', { lang: 'pt' })).status).toBe('exists');
     expect((await sh.addMember(a, sf, 'novo@example.pt', { lang: 'pt' })).status).toBe('needs_invite');
     expect((await sh.addMember(a, sf, 'novo@example.pt', { lang: 'pt', invite: true })).status).toBe(
@@ -1750,6 +1831,7 @@ describe.skipIf(!enabled)('notes', () => {
     const sf2 = await sh.createSharedFolder(a, { kind: 'notes', name: 'Caderno', folderId: nb.id });
     expect(await sh.createSharedFolder(a, { kind: 'notes', name: 'Caderno', folderId: nb.id })).toBe(sf2);
     await sh.addMember(a, sf2, 'sf-c@example.pt', { lang: 'pt' });
+    await acceptInvite(c, sf2);
     expect((await notes.listNotes(c, { shared: await sh.reachableFolder(c, sf2) })).map((x) => x.id)).toEqual(
       [inNb.id],
     );
@@ -1758,6 +1840,7 @@ describe.skipIf(!enabled)('notes', () => {
     // tasks and artifacts folders work the same way
     const tf = await sh.createSharedFolder(a, { kind: 'tasks', name: 'Tarefas X' });
     await sh.addMember(a, tf, 'sf-b@example.pt', { lang: 'pt' });
+    await acceptInvite(b, tf);
     const tk = await tasksSvc.createTask(a, { title: 'Rever', sharedFolderId: tf });
     expect((await tasksSvc.listTasks(b)).length).toBe(0);
     expect((await tasksSvc.listTasks(b, tf)).map((x) => [x.title, x.mine])).toEqual([['Rever', false]]);
@@ -1768,6 +1851,7 @@ describe.skipIf(!enabled)('notes', () => {
     expect(await codeOf(tasksSvc.updateTask(b, tk.id, { pinned: true }))).toBe('forbidden');
     const af = await sh.createSharedFolder(a, { kind: 'artifacts', name: 'Artefactos X' });
     await sh.addMember(a, af, 'sf-b@example.pt', { lang: 'pt' });
+    await acceptInvite(b, af);
     const ar = await art.createArtifact(a, { title: 'Página', sharedFolderId: af });
     expect((await art.listArtifacts(b, { id: af, folderId: null })).map((x) => [x.id, x.mine])).toEqual([
       [ar.id, false],
@@ -1825,8 +1909,9 @@ describe.skipIf(!enabled)('notes', () => {
     const nu = (await session.resolveSession(lg.token))!;
     expect((await notes.getNote(nu, n.id)).title).toBe('Para o convidado');
     expect((await sh.listSharedFolders(nu)).map((f) => [f.name, f.mine])).toEqual([['Convite', false]]);
-    // a second sign-up with the same email is still refused
-    expect(await codeOf(svc.register({ ...reg, email: 'novo@example.pt' }, meta))).toBe('email_taken');
+    // a second sign-up with the same email (no code, invitation used): the same answer as
+    // for any unknown email without a code — nothing says the account exists
+    expect(await codeOf(svc.register({ ...reg, email: 'novo@example.pt' }, meta))).toBe('code_invalid');
   });
 
   it('management: the photo of a person is checked, kept in the tenant, untouched by ops, removable', async () => {

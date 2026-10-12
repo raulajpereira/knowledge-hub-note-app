@@ -97,8 +97,6 @@ const H_GROUPS = [
   ['tech', 'tk_tech', 'oklch(0.8 0.13 245)'],
   ['mgmt', 'tk_mgmt', 'oklch(0.8 0.13 305)'],
 ] as const;
-const MON_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-const MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const svg = (d: string, size = 15, sw = 1.9) => (
   <svg
     width={size}
@@ -147,7 +145,7 @@ function Favicon({ domain }: { domain: string }) {
 }
 
 export function HomeView({ initialHour }: { initialHour?: number | null } = {}) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const { me, modules } = useShell();
   const prefsCtx = usePrefsContext()!;
@@ -416,7 +414,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
       href: `/app/emails?m=${m.id}`,
     })),
   ];
-  const MON = lang === 'en' ? MON_EN : MON_PT;
+  const MON = t('monthsShort').split(',');
   const completeTask = async (id: string) => {
     setData((d) => ({ ...d, tasks: d.tasks?.filter((x) => x.id !== id) }));
     // on failure the reload below brings the task back
@@ -776,15 +774,27 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: `conic-gradient(#fbf8f5 ${Math.round((1 - p.left / pomo.total()) * 100)}%,rgba(255,255,255,.12) 0)`,
               }}
             >
+              {/* the progress ring alone (masked), so the glassy disc inside shows the page through */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '50%',
+                  background: `conic-gradient(#fbf8f5 ${Math.round((1 - p.left / pomo.total()) * 100)}%,rgba(255,255,255,.12) 0)`,
+                  mask: 'radial-gradient(farthest-side, transparent calc(100% - 8.5px), #000 calc(100% - 8px))',
+                }}
+              />
               <div
                 style={{
                   position: 'absolute',
                   inset: 8,
                   borderRadius: '50%',
-                  background: 'rgba(40,30,24,.85)',
+                  background: 'var(--kh-sticky-bg)',
+                  backdropFilter: 'var(--kh-sticky-filter)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,.18)',
                 }}
               />
               <span

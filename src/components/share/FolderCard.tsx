@@ -198,7 +198,7 @@ function MemberRow({
 }) {
   const { t } = useI18n();
   const ps = m.paused || m.personPaused || folderPaused;
-  const st = m.status === 'invited' ? 'invited' : ps ? 'paused' : 'active';
+  const st = m.status !== 'active' ? m.status : ps ? 'paused' : 'active';
   return (
     <div className="kh-sh-mem" style={{ opacity: ps ? 0.55 : 1 }}>
       <span className="kh-sh-av" style={{ background: shAv(m.email) }} aria-hidden="true">

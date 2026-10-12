@@ -248,7 +248,7 @@ function Field({
 }
 
 export function VaultView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const [lockMinutes, setLockMinutes] = usePersistentState<number>('vault.lock', 1);
@@ -635,8 +635,7 @@ export function VaultView() {
   const a = items.find((x) => x.id === active) ?? null;
   const A = a ? info(a.e) : null;
   const ageTxt = (d: number) => (d <= 0 ? t('p_today') : t('p_daysAgo').replace('{n}', String(d)));
-  const fmtD = (ts: number | null) =>
-    ts ? new Date(ts).toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-PT') : t('p_never');
+  const fmtD = (ts: number | null) => (ts ? new Date(ts).toLocaleDateString(t('locale')) : t('p_never'));
 
   // TOTP for the open item (computed locally every 30 s step)
   const step = Math.floor(now / 30_000);
@@ -756,7 +755,7 @@ export function VaultView() {
   const panelW = livePanel ?? panel;
 
   return (
-    <section className="kh-pw" style={{ position: 'relative' }}>
+    <section className="kh-pw kh-page-card">
       <div className="kh-pw-main">
         <div className="kh-pw-head">
           <div className="kh-pw-title">
@@ -936,7 +935,7 @@ export function VaultView() {
       {a && A && (
         <>
           <ColHandle
-            style={{ right: panelW - 2 }}
+            style={{ right: panelW }}
             value={panelW}
             limits={PANEL.lim}
             dir={-1}

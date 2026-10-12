@@ -125,9 +125,19 @@ test('systems, transactions, header popup and SAP GUI settings', async ({ page, 
   await page.getByLabel('Descrição', { exact: true }).fill('Preços especiais');
   await page.getByLabel('Tipo', { exact: true }).selectOption('param');
   await page.getByLabel('Parâmetros').fill('VIEWNAME=ZV_SD_PRICE');
+  // a module that does not exist yet: typed in the combobox, offered as a new one
+  const modIn = page.getByRole('combobox', { name: 'Módulo' });
+  await modIn.fill('retail');
+  await expect(page.getByRole('option', { name: 'Criar módulo «RETAIL»' })).toBeVisible();
+  await modIn.press('Enter');
+  await expect(modIn).toHaveValue('RETAIL');
   await page.waitForTimeout(800);
   await page.reload();
   await expect(page.getByText(`${TX_SEED.length + 1} transações`)).toBeVisible();
+  // its own filter chip, with the count
+  await page.getByRole('button', { name: /^RETAIL\s*1$/ }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'ZSD_PRICE' })).toBeVisible();
+  await page.getByRole('button', { name: /^Todos/ }).click();
   await page.getByPlaceholder('Procurar transação, descrição, programa…').fill('preços');
   await expect(page.getByRole('row').filter({ hasText: 'ZSD_PRICE' })).toBeVisible();
 

@@ -99,7 +99,7 @@ const I = {
 };
 
 export function EmailsView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -310,7 +310,7 @@ export function EmailsView() {
   const list = base.filter((m) => filter === 'all' || (filter === 'star' ? m.starred : m.attachments > 0));
   const fmtDate = (iso: string | null) =>
     iso
-      ? new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', {
+      ? new Date(iso).toLocaleString(t('locale'), {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric',
@@ -324,7 +324,7 @@ export function EmailsView() {
 
   return (
     <div
-      className="kh-em"
+      className="kh-em kh-page-card"
       style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
     >
       {!focus && (

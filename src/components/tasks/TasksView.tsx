@@ -666,7 +666,7 @@ export function TasksView() {
 
   return (
     <div
-      className="kh-tk"
+      className="kh-tk kh-page-card"
       style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
     >
       {!focus && (

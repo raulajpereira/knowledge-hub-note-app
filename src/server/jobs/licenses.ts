@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNotNull, isNull, lt, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { db } from '@/db/client';
 import { codes, plans, tenants, users } from '@/db/schema';
@@ -140,45 +140,14 @@ export async function runLicenseJob(now = new Date()) {
     .returning({ id: codes.id });
   out.codesExpired = exp.length;
 
-  // revoked more than 30 days ago: delete for good
+  // clients deleted in the console more than 30 days ago: delete for good
   const limit = new Date(t - REVOKE_RETENTION_DAYS * DAY);
   const goneTenants = await db()
     .select({ id: tenants.id, name: tenants.name })
     .from(tenants)
     .where(and(isNotNull(tenants.deletedAt), lt(tenants.deletedAt, limit)));
-  const revoked = await db()
-    .select({ id: codes.id, code: codes.code })
-    .from(codes)
-    .where(and(eq(codes.status, 'revoked'), lt(codes.revokedAt, limit)));
-  // people who registered with a revoked invite (their own individual clients go with them)
-  const people = revoked.length
-    ? await db()
-        .select({ id: users.id, tenantId: users.tenantId })
-        .from(users)
-        .where(
-          inArray(
-            users.registeredWithCodeId,
-            revoked.map((c) => c.id),
-          ),
-        )
-    : [];
   // one person or client that can't be removed today must not stop the rest
   let purged = 0;
-  for (const p of people)
-    try {
-      await removePrefix(`users/${p.id}/`).catch(() => {});
-      await db().delete(users).where(eq(users.id, p.id));
-      purged++;
-      const [left] = await db()
-        .select({ n: sql<number>`count(*)::int` })
-        .from(users)
-        .where(and(eq(users.tenantId, p.tenantId), ne(users.id, p.id)));
-      const [tk] = await db().select({ kind: tenants.kind }).from(tenants).where(eq(tenants.id, p.tenantId));
-      if (left!.n === 0 && tk?.kind === 'individual' && !goneTenants.some((g) => g.id === p.tenantId))
-        goneTenants.push({ id: p.tenantId, name: '' });
-    } catch (e) {
-      console.error('[licenses] purge person failed', p.id, e);
-    }
   for (const g of goneTenants)
     try {
       const members = await db().select({ id: users.id }).from(users).where(eq(users.tenantId, g.id));

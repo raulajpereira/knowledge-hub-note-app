@@ -9,18 +9,18 @@ type Copy = { subject: string; title: string; body: string; cta?: string; foot: 
 const COPY: Record<string, Record<Lang, Copy>> = {
   shared: {
     pt: {
-      subject: '{who} partilhou "{folder}" consigo · KnowledgeHub',
-      title: 'Nova pasta partilhada',
-      body: '{who} partilhou a pasta "{folder}" ({kind}) consigo. Já a encontra na página respetiva do KnowledgeHub.',
-      cta: 'Abrir o KnowledgeHub',
-      foot: 'Se não conhece quem partilhou, pode ignorar este email.',
+      subject: '{who} quer partilhar "{folder}" consigo · KnowledgeHub',
+      title: 'Convite para uma pasta partilhada',
+      body: '{who} quer partilhar a pasta "{folder}" ({kind}) consigo. Aceite o convite no KnowledgeHub (Definições › Partilhas) para a ver.',
+      cta: 'Ver o convite',
+      foot: 'Se não conhece quem partilhou, recuse o convite ou ignore este email.',
     },
     en: {
-      subject: '{who} shared "{folder}" with you · KnowledgeHub',
-      title: 'New shared folder',
-      body: '{who} shared the folder "{folder}" ({kind}) with you. You will find it in its page in KnowledgeHub.',
-      cta: 'Open KnowledgeHub',
-      foot: "If you don't know who shared it, you can ignore this email.",
+      subject: '{who} wants to share "{folder}" with you · KnowledgeHub',
+      title: 'Invitation to a shared folder',
+      body: '{who} wants to share the folder "{folder}" ({kind}) with you. Accept the invitation in KnowledgeHub (Settings › Sharing) to see it.',
+      cta: 'See the invitation',
+      foot: "If you don't know who shared it, decline the invitation or ignore this email.",
     },
   },
   shareInvite: {
@@ -195,6 +195,22 @@ const COPY: Record<string, Record<Lang, Copy>> = {
       body: 'We received a request to set a new password. The link is valid for 30 minutes and can only be used once.',
       cta: 'Set New Password',
       foot: "If you didn't ask for this, ignore this email — your password won't change.",
+    },
+  },
+  accountExists: {
+    pt: {
+      subject: 'Já tem conta no KnowledgeHub',
+      title: 'Já tem uma conta com este email',
+      body: 'Alguém (talvez você) tentou criar uma conta no KnowledgeHub com este email, mas ele já tem conta. Entre com a sua password; se não se lembrar dela, use "Esqueci-me da password" na página de entrada.',
+      cta: 'Entrar',
+      foot: 'Se não foi você, pode ignorar este email: nada foi alterado na sua conta.',
+    },
+    en: {
+      subject: 'You already have a KnowledgeHub account',
+      title: 'This email already has an account',
+      body: 'Someone (maybe you) tried to create a KnowledgeHub account with this email, but it already has one. Sign in with your password; if you don\'t remember it, use "Forgot password" on the sign-in page.',
+      cta: 'Sign In',
+      foot: "If it wasn't you, you can ignore this email: nothing changed in your account.",
     },
   },
   emailChanged: {

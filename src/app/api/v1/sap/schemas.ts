@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SAP_ENVS, TX_MOD_IDS, TX_TYPES } from '@/lib/sap';
+import { normTxMod, SAP_ENVS, TX_MOD_MAX, TX_MOD_RE, TX_TYPES } from '@/lib/sap';
 import { CL_TYPE_IDS, ClNodesSchema, type ClType } from '@/lib/codelib';
 import { FN_PAGES } from '@/lib/functional';
 
@@ -50,7 +50,8 @@ export const TcodeInput = z
       .max(40)
       .regex(/^[^\s]*$/),
     description: s(300),
-    module: z.enum(TX_MOD_IDS as [string, ...string[]]),
+    // built-in or the tenant's own module: stored upper-case, spaces collapsed
+    module: z.string().max(200).transform(normTxMod).pipe(z.string().max(TX_MOD_MAX).regex(TX_MOD_RE)),
     program: z.string().trim().max(60),
     type: z.enum(TX_TYPES),
     params: z.string().trim().max(1000),

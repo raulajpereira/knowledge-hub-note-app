@@ -52,7 +52,7 @@ export function VaultKeysModal({
   onRegenerate: () => void;
   onMode: (m: KeysMode) => void;
 }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const L = (k: string) => t(`vk_${k}`);
   const [v, setV] = useState<Record<string, string>>({});
   const [err, setErr] = useState('');
@@ -84,7 +84,7 @@ export function VaultKeysModal({
       recoveryKey,
       '',
       `${L('fp')}: ${fp}`,
-      `${lang === 'en' ? 'Created' : 'Criada'}: ${new Date().toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT')}`,
+      `${L('createdLbl')}: ${new Date().toLocaleString(t('locale'))}`,
       '',
       L('kitWarn'),
       '',
@@ -316,7 +316,7 @@ export function VaultKeysModal({
             <span>{fp ? L('stOn') : L('stOff')}</span>
             <span>
               {fp
-                ? `${fp} · ${L('created')} ${rkCreated ? new Date(rkCreated).toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-PT') : ''}`
+                ? `${fp} · ${L('created')} ${rkCreated ? new Date(rkCreated).toLocaleDateString(t('locale')) : ''}`
                 : L('stOffSub')}
             </span>
           </span>

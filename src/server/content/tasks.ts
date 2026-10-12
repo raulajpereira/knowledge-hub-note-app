@@ -6,7 +6,7 @@ import { assertWithinLimit } from '@/server/licensing/entitlements';
 import type { AuthContext } from '@/server/auth/session';
 import { nextDue } from '@/lib/tasks';
 import { checkProject } from './mg';
-import { asSharer, asUser } from './tenant';
+import { asSharer, asUser, lockLimit } from './tenant';
 import { folderError } from './folderError';
 
 // Tasks (prototype isTasks). Every query runs through asUser(), so Row Level
@@ -136,6 +136,7 @@ export async function createTask(
   input: { title: string; type?: TaskType; dueOn?: string | null; sharedFolderId?: string | null },
 ) {
   return asUser(auth, async (tx) => {
+    await lockLimit(tx, auth.tenant.id, 'tasks');
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(tasks)

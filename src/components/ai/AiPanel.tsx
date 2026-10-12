@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { AI_SOURCE_HREF, aiProvider } from '@/lib/ai';
-import { useConfirm } from '@/components/ui';
+import { useConfirm, usePersistentState } from '@/components/ui';
 import { useAi } from './useAi';
 import { AiText } from './AiText';
 import './ai.css';
@@ -46,6 +46,83 @@ const I = {
     '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path>',
 };
 
+/** Default size, the limits, and the corner it is anchored to (just above the
+ * footer row that holds the AI button), all in px. */
+const SIZE = { w: 460, h: 560, minW: 320, minH: 340, right: 22, bottom: 62, top: 16, left: 16 };
+type Size = { w: number; h: number };
+type Edge = 'w' | 'h' | 'wh';
+const clampSize = ({ w, h }: Size): Size => ({
+  w: Math.round(Math.max(SIZE.minW, Math.min(window.innerWidth - SIZE.right - SIZE.left, w))),
+  h: Math.round(Math.max(SIZE.minH, Math.min(window.innerHeight - SIZE.bottom - SIZE.top, h))),
+});
+
+/** The panel's size: persisted per browser, resized from its left edge, top
+ * edge and top-left corner (pointer or arrow keys), double click resets. */
+function useAiSize() {
+  const [saved, setSaved] = usePersistentState<Size>('ai.size', { w: SIZE.w, h: SIZE.h });
+  const [live, setLive] = useState<Size | null>(null);
+  const [drag, setDrag] = useState<Edge | null>(null);
+  const size = live ?? saved;
+  const handle = (edge: Edge, label: string) => ({
+    role: 'separator',
+    'aria-orientation': edge === 'h' ? ('horizontal' as const) : ('vertical' as const),
+    'aria-label': label,
+    'aria-valuenow': edge === 'h' ? size.h : size.w,
+    'aria-valuemin': edge === 'h' ? SIZE.minH : SIZE.minW,
+    tabIndex: 0,
+    title: label,
+    'data-edge': edge,
+    'data-drag': drag === edge || undefined,
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const el = e.currentTarget;
+      el.setPointerCapture(e.pointerId);
+      const x0 = e.clientX;
+      const y0 = e.clientY;
+      const s0 = clampSize(size);
+      let cur = s0;
+      document.body.style.cursor = getComputedStyle(el).cursor;
+      document.body.style.userSelect = 'none';
+      setDrag(edge);
+      const move = (ev: PointerEvent) => {
+        cur = clampSize({
+          w: edge === 'h' ? s0.w : s0.w + x0 - ev.clientX,
+          h: edge === 'w' ? s0.h : s0.h + y0 - ev.clientY,
+        });
+        setLive(cur);
+      };
+      const up = () => {
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        setLive(null);
+        setDrag(null);
+        if (cur.w !== s0.w || cur.h !== s0.h) setSaved(cur);
+      };
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    },
+    onKeyDown: (e: React.KeyboardEvent) => {
+      const step = e.shiftKey ? 60 : 20;
+      const s0 = clampSize(size);
+      let { w, h } = s0;
+      if (edge !== 'h' && e.key === 'ArrowLeft') w += step;
+      else if (edge !== 'h' && e.key === 'ArrowRight') w -= step;
+      else if (edge !== 'w' && e.key === 'ArrowUp') h += step;
+      else if (edge !== 'w' && e.key === 'ArrowDown') h -= step;
+      else return;
+      e.preventDefault();
+      setSaved(clampSize({ w, h }));
+    },
+    onDoubleClick: () => setSaved({ w: SIZE.w, h: SIZE.h }),
+  });
+  return { size, handle };
+}
+
 export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const confirm = useConfirm();
@@ -58,6 +135,7 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
   const [busy, setBusy] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const { size, handle } = useAiSize();
 
   useEffect(() => {
     if (open) setTimeout(() => input.current?.focus(), 50);
@@ -185,7 +263,15 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
     };
 
   return (
-    <aside className="kh-ai" role="dialog" aria-label={t('ai_panel')}>
+    <aside
+      className="kh-ai"
+      role="dialog"
+      aria-label={t('ai_panel')}
+      style={{ '--kh-ai-w': `${size.w}px`, '--kh-ai-h': `${size.h}px` } as React.CSSProperties}
+    >
+      <div className="kh-ai__rs" {...handle('w', t('ai_resizeW'))} />
+      <div className="kh-ai__rs" {...handle('h', t('ai_resizeH'))} />
+      <div className="kh-ai__rs" {...handle('wh', t('ai_resizeWH'))} />
       <div className="kh-ai__head">
         <span className="kh-ai__logo">
           <Svg d={I.spark} s={17} />

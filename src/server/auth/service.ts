@@ -12,7 +12,15 @@ import { sendMail } from '@/server/mail/send';
 import { createCode, redeemCode } from '@/server/licensing/codes';
 import { codeType, normalizeCode } from '@/server/licensing/codeFormat';
 import { burnPasswordCheck, checkPasswordPolicy, hashPassword, verifyPassword } from './password';
-import { captchaNeeded, captchaSiteKey, noteLoginFailure, verifyCaptcha } from './captcha';
+import {
+  ACCT_FAILS,
+  accountFailures,
+  captchaNeeded,
+  captchaSiteKey,
+  noteAccountFailure,
+  noteLoginFailure,
+  verifyCaptcha,
+} from './captcha';
 import { Lockout, allow } from './rateLimit';
 import {
   accessProblem,
@@ -91,7 +99,7 @@ export async function sendResetLink(userId: string, email: string, lang: Lang) {
 export async function register(
   input: { name: string; email: string; password: string; code?: string },
   meta: RequestMeta,
-): Promise<{ userId: string }> {
+): Promise<{ userId: string | null }> {
   if (!meta.ip || !(await allow(`register:${meta.ip}`, 10, 3600)))
     throw new ApiError(429, 'too_many_requests');
   const email = input.email.trim().toLowerCase();
@@ -104,13 +112,25 @@ export async function register(
   const problem = await checkPasswordPolicy(input.password);
   if (problem) throw new ApiError(400, `password_${problem}`);
 
-  const [existing] = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  if (existing) throw new ApiError(409, 'email_taken');
-  if (invited && !(await shareInvited(email))) throw new ApiError(400, 'code_invalid');
+  // The code (or the invitation) is checked first and the answer never says
+  // whether the email already has an account: for an existing account the
+  // response is the same as a new sign-up and its owner gets an email instead.
+  if (invited) {
+    if (!(await shareInvited(email))) throw new ApiError(400, 'code_invalid');
+  } else await checkCodeUsable(code, input.name.trim());
+  const [existing] = await db()
+    .select({ id: users.id, lang: users.lang })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  if (existing) {
+    await tellAccountExists(email, existing.lang);
+    return { userId: null };
+  }
 
   const passwordHash = await hashPassword(input.password);
   const useCode = invited ? (await createCode({ type: 'invite', planCode: 'FREE' })).code : code;
-  const { userId, tenantId } = await db()
+  const created = await db()
     .transaction(async (tx) => {
       const r = await redeemCode(tx, useCode, { name: input.name.trim() });
       const [u] = await tx
@@ -132,9 +152,15 @@ export async function register(
     .catch((err: unknown) => {
       // Concurrent sign-up with the same email: the unique index wins.
       const pg = (err as { cause?: { code?: string } }).cause ?? (err as { code?: string });
-      if (pg?.code === '23505') throw new ApiError(409, 'email_taken');
+      if (pg?.code === '23505') return null;
       throw err;
     });
+  // a concurrent sign-up with the same email won: same answer as above
+  if (!created) {
+    await tellAccountExists(email, meta.lang);
+    return { userId: null };
+  }
+  const { userId, tenantId } = created;
 
   await sendVerification(userId, email, meta.lang);
   await audit({
@@ -147,6 +173,26 @@ export async function register(
     ip: meta.ip,
   });
   return { userId };
+}
+
+const DRY_RUN = Symbol('dry-run');
+
+/** Whether a code would let someone sign up now — redeemed and rolled back, nothing kept. */
+async function checkCodeUsable(code: string, name: string) {
+  await db()
+    .transaction(async (tx) => {
+      await redeemCode(tx, code, { name });
+      throw DRY_RUN;
+    })
+    .catch((e: unknown) => {
+      if (e !== DRY_RUN) throw e;
+    });
+}
+
+/** "Someone tried to create an account with your email" (rate-limited per address). */
+async function tellAccountExists(email: string, lang: Lang) {
+  if (!(await allow(`account-exists:${email}`, 3, 3600))) return;
+  await sendMail(renderMail('accountExists', lang, email, appLink('/login'))).catch(() => {});
 }
 
 /** A pending shared-folder invitation for this email (no account yet). */
@@ -192,7 +238,15 @@ export async function login(
   const wait = await loginLock.lockedFor(lockKey);
   if (wait) throw new ApiError(429, 'locked', undefined, { retryAfter: wait });
   const st = await loginLock.state(lockKey);
-  if ((await captchaNeeded(st.fails, st.lockouts, meta.ip)) && !(await verifyCaptcha(input.captcha, meta.ip)))
+  // many failures for this account from any address: captcha, or wait without one
+  const acct = await accountFailures(email);
+  const acctBusy = acct.fails >= ACCT_FAILS;
+  if (acctBusy && !captchaSiteKey())
+    throw new ApiError(429, 'locked', undefined, { retryAfter: acct.retryAfter });
+  if (
+    (acctBusy || (await captchaNeeded(st.fails, st.lockouts, meta.ip))) &&
+    !(await verifyCaptcha(input.captcha, meta.ip))
+  )
     throw new ApiError(403, 'captcha_required', undefined, { siteKey: captchaSiteKey() });
 
   const u = await loadForLogin(email);
@@ -202,6 +256,7 @@ export async function login(
   if (!u || !ok) {
     const locked = await loginLock.fail(lockKey);
     await noteLoginFailure(meta.ip);
+    await noteAccountFailure(email);
     await audit({ action: 'auth.login_failed', details: { email }, ip: meta.ip });
     if (locked) throw new ApiError(429, 'locked', undefined, { retryAfter: locked });
     throw new ApiError(401, 'bad_credentials');

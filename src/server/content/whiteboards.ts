@@ -1,5 +1,5 @@
 import 'server-only';
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { and, asc, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import {
   artifacts,
@@ -20,7 +20,7 @@ import { sniffImage } from '@/server/assets';
 import { s3 } from '@/lib/storage';
 import { assertWithinLimit } from '@/server/licensing/entitlements';
 import type { AuthContext } from '@/server/auth/session';
-import { asUser, type Tx } from './tenant';
+import { asUser, type Tx, lockLimit, removeFilesAfterCommit } from './tenant';
 
 // Whiteboard (Whiteboard.dc.html): several boards per user, each an element
 // list saved as a whole ("last write wins" + conflict warning by updated_at,
@@ -118,6 +118,7 @@ async function countBoards(tx: Tx) {
 
 export async function createBoard(auth: AuthContext, name: string): Promise<Board> {
   return asUser(auth, async (tx) => {
+    await lockLimit(tx, auth.tenant.id, 'whiteboards');
     const n = await countBoards(tx);
     await assertWithinLimit(auth.tenant.id, 'whiteboards', n);
     if (n >= 500) throw new ApiError(400, 'too_many_items');
@@ -171,6 +172,7 @@ export async function duplicateBoard(auth: AuthContext, id: string, suffix: stri
       .from(whiteboards)
       .where(and(eq(whiteboards.id, id), isNull(whiteboards.deletedAt)));
     if (!src) throw new ApiError(404, 'not_found');
+    await lockLimit(tx, auth.tenant.id, 'whiteboards');
     await assertWithinLimit(auth.tenant.id, 'whiteboards', await countBoards(tx));
     const [dst] = await tx
       .insert(whiteboards)
@@ -235,10 +237,10 @@ export async function purgeBoardsTx(tx: Tx, ids: string[]) {
     .from(whiteboardImages)
     .where(inArray(whiteboardImages.boardId, ids));
   await tx.delete(whiteboards).where(inArray(whiteboards.id, ids));
-  for (const k of keys)
-    await s3()
-      .send(new DeleteObjectCommand({ Bucket: env().S3_BUCKET, Key: k.key }))
-      .catch(() => {});
+  removeFilesAfterCommit(
+    tx,
+    keys.map((k) => k.key),
+  );
 }
 
 // ── Images ─────────────────────────────────────────────────────────────────

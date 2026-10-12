@@ -128,7 +128,7 @@ function FoldersPanel({
   ];
 
   return (
-    <div className="kh-nt-folders kh-nt-glass">
+    <div className="kh-nt-folders">
       {rows.map((r) => {
         const on = filter === r.id;
         const linked = r.f ? linkedOf(shared, r.f.id) : undefined;
@@ -335,6 +335,7 @@ function NoteList({
   loading,
   onOpen,
   onNew,
+  onMore,
 }: {
   title: string;
   items: NoteItem[];
@@ -345,18 +346,21 @@ function NoteList({
   loading: boolean;
   onOpen: (id: string) => void;
   onNew: () => void;
+  /** set while the server has more notes than the ones listed */
+  onMore?: () => void;
 }) {
   const { t } = useI18n();
   const when = useWhen();
   const [dragId, setDragId] = useState<string | null>(null);
   return (
-    <section className="kh-nt-list kh-nt-glass">
+    <section className="kh-nt-list">
       <div className="kh-nt-list__head">
         <div className="kh-nt-list__title">
           <div>{title}</div>
           <div className="kh-nt-list__count">
             {items.length}
-            {items.length === 1 ? t('note1') : t('noteN')}
+            {onMore ? '+' : ''}
+            {items.length === 1 && !onMore ? t('note1') : t('noteN')}
           </div>
         </div>
         <button
@@ -417,6 +421,11 @@ function NoteList({
           );
         })}
         {!loading && items.length === 0 && <div className="kh-nt-list__empty">{t('noResults')}</div>}
+        {onMore && (
+          <button type="button" className="kh-nt-list__more" onClick={onMore}>
+            {t('nt_more')}
+          </button>
+        )}
       </div>
     </section>
   );
@@ -678,6 +687,7 @@ export function NotesView() {
 
   const [folders, setFolders] = useState<FolderList | null>(null);
   const [items, setItems] = useState<NoteItem[]>([]);
+  const [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState<Note | null>(null);
   const activeId = sp.get('n');
@@ -701,6 +711,26 @@ export function NotesView() {
     fav: validFilter === 'fav',
     q: query.trim() || undefined,
   });
+  // "Carregar mais": the next page of the same list; dropped if the filter changed meanwhile
+  const moreBusy = useRef(false);
+  const loadMore = async () => {
+    if (!next || moreBusy.current) return;
+    moreBusy.current = true;
+    const key = listKeyRef.current;
+    try {
+      const r = await notesApi.list({ ...listQuery(), after: next });
+      if (key !== listKeyRef.current) return;
+      setItems((all) => {
+        const have = new Set(all.map((n) => n.id));
+        return [...all, ...r.notes.filter((n) => !have.has(n.id))];
+      });
+      setNext(r.next);
+    } catch {
+      toast({ message: t('nt_moreFail'), tone: 'error' });
+    } finally {
+      moreBusy.current = false;
+    }
+  };
 
   const open = useCallback(
     (id: string | null) => {
@@ -725,6 +755,10 @@ export function NotesView() {
 
   // List for the current filter + header search.
   const listKey = `${validFilter}|${query.trim()}`;
+  const listKeyRef = useRef(listKey);
+  useEffect(() => {
+    listKeyRef.current = listKey;
+  }, [listKey]);
   useEffect(() => {
     let live = true;
     setLoading(true);
@@ -735,6 +769,7 @@ export function NotesView() {
           .then((r) => {
             if (!live) return;
             setItems(r.notes);
+            setNext(r.next);
             setLoading(false);
           })
           .catch(() => live && setLoading(false));
@@ -915,6 +950,7 @@ export function NotesView() {
         );
       const r = await notesApi.list(listQuery());
       setItems(r.notes);
+      setNext(r.next);
       void loadFolders();
     } catch (e) {
       failed(e);
@@ -945,7 +981,7 @@ export function NotesView() {
 
   return (
     <div
-      className="kh-nt"
+      className="kh-nt kh-page-card"
       style={{ gridTemplateColumns: `${listW}px minmax(360px,1fr)${showInsp ? ` ${inspW}px` : ''}` }}
     >
       <ColHandle
@@ -1016,6 +1052,7 @@ export function NotesView() {
           loading={loading}
           onOpen={open}
           onNew={() => void newNote(validFilter !== 'all' && validFilter !== 'fav' ? validFilter : null)}
+          onMore={next ? () => void loadMore() : undefined}
         />
       </div>
       {note ? (

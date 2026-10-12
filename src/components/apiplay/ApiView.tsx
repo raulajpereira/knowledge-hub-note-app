@@ -327,7 +327,7 @@ function EnvManager({
 }
 
 export function ApiView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -691,7 +691,7 @@ export function ApiView() {
   };
   const bytes = rs && rs.ok ? new Blob([rs.body]).size : 0;
   const fmtStamp = (iso: string) =>
-    new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', {
+    new Date(iso).toLocaleString(t('locale'), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -712,7 +712,7 @@ export function ApiView() {
 
   return (
     <div
-      className="kh-em"
+      className="kh-em kh-page-card"
       style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
     >
       {!focus && (

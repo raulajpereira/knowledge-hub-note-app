@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { connectionText, envColor, modColor, sapShortcut, TX_SEED, TX_TYPES } from '@/lib/sap';
+import {
+  connectionText,
+  envColor,
+  modColor,
+  parseTxMod,
+  sapShortcut,
+  txModules,
+  TX_MOD_IDS,
+  TX_SEED,
+  TX_TYPES,
+} from '@/lib/sap';
+import { TcodeInput } from '@/app/api/v1/sap/schemas';
 
 // SAP landscape helpers (ZNotes.dc.html gui() / copy()).
 const sys = {
@@ -68,4 +79,23 @@ it('connection text, colours and the transaction catalogue', () => {
     expect(prog).toMatch(/^[A-Z0-9_/]*$/);
     expect(TX_TYPES).toContain(type);
   }
+});
+
+it('transaction modules: built-ins plus the ones the tenant types', () => {
+  expect(parseTxMod('  retail  ops ')).toBe('RETAIL OPS');
+  expect(parseTxMod('s/4-x')).toBeNull();
+  expect(parseTxMod('')).toBeNull();
+  expect(parseTxMod('a'.repeat(21))).toBeNull();
+  expect(parseTxMod('é_2-x')).toBe('É_2-X');
+  expect(txModules(['FI', 'RETAIL', 'EWM', 'RETAIL', ''])).toEqual([...TX_MOD_IDS, 'EWM', 'RETAIL']);
+  // custom modules: a stable colour derived from the name
+  expect(modColor('RETAIL')).toMatch(/^oklch\(0\.8 0\.11 \d+\)$/);
+  expect(modColor('RETAIL')).toBe(modColor('RETAIL'));
+  expect(modColor('RETAIL')).not.toBe(modColor('EWM'));
+  expect(modColor('')).toBe('oklch(0.8 0.02 60)');
+  // the API accepts any valid module, stored normalised
+  expect(TcodeInput.parse({ module: ' ewm  ops ' })).toEqual({ module: 'EWM OPS' });
+  expect(TcodeInput.safeParse({ module: '   ' }).success).toBe(false);
+  expect(TcodeInput.safeParse({ module: 'A<B' }).success).toBe(false);
+  expect(TcodeInput.safeParse({ module: 'X'.repeat(21) }).success).toBe(false);
 });

@@ -38,14 +38,13 @@ export function MgTime({ mg }: { mg: Mg }) {
   const sp = useSearchParams();
   const { D, tr, lang, P, wk, wi, dIso } = mg;
   const L = (i: number) => mgL(i, lang);
-  const en = lang === 'en';
   const [w, setW] = useState(-1);
   const [vm0, setVM] = usePersistentState<string>('mg.tsView', 'person');
   const VM = vm0 === 'area' ? 'team' : vm0; // saved before "Por Equipa" grouped by team
   const [RG, setRG] = usePersistentState<string>('mg.tsRange', 'w');
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const wIso = wk(w);
-  const DN = en ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] : ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
+  const DN = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map((d) => tr(d));
   const days = DN.map((d, i) => `${d} ${+dIso(w, i).slice(8, 10)}`);
   const entry = (pid: string, wkIso = wIso) => mg.tsBy[`${pid}|${wkIso}`];
   const planned = (pid: string) =>
@@ -399,7 +398,7 @@ export function MgTime({ mg }: { mg: Mg }) {
       >
         <div style={css('display:flex;flex-direction:column;gap:3px;margin-right:auto;min-width:0;')}>
           <h1 style={css('margin:0;font-size:26px;font-weight:600;letter-spacing:-.02em;')}>
-            {en ? 'Timesheets' : 'Folhas de Tempos'}
+            {tr('Folhas de Tempos')}
           </h1>
           <span style={css('font-size:12.5px;color:rgba(255,248,240,.68);')}>{summary}</span>
         </div>

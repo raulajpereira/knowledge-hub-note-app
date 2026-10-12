@@ -4,7 +4,7 @@ import { userTemplates } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
 import { tplBodySchema, type Tpl, type TplBody, type TplKind } from '@/lib/templates';
-import { asUser } from './tenant';
+import { asUser, lockLimit } from './tenant';
 
 // Modelos: the templates a person saves (the ready-made ones live in
 // src/lib/templates.ts). Private to their owner (RLS).
@@ -30,6 +30,7 @@ export async function saveTemplate(
   const parsed = tplBodySchema(input.kind).safeParse(input.body);
   if (!parsed.success) throw new ApiError(400, 'invalid_input', 'invalid template');
   return asUser(auth, async (tx) => {
+    await lockLimit(tx, auth.tenant.id, `templates:${auth.user.id}`);
     const [{ n }] = (await tx.select({ n: sql<number>`count(*)::int` }).from(userTemplates)) as [
       { n: number },
     ];

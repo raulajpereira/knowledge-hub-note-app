@@ -27,7 +27,8 @@ export type Member = {
   email: string;
   name: string;
   perm: 'read' | 'edit';
-  status: 'invited' | 'active';
+  /** invited = no account yet (external); pending = an account that hasn't accepted yet; active = member */
+  status: 'invited' | 'pending' | 'active';
   paused: boolean;
   /** paused for this owner's folders as a whole ("Pessoas com Acesso") */
   personPaused: boolean;
@@ -220,9 +221,11 @@ export async function deleteSharedFolder(auth: AuthContext, id: string) {
 export type AddResult = { status: 'added' | 'exists' | 'needs_invite' | 'invited'; member?: Member };
 
 /**
- * "Partilhar" with an email. An existing account is added at once (and told
- * by email); an email without an account needs `invite` (prototype: "não tem
- * conta no KnowledgeHub. Enviar convite por email?").
+ * "Partilhar" with an email. An existing account gets an invitation to accept
+ * (in the app and by email) and only sees the folder once it accepts — the
+ * owner sees it as a member waiting; an email without an account needs
+ * `invite` and is shown as external (prototype: "não tem conta no
+ * KnowledgeHub. Enviar convite por email?").
  */
 export async function addMember(
   auth: AuthContext,
@@ -259,7 +262,7 @@ export async function addMember(
         folderId,
         email,
         userId: account?.id ?? null,
-        status: account ? 'active' : 'invited',
+        status: account ? 'pending' : 'invited',
         perm: opts.perm ?? 'read',
       })
       .returning();
@@ -419,4 +422,53 @@ export async function reachableFolder(auth: AuthContext, id: string) {
   );
   if (!f) throw new ApiError(404, 'not_found');
   return f;
+}
+
+// ── Invitations waiting for the current user ───────────────────────────────
+export type ShareInvite = {
+  id: string;
+  folderId: string;
+  folderName: string;
+  kind: ShareKind;
+  perm: 'read' | 'edit';
+  ownerName: string;
+  invitedAt: string;
+};
+
+export async function listInvites(auth: AuthContext): Promise<ShareInvite[]> {
+  const rows = await asUser(auth, (tx) =>
+    tx.execute<{
+      id: string;
+      folder_id: string;
+      folder_name: string;
+      kind: ShareKind;
+      perm: 'read' | 'edit';
+      owner_name: string;
+      invited_at: Date | string;
+    }>(sql`select * from kh_share_invites()`),
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    folderId: r.folder_id,
+    folderName: r.folder_name,
+    kind: r.kind,
+    perm: r.perm,
+    ownerName: r.owner_name,
+    invitedAt: new Date(r.invited_at).toISOString(),
+  }));
+}
+
+/** Accept (the folder appears) or decline (the invitation goes away) an invitation. */
+export async function answerInvite(auth: AuthContext, memberId: string, accept: boolean) {
+  const [r] = await asUser(auth, (tx) =>
+    tx.execute<{ ok: boolean }>(sql`select kh_share_answer(${memberId}::uuid, ${accept}) as ok`),
+  );
+  if (!r?.ok) throw new ApiError(404, 'not_found');
+  await audit({
+    action: accept ? 'share.invite.accept' : 'share.invite.decline',
+    actorUserId: auth.user.id,
+    tenantId: auth.tenant.id,
+    targetType: 'share_member',
+    targetId: memberId,
+  });
 }

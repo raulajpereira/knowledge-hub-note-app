@@ -4,7 +4,7 @@ import path from 'node:path';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 // Phase 2 business rules end-to-end through the real services, Postgres and
 // Redis (acceptance criteria of ROADMAP Fase 1/2 + SECURITY.md §2).
@@ -131,7 +131,17 @@ describe.skipIf(!enabled)('auth, codes and entitlements', () => {
     await expect(reg(e.code)).rejects.toMatchObject({ code: 'code_expired' });
     const ok = await codesSvc.createCode({ type: 'license', maxUses: 5 });
     await reg(ok.code, 'dup@b.pt');
-    await expect(reg(ok.code, 'DUP@b.pt')).rejects.toMatchObject({ code: 'email_taken' });
+    // an existing email gets the same answer as a new sign-up (nothing says the
+    // account exists); its owner is told by email and no seat is used
+    await expect(reg(ok.code, 'DUP@b.pt')).resolves.toEqual({ userId: null });
+    expect((await lastMail('dup@b.pt', 'accountExists'))?.subject).toMatch(/Já tem conta/);
+    const [used] = await dbm
+      .db()
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.codeRedemptions)
+      .innerJoin(schema.codes, eq(schema.codes.id, schema.codeRedemptions.codeId))
+      .where(eq(schema.codes.code, ok.code));
+    expect(used?.n).toBe(1);
   });
 
   it('login requires a verified email, then creates a working session', async () => {
@@ -210,12 +220,16 @@ describe.skipIf(!enabled)('auth, codes and entitlements', () => {
     await codesSvc.resumeCode(c.code);
     const t2 = await loginToken('p@z.pt');
 
+    // revoking only stops new sign-ups: who is in keeps access and nothing is marked for deletion
     await codesSvc.revokeCode(c.code);
-    expect(await session.resolveSession(t2)).toBeNull();
-    await expect(loginToken('p@z.pt')).rejects.toMatchObject({ code: 'code_revoked' });
+    expect(await session.resolveSession(t2)).not.toBeNull();
+    expect(await loginToken('p@z.pt')).toBeTruthy();
     const [code] = await dbm.db().select().from(schema.codes).where(eq(schema.codes.code, c.code));
     const [t] = await dbm.db().select().from(schema.tenants).where(eq(schema.tenants.id, code!.tenantId!));
-    expect(t!.deletedAt).not.toBeNull(); // data kept, marked for purge in 30 days
+    expect(t!.deletedAt).toBeNull();
+    await expect(
+      svc.register({ name: 'Novo', email: 'novo-rev@z.pt', password: 'Correct-Horse-9', code: c.code }, meta),
+    ).rejects.toMatchObject({ code: 'code_invalid' });
 
     await codesSvc.restoreCode(c.code);
     expect(await loginToken('p@z.pt')).toBeTruthy();

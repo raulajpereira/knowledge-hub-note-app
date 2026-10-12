@@ -87,7 +87,7 @@ describe('access rules', () => {
     [{ emailVerifiedAt: null }, 'unverified'],
     [{ userStatus: 'paused' }, 'user_paused'],
     [{ codeStatus: 'paused' }, 'code_paused'],
-    [{ codeStatus: 'revoked', tenantDeletedAt: new Date() }, 'code_revoked'],
+    [{ codeStatus: 'revoked', tenantDeletedAt: null }, null],
     [{ tenantDeletedAt: new Date() }, 'tenant_deleted'],
   ] as const)('%o → %s', (patch, expected) => expect(accessProblem({ ...ok, ...patch })).toBe(expected));
 });

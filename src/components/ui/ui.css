@@ -1122,10 +1122,12 @@ button.kh-table__th {
     0 18px 50px rgba(0, 0, 0, 0.35);
 }
 
-/* TagInput suggestions */
+/* TagInput suggestions: sits right on top of form fields, so the glass is
+   darker than a menu's to keep the labels underneath from showing through */
 .kh-taglist {
   padding: 6px;
   border-radius: 16px;
+  background: linear-gradient(180deg, rgba(52, 52, 60, 0.9), rgba(40, 40, 47, 0.9));
 }
 .kh-taglist > button {
   flex: none;

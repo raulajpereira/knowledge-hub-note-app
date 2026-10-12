@@ -168,7 +168,6 @@
 }
 .kh-mt-when input:focus,
 .kh-mt-when select:focus,
-.kh-mt-topics:focus,
 .kh-mt-row input:focus {
   border-color: rgba(255, 255, 255, 0.36);
 }
@@ -257,23 +256,8 @@
   outline: none;
 }
 .kh-mt-who input::placeholder,
-.kh-mt-topics::placeholder,
 .kh-mt-row input::placeholder {
   color: rgba(255, 248, 240, 0.45);
-}
-.kh-mt-topics {
-  min-height: 160px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(18, 12, 9, 0.2);
-  color: #fbf8f5;
-  font: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  outline: none;
-  resize: vertical;
-  field-sizing: content;
 }
 .kh-mt-cols {
   display: grid;
@@ -380,8 +364,8 @@
   cursor: pointer;
 }
 .kh-mt-folderSel option {
-  background: #2a211c;
-  color: #fbf8f5;
+  background: var(--kh-option-bg);
+  color: var(--kh-option-fg);
 }
 .kh-mt-item[data-drag] {
   opacity: 0.45;
@@ -412,4 +396,34 @@
 .kh-mt-handle:focus-visible > div,
 .kh-mt-handle[data-drag] > div {
   background: rgba(255, 255, 255, 0.75);
+}
+
+/* "Temas discutidos": the Notes editor inside the record */
+.kh-mt-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 160px;
+  padding: 10px 14px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 12, 9, 0.2);
+}
+.kh-mt-doc:focus-within {
+  border-color: rgba(255, 255, 255, 0.36);
+}
+.kh-mt-doc .kh-ne-tools {
+  align-self: flex-start;
+}
+.kh-mt-doc .kh-ne-ask {
+  margin: 0;
+}
+.kh-mt-doc .kh-ne {
+  min-height: 120px;
+  font-size: 14.5px;
+}
+.kh-mt-doc .kh-ne p {
+  margin: 0 0 8px;
+  font-size: 14.5px;
+  line-height: 1.6;
 }

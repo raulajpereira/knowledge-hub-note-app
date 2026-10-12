@@ -415,10 +415,14 @@
 }
 
 /* detail panel */
+/* One card, like Management › Resources: the detail panel is a column of the
+   same card behind a thin divider, resized by the grip sitting on that line. */
 .kh-sap-handle {
   flex: none;
+  position: relative;
+  z-index: 6;
   width: 14px;
-  margin: 10px 0;
+  margin: 0 -7px;
   cursor: col-resize;
   display: flex;
   align-items: center;
@@ -427,9 +431,10 @@
 }
 .kh-sap-handle > div {
   width: 4px;
-  height: 56px;
+  height: 48px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .kh-sap-handle[data-drag] > div {
   background: rgba(255, 255, 255, 0.75);
@@ -437,15 +442,11 @@
 .kh-sap-panel {
   flex: none;
   max-width: 78%;
-  margin: 10px 10px 10px 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-radius: 24px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-left: 1px solid var(--kh-divider, rgba(255, 255, 255, 0.1));
 }
 .kh-sap-ptop {
   flex-shrink: 0;
@@ -535,8 +536,8 @@
   background-size: 12px;
 }
 .kh-sap-select option {
-  background-color: #2b2c33;
-  color: #f4f2f0;
+  background-color: var(--kh-option-bg, #2b2622);
+  color: var(--kh-option-fg, #f4f2f0);
 }
 .kh-sap-envpick {
   display: flex;
@@ -569,7 +570,9 @@
   .kh-sap-panel {
     width: auto !important;
     max-width: none;
-    margin: 0 10px 10px;
+    max-height: 60vh;
+    border-left: 0;
+    border-top: 1px solid var(--kh-divider, rgba(255, 255, 255, 0.1));
   }
 }
 
@@ -1321,4 +1324,38 @@
 }
 .kh-sap-pbody > * {
   flex-shrink: 0;
+}
+
+/* TCodes › module combobox (pick a module or type a new one) */
+.kh-tx-combo {
+  position: relative;
+  display: block;
+}
+.kh-tx-combo > .kh-sap-sq {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.kh-tx-modin {
+  padding-left: 30px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.kh-tx-modin[aria-invalid='true'] {
+  border-color: oklch(0.72 0.17 25 / 0.8);
+}
+.kh-tx-modlist > button {
+  gap: 9px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12.5px;
+}
+.kh-tx-modlist > button[data-create] {
+  font-family: inherit;
+  color: rgba(255, 248, 240, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 10px 10px;
 }

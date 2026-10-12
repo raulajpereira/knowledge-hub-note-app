@@ -367,7 +367,7 @@ export function DriveView() {
       : undefined;
   const canUpload = !curShared || curShared.mine || curShared.perm === 'edit';
   const fmtStamp = (iso: string) =>
-    new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', {
+    new Date(iso).toLocaleString(t('locale'), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -384,7 +384,7 @@ export function DriveView() {
 
   return (
     <div
-      className="kh-em kh-fl"
+      className="kh-em kh-fl kh-page-card"
       style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
     >
       {!focus && (
@@ -869,7 +869,7 @@ function Preview({ f }: { f: DFile }) {
               <tr key={i}>
                 <th>{i + 1}</th>
                 {r.slice(0, XL_COLS).map((c, j) => (
-                  <td key={j}>{cell(c, lang)}</td>
+                  <td key={j}>{cell(c, t('locale'))}</td>
                 ))}
               </tr>
             ))}
@@ -884,13 +884,13 @@ function Preview({ f }: { f: DFile }) {
   );
 }
 
-const cell = (c: unknown, lang: string) =>
+const cell = (c: unknown, loc: string) =>
   c === null || c === undefined
     ? ''
     : c instanceof Date
-      ? c.toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-PT')
+      ? c.toLocaleDateString(loc)
       : typeof c === 'number'
-        ? c.toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', { maximumFractionDigits: 6 })
+        ? c.toLocaleString(loc, { maximumFractionDigits: 6 })
         : String(c);
 
 const DOC_CSS =

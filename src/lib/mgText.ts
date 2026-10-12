@@ -92,6 +92,33 @@ export const MG_L: Array<[string, string]> = [
   ['Remover Cliente', 'Remove Client'],
 ];
 export const MG_EX: Record<string, string> = {
+  // Alocações panel and cell popup, Recursos and Timesheets titles, weekdays
+  // ({x}/{n}/… are filled in after translating)
+  Repor: 'Reset',
+  'Sem alocações neste período.': 'No allocation in this period.',
+  'Termina a': 'Ends on',
+  '{n} dias': '{n} days',
+  'Por semana': 'Per week',
+  'Carga semanal máxima': 'Peak weekly load',
+  Recurso: 'Resource',
+  'Função no projeto': 'Role in the project',
+  'Ex.: Líder FI, Programador ABAP…': 'E.g. FI lead, ABAP developer…',
+  'Competências da pessoa': "The person's skills",
+  'Data de início': 'Start date',
+  'Horas por dia': 'Hours per day',
+  'Número de dias úteis': 'Number of working days',
+  'Dias da semana': 'Working days',
+  Guardar: 'Save',
+  '{x} está {s}.': '{x} is {s}.',
+  'O período é demasiado longo (máximo 160 semanas).': 'The period is too long (at most 160 weeks).',
+  'Esta alocação deixa {x} acima da capacidade ({h}).': 'This allocation puts {x} above capacity ({h}).',
+  'Pesquisar Recursos': 'Resource Finder',
+  'Folhas de Tempos': 'Timesheets',
+  Seg: 'Mon',
+  Ter: 'Tue',
+  Qua: 'Wed',
+  Qui: 'Thu',
+  Sex: 'Fri',
   // prompts and messages of the v2 screens (not in the prototype's tables)
   // Recursos: status, profile blocks, phone and experience breakdown
   Inativo: 'Inactive',

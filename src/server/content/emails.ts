@@ -7,7 +7,7 @@ import { randomToken } from '@/lib/crypto';
 import { s3 } from '@/lib/storage';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
-import { asUser, type Tx } from './tenant';
+import { asUser, removeFilesAfterCommit, type Tx } from './tenant';
 import { parseEmailFile } from './emailParse';
 import { createTask, updateTask } from './tasks';
 
@@ -217,7 +217,10 @@ export async function purgeEmailsTx(tx: Tx, ids: string[]) {
     .where(inArray(emailAttachments.emailId, ids))
     .returning({ key: emailAttachments.storageKey });
   const gone = await tx.delete(emails).where(inArray(emails.id, ids)).returning({ key: emails.fileKey });
-  for (const k of [...atts, ...gone]) await del(k.key);
+  removeFilesAfterCommit(
+    tx,
+    [...atts, ...gone].map((k) => k.key),
+  );
 }
 
 /** "Criar tarefa": a task titled with the subject, the sender and date in its notes. */

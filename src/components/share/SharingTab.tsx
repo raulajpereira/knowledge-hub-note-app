@@ -10,6 +10,14 @@ import type { PublicLink } from './ShareLinkDialog';
 import { SHARE_EVENT, shareChanged, shAv, shIni, useSharedFolders, type ShareKind } from './useSharedFolders';
 import './share.css';
 
+type Invite = {
+  id: string;
+  folderName: string;
+  kind: ShareKind;
+  perm: 'read' | 'edit';
+  ownerName: string;
+  invitedAt: string;
+};
 type Person = { email: string; name: string; folders: number; paused: boolean };
 
 /** Definições › Partilhas (prototype Sharing, mode "settings"): folders, people, public links. */
@@ -25,12 +33,16 @@ export function SharingTab() {
   const [nName, setNName] = useState('');
   const [people, setPeople] = useState<Person[]>([]);
   const [links, setLinks] = useState<PublicLink[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
   const fail = () => toast({ message: t('ne_saveFail'), tone: 'error' });
 
   const load = useCallback(() => {
     api<{ people: Person[] }>('/share/people')
       .then((r) => setPeople(r.people))
+      .catch(() => {});
+    api<{ invites: Invite[] }>('/share/invites')
+      .then((r) => setInvites(r.invites))
       .catch(() => {});
     api<{ links: PublicLink[] }>('/share/links')
       .then((r) => setLinks(r.links))
@@ -59,6 +71,47 @@ export function SharingTab() {
 
   return (
     <div className="kh-sh-set">
+      {invites.length > 0 && (
+        <div className="kh-sh-card">
+          <div className="kh-sh-card__h">
+            <div className="kh-sh-card__t">{t('sh_invites')}</div>
+            <div className="kh-sh-card__s">{t('sh_invitesDesc')}</div>
+          </div>
+          {invites.map((v) => (
+            <div key={v.id} className="kh-sh-mem kh-sh-mem--person">
+              <span
+                className="kh-sh-av kh-sh-av--lg"
+                style={{ background: shAv(v.ownerName) }}
+                aria-hidden="true"
+              >
+                {shIni(v.ownerName)}
+              </span>
+              <span className="kh-sh-mem__txt">
+                <span className="kh-sh-mem__n">{v.folderName}</span>
+                <span className="kh-sh-mem__e">
+                  {t(v.kind === 'artifacts' ? 'sh_arts' : `sh_${v.kind}`)} ·{' '}
+                  {t(v.perm === 'edit' ? 'sh_edit' : 'sh_read')} · {t('sh_from')} {v.ownerName} ·{' '}
+                  {fmt(v.invitedAt)}
+                </span>
+              </span>
+              <button
+                type="button"
+                className="kh-sh-solid kh-sh-solid--sm"
+                onClick={() => void run(() => api(`/share/invites/${v.id}`, { accept: true }))}
+              >
+                {t('sh_accept')}
+              </button>
+              <button
+                type="button"
+                className="kh-sh-ghost kh-sh-ghost--sm"
+                onClick={() => void run(() => api(`/share/invites/${v.id}`, { accept: false }))}
+              >
+                {t('sh_decline')}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="kh-sh-card">
         <div className="kh-sh-card__h">
           <div className="kh-sh-card__t">{t('sh_folders')}</div>

@@ -16,6 +16,9 @@ import { CodeBlockView } from './CodeBlockView';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
+/** Where stored images are served: a note's (/api/v1/files/…) or a meeting record's (/api/v1/meetings/files/…). */
+const STORED = /^\/api\/v1\/(meetings\/)?files\//;
+
 /** Images live with the note: the document keeps `/api/v1/files/<id>` and the basePath is added when rendering. */
 export const NoteImage = Image.extend({
   addAttributes() {
@@ -25,11 +28,13 @@ export const NoteImage = Image.extend({
         default: null,
         parseHTML: (el) => {
           const src = el.getAttribute('src') ?? '';
-          return BASE && src.startsWith(`${BASE}/api/v1/files/`) ? src.slice(BASE.length) : src;
+          return BASE && src.startsWith(BASE) && STORED.test(src.slice(BASE.length))
+            ? src.slice(BASE.length)
+            : src;
         },
         // Images still being imported are not loaded from the third-party host.
         renderHTML: (attrs) =>
-          typeof attrs.src === 'string' && attrs.src.startsWith('/api/v1/files/')
+          typeof attrs.src === 'string' && STORED.test(attrs.src)
             ? { src: `${BASE}${attrs.src}` }
             : { 'data-pending': '' },
       },

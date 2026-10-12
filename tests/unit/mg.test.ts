@@ -60,6 +60,17 @@ describe('management model', () => {
 
 describe('management labels', () => {
   const en = (s: string) => mgTr(s, 'en');
+  it('the allocation panel and cell popup strings have English text', () => {
+    expect(en('Nova Alocação')).toBe('New Allocation');
+    expect(en('Carga semanal máxima')).toBe('Peak weekly load');
+    expect(en('Esta alocação deixa {x} acima da capacidade ({h}).')).toBe(
+      'This allocation puts {x} above capacity ({h}).',
+    );
+    expect(en('{n} dias')).toBe('{n} days');
+    expect(en('Semana de 06/10/26')).toBe('Week of 06/10/26');
+    expect(['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map(en)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+    expect(mgTr('Nova Alocação', 'pt')).toBe('Nova Alocação');
+  });
   it('the Teams, Skills and Settings strings have English text', () => {
     for (const s of [
       'Equipas',

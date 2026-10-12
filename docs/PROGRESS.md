@@ -384,6 +384,17 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
   - *Cliente*: diálogos já não roubam o foco a cada tecla; eliminações e autosaves com falha avisam e não perdem dados (incl. ao fechar o separador); linhas clicáveis acessíveis por teclado; um único estilo de interruptor; aviso de cliente suspenso já não tapa o cabeçalho; diálogos por cima do botão da IA; etiquetas acessíveis em falta; foco visível nos seletores. Botão da IA passa para o canto da barra de rodapé (tapava controlos).
   - *Corte*: CI usa `APP_URL` com o mesmo base path da build; avisos de arranque para `change-me` e `APP_URL`/base path divergentes; `DEPLOY.md §7` reescrito (cópias antes, DNS, janela, `COMPOSE_PROFILES=edge`, verificação, reversão completa); `.env.example` com as variáveis do Caddy; `migrate` espera pelo Redis; worker/CLI/seed com `server-only` neutralizado no bundle.
 
+- **Lote B** (migração `0039`):
+  - *Registos Reuniões*: os Temas discutidos usam o editor das Notas, com imagens no texto (tabela `meeting_attachments`, servidas só ao dono; as que deixam de ser usadas são limpas pelo job diário); ligações entre reuniões; "Organizar com IA" insere o resumo no topo; o contador do menu conta todos os registos.
+  - *Transações SAP*: sem contador no menu; o campo Módulo aceita escrever um módulo novo ("Criar módulo «X»"), com cor própria.
+  - *Partilhas*: quem já tem conta tem de aceitar o convite em Definições › Partilhas (Convites recebidos: Aceitar/Recusar); até lá não vê a pasta. O dono vê "Membro · aguarda aceitação" (tem conta) ou "Externo · convite enviado" (sem conta). Triggers na base: a pasta partilhada tem de ser do dono e notas/tarefas/artefactos/ficheiros não mudam de dono nem de tenant.
+  - *Revogar código*: só impede novos registos; quem já entrou mantém o acesso e nada é apagado (D45 revista).
+  - *Segurança*: o registo e "adicionar membro" já não revelam se um email tem conta (quem já tem recebe um email a avisar); tentativas de login limitadas também por conta (20 em 15 min → CAPTCHA, ou bloqueio temporário sem Turnstile).
+  - *Servidor*: lista de notas paginada (200 de cada vez, "Carregar mais"; antes parava nas 500); limites do plano FREE verificados sob lock (pedidos simultâneos já não passam o limite); seed e aprovação de pedidos em transação (aprovar duas vezes ao mesmo tempo dá 409); ficheiros no S3 só apagados depois do commit; imagens do Quadro que deixam de ser usadas são limpas.
+  - *Layout*: cada página é um só cartão com divisórias finas (Notas, Emails, Registos, Artefactos, Ficheiros, API, Notas de Voz, Tarefas, Problemas, Palavras-passe…); só o menu à esquerda fica separado. Cabeçalhos de tabela fixos e opções dos menus nativos com as mesmas cores em toda a app (sem castanho opaco); textos que estavam no código passam ao dicionário PT/EN.
+  - *Assistente IA*: janela mais baixa (460×560) e redimensionável em largura e altura (bordas e canto, teclado; duplo clique repõe; o tamanho fica guardado).
+  - Screenshots `correcoes/34–39`.
+
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
 - Opcional: chaves Cloudflare Turnstile e `ADMIN_IP_ALLOWLIST` no `.env`.
@@ -438,7 +449,9 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D42 | Partilha entre tenants: o RLS de notas/tarefas/artefactos alarga-se aos membros de pastas partilhadas só com o âmbito de partilha ligado (itens abertos/editados e listas de uma pasta partilhada); links públicos lidos por uma função SECURITY DEFINER pelo hash do token | Claude + utilizador |
 | D43 | Admin Console: pedidos de plano numa secção própria "Pedidos" (planos normais e pacotes personalizados com grupos, lugares e ciclo), com Aprovar (aplica ao cliente) / Recusar e email aos administradores | utilizador |
 | D44 | Visão Geral da consola sem o gráfico de 12 meses nem a variação do protótipo (eram inventados): só MRR e ARR atuais | utilizador |
-| D45 | Revogar código segue os documentos (não o protótipo): acesso cortado já, dados mantidos 30 dias com Restaurar na consola, depois apagados por um job | utilizador |
+| D45 | Revogar código só impede novos registos com ele; quem já entrou mantém o acesso e nada é apagado (revisto no lote B; antes cortava o acesso e apagava aos 30 dias) | utilizador |
+| D61 | Pastas partilhadas: convite a quem já tem conta tem de ser aceite; o dono distingue membros (com conta) de externos (convite por email) | utilizador |
+| D62 | Um cartão por página com divisórias finas, como Recursos; só o menu lateral fica separado | utilizador |
 | D46 | Papel Suporte: vê clientes e utilizadores (dados comerciais só leitura), repõe password, reenvia convite, pausa/reativa utilizadores, trata pedidos e vê a auditoria; papéis verificados no servidor | utilizador |
 | D47 | "Em atraso" automático: subscrição paga ativa com a data de renovação ultrapassada passa a Em atraso no job diário e, 7 dias depois, a suspensa (só leitura). A consola continua a poder marcar à mão; os planos grátis nunca ficam em atraso | Claude (sem faturação na app) |
 | D48 | Pedido de mudança de pacote usa sempre os lugares atuais do cliente; só o pacote personalizado indica lugares; aprovar nunca baixa os lugares abaixo das pessoas em uso | Claude |

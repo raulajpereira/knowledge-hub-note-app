@@ -13,6 +13,8 @@ import { AiText } from '@/components/ai/AiText';
 import { aiError, useAi } from '@/components/ai/useAi';
 import { SaveTemplateButton, TemplateButton } from '@/components/templates/Templates';
 import type { MeetingTpl } from '@/lib/templates';
+import type { JSONContent } from '@tiptap/react';
+import { MeetingTopics, textToDoc, type TopicsHandle } from './MeetingTopics';
 import '../emails/emails.css';
 import '../artifacts/artifacts.css';
 import './meetings.css';
@@ -20,7 +22,8 @@ import './meetings.css';
 // Registos Reuniões: a meeting record kept as minutes — when, the subject, who
 // was there (any names, people may be outside the app), the topics discussed,
 // points to review and things to do. In folders (as Artefactos); shown on the
-// Calendar by its date; linkable to notes, tasks and project issues.
+// Calendar by its date; linkable to notes, tasks, project issues and other
+// meeting records. The topics are a document like a note's (images included).
 
 type Item = { t: string; done: boolean };
 type Meeting = {
@@ -37,9 +40,9 @@ type Meeting = {
   createdAt: string;
   updatedAt: string;
 };
-type Patch = Partial<Omit<Meeting, 'id' | 'createdAt' | 'updatedAt'>>;
+type Patch = Partial<Omit<Meeting, 'id' | 'createdAt' | 'updatedAt'>> & { topicsDoc?: JSONContent };
 type Folder = { id: string; name: string; color: string };
-const COL = { def: 340, min: 260, gap: 16, read: 420 };
+const COL = { def: 340, min: 260, gap: 0, read: 420 };
 
 const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
   <svg
@@ -160,7 +163,7 @@ function Checklist({
 }
 
 export function MeetingsView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -189,7 +192,7 @@ export function MeetingsView() {
   const urlId = sp.get('m');
   const [activeId, setActiveId] = useState<string | null>(urlId);
   useEffect(() => setActiveId(urlId), [urlId]);
-  const loc = lang === 'en' ? 'en-GB' : 'pt-PT';
+  const loc = t('locale');
 
   const open = useCallback(
     (id: string | null) => {
@@ -235,7 +238,10 @@ export function MeetingsView() {
     };
   }, [flush]);
   const upd = (id: string, p: Patch, delay = 500) => {
-    setItems((cur) => cur && cur.map((x) => (x.id === id ? { ...x, ...p } : x)));
+    // the document is kept by the editor (and in `docs`), not in the list
+    const vis = { ...p };
+    delete vis.topicsDoc;
+    setItems((cur) => cur && cur.map((x) => (x.id === id ? { ...x, ...vis } : x)));
     const prev = timers.current.get(id);
     if (prev) clearTimeout(prev.tm);
     timers.current.set(id, {
@@ -260,6 +266,25 @@ export function MeetingsView() {
     )
     .sort((a, b) => (b.heldOn + b.startTime).localeCompare(a.heldOn + a.startTime));
   const act = all.find((m) => m.id === activeId) ?? null;
+  // topics documents, loaded when a record is opened (records with only text are converted)
+  const docs = useRef(new Map<string, JSONContent>());
+  const [, setDocsLoaded] = useState(0);
+  const topicsRef = useRef<TopicsHandle>(null);
+  const actId = act?.id;
+  useEffect(() => {
+    if (!actId || docs.current.has(actId)) return;
+    let live = true;
+    api<{ meeting: Meeting & { topicsDoc: JSONContent | null } }>(`/meetings/${actId}`)
+      .then(({ meeting: m }) => {
+        if (!live || docs.current.has(actId)) return;
+        docs.current.set(actId, m.topicsDoc ?? textToDoc(m.topics));
+        setDocsLoaded((n) => n + 1);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [actId]);
   // grouped by month (newest first)
   const groups = useMemo(() => {
     const out: Array<{ key: string; label: string; items: Meeting[] }> = [];
@@ -290,6 +315,7 @@ export function MeetingsView() {
           todos: tpl.todos.map((x) => ({ t: x, done: false })),
         }),
       });
+      docs.current.set(meeting.id, textToDoc(meeting.topics));
       setItems((cur) => [meeting, ...(cur ?? [])]);
       setQ('');
       open(meeting.id);
@@ -423,7 +449,11 @@ export function MeetingsView() {
   const colCss = `min(${cw}px, calc(100% - ${COL.read + COL.gap}px))`;
 
   return (
-    <div ref={rootRef} className="kh-em kh-mt" style={{ gridTemplateColumns: `${colCss} minmax(0, 1fr)` }}>
+    <div
+      ref={rootRef}
+      className="kh-em kh-mt kh-page-card"
+      style={{ gridTemplateColumns: `${colCss} minmax(0, 1fr)` }}
+    >
       <div
         className="kh-mt-handle"
         style={{ left: `calc(${colCss} + ${COL.gap / 2 - 7}px)` }}
@@ -709,7 +739,7 @@ export function MeetingsView() {
 
             <div className="kh-mt-sec">
               <div className="kh-mt-secT">
-                <label htmlFor={`mt-topics-${act.id}`}>{t('mt_topics')}</label>
+                <span>{t('mt_topics')}</span>
                 {aiReady && (
                   <span style={{ marginLeft: 'auto' }}>
                     <AiButton
@@ -769,12 +799,12 @@ export function MeetingsView() {
                       type="button"
                       data-main
                       onClick={() => {
+                        // the summary goes on top of the document, the original topics stay below
+                        if (sug.summary)
+                          topicsRef.current?.prepend(sug.summary, `— ${t('ai_originalNotes')} —`);
                         upd(
                           act.id,
                           {
-                            topics: sug.summary
-                              ? `${sug.summary.trim()}\n\n— ${t('ai_originalNotes')} —\n${act.topics}`
-                              : act.topics,
                             review: [...act.review, ...sug.review.map((x) => ({ t: x, done: false }))],
                             todos: [...act.todos, ...sug.todos.map((x) => ({ t: x, done: false }))],
                           },
@@ -791,14 +821,22 @@ export function MeetingsView() {
                   </div>
                 </div>
               )}
-              <textarea
-                id={`mt-topics-${act.id}`}
-                className="kh-mt-topics"
-                value={act.topics}
-                maxLength={100_000}
-                placeholder={t('mt_topicsPh')}
-                onChange={(e) => upd(act.id, { topics: e.target.value })}
-              />
+              {docs.current.has(act.id) ? (
+                <MeetingTopics
+                  key={act.id}
+                  meetingId={act.id}
+                  doc={docs.current.get(act.id)!}
+                  handle={topicsRef}
+                  onChange={(doc, text) => {
+                    docs.current.set(act.id, doc);
+                    // the server keeps the text itself; here it serves search and the AI button
+                    setItems((cur) => cur && cur.map((x) => (x.id === act.id ? { ...x, topics: text } : x)));
+                    upd(act.id, { topicsDoc: doc });
+                  }}
+                />
+              ) : (
+                <div className="kh-mt-doc" aria-busy="true" />
+              )}
             </div>
 
             <div className="kh-mt-cols">

@@ -704,7 +704,7 @@ export function VoiceView() {
 
   return (
     <div
-      className="kh-vc"
+      className="kh-vc kh-page-card"
       style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
     >
       {!focus && (

@@ -214,7 +214,7 @@ export function Codes() {
         )}
         <div className="kh-ad-note">
           {A(
-            'Individual: o código fica associado a quem se registar com ele. Convite: junta pessoas a um cliente existente ou cria um utilizador individual. Licença: cria a subscrição do cliente ou utilizador ao ser usado. Pausar retira o acesso mas mantém os dados; Revogar corta o acesso e apaga os dados ao fim de 30 dias (pode restaurar até lá).',
+            'Individual: o código fica associado a quem se registar com ele. Convite: junta pessoas a um cliente existente ou cria um utilizador individual. Licença: cria a subscrição do cliente ou utilizador ao ser usado. Pausar retira o acesso mas mantém os dados; Revogar só impede novos registos com o código (quem já entrou continua e nada é apagado; pode restaurar).',
           )}
         </div>
       </div>
@@ -578,7 +578,7 @@ export function CodeDetail({ row, onChanged }: { row: CodeRow; onChanged: () => 
                   const ok = await confirm({
                     title: A(`Revogar ${r.code}?`),
                     body: A(
-                      `Os ${users.length} utilizadores associados${r.type === 'license' && r.holder && r.holder.kind !== 'user' ? ` e a licença de ${r.holder.name}` : ''} perdem o acesso já. Os dados ficam guardados 30 dias e pode restaurar até lá; depois são apagados.`,
+                      'O código deixa de aceitar novos registos. Quem já entrou com ele mantém o acesso e nada é apagado.',
                     ),
                     confirmLabel: A('Revogar'),
                     cancelLabel: A('Cancelar'),

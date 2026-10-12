@@ -381,7 +381,10 @@ export const meetings = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     /** temas discutidos */
+    /** plain text of the topics (search, AI); the document itself is topicsDoc */
     topics: text('topics').notNull().default(''),
+    /** "Temas discutidos" as a rich document (same nodes as Notes, images included); NULL = only the plain text */
+    topicsDoc: jsonb('topics_doc'),
     /** pontos a rever / coisas a fazer */
     review: jsonb('review').$type<MeetingItem[]>().notNull().default([]),
     todos: jsonb('todos').$type<MeetingItem[]>().notNull().default([]),
@@ -398,6 +401,30 @@ export const meetings = pgTable(
     check(
       'meetings_time_chk',
       sql`${t.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$|^$' and ${t.endTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$|^$'`,
+    ),
+  ],
+);
+
+/** Images inside a meeting record's topics (like note_attachments). */
+export const meetingAttachments = pgTable(
+  'meeting_attachments',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    meetingId: uuid('meeting_id')
+      .notNull()
+      .references(() => meetings.id, { onDelete: 'cascade' }),
+    storageKey: text('storage_key').notNull(),
+    mime: text('mime').notNull(),
+    size: integer('size').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('meeting_attachments_meeting_idx').on(t.meetingId),
+    check(
+      'meeting_attachments_mime_chk',
+      sql`${t.mime} in ('image/png','image/jpeg','image/webp','image/gif')`,
     ),
   ],
 );

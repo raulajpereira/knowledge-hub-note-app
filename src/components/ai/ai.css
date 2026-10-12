@@ -1,12 +1,13 @@
 /* Assistente IA — side panel over the app (glass, like the app's drawers). */
 .kh-ai {
   position: fixed;
-  top: 96px;
   right: 22px;
-  /* above the footer row (news ticker + the button) */
+  /* anchored just above the footer row (news ticker + the button); the user
+     resizes it from its left/top edges (--kh-ai-w/h), never past the window */
   bottom: 62px;
   z-index: 60;
-  width: min(460px, calc(100vw - 32px));
+  width: min(var(--kh-ai-w, 460px), calc(100vw - 38px));
+  height: min(var(--kh-ai-h, 560px), calc(100dvh - 78px));
   display: flex;
   flex-direction: column;
   border-radius: 28px;
@@ -32,6 +33,75 @@
   .kh-ai {
     animation: none;
   }
+}
+/* resize handles: left edge, top edge, top-left corner */
+.kh-ai__rs {
+  position: absolute;
+  z-index: 3;
+  touch-action: none;
+  outline: none;
+}
+.kh-ai__rs[data-edge='w'] {
+  left: 0;
+  top: 22px;
+  bottom: 22px;
+  width: 10px;
+  cursor: ew-resize;
+}
+.kh-ai__rs[data-edge='h'] {
+  top: 0;
+  left: 22px;
+  right: 22px;
+  height: 10px;
+  cursor: ns-resize;
+}
+.kh-ai__rs[data-edge='wh'] {
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  cursor: nwse-resize;
+}
+/* a thin light line along the edge while hovered, focused or dragged */
+.kh-ai__rs::after {
+  content: '';
+  position: absolute;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.7);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.kh-ai__rs[data-edge='w']::after {
+  left: 2px;
+  top: 50%;
+  width: 3px;
+  height: 48px;
+  transform: translateY(-50%);
+}
+.kh-ai__rs[data-edge='h']::after {
+  top: 2px;
+  left: 50%;
+  height: 3px;
+  width: 48px;
+  transform: translateX(-50%);
+}
+.kh-ai__rs[data-edge='wh']::after {
+  top: 6px;
+  left: 6px;
+  width: 9px;
+  height: 9px;
+  background: none;
+  border-top: 2px solid rgba(255, 255, 255, 0.75);
+  border-left: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 3px 0 0 0;
+}
+.kh-ai__rs:hover::after,
+.kh-ai__rs:focus-visible::after,
+.kh-ai__rs[data-drag]::after {
+  opacity: 1;
+}
+.kh-ai__rs:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
 }
 .kh-ai__head {
   flex: none;

@@ -235,6 +235,27 @@ async function notify(
  */
 export async function approveRequest(ctx: AdminCtx, id: string, ip: string | null) {
   const r = await loadNew(id);
+  // claim it first: two admins approving at once can't both apply it
+  const claimed = await db()
+    .update(planRequests)
+    .set({ status: 'approved', handledBy: ctx.user.id, handledAt: new Date() })
+    .where(and(eq(planRequests.id, id), eq(planRequests.status, 'new')))
+    .returning({ id: planRequests.id });
+  if (!claimed.length) throw new ApiError(409, 'already_handled');
+  try {
+    await applyApproval(ctx, r, ip);
+  } catch (e) {
+    // nothing was applied after all: the request goes back to the queue
+    await db()
+      .update(planRequests)
+      .set({ status: 'new', handledBy: null, handledAt: null })
+      .where(eq(planRequests.id, id));
+    throw e;
+  }
+}
+
+async function applyApproval(ctx: AdminCtx, r: Awaited<ReturnType<typeof loadNew>>, ip: string | null) {
+  const id = r.id;
   const [t] = await db().select().from(tenants).where(eq(tenants.id, r.tenantId)).limit(1);
   if (!t || t.deletedAt) throw new ApiError(404, 'not_found');
   const [cur] = t.planId ? await db().select().from(plans).where(eq(plans.id, t.planId)).limit(1) : [];
@@ -267,10 +288,6 @@ export async function approveRequest(ctx: AdminCtx, id: string, ip: string | nul
       .update(tenants)
       .set({ trialEndsAt: new Date(now + target!.trialDays * DAY) })
       .where(eq(tenants.id, t.id));
-  await db()
-    .update(planRequests)
-    .set({ status: 'approved', handledBy: ctx.user.id, handledAt: new Date() })
-    .where(eq(planRequests.id, id));
   await audit({
     action: 'request.approve',
     actorUserId: ctx.user.id,
@@ -301,10 +318,12 @@ export async function rejectRequest(ctx: AdminCtx, id: string, reason: string, i
   const [p] = r.planId
     ? await db().select({ code: plans.code }).from(plans).where(eq(plans.id, r.planId))
     : [];
-  await db()
+  const claimed = await db()
     .update(planRequests)
     .set({ status: 'rejected', handledBy: ctx.user.id, handledAt: new Date() })
-    .where(eq(planRequests.id, id));
+    .where(and(eq(planRequests.id, id), eq(planRequests.status, 'new')))
+    .returning({ id: planRequests.id });
+  if (!claimed.length) throw new ApiError(409, 'already_handled');
   await audit({
     action: 'request.reject',
     actorUserId: ctx.user.id,

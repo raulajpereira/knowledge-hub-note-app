@@ -150,7 +150,7 @@
   "Individual": "Individual",
   "Individual · associado no registo": "Individual · linked at sign-up",
   "Individual — associado a quem se registar": "Individual — linked to whoever signs up",
-  "Individual: o código fica associado a quem se registar com ele. Convite: junta pessoas a um cliente existente ou cria um utilizador individual. Licença: cria a subscrição do cliente ou utilizador ao ser usado. Pausar retira o acesso mas mantém os dados; Revogar corta o acesso e apaga os dados ao fim de 30 dias (pode restaurar até lá).": "Individual: the code is tied to whoever signs up with it. Invite: adds people to an existing client or creates an individual user. License: creates the client’s or user’s subscription when used. Pause removes access but keeps the data; Revoke cuts access and deletes the data after 30 days (you can restore it until then).",
+  "Individual: o código fica associado a quem se registar com ele. Convite: junta pessoas a um cliente existente ou cria um utilizador individual. Licença: cria a subscrição do cliente ou utilizador ao ser usado. Pausar retira o acesso mas mantém os dados; Revogar só impede novos registos com o código (quem já entrou continua e nada é apagado; pode restaurar).": "Individual: the code is tied to whoever signs up with it. Invite: adds people to an existing client or creates an individual user. License: creates the client’s or user’s subscription when used. Pause removes access but keeps the data; Revoke only stops new sign-ups with the code (whoever is in stays and nothing is deleted; you can restore it).",
   "Individual: o código fica associado a quem se registar com ele. Convite: junta pessoas a um cliente existente ou cria um utilizador individual. Licença: cria a subscrição do cliente ou utilizador ao ser usado. Pausar retira o acesso mas mantém os dados; Revogar elimina os utilizadores e os dados associados.": "Individual: the code is linked to whoever signs up with it. Invite: adds people to an existing client or creates an individual user. License: creates the client or user subscription when used. Pause removes access but keeps the data; Revoke deletes the linked users and their data.",
   "Instância dedicada": "Dedicated instance",
   "Intervalo personalizado": "Custom range",
@@ -387,5 +387,6 @@
   "Espaço (MB)": "Storage (MB)",
   "Tamanho máximo por ficheiro (MB)": "Largest file (MB)",
   "Em uso": "In use",
-  "Limites de ficheiros guardados.": "File limits saved."
+  "Limites de ficheiros guardados.": "File limits saved.",
+  "O código deixa de aceitar novos registos. Quem já entrou com ele mantém o acesso e nada é apagado.": "The code stops accepting new sign-ups. Whoever already joined with it keeps access and nothing is deleted."
 }

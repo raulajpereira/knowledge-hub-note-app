@@ -179,22 +179,14 @@ export async function resumeCode(code: string, actorUserId?: string | null) {
 }
 
 /**
- * Revoke (DECISIONS §1): access cut immediately; the tenant a license created
- * is marked deleted_at = now and kept 30 days (restorable), then purged by
- * the daily job.
+ * Revoke: the code can't be used for new sign-ups any more. Nobody loses
+ * access and nothing is deleted (the user's decision; to remove a client use
+ * "Eliminar cliente", which keeps it 30 days). Pausing is what cuts access.
  */
 export async function revokeCode(code: string, actorUserId?: string | null) {
   const c = await findCode(code);
   if (c.status === 'revoked') throw new ApiError(409, 'code_already_revoked');
-  const now = new Date();
-  await db().transaction(async (tx) => {
-    await tx.update(codes).set({ status: 'revoked', revokedAt: now }).where(eq(codes.id, c.id));
-    if (c.type === 'license' && c.tenantId) {
-      await tx.update(tenants).set({ deletedAt: now }).where(eq(tenants.id, c.tenantId));
-    }
-  });
-  await endSessions(await affectedUserIds(c.id));
-  if (c.tenantId) await invalidateEntitlements(c.tenantId);
+  await db().update(codes).set({ status: 'revoked', revokedAt: new Date() }).where(eq(codes.id, c.id));
   await audit({
     action: 'code.revoke',
     actorUserId,
@@ -204,18 +196,10 @@ export async function revokeCode(code: string, actorUserId?: string | null) {
   });
 }
 
-/** Undo a revocation within the retention window. */
+/** Undo a revocation: the code accepts sign-ups again. */
 export async function restoreCode(code: string, actorUserId?: string | null) {
   const c = await findCode(code);
-  if (c.status !== 'revoked' || !c.revokedAt) throw new ApiError(409, 'code_not_revoked');
-  if (Date.now() - c.revokedAt.getTime() > REVOKE_RETENTION_DAYS * 86400_000)
-    throw new ApiError(410, 'retention_expired');
-  await db().transaction(async (tx) => {
-    await tx.update(codes).set({ status: 'active', revokedAt: null }).where(eq(codes.id, c.id));
-    if (c.type === 'license' && c.tenantId) {
-      await tx.update(tenants).set({ deletedAt: null }).where(eq(tenants.id, c.tenantId));
-    }
-  });
-  if (c.tenantId) await invalidateEntitlements(c.tenantId);
+  if (c.status !== 'revoked') throw new ApiError(409, 'code_not_revoked');
+  await db().update(codes).set({ status: 'active', revokedAt: null }).where(eq(codes.id, c.id));
   await audit({ action: 'code.restore', actorUserId, targetType: 'code', targetId: code });
 }

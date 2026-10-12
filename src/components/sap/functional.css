@@ -36,8 +36,8 @@
   background-repeat: no-repeat;
 }
 .kh-fn select option {
-  background: #3a2e28;
-  color: #fbf8f5;
+  background: var(--kh-option-bg, #2b2622);
+  color: var(--kh-option-fg, #fbf8f5);
 }
 .kh-fn-handle {
   position: absolute;
@@ -68,7 +68,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid var(--kh-divider, rgba(255, 255, 255, 0.1));
 }
 .kh-fn-head {
   flex-shrink: 0;

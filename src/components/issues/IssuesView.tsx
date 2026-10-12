@@ -95,7 +95,7 @@ function startResize(
 }
 
 export function IssuesView() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -218,7 +218,7 @@ export function IssuesView() {
     return (A < B ? -1 : A > B ? 1 : 0) * sort.dir;
   });
   const fmtStamp = (iso: string) =>
-    new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', {
+    new Date(iso).toLocaleString(t('locale'), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

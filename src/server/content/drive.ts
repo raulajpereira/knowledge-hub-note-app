@@ -17,7 +17,7 @@ import { randomToken } from '@/lib/crypto';
 import { cleanName, FILES_MAX_MB, FILES_QUOTA_MB, UPLOAD_PART } from '@/lib/drive';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
-import { asSharer, asUser, type Tx } from './tenant';
+import { asSharer, asUser, removeFilesAfterCommit, type Tx } from './tenant';
 import {
   checkKindFolder,
   createKindFolder,
@@ -398,13 +398,8 @@ export async function purgeDriveFilesTx(tx: Tx, ids: string[]) {
     .delete(driveFiles)
     .where(and(inArray(driveFiles.id, ids), sql`${driveFiles.deletedAt} is not null`))
     .returning({ key: driveFiles.storageKey });
-  for (let i = 0; i < rs.length; i += 1000)
-    await s3()
-      .send(
-        new DeleteObjectsCommand({
-          Bucket: env().S3_BUCKET,
-          Delete: { Objects: rs.slice(i, i + 1000).map((r) => ({ Key: r.key })), Quiet: true },
-        }),
-      )
-      .catch(() => {}); // the storage sweep removes whatever is left
+  removeFilesAfterCommit(
+    tx,
+    rs.map((r) => r.key),
+  );
 }

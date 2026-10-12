@@ -46,6 +46,9 @@ const MARK_ATTRS: Record<string, string[]> = {
 
 /** Image src as stored: app-relative, without the basePath (survives the /v2 cut-over). */
 export const FILE_SRC = /^\/api\/v1\/files\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+/** The same for the images in a meeting record's topics (meeting_attachments). */
+export const MEETING_FILE_SRC =
+  /^\/api\/v1\/meetings\/files\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 
 export const MAX_DOC_BYTES = 1_000_000;
 const MAX_DEPTH = 40;
@@ -60,7 +63,7 @@ export function safeUrl(u: unknown, kind: 'link' | 'image'): string | null {
   return null;
 }
 
-function clean(node: unknown, depth: number): PMNode {
+function clean(node: unknown, depth: number, imageSrc: RegExp): PMNode {
   if (depth > MAX_DEPTH) throw new ApiError(400, 'doc_too_deep');
   if (!node || typeof node !== 'object') throw new ApiError(400, 'doc_invalid');
   const n = node as PMNode;
@@ -83,7 +86,7 @@ function clean(node: unknown, depth: number): PMNode {
     if (n.type === 'image') {
       // Only images stored with the note (imported by the server); no hot-linking
       // to third-party hosts, which would leak the reader's IP / track opens.
-      if (typeof a.src !== 'string' || !FILE_SRC.test(a.src))
+      if (typeof a.src !== 'string' || !imageSrc.test(a.src))
         throw new ApiError(400, 'doc_invalid', undefined, { node: 'image' });
     }
     if (n.type === 'linkCard') {
@@ -110,14 +113,18 @@ function clean(node: unknown, depth: number): PMNode {
       return mm;
     });
   }
-  if (Array.isArray(n.content)) out.content = n.content.map((c) => clean(c, depth + 1));
+  if (Array.isArray(n.content)) out.content = n.content.map((c) => clean(c, depth + 1, imageSrc));
   return out;
 }
 
-export function validateDoc(input: unknown): PMNode {
+/**
+ * `images`: where the document's images must live — a note's files (default)
+ * or a meeting record's (MEETING_FILE_SRC); only one store per document.
+ */
+export function validateDoc(input: unknown, opts: { images?: 'notes' | 'meetings' } = {}): PMNode {
   const size = JSON.stringify(input ?? null).length;
   if (size > MAX_DOC_BYTES) throw new ApiError(413, 'doc_too_large');
-  const d = clean(input, 0);
+  const d = clean(input, 0, opts.images === 'meetings' ? MEETING_FILE_SRC : FILE_SRC);
   if (d.type !== 'doc') throw new ApiError(400, 'doc_invalid');
   return d;
 }

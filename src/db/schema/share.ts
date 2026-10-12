@@ -102,7 +102,8 @@ export const shareMembers = pgTable(
     perm: text('perm', { enum: ['read', 'edit'] })
       .notNull()
       .default('read'),
-    status: text('status', { enum: ['invited', 'active'] })
+    /** invited = email without an account yet; pending = account asked to accept; active = member */
+    status: text('status', { enum: ['invited', 'pending', 'active'] })
       .notNull()
       .default('active'),
     paused: boolean('paused').notNull().default(false),
@@ -113,7 +114,7 @@ export const shareMembers = pgTable(
     index('share_members_user_idx').on(t.userId),
     index('share_members_email_idx').on(t.email),
     check('share_members_perm_chk', sql`${t.perm} in ('read','edit')`),
-    check('share_members_status_chk', sql`${t.status} in ('invited','active')`),
+    check('share_members_status_chk', sql`${t.status} in ('invited','pending','active')`),
   ],
 );
 

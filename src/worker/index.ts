@@ -10,7 +10,7 @@ import type { MailMessage } from '@/server/mail/templates';
 import { runLicenseJob } from '@/server/jobs/licenses';
 import { sweepStorage } from '@/server/jobs/storage';
 import { runMonitor } from '@/server/jobs/monitor';
-import { expireTrash, pruneNoteImages } from '@/server/jobs/trash';
+import { expireTrash, pruneNoteImages, pruneOtherImages } from '@/server/jobs/trash';
 
 type JobHandler = () => Promise<unknown>;
 
@@ -28,8 +28,9 @@ const handlers: Record<string, JobHandler> = {
     const r = await step(runLicenseJob);
     const trash = await step(expireTrash);
     const noteImages = await step(pruneNoteImages);
+    const otherImages = await step(pruneOtherImages);
     const files = await step(() => sweepStorage());
-    const out = { licenses: r, trash, noteImages, files };
+    const out = { licenses: r, trash, noteImages, otherImages, files };
     console.log('[worker] licenses', JSON.stringify(out));
     return out;
   },

@@ -19,7 +19,9 @@ export async function notifyShared(p: {
   hasAccount: boolean;
 }) {
   const base = env().APP_URL.replace(/\/$/, '');
-  const link = p.hasAccount ? `${base}/app` : `${base}/register?invite=1&email=${encodeURIComponent(p.to)}`;
+  const link = p.hasAccount
+    ? `${base}/app/settings?tab=share`
+    : `${base}/register?invite=1&email=${encodeURIComponent(p.to)}`;
   const vars = { who: p.who.slice(0, 80), folder: p.folder.slice(0, 80), kind: KIND[p.lang][p.kind] };
   await sendMail(renderMail(p.hasAccount ? 'shared' : 'shareInvite', p.lang, p.to, link, vars)).catch(
     () => {},

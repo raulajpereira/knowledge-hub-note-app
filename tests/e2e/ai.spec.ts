@@ -124,7 +124,7 @@ test('set up a key, ask with sources, organise a meeting record', async ({ page 
   await sug.getByRole('button', { name: 'Aplicar' }).click();
   await expect(page.getByLabel('Pontos a rever 1')).toHaveValue('Validar mapeamento de rubricas');
   await expect(page.getByLabel('Coisas a fazer 1')).toHaveValue('Pedro — preparar plano de testes');
-  await expect(page.getByLabel('Temas discutidos')).toHaveValue(
+  await expect(page.getByLabel('Temas discutidos')).toHaveText(
     /^Resumo de teste[\s\S]*notas originais[\s\S]*fase 2/,
   );
 });

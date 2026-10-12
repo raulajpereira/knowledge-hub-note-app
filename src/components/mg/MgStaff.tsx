@@ -22,7 +22,6 @@ export function MgStaff({ mg }: { mg: Mg }) {
   const sp = useSearchParams();
   const { D, tr, lang, LV, SKN, SKL, lvIdx, wk, wi, gTeam } = mg;
   const L = (i: number) => mgL(i, lang);
-  const en = lang === 'en';
   const rf = sp.get('rf') ?? 'open';
   const [sort, setSort] = usePersistentState('mg.rSort', 'avail');
   const [pop, setPop] = useState<string | null>(null);
@@ -41,7 +40,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
       <div style={css('flex-shrink:0;display:flex;flex-direction:column;gap:12px;padding:20px 16px 12px;')}>
         <div style={css('display:flex;align-items:center;gap:10px;')}>
           <h1 style={css('margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em;margin-right:auto;')}>
-            {en ? 'Resource Finder' : 'Pesquisar Recursos'}
+            {tr('Pesquisar Recursos')}
           </h1>
         </div>
         <button

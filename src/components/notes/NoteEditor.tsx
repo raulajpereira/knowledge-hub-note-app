@@ -21,6 +21,7 @@ import { notesApi, type Candidate } from './notesApi';
 // so the document only ever references /api/v1/files/<id>.
 
 export const FILE_SRC = /^\/api\/v1\/files\/[0-9a-f-]{36}$/;
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const MAX_IMG = 5 * 1024 * 1024;
 const isUrl = (s: string) => /^(https?:\/\/|mailto:)\S+$/i.test(s) || /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(s);
 const withScheme = (s: string) => (/^[a-z]+:/i.test(s) ? s : `https://${s}`);
@@ -42,10 +43,27 @@ async function shrink(file: File): Promise<Blob> {
   }
 }
 
+/**
+ * Where the editor keeps its images: a note's attachments by default; the
+ * meeting records' topics pass their own (same flow, another store).
+ */
+export type ImageStore = {
+  /** src of an image already stored here */
+  stored: RegExp;
+  upload: (file: Blob) => Promise<{ src: string }>;
+  /** an http(s) image fetched and stored by the server */
+  importUrl: (url: string) => Promise<{ src: string }>;
+};
+const noteImages = (noteId: string): ImageStore => ({
+  stored: FILE_SRC,
+  upload: (b) => notesApi.uploadImage(noteId, b),
+  importUrl: (u) => notesApi.importImage(noteId, u),
+});
+
 /** Removes images that are not stored yet (still importing) before saving. */
-function storable(doc: JSONContent): JSONContent {
+function storable(doc: JSONContent, stored: RegExp): JSONContent {
   const walk = (n: JSONContent): JSONContent | null => {
-    if (n.type === 'image' && !(typeof n.attrs?.src === 'string' && FILE_SRC.test(n.attrs.src))) return null;
+    if (n.type === 'image' && !(typeof n.attrs?.src === 'string' && stored.test(n.attrs.src))) return null;
     return n.content ? { ...n, content: n.content.map(walk).filter((x): x is JSONContent => !!x) } : n;
   };
   return walk(doc) ?? { type: 'doc', content: [] };
@@ -95,10 +113,19 @@ export function useNoteEditor({
   noteId,
   content,
   onChange,
+  images,
+  label,
+  placeholder,
 }: {
+  /** the note (or other item) the editor belongs to: a new id makes a new editor */
   noteId: string;
   content: unknown;
   onChange: (doc: JSONContent) => void;
+  /** where images go (default: the note's attachments) */
+  images?: ImageStore;
+  /** accessible name and placeholder of the document (default: Notes') */
+  label?: string;
+  placeholder?: string;
 }) {
   const { t } = useI18n();
   const toast = useToast();
@@ -106,6 +133,8 @@ export function useNoteEditor({
   const pending = useRef(new Set<string>());
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const imagesRef = useRef<ImageStore>(images ?? noteImages(noteId));
+  imagesRef.current = images ?? noteImages(noteId);
 
   const uploadFiles = useCallback(
     async (editor: Editor, files: File[], pos?: number) => {
@@ -117,7 +146,7 @@ export function useNoteEditor({
         try {
           const blob = await shrink(f);
           if (blob.size > MAX_IMG) throw { code: 'file_too_large' };
-          const { src } = await notesApi.uploadImage(noteId, blob);
+          const { src } = await imagesRef.current.upload(blob);
           insertBlock(editor, { type: 'image', attrs: { src } }, pos);
         } catch (e) {
           toast({
@@ -127,7 +156,7 @@ export function useNoteEditor({
         }
       }
     },
-    [noteId, t, toast],
+    [t, toast],
   );
 
   /** Images pasted from HTML or inserted by URL: the server fetches and stores them. */
@@ -135,15 +164,19 @@ export function useNoteEditor({
     (editor: Editor) => {
       editor.state.doc.descendants((n) => {
         const src = n.type.name === 'image' ? String(n.attrs.src ?? '') : '';
-        if (!src || FILE_SRC.test(src) || pending.current.has(src)) return;
+        const store = imagesRef.current;
+        if (!src || store.stored.test(src) || pending.current.has(src)) return;
         pending.current.add(src);
-        const job = src.startsWith('data:image/')
-          ? fetch(src)
-              .then((r) => r.blob())
-              .then((b) => notesApi.uploadImage(noteId, b))
-          : /^https?:\/\//i.test(src)
-            ? notesApi.importImage(noteId, src)
-            : Promise.reject(new Error('bad src'));
+        // data: URLs and the app's own stored images (copied from a note / a meeting record) are uploaded again
+        const own = /^\/api\/v1\/(meetings\/)?files\/[0-9a-f-]{36}$/.test(src);
+        const job =
+          src.startsWith('data:image/') || own
+            ? fetch(own ? `${BASE}${src}` : src, { credentials: 'same-origin' })
+                .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+                .then((b) => store.upload(b))
+            : /^https?:\/\//i.test(src)
+              ? store.importUrl(src)
+              : Promise.reject(new Error('bad src'));
         job
           .then(
             (r) => r.src,
@@ -167,7 +200,7 @@ export function useNoteEditor({
           });
       });
     },
-    [noteId, t, toast],
+    [t, toast],
   );
 
   const editor = useEditor(
@@ -194,11 +227,11 @@ export function useNoteEditor({
         Callout,
         LinkCard,
         TableKit.configure({ table: { resizable: false } }),
-        Placeholder.configure({ placeholder: t('ne_ph') }),
+        Placeholder.configure({ placeholder: placeholder ?? t('ne_ph') }),
       ],
       content: (content as JSONContent) ?? '',
       editorProps: {
-        attributes: { class: 'kh-ne', spellcheck: 'true', 'aria-label': t('nav_notes') },
+        attributes: { class: 'kh-ne', spellcheck: 'true', 'aria-label': label ?? t('nav_notes') },
         // Office/Chrome clipboard fragments; relative links become absolute when the source is known.
         transformPastedHTML: (html) => {
           const src = /SourceURL:(\S+)/.exec(html)?.[1];
@@ -258,7 +291,7 @@ export function useNoteEditor({
       onCreate: ({ editor }) => importForeign(editor),
       onUpdate: ({ editor }) => {
         importForeign(editor);
-        onChangeRef.current(storable(editor.getJSON()));
+        onChangeRef.current(storable(editor.getJSON(), imagesRef.current.stored));
       },
     },
     [noteId],
@@ -273,9 +306,12 @@ export function useNoteEditor({
 export function EditorToolbar({
   editor,
   onAsk,
+  label: name,
 }: {
   editor: Editor | null;
   onAsk: (ui: 'link' | 'img') => void;
+  /** accessible name of the toolbar (default: Notes') */
+  label?: string;
 }) {
   const { t } = useI18n();
   useEditorTick(editor);
@@ -320,7 +356,7 @@ export function EditorToolbar({
     } else onAsk('img');
   };
   return (
-    <div className="kh-ne-tools" role="toolbar" aria-label={t('nav_notes')}>
+    <div className="kh-ne-tools" role="toolbar" aria-label={name ?? t('nav_notes')}>
       {TOOLS.map((g) => (
         <button
           key={g}
@@ -369,18 +405,23 @@ export function InsertBar({
   ui,
   onClose,
   onUpload,
+  search,
 }: {
   editor: Editor;
   noteId: string;
   ui: 'link' | 'img';
   onClose: () => void;
   onUpload: (files: File[]) => void;
+  /** items for internal links (default: the note's link candidates) */
+  search?: (q: string) => Promise<{ items: Candidate[] }>;
 }) {
   const { t } = useI18n();
   const [val, setVal] = useState(ui === 'img' ? 'https://' : '');
   const [card, setCard] = useState(false);
   const [found, setFound] = useState<Candidate[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef(search);
+  searchRef.current = search;
 
   useEffect(() => {
     if (ui !== 'link') return;
@@ -390,8 +431,7 @@ export function InsertBar({
       return;
     }
     const h = setTimeout(() => {
-      notesApi
-        .candidates(noteId, q)
+      (searchRef.current ?? ((x: string) => notesApi.candidates(noteId, x)))(q)
         .then((r) => setFound(r.items.slice(0, 6)))
         .catch(() => setFound([]));
     }, 200);

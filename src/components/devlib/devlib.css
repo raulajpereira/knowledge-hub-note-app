@@ -134,7 +134,7 @@
   border-color: var(--kh-field-focus);
 }
 .kh-dl-sel option {
-  background-color: #2b2c33;
+  background-color: var(--kh-option-bg);
   color: #f4f2f0;
 }
 .kh-dl-sel--box {
@@ -692,7 +692,7 @@
   color-scheme: dark;
 }
 .kh-dl-addrel option {
-  background-color: #2b2c33;
+  background-color: var(--kh-option-bg);
   color: #f4f2f0;
 }
 .kh-dl-meta {

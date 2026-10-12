@@ -36,13 +36,14 @@ export const notesApi = {
   duplicateFolder: (id: string, suffix: string) =>
     api<{ folder: Folder }>(`/folders/${id}/duplicate`, { suffix }),
 
-  list: (q: { folder?: string; shared?: string; fav?: boolean; q?: string }) => {
+  list: (q: { folder?: string; shared?: string; fav?: boolean; q?: string; after?: string }) => {
     const sp = new URLSearchParams();
     if (q.folder) sp.set('folder', q.folder);
     if (q.shared) sp.set('shared', q.shared);
     if (q.fav) sp.set('fav', '1');
     if (q.q) sp.set('q', q.q);
-    return api<{ notes: NoteItem[] }>(`/notes?${sp}`);
+    if (q.after) sp.set('after', q.after);
+    return api<{ notes: NoteItem[]; next: string | null }>(`/notes?${sp}`);
   },
   get: (id: string) => api<{ note: Note }>(`/notes/${id}`),
   create: (folderId: string | null, sharedFolderId?: string) =>
