@@ -105,6 +105,17 @@ export function LockScreen({
           {t('locked')}
         </span>
         <span className="kh-lock__pw">
+          {/* the account the password belongs to, so the browser does not pick another field as the username */}
+          <input
+            type="email"
+            name="username"
+            autoComplete="username"
+            value={email}
+            readOnly
+            hidden
+            tabIndex={-1}
+            aria-hidden="true"
+          />
           <input
             ref={input}
             type={show ? 'text' : 'password'}

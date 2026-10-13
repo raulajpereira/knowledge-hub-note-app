@@ -588,6 +588,7 @@
   margin: 0;
 }
 .kh-ne a {
+  cursor: pointer;
   color: oklch(0.84 0.12 240);
   text-decoration: underline;
   text-decoration-color: oklch(0.84 0.12 240 / 0.45);

@@ -79,6 +79,15 @@
   font: inherit;
   font-size: 14px;
 }
+.kh-hdr__search input[type='search'] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.kh-hdr__search input::-webkit-search-cancel-button,
+.kh-hdr__search input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  display: none;
+}
 .kh-hdr__search input::placeholder {
   color: var(--placeholder);
 }

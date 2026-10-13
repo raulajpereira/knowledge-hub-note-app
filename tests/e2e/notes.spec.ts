@@ -170,7 +170,7 @@ test('favourites, header search, links between notes', async ({ page }) => {
   await page.locator('.kh-cx__results > div', { hasText: 'Go-live' }).click();
   await expect(page.locator('.kh-cx__link')).toContainText('Go-live SuccessFactors');
 
-  await page.getByRole('textbox', { name: 'Pesquisar notas, objetos, transações…' }).fill('STRUST');
+  await page.getByRole('searchbox', { name: 'Pesquisar notas, objetos, transações…' }).fill('STRUST');
   await expect(page.locator('.kh-nt-card')).toHaveCount(1);
   await expect(page.locator('.kh-nt-card')).toContainText('Go-live');
 });

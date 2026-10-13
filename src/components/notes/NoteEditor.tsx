@@ -282,8 +282,9 @@ export function useNoteEditor({
         },
         handleDOMEvents: {
           click: (_view, event) => {
+            // a click opens the link (Alt+click places the cursor in it, to edit the text)
             const a = (event.target as HTMLElement).closest?.('a[href]') as HTMLAnchorElement | null;
-            if (!a || !(event.metaKey || event.ctrlKey)) return false;
+            if (!a || event.altKey || event.button !== 0) return false;
             event.preventDefault();
             const href = a.getAttribute('href') ?? '';
             if (href.startsWith('/app')) router.push(href);

@@ -23,10 +23,8 @@ export function LinkCardView({ node, selected }: ReactNodeViewProps) {
         target="_blank"
         rel="noopener noreferrer"
         contentEditable={false}
-        onClick={(e) => {
-          // Inside the editor a plain click selects the card; Ctrl/⌘-click opens it.
-          if (!(e.metaKey || e.ctrlKey)) e.preventDefault();
-        }}
+        // the editor opens it (click) or selects it (Alt+click); the anchor never navigates by itself
+        onClick={(e) => e.preventDefault()}
       >
         <span
           className="kh-ne-card__ic"

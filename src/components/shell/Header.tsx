@@ -61,7 +61,17 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
         <span style={{ display: 'flex', opacity: 0.65 }}>
           <Icon name="search" size={16} sw={2} />
         </span>
+        {/* a search box, not a login field: browsers and password managers must not fill it */}
         <input
+          type="search"
+          name="kh-search"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          data-1p-ignore=""
+          data-lpignore="true"
+          data-bwignore=""
+          data-form-type="other"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('search')}
