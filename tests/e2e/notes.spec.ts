@@ -207,7 +207,12 @@ test('tasks: create, subtasks, repetition, filters, link to a note, Trash', asyn
   await title.fill('Revisão semanal de dumps');
   await title.blur();
   await page.locator('.kh-tk-prios').getByRole('button', { name: 'Alta' }).click();
-  await page.locator('.kh-tk-grid input[type=date]').fill('2026-10-06');
+  // due a month from now, so the next one is never shown as Hoje/Amanhã
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const pt = (d: Date) => iso(d).split('-').reverse().join('/');
+  const due = new Date(Date.now() + 30 * 864e5);
+  const next = new Date(due.getTime() + 7 * 864e5);
+  await page.locator('.kh-tk-grid input[type=date]').fill(iso(due));
   await page.locator('.kh-tk-grid select').nth(1).selectOption('weekly');
   for (const s of ['Ver dumps', 'Limpar logs']) {
     await page.getByPlaceholder('Adicionar subtarefa e premir Enter').fill(s);
@@ -225,9 +230,9 @@ test('tasks: create, subtasks, repetition, filters, link to a note, Trash', asyn
 
   // Done → the weekly task comes back for next week.
   await page.getByRole('button', { name: 'Marcar como Concluída' }).click();
-  await expect(page.getByText('próxima criada para 13/10/2026')).toBeVisible();
+  await expect(page.getByText(`próxima criada para ${pt(next)}`)).toBeVisible();
   await expect(page.locator('.kh-tk-item')).toHaveCount(1);
-  await expect(page.locator('.kh-tk-item')).toContainText('13/10/2026');
+  await expect(page.locator('.kh-tk-item')).toContainText(pt(next));
   await page.locator('.kh-tk-fchip', { hasText: 'Concluídas' }).click();
   await expect(page.locator('.kh-tk-item')).toHaveCount(1);
   await page.locator('.kh-tk-fchip', { hasText: 'Todas' }).click();
