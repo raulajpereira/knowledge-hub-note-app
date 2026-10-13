@@ -249,10 +249,6 @@
 .kh-dl-item:hover {
   background: rgba(255, 255, 255, 0.08);
 }
-.kh-dl-item[data-on] {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.2);
-}
 .kh-dl-item__t {
   display: flex;
   align-items: center;

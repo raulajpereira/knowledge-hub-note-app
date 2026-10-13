@@ -395,6 +395,8 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
   - *Assistente IA*: janela mais baixa (460×560) e redimensionável em largura e altura (bordas e canto, teclado; duplo clique repõe; o tamanho fica guardado).
   - Screenshots `correcoes/34–39`.
 
+- **Seleção em branco**: o item selecionado nas listas com pastas (Artefactos, Registos Reuniões, Emails, Ficheiros, API Playground, Biblioteca de Código, Code Library SAP, Notas de Voz, Tarefas, Funcional) passa a cartão branco com texto escuro, como a nota selecionada; uma regra comum em `globals.css` (antes cada página tinha um vidro translúcido próprio). Etiquetas, métodos HTTP, caixa do dia, caixa de seleção e barras escurecidas para lerem bem no branco. Screenshots `correcoes/40–42`.
+
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
 - Opcional: chaves Cloudflare Turnstile e `ADMIN_IP_ALLOWLIST` no `.env`.

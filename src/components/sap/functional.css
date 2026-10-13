@@ -238,10 +238,6 @@
 .kh-fn-item:hover {
   background: rgba(255, 255, 255, 0.08);
 }
-.kh-fn-item[data-on] {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.22);
-}
 .kh-fn-irow {
   display: flex;
   align-items: flex-start;

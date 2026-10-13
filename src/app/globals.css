@@ -165,3 +165,73 @@ select optgroup {
   color: oklch(0.8 0.13 250);
   font-weight: 600;
 }
+
+/* Selected item of a list (inside folders): the same white card as a selected
+   note (.kh-nt-card[data-on]); dark text, secondary text dimmed */
+:is(
+  .kh-ar-item,
+  .kh-mt-item,
+  .kh-em-item,
+  .kh-fl-item,
+  .kh-ap-item,
+  .kh-dl-item,
+  .kh-cl-item,
+  .kh-vc-item,
+  .kh-tk-item,
+  .kh-fn-item
+)[data-on],
+:is(
+    .kh-ar-item,
+    .kh-mt-item,
+    .kh-em-item,
+    .kh-fl-item,
+    .kh-ap-item,
+    .kh-dl-item,
+    .kh-cl-item,
+    .kh-vc-item,
+    .kh-tk-item,
+    .kh-fn-item
+  )[data-on]:hover {
+  --kh-sel-fg: #2a211c;
+  --kh-sel-dim: rgba(42, 33, 28, 0.66);
+  color: var(--kh-sel-fg);
+  background: rgba(251, 248, 245, 0.94);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+}
+.kh-dl-item[data-on] .kh-dl-item__m,
+.kh-em-item[data-on] :is(.kh-em-item__from, .kh-em-item__snip, .kh-em-item__date),
+.kh-tk-item[data-on] .kh-tk-item__subs,
+.kh-vc-item[data-on] .kh-vc-item__meta,
+.kh-ar-item[data-on] :is(.kh-ar-item__desc, .kh-ar-item__date),
+:is(.kh-mt-item, .kh-fl-item, .kh-ap-item)[data-on] > div > span:last-child,
+.kh-cl-item[data-on] :is(.kh-cl-idesc, .kh-cl-meta),
+.kh-fn-item[data-on] .kh-fn-imeta,
+.kh-mt-item[data-on] .kh-mt-day span {
+  color: var(--kh-sel-dim);
+}
+/* accents made for the dark glass, darkened on the white card */
+.kh-ar-item[data-on] .kh-ar-tags > span {
+  color: var(--kh-sel-fg);
+}
+.kh-ap-item[data-on] .kh-ap-m {
+  filter: brightness(0.55) saturate(1.6);
+}
+:is(.kh-ar-item, .kh-fl-item)[data-on] .kh-sh-mark {
+  color: oklch(0.52 0.13 150);
+}
+.kh-mt-item[data-on] .kh-mt-day[class] {
+  background: rgba(42, 33, 28, 0.08);
+  color: var(--kh-sel-fg);
+}
+.kh-fn-item[data-on] .kh-fn-ibar {
+  background: rgba(42, 33, 28, 0.1);
+}
+.kh-tk-item[data-on] .kh-tk-ck {
+  border-color: rgba(42, 33, 28, 0.4);
+}
+.kh-tk-item[data-on] .kh-tk-ck[data-on] {
+  border-color: #2a211c;
+  background: #2a211c;
+  color: #fbf8f5;
+}

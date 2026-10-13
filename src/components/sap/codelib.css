@@ -271,10 +271,6 @@
 .kh-cl-item:hover {
   background: rgba(255, 255, 255, 0.1);
 }
-.kh-cl-item[data-on] {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.34);
-}
 .kh-cl-dot {
   width: 8px;
   height: 8px;

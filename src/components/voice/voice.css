@@ -83,10 +83,6 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
-.kh-vc-item[data-on] {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.28);
-}
 .kh-vc-item__ic {
   width: 40px;
   height: 40px;
@@ -99,8 +95,8 @@
   color: #fbf8f5;
 }
 .kh-vc-item[data-on] .kh-vc-item__ic {
-  background: #fbf8f5;
-  color: #2a211c;
+  background: #2a211c;
+  color: #fbf8f5;
 }
 .kh-vc-item__body {
   flex: 1;
@@ -143,7 +139,7 @@
   background: rgba(255, 248, 240, 0.45);
 }
 .kh-vc-item[data-on] .kh-vc-item__mini span {
-  background: #fbf8f5;
+  background: rgba(42, 33, 28, 0.55);
 }
 .kh-vc-empty {
   padding: 40px 16px;
