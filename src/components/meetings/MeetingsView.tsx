@@ -15,6 +15,7 @@ import { SaveTemplateButton, TemplateButton } from '@/components/templates/Templ
 import type { MeetingTpl } from '@/lib/templates';
 import type { JSONContent } from '@tiptap/react';
 import { MeetingTopics, textToDoc, type TopicsHandle } from './MeetingTopics';
+import { TodoTasksDialog, type TaskType, type TodoAsk } from './TodoTasksDialog';
 import '../emails/emails.css';
 import '../artifacts/artifacts.css';
 import './meetings.css';
@@ -43,6 +44,28 @@ type Meeting = {
 type Patch = Partial<Omit<Meeting, 'id' | 'createdAt' | 'updatedAt'>> & { topicsDoc?: JSONContent };
 type Folder = { id: string; name: string; color: string };
 const COL = { def: 340, min: 260, gap: 0, read: 420 };
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
+/** "Coisas a fazer" already offered as tasks this session (created or declined), per record. */
+const ASKED = 'kh.mt.askedTodos';
+const norm = (s: string) => s.trim().toLowerCase();
+function askedOf(id: string): Set<string> {
+  try {
+    const all = JSON.parse(sessionStorage.getItem(ASKED) ?? '{}') as Record<string, string[]>;
+    return new Set(all[id] ?? []);
+  } catch {
+    return new Set();
+  }
+}
+function markAsked(id: string, texts: string[]) {
+  try {
+    const all = JSON.parse(sessionStorage.getItem(ASKED) ?? '{}') as Record<string, string[]>;
+    all[id] = [...new Set([...(all[id] ?? []), ...texts.map(norm)])];
+    sessionStorage.setItem(ASKED, JSON.stringify(all));
+  } catch {
+    /* storage unavailable: the question may come back */
+  }
+}
 
 const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
   <svg
@@ -188,6 +211,8 @@ export function MeetingsView() {
   const [who, setWho] = useState('');
   const [taskOf, setTaskOf] = useState<Record<string, true>>({});
   const timers = useRef(new Map<string, { patch: Patch; tm: ReturnType<typeof setTimeout> }>());
+  /** the open record, for the questions asked when leaving it */
+  const actRef = useRef<Meeting | null>(null);
   // the open record switches at once; the URL (?m=) follows
   const urlId = sp.get('m');
   const [activeId, setActiveId] = useState<string | null>(urlId);
@@ -266,6 +291,7 @@ export function MeetingsView() {
     )
     .sort((a, b) => (b.heldOn + b.startTime).localeCompare(a.heldOn + a.startTime));
   const act = all.find((m) => m.id === activeId) ?? null;
+  actRef.current = act;
   // topics documents, loaded when a record is opened (records with only text are converted)
   const docs = useRef(new Map<string, JSONContent>());
   const [, setDocsLoaded] = useState(0);
@@ -398,14 +424,19 @@ export function MeetingsView() {
     setWho('');
     if (names.length) upd(act.id, { participants: [...act.participants, ...names].slice(0, 100) }, 0);
   };
-  /** "Coisas a fazer" → a task linked to this meeting */
+  /** "Coisas a fazer" → a task linked to this meeting (of the given type; the default otherwise) */
+  const makeTask = async (m: Meeting, text: string, i: number, type?: TaskType) => {
+    const { task } = await api<{ task: { id: string } }>('/tasks', {
+      title: text.trim().slice(0, 300),
+      ...(type && { type }),
+    });
+    await api('/links', { a: { type: 'meeting', id: m.id }, b: { type: 'task', id: task.id } });
+    setTaskOf((x) => ({ ...x, [`${m.id}:${i}`]: true }));
+  };
   const toTask = async (m: Meeting, it: Item, i: number) => {
-    const key = `${m.id}:${i}`;
-    if (!it.t.trim() || taskOf[key]) return;
+    if (!it.t.trim() || taskOf[`${m.id}:${i}`]) return;
     try {
-      const { task } = await api<{ task: { id: string } }>('/tasks', { title: it.t.trim().slice(0, 300) });
-      await api('/links', { a: { type: 'meeting', id: m.id }, b: { type: 'task', id: task.id } });
-      setTaskOf((x) => ({ ...x, [key]: true }));
+      await makeTask(m, it.t, i);
       toast({ message: t('mt_taskMade') });
       refreshCounts();
       // reload the links section
@@ -415,6 +446,103 @@ export function MeetingsView() {
     }
   };
   const [linksKey, setLinksKey] = useState(0);
+
+  // Leaving a record (another record, a new one, another page of the app) whose
+  // "Coisas a fazer" are not done and have no task yet: ask whether to create
+  // them as tasks first. Each item is offered once per session.
+  const [leave, setLeave] = useState<{ m: Meeting; items: TodoAsk[]; go: () => void } | null>(null);
+  const pendingTodos = useCallback(
+    (m: Meeting) => {
+      const asked = askedOf(m.id);
+      return m.todos
+        .map((it, i) => ({ i, t: it.t.trim(), done: it.done }))
+        .filter((x) => x.t && !x.done && !taskOf[`${m.id}:${x.i}`] && !asked.has(norm(x.t)));
+    },
+    [taskOf],
+  );
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
+  const guard = useCallback(
+    async (go: () => void) => {
+      const m = actRef.current;
+      let items = m && modules.has('tasks') && !leaveRef.current ? pendingTodos(m) : [];
+      if (m && items.length) {
+        // to-dos made into tasks earlier (before a reload) are linked to the record by their title
+        try {
+          const { links } = await api<{ links: Array<{ type: string; title: string }> }>(
+            `/links?type=meeting&id=${m.id}`,
+          );
+          const made = new Set(links.filter((l) => l.type === 'task').map((l) => norm(l.title)));
+          items = items.filter((x) => !made.has(norm(x.t.slice(0, 300))));
+        } catch {
+          /* ask anyway */
+        }
+      }
+      if (!m || !items.length) return go();
+      setLeave({ m, items: items.map(({ i, t: text }) => ({ i, t: text })), go });
+    },
+    [modules, pendingTodos],
+  );
+  const guardRef = useRef(guard);
+  guardRef.current = guard;
+  const pendingRef = useRef(pendingTodos);
+  pendingRef.current = pendingTodos;
+  // links to other pages of the app (sidebar, Connections, links in the topics…) wait for the answer
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+      const url = new URL(a.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      const m = actRef.current;
+      const same = url.pathname === window.location.pathname;
+      // the same page: only another record (?m=) leaves this one
+      if (!m || (same && (url.searchParams.get('m') ?? m.id) === m.id)) return;
+      if (!modules.has('tasks') || !pendingRef.current(m).length) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const to = url.pathname.startsWith(`${BASE}/`) ? url.pathname.slice(BASE.length) : url.pathname;
+      void guardRef.current(() => router.push(`${to}${url.search}${url.hash}`));
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [modules, router]);
+
+  /** another record: after the question about this one's to-dos */
+  const openRec = (id: string) => (id === activeId ? open(id) : void guard(() => open(id)));
+  const answer = (created: boolean) => async (chosen: TodoAsk[], type: TaskType) => {
+    if (!leave) return [];
+    const { m, items, go } = leave;
+    const failed: TodoAsk[] = [];
+    let n = 0;
+    if (created)
+      for (const x of chosen) {
+        try {
+          await makeTask(m, x.t, x.i, type);
+          n++;
+        } catch {
+          failed.push(x);
+        }
+      }
+    if (n) {
+      toast({ message: n === 1 ? t('mt_taskMade') : t('mt_tasksMade').replace('{n}', String(n)) });
+      refreshCounts();
+      setLinksKey((k) => k + 1);
+    }
+    // the ones not chosen count as declined; the ones that failed are asked again
+    markAsked(
+      m.id,
+      items.filter((x) => !failed.includes(x)).map((x) => x.t),
+    );
+    if (failed.length) {
+      fail();
+      return failed;
+    }
+    setLeave(null);
+    go();
+    return [];
+  };
 
   const fmtDay = (iso: string) =>
     new Date(`${iso}T12:00:00`).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' });
@@ -487,13 +615,17 @@ export function MeetingsView() {
               aria-label={t('mt_search')}
             />
           </label>
-          <TemplateButton kind="meeting" compact onPick={(tpl) => void create(tpl.body as MeetingTpl)} />
+          <TemplateButton
+            kind="meeting"
+            compact
+            onPick={(tpl) => void guard(() => void create(tpl.body as MeetingTpl))}
+          />
           <button
             type="button"
             className="kh-mt-new"
             title={t('mt_new')}
             aria-label={t('mt_new')}
-            onClick={() => void create()}
+            onClick={() => void guard(() => void create())}
           >
             <Svg d={I.plus} s={16} />
           </button>
@@ -582,8 +714,8 @@ export function MeetingsView() {
                       setDragId(m.id);
                     }}
                     onDragEnd={() => setDragId(null)}
-                    onClick={() => open(m.id)}
-                    onKeyDown={(e) => e.key === 'Enter' && open(m.id)}
+                    onClick={() => openRec(m.id)}
+                    onKeyDown={(e) => e.key === 'Enter' && openRec(m.id)}
                   >
                     <span className="kh-mt-day" aria-hidden="true">
                       <b>{d.getDate()}</b>
@@ -899,6 +1031,15 @@ export function MeetingsView() {
           <div className="kh-em-none">{items && !all.length ? t('mt_empty') : t('mt_noActive')}</div>
         )}
       </section>
+      {leave && (
+        <TodoTasksDialog
+          title={leave.m.title}
+          items={leave.items}
+          onCreate={answer(true)}
+          onSkip={() => void answer(false)([], 'tech')}
+          onStay={() => setLeave(null)}
+        />
+      )}
     </div>
   );
 }

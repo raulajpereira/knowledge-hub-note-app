@@ -190,3 +190,60 @@ test('write a record, a task from a to-do, on the Calendar, Trash', async ({ pag
   await page.goto('app/trash');
   await expect(page.getByText('Kick-off Atlas')).toBeVisible();
 });
+
+test('leaving a record offers its open to-dos as tasks, of the chosen type', async ({ page }) => {
+  await login(page);
+  await page.goto('app/meetings');
+  await page.getByRole('button', { name: 'Novo Registo' }).click();
+  await expect(page.getByLabel('Tema da reunião')).toHaveValue('Nova reunião');
+  await page.getByLabel('Tema da reunião').fill('Retro sprint 12');
+  await page.getByRole('button', { name: '+ Ação' }).click();
+  await page.getByLabel('Coisas a fazer 1').fill('Atualizar documentação');
+  await page.getByLabel('Coisas a fazer 1').press('Enter');
+  await page.getByLabel('Coisas a fazer 2').fill('Rever orçamento');
+  await page.getByLabel('Coisas a fazer 2').press('Enter');
+  await page.getByLabel('Coisas a fazer 3').fill('Fechar ata');
+  await page.getByRole('button', { name: 'Feito: Fechar ata' }).click();
+
+  // a new record: first the question about this one's to-dos (the done one is not offered)
+  await page.getByRole('button', { name: 'Novo Registo' }).click();
+  const ask = page.getByRole('dialog', { name: 'Criar tarefas para as coisas a fazer?' });
+  await expect(ask).toBeVisible();
+  await expect(ask.getByRole('checkbox')).toHaveText(['Atualizar documentação', 'Rever orçamento']);
+  await expect(ask.getByRole('checkbox', { name: 'Atualizar documentação' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await ask.getByRole('checkbox', { name: 'Rever orçamento' }).click();
+  await ask.getByRole('radio', { name: 'Gestão' }).click();
+  await ask.getByRole('button', { name: 'Criar tarefas (1)' }).click();
+  await expect(page.getByText('Tarefa criada e ligada à reunião.')).toBeVisible();
+  await expect(ask).toBeHidden();
+  // …then the navigation goes on
+  await expect(page.getByLabel('Tema da reunião')).toHaveValue('Nova reunião');
+  const tasks = (await (await page.request.get('api/v1/tasks')).json()) as {
+    tasks: Array<{ title: string; type: string }>;
+  };
+  expect(tasks.tasks.find((x) => x.title === 'Atualizar documentação')?.type).toBe('mgmt');
+  expect(tasks.tasks.some((x) => x.title === 'Rever orçamento')).toBe(false);
+
+  // back on the record: the task is linked; the declined to-do is not asked again
+  await page.locator('.kh-mt-item', { hasText: 'Retro sprint 12' }).click();
+  await expect(page.getByLabel('Tema da reunião')).toHaveValue('Retro sprint 12');
+  await expect(page.locator('.kh-cx__link', { hasText: 'Atualizar documentação' })).toBeVisible();
+  await page.locator('.kh-mt-item', { hasText: 'Nova reunião' }).click();
+  await expect(page.getByLabel('Tema da reunião')).toHaveValue('Nova reunião');
+  await expect(ask).toBeHidden();
+
+  // another page of the app waits for the answer too; "Agora não" goes on without tasks
+  await page.locator('.kh-mt-item', { hasText: 'Retro sprint 12' }).click();
+  await page.getByRole('button', { name: '+ Ação' }).click();
+  await page.getByLabel('Coisas a fazer 4').fill('Marcar workshop');
+  await page.getByRole('link', { name: /^Tarefas\s*\d*$/ }).click();
+  await expect(ask).toBeVisible();
+  await expect(ask.getByRole('checkbox')).toHaveText(['Marcar workshop']);
+  await expect(page).toHaveURL(/app\/meetings/);
+  await ask.getByRole('button', { name: 'Agora não' }).click();
+  await expect(page).toHaveURL(/app\/tasks/);
+  await expect(page.getByText('Atualizar documentação').first()).toBeVisible();
+});

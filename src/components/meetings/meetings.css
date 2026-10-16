@@ -423,3 +423,43 @@
   font-size: 14.5px;
   line-height: 1.6;
 }
+/* list and checklist items stay together, as in Notes */
+.kh-mt-doc .kh-ne li p {
+  margin: 0;
+}
+.kh-mt-doc .kh-ne ul,
+.kh-mt-doc .kh-ne ol {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+/* Leaving a record: "Coisas a fazer" without a task → create tasks (TodoTasksDialog) */
+.kh-mt-ask__items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.kh-mt-ask__items .kh-check {
+  padding: 6px 2px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.kh-mt-ask__type {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+}
+.kh-mt-ask__type > span {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 240, 0.6);
+}

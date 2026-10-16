@@ -88,6 +88,11 @@ test('meeting record from a ready-made template; save, reuse and delete my own',
 
   await page.getByRole('button', { name: 'Modelos', exact: true }).click();
   await menu.getByRole('menuitem', { name: 'Steering Banco SOL' }).click();
+  // leaving the first record: its to-dos could become tasks — not now
+  await page
+    .getByRole('dialog', { name: 'Criar tarefas para as coisas a fazer?' })
+    .getByRole('button', { name: 'Agora não' })
+    .click();
   await expect(page.locator('.kh-mt-item').filter({ hasText: 'Comité de Direção' })).toHaveCount(2);
 
   await page.getByRole('button', { name: 'Modelos', exact: true }).click();

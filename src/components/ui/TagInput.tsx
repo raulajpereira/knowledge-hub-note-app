@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/client/api';
 import type { TagCount } from '@/lib/tags';
-import { suggestTags } from '@/lib/tags';
+import { suggestTags, tagStyle } from '@/lib/tags';
 import { Popover } from './Popover';
 
 // Every tag in the app (notes, artifacts, snippets, SAP objects), most used
@@ -162,7 +162,9 @@ export function TagInput({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => add(name)}
             >
-              {name}
+              <span className="kh-taglist__chip kh-tagc" style={tagStyle(name)}>
+                {name}
+              </span>
             </button>
           ))}
         </Popover>

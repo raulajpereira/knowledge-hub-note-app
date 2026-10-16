@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
+import { tagStyle } from '@/lib/tags';
 import { DEV_LANGS, DEV_TYPES, highlight, langOf, type DevLang, type DevType } from '@/lib/devlib';
 import { Modal, TagInput, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
@@ -453,7 +454,15 @@ export function DevLibView() {
                             · {s.files.length}
                             {s.files.length === 1 ? t('dl_file') : t('dl_filesN')}
                           </span>
-                          {s.tags.length > 0 && <span className="kh-dl-ell">· {s.tags.join(', ')}</span>}
+                          {s.tags.length > 0 && (
+                            <span className="kh-dl-ell kh-dl-item__tags">
+                              {s.tags.map((tg) => (
+                                <span key={tg} className="kh-tagc" style={tagStyle(tg)}>
+                                  {tg}
+                                </span>
+                              ))}
+                            </span>
+                          )}
                         </span>
                       </button>
                     ))}
@@ -573,7 +582,7 @@ export function DevLibView() {
                 <span>{t('dl_tags')}</span>
                 <div className="kh-dl-tagbox">
                   {sel.tags.map((tg) => (
-                    <span key={tg} className="kh-dl-tag">
+                    <span key={tg} className="kh-dl-tag kh-tagc" style={tagStyle(tg)}>
                       {tg}
                       <button
                         type="button"

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Icon, NavIcon, type IconName } from '@/components/shell/icons';
 import { useI18n } from '@/i18n/client';
+import { tagStyle } from '@/lib/tags';
 import { PublicFrame, type Entity } from './PublicFrame';
 
 export type LandingPlan = {
@@ -167,8 +168,12 @@ function Preview() {
           <span>{t('lp_prevNote1')}</span>
           <span>{t('lp_prevNote2')}</span>
           <span className="kh-lp-prev__tags">
-            <i>SAP</i>
-            <i>{t('lp_prevTag')}</i>
+            <i className="kh-tagc" style={tagStyle('SAP')}>
+              SAP
+            </i>
+            <i className="kh-tagc" style={tagStyle(t('lp_prevTag'))}>
+              {t('lp_prevTag')}
+            </i>
           </span>
         </div>
         <div className="kh-lp-prev__card">

@@ -211,9 +211,6 @@ select optgroup {
   color: var(--kh-sel-dim);
 }
 /* accents made for the dark glass, darkened on the white card */
-.kh-ar-item[data-on] .kh-ar-tags > span {
-  color: var(--kh-sel-fg);
-}
 .kh-ap-item[data-on] .kh-ap-m {
   filter: brightness(0.55) saturate(1.6);
 }
@@ -234,4 +231,32 @@ select optgroup {
   border-color: #2a211c;
   background: #2a211c;
   color: #fbf8f5;
+}
+
+/* Tag chips (every place a tag is shown): a vivid colour per tag name set
+   inline by tagStyle() (src/lib/tags.ts) — tinted fill + light text on the
+   dark glass; a light fill + dark text of the same hue on a selected (white)
+   card. Size/shape stay with each place's own class. */
+.kh-tagc {
+  background: var(--tg-bg, rgba(255, 255, 255, 0.14));
+  color: var(--tg-fg, #fbf8f5);
+  box-shadow: inset 0 0 0 1px var(--tg-ring, transparent);
+}
+:is(
+    .kh-nt-card,
+    .kh-ar-item,
+    .kh-dl-item,
+    .kh-cl-item,
+    .kh-mt-item,
+    .kh-em-item,
+    .kh-fl-item,
+    .kh-ap-item,
+    .kh-vc-item,
+    .kh-tk-item,
+    .kh-fn-item
+  )[data-on]
+  .kh-tagc {
+  background: var(--tg-bg-on, rgba(42, 33, 28, 0.08));
+  color: var(--tg-fg-on, #2a211c);
+  box-shadow: inset 0 0 0 1px var(--tg-ring-on, transparent);
 }

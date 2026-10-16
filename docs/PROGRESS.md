@@ -397,6 +397,13 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 
 - **Seleção em branco**: o item selecionado nas listas com pastas (Artefactos, Registos Reuniões, Emails, Ficheiros, API Playground, Biblioteca de Código, Code Library SAP, Notas de Voz, Tarefas, Funcional) passa a cartão branco com texto escuro, como a nota selecionada; uma regra comum em `globals.css` (antes cada página tinha um vidro translúcido próprio). Etiquetas, métodos HTTP, caixa do dia, caixa de seleção e barras escurecidas para lerem bem no branco. Screenshots `correcoes/40–42`.
 
+- **Etiquetas, editor, Registos e API Playground** (migração `0040`):
+  - *Etiquetas*: chips coloridos em todos os sítios que mostram etiquetas (notas, artefactos, biblioteca de código, Code Library SAP, página Etiquetas, sugestões), com cores mais vivas e a mesma cor para a mesma etiqueta em toda a app (`src/lib/tags.ts`, contraste ≥ 4,5:1 no vidro escuro e no cartão branco selecionado).
+  - *Editor (Notas e Registos Reuniões)*: listas numa nota nova desapareciam ao escrever (documento vazio sem parágrafo ficava todo selecionado) — corrigido; as listas voltam a mostrar marcadores (o reset do Tailwind escondia-os); "H1" volta a tirar qualquer nível de título; os botões da barra funcionam com o teclado.
+  - *Registos Reuniões*: ao sair de um registo (outro registo, novo registo, outra página) com coisas a fazer por concluir e sem tarefa, pergunta quais criar como tarefas e o tipo (Funcional / Técnica ou Gestão); "Agora não" não volta a perguntar pelos mesmos itens nesta sessão.
+  - *API Playground*: pastas reordenáveis e dentro de outras pastas (arrastar: em cima/baixo muda a ordem, no meio põe lá dentro; zona "Mover para o topo"; "Mover pasta…" com Subir/Descer e escolha da pasta; Alt+↑/↓); pedidos arrastam-se para qualquer pasta; apagar uma pasta com subpastas sobe-as e aos pedidos para a pasta-mãe (com aviso). A base impede ciclos e pastas de outro utilizador (trigger + lock). O cursor do URL já não salta ao escrever/apagar.
+  - Screenshots `correcoes/43–47`.
+
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
 - Opcional: chaves Cloudflare Turnstile e `ADMIN_IP_ALLOWLIST` no `.env`.
@@ -453,6 +460,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D44 | Visão Geral da consola sem o gráfico de 12 meses nem a variação do protótipo (eram inventados): só MRR e ARR atuais | utilizador |
 | D45 | Revogar código só impede novos registos com ele; quem já entrou mantém o acesso e nada é apagado (revisto no lote B; antes cortava o acesso e apagava aos 30 dias) | utilizador |
 | D61 | Pastas partilhadas: convite a quem já tem conta tem de ser aceite; o dono distingue membros (com conta) de externos (convite por email) | utilizador |
+| D63 | Registos Reuniões: a pergunta para criar tarefas das coisas a fazer aparece ao sair do registo; API Playground: pastas com subpastas e ordem | utilizador |
 | D62 | Um cartão por página com divisórias finas, como Recursos; só o menu lateral fica separado | utilizador |
 | D46 | Papel Suporte: vê clientes e utilizadores (dados comerciais só leitura), repõe password, reenvia convite, pausa/reativa utilizadores, trata pedidos e vê a auditoria; papéis verificados no servidor | utilizador |
 | D47 | "Em atraso" automático: subscrição paga ativa com a data de renovação ultrapassada passa a Em atraso no job diário e, 7 dias depois, a suspensa (só leitura). A consola continua a poder marcar à mão; os planos grátis nunca ficam em atraso | Claude (sem faturação na app) |

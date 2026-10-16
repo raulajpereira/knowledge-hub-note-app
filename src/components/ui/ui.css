@@ -1151,3 +1151,13 @@ button.kh-table__th {
 .kh-taglist > button[aria-selected='true'] {
   background: rgba(255, 255, 255, 0.16);
 }
+/* TagInput: each suggestion shown as the tag's coloured chip */
+.kh-taglist__chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}

@@ -195,3 +195,86 @@ test('requests: create, edit URL and params, env variables, blocked proxy, Trash
   await page.goto('app/trash');
   await expect(page.getByText('Utilizadores (2)')).toBeVisible();
 });
+
+test('folders: subfolders by menu, drag and keyboard; the URL caret stays put', async ({ page }) => {
+  await login(page);
+  await page.goto('app/api');
+  const row = (n: string) => page.locator('.kh-ap-frow', { hasText: n });
+  const tree = page.locator('.kh-ap-frow[data-depth]');
+  for (const n of ['Employee Central', 'Time Off']) {
+    await page.getByLabel('Nome da pasta').fill(n);
+    await page.getByRole('button', { name: '+ Nova Pasta' }).click();
+    await expect(row(n)).toBeVisible();
+  }
+  // drag and drop, with an extra small move so the last dragover lands
+  const drag = async (from: string, to: { x: number; y: number }) => {
+    const a = (await row(from).boundingBox())!;
+    await page.mouse.move(a.x + 120, a.y + a.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(a.x + 124, a.y + a.height / 2 + 6, { steps: 3 });
+    await page.mouse.move(to.x, to.y, { steps: 6 });
+    await page.mouse.move(to.x + 2, to.y);
+    await page.mouse.up();
+  };
+
+  // the menu (keyboard) way: "Mover para…" → SuccessFactors
+  await row('Employee Central').getByRole('button', { name: 'Mover para… Employee Central' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Mover pasta' });
+  await dlg.getByRole('button', { name: 'SuccessFactors', exact: true }).click();
+  await expect(row('Employee Central')).toHaveAttribute('data-depth', '1');
+
+  // dropped on the middle of a folder: inside it
+  const ec = (await row('Employee Central').boundingBox())!;
+  await drag('Time Off', { x: ec.x + 150, y: ec.y + ec.height / 2 });
+  await expect(row('Time Off')).toHaveAttribute('data-depth', '2');
+  await expect(tree).toHaveText([/^SuccessFactors/, /^Employee Central/, /^Time Off/]);
+
+  // a request dragged into a subfolder; parents count what is below them
+  await page.getByRole('button', { name: 'Todos os Pedidos' }).click();
+  const item = (await page.locator('.kh-ap-item', { hasText: 'Utilizadores' }).boundingBox())!;
+  const to = (await row('Time Off').boundingBox())!;
+  await page.mouse.move(item.x + 100, item.y + item.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(item.x + 104, item.y + item.height / 2 - 6, { steps: 3 });
+  await page.mouse.move(to.x + 150, to.y + to.height / 2, { steps: 6 });
+  await page.mouse.move(to.x + 152, to.y + to.height / 2);
+  await page.mouse.up();
+  await expect(row('SuccessFactors').locator('.kh-em-count')).toHaveText('1');
+  await page.getByRole('button', { name: 'Recolher SuccessFactors' }).click();
+  await expect(tree).toHaveText([/^SuccessFactors/]);
+  await page.getByRole('button', { name: 'Expandir SuccessFactors' }).click();
+
+  // dropped on the top part of a folder: before it, at its level
+  const sf = (await row('SuccessFactors').boundingBox())!;
+  await drag('Time Off', { x: sf.x + 150, y: sf.y + 5 });
+  await expect(tree).toHaveText([/^Time Off/, /^SuccessFactors/, /^Employee Central/]);
+  await expect(row('Time Off')).toHaveAttribute('data-depth', '0');
+  // keyboard: Alt+↓ on the name moves it down among its siblings
+  await row('Time Off').getByRole('button', { name: 'Time Off', exact: true }).press('Alt+ArrowDown');
+  await expect(tree).toHaveText([/^SuccessFactors/, /^Employee Central/, /^Time Off/]);
+  await page.reload();
+  await expect(tree).toHaveText([/^SuccessFactors/, /^Employee Central/, /^Time Off/]);
+  await expect(row('Employee Central')).toHaveAttribute('data-depth', '1');
+
+  // removing a folder with subfolders says where they go
+  await row('SuccessFactors').getByRole('button', { name: 'Eliminar SuccessFactors' }).click();
+  const ask = page.getByRole('dialog', { name: 'Eliminar pasta?' });
+  await expect(ask).toContainText('as subpastas passam para o topo');
+  await ask.getByRole('button', { name: 'Eliminar' }).click();
+  await expect(tree).toHaveText([/^Employee Central/, /^Time Off/]);
+  await expect(row('Employee Central')).toHaveAttribute('data-depth', '0');
+
+  // the URL line: typing in the middle of the query keeps the caret there
+  await page.getByRole('button', { name: 'Todos os Pedidos' }).click();
+  await page.locator('.kh-ap-item', { hasText: 'Utilizadores' }).click();
+  const url = page.getByLabel('URL', { exact: true });
+  await url.fill('{{host}}/odata/v2/User?filter=name');
+  await url.evaluate((e: HTMLInputElement) => e.setSelectionRange(31, 31));
+  await page.keyboard.type('{{v}} ');
+  await expect(url).toHaveValue('{{host}}/odata/v2/User?filter=n{{v}} ame');
+  expect(await url.evaluate((e: HTMLInputElement) => e.selectionStart)).toBe(37);
+  await page.keyboard.press('Backspace');
+  await expect(url).toHaveValue('{{host}}/odata/v2/User?filter=n{{v}}ame');
+  expect(await url.evaluate((e: HTMLInputElement) => e.selectionStart)).toBe(36);
+  await expect(page.getByRole('tab', { name: /Parâmetros/ })).toContainText('1');
+});

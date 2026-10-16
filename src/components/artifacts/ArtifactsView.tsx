@@ -8,7 +8,7 @@ import { sharedConfirm, useSharedFolders, type SharedFolder } from '@/components
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
-import { tagTint } from '@/lib/tags';
+import { tagStyle } from '@/lib/tags';
 import { Popover, useConfirm, usePersistentState, useToast, TagInput } from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
@@ -544,7 +544,7 @@ export function ArtifactsView() {
                 {a.tags.length > 0 && (
                   <div className="kh-ar-tags">
                     {a.tags.map((x) => (
-                      <span key={x} style={{ background: tagTint(x) }}>
+                      <span key={x} className="kh-tagc" style={tagStyle(x)}>
                         {x}
                       </span>
                     ))}
@@ -721,7 +721,7 @@ export function ArtifactsView() {
 
             <div className="kh-ar-meta">
               {full.tags.map((x) => (
-                <span key={x} className="kh-ar-tag" style={{ background: tagTint(x) }}>
+                <span key={x} className="kh-ar-tag kh-tagc" style={tagStyle(x)}>
                   {x}
                   {!ro && (
                     <button

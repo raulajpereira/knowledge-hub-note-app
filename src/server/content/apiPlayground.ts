@@ -185,39 +185,136 @@ export async function purgeApiRequestsTx(tx: Tx, ids: string[]) {
 }
 
 // ── Folders ────────────────────────────────────────────────────────────────
-export async function listApiFolders(auth: AuthContext) {
-  return asUser(auth, (tx) =>
-    tx
-      .select({ id: folders.id, name: folders.name })
-      .from(folders)
-      .where(and(eq(folders.kind, 'api'), isNull(folders.deletedAt)))
-      .orderBy(asc(folders.sort), asc(folders.createdAt)),
-  );
+// A tree: parentId (null = top level) and sort (order among siblings). The
+// 0040 trigger is the backstop for owner / kind / cycles; the service checks
+// the same first, inside a transaction that locks the owner's API folders.
+export type ApiFolder = { id: string; name: string; parentId: string | null; sort: number };
+const folderCols = { id: folders.id, name: folders.name, parentId: folders.parentId, sort: folders.sort };
+const isApiFolder = and(eq(folders.kind, 'api'), isNull(folders.deletedAt));
+
+export async function listApiFolders(auth: AuthContext): Promise<ApiFolder[]> {
+  return asUser(auth, (tx) => listFoldersTx(tx));
+}
+const listFoldersTx = (tx: Tx) =>
+  tx.select(folderCols).from(folders).where(isApiFolder).orderBy(asc(folders.sort), asc(folders.createdAt));
+
+/** Every API folder of the caller, locked until the end of the transaction. */
+const lockFolders = (tx: Tx) =>
+  tx
+    .select(folderCols)
+    .from(folders)
+    .where(isApiFolder)
+    .orderBy(asc(folders.sort), asc(folders.createdAt))
+    .for('update');
+
+/** Gives the siblings sort 0..n-1 in the given order (only rows whose sort changes). */
+async function renumber(tx: Tx, list: ApiFolder[], parentId: string | null) {
+  for (const [i, f] of list.entries()) {
+    if (f.sort === i && f.parentId === parentId) continue;
+    await tx.update(folders).set({ sort: i, parentId }).where(eq(folders.id, f.id));
+  }
 }
 
-export async function createApiFolder(auth: AuthContext, name: string) {
+/** Trigger errors (0040) as API errors. */
+function treeError(e: { code?: string; cause?: { code?: string } }): never {
+  const c = e.code ?? e.cause?.code;
+  if (c === 'KHF01') throw new ApiError(400, 'folder_cycle');
+  if (c === '23503' || c === 'KHF02') throw new ApiError(404, 'folder_not_found');
+  throw e;
+}
+
+export async function createApiFolder(
+  auth: AuthContext,
+  name: string,
+  parentId: string | null = null,
+): Promise<ApiFolder> {
   return asUser(auth, async (tx) => {
+    const all = await lockFolders(tx);
     const [{ n }] = (await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(folders)
       .where(eq(folders.kind, 'api'))) as [{ n: number }];
     if (n >= 200) throw new ApiError(400, 'too_many_folders');
+    if (parentId && !all.some((f) => f.id === parentId)) throw new ApiError(404, 'folder_not_found');
+    const sort = all.filter((f) => f.parentId === parentId).length;
     const [f] = await tx
       .insert(folders)
-      .values({ tenantId: auth.tenant.id, ownerId: auth.user.id, kind: 'api', name, color: '', sort: n })
-      .returning({ id: folders.id, name: folders.name });
+      .values({
+        tenantId: auth.tenant.id,
+        ownerId: auth.user.id,
+        kind: 'api',
+        name,
+        color: '',
+        parentId,
+        sort,
+      })
+      .returning(folderCols)
+      .catch(treeError);
     return f!;
   });
 }
 
-/** Removing a folder keeps its requests ("Sem Pasta"), as in the prototype. */
+/**
+ * Moves a folder under parentId (null: the top level) at position among its
+ * new siblings, and renumbers the old and new siblings. A folder can't go
+ * inside itself or one of its subfolders (400 folder_cycle); a parent that
+ * isn't one of the caller's API folders is 404 folder_not_found.
+ */
+export async function moveApiFolder(
+  auth: AuthContext,
+  id: string,
+  to: { parentId: string | null; position: number },
+): Promise<ApiFolder[]> {
+  return asUser(auth, async (tx) => {
+    const all = await lockFolders(tx);
+    const me = all.find((f) => f.id === id);
+    if (!me) throw new ApiError(404, 'not_found');
+    const from = me.parentId;
+    const byId = new Map(all.map((f) => [f.id, f]));
+    if (to.parentId) {
+      if (!byId.has(to.parentId)) throw new ApiError(404, 'folder_not_found');
+      for (let cur: string | null = to.parentId; cur; cur = byId.get(cur)?.parentId ?? null)
+        if (cur === id) throw new ApiError(400, 'folder_cycle');
+    }
+    const siblings = all.filter((f) => f.parentId === to.parentId && f.id !== id);
+    const at = Math.max(0, Math.min(to.position, siblings.length));
+    siblings.splice(at, 0, me);
+    try {
+      // the moved folder first: the trigger checks its new parent
+      if (me.parentId !== to.parentId) {
+        await tx.update(folders).set({ parentId: to.parentId, sort: at }).where(eq(folders.id, id));
+        Object.assign(me, { parentId: to.parentId, sort: at });
+      }
+      await renumber(tx, siblings, to.parentId);
+    } catch (e) {
+      treeError(e as { code?: string });
+    }
+    if (from !== to.parentId)
+      await renumber(
+        tx,
+        all.filter((f) => f.parentId === from && f.id !== id),
+        from,
+      );
+    return listFoldersTx(tx);
+  });
+}
+
+/**
+ * Removing a folder: its subfolders take its place under its parent (in
+ * order) and its requests go to that parent too ("Sem Pasta" at the top
+ * level); its own environments go with it.
+ */
 export async function deleteApiFolder(auth: AuthContext, id: string) {
   await asUser(auth, async (tx) => {
-    const r = await tx
-      .delete(folders)
-      .where(and(eq(folders.id, id), eq(folders.kind, 'api')))
-      .returning({ id: folders.id });
-    if (!r.length) throw new ApiError(404, 'not_found');
+    const all = await lockFolders(tx);
+    const me = all.find((f) => f.id === id);
+    if (!me) throw new ApiError(404, 'not_found');
+    const kids = all.filter((f) => f.parentId === id);
+    const siblings = all.filter((f) => f.parentId === me.parentId);
+    siblings.splice(siblings.indexOf(me), 1, ...kids);
+    await renumber(tx, siblings, me.parentId);
+    await tx.update(apiRequests).set({ folderId: me.parentId }).where(eq(apiRequests.folderId, id));
+    await tx.delete(folders).where(eq(folders.id, id));
   });
 }
 

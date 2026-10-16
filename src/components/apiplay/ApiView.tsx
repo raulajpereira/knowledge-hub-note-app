@@ -39,7 +39,10 @@ type Req = {
 };
 /** folderId null: the global environments (requests without a folder) */
 type Env = { id: string; folderId: string | null; name: string; vars: Kv[] };
-type Folder = { id: string; name: string };
+/** A folder tree: parentId null = top level, sort = order among its siblings. */
+type Folder = { id: string; name: string; parentId: string | null; sort: number };
+type Zone = 'before' | 'after' | 'inside';
+type Drag = { kind: 'req' | 'folder'; id: string };
 type Resp =
   | {
       ok: true;
@@ -91,6 +94,28 @@ const stColor = (s: number) =>
       : s < 400
         ? 'oklch(0.85 0.12 75)'
         : 'oklch(0.74 0.17 25)';
+const bySort = (a: Folder, b: Folder) => a.sort - b.sort;
+/** Folder `id` under `parentId` at `position`; both sibling lists renumbered (as the server does). */
+function placeFolder(list: Folder[], id: string, parentId: string | null, position: number): Folder[] {
+  const me = list.find((f) => f.id === id);
+  if (!me) return list;
+  const sib = list.filter((f) => f.parentId === parentId && f.id !== id).sort(bySort);
+  sib.splice(Math.max(0, Math.min(position, sib.length)), 0, me);
+  const old = me.parentId === parentId ? [] : list.filter((f) => f.parentId === me.parentId && f.id !== id);
+  const next = new Map<string, Folder>();
+  old.sort(bySort).forEach((f, i) => next.set(f.id, { ...f, sort: i }));
+  sib.forEach((f, i) => next.set(f.id, { ...f, parentId, sort: i }));
+  return list.map((f) => next.get(f.id) ?? f);
+}
+/** Without folder `id`: its subfolders take its place under its parent (as the server does). */
+function dropFolder(list: Folder[], id: string): Folder[] {
+  const me = list.find((f) => f.id === id);
+  if (!me) return list;
+  const sib = list.filter((f) => f.parentId === me.parentId).sort(bySort);
+  sib.splice(sib.indexOf(me), 1, ...list.filter((f) => f.parentId === id).sort(bySort));
+  const next = new Map(sib.map((f, i) => [f.id, { ...f, parentId: me.parentId, sort: i }]));
+  return list.filter((f) => f.id !== id).map((f) => next.get(f.id) ?? f);
+}
 const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 
 const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
@@ -112,6 +137,9 @@ const I = {
   plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>',
   x: '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>',
+  chev: '<path d="M6 9l6 6 6-6"></path>',
+  move: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M10 13h6"></path><path d="M13.5 10.5L16 13l-2.5 2.5"></path>',
+  up: '<path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path>',
   dup: '<rect x="9" y="9" width="11" height="11" rx="2.5"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path>',
   trash: '<path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path>',
   send: '<path d="M4 12l16-8-6 16-3-7z"></path>',
@@ -326,6 +354,82 @@ function EnvManager({
   );
 }
 
+/** "Mover para…": the keyboard / menu way to move a folder (drag and drop does the same). */
+function FolderMover({
+  folder,
+  rows,
+  blocked,
+  siblings,
+  onMove,
+  onClose,
+}: {
+  folder: Folder;
+  /** every folder in tree order, with its depth */
+  rows: Array<{ f: Folder; depth: number }>;
+  /** the folder and its subfolders: not a destination */
+  blocked: Set<string>;
+  siblings: Folder[];
+  onMove: (parentId: string | null, position: number) => void;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const idx = siblings.findIndex((f) => f.id === folder.id);
+  const dest = (parentId: string | null, label: string, depth: number) => {
+    const here = folder.parentId === parentId;
+    return (
+      <button
+        key={parentId ?? 'top'}
+        type="button"
+        className="kh-ap-pick"
+        style={{ paddingLeft: 12 + depth * 18 }}
+        aria-current={here || undefined}
+        disabled={here}
+        onClick={() => onMove(parentId, rows.filter((r) => r.f.parentId === parentId).length)}
+      >
+        <Svg d={parentId ? I.folder : I.up} s={15} />
+        <span>{label}</span>
+        {here && <em>{t('p_fHere')}</em>}
+      </button>
+    );
+  };
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={t('p_fMoveTitle')}
+      subtitle={folder.name}
+      size="sm"
+      closeLabel={t('ui_close')}
+    >
+      <div className="kh-ap-mover">
+        <div className="kh-ap-row">
+          <button
+            type="button"
+            className="kh-ap-pill"
+            disabled={idx <= 0}
+            onClick={() => onMove(folder.parentId, idx - 1)}
+          >
+            ↑ {t('p_fUp')}
+          </button>
+          <button
+            type="button"
+            className="kh-ap-pill"
+            disabled={idx < 0 || idx >= siblings.length - 1}
+            onClick={() => onMove(folder.parentId, idx + 1)}
+          >
+            ↓ {t('p_fDown')}
+          </button>
+        </div>
+        <div className="kh-ap-picks" role="group" aria-label={t('p_fMove')}>
+          {dest(null, t('p_fTop'), 0)}
+          {rows.filter((r) => !blocked.has(r.f.id)).map((r) => dest(r.f.id, r.f.name, r.depth + 1))}
+        </div>
+        <div className="kh-ap-hint">{t('p_fMoveHint')}</div>
+      </div>
+    </Modal>
+  );
+}
+
 export function ApiView() {
   const { t } = useI18n();
   const toast = useToast();
@@ -352,6 +456,14 @@ export function ApiView() {
   const [q, setQ] = useState('');
   const [newFolder, setNewFolder] = useState('');
   const [copied, setCopied] = useState('');
+  // folders shown collapsed (their subfolders hidden)
+  const [closed, setClosed] = usePersistentState<string[]>('api.folderClosed', []);
+  // what is being dragged (a request or a folder) and where it would land
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const [over, setOver] = useState<{ id: string; zone: Zone } | null>(null);
+  const [mover, setMover] = useState<Folder | null>(null);
+  // the URL line as typed while it has the focus (see onUrl)
+  const [urlDraft, setUrlDraft] = useState<{ id: string; text: string } | null>(null);
   const timers = useRef(new Map<string, { patch: Partial<Req>; tm: ReturnType<typeof setTimeout> }>());
   const envTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeId = sp.get('r');
@@ -427,10 +539,47 @@ export function ApiView() {
       }),
     [env],
   );
+  // ── Folder tree ───────────────────────────────────────────────────────────
+  const tree = useMemo(() => {
+    const ids = new Set(folders.map((f) => f.id));
+    const kids = new Map<string | null, Folder[]>();
+    for (const f of folders) {
+      const p = f.parentId && ids.has(f.parentId) ? f.parentId : null;
+      kids.set(p, [...(kids.get(p) ?? []), f]);
+    }
+    for (const l of kids.values()) l.sort(bySort);
+    // every folder in tree order with its depth, and each one's subtree
+    const rows: Array<{ f: Folder; depth: number }> = [];
+    const sub = new Map<string, Set<string>>();
+    const walk = (p: string | null, depth: number): string[] =>
+      (kids.get(p) ?? []).flatMap((f) => {
+        rows.push({ f, depth });
+        const below = [f.id, ...walk(f.id, depth + 1)];
+        sub.set(f.id, new Set(below));
+        return below;
+      });
+    walk(null, 0);
+    return { kids, rows, sub };
+  }, [folders]);
+  const kidsOf = (id: string | null) => tree.kids.get(id) ?? [];
+  const subOf = (id: string) => tree.sub.get(id) ?? new Set([id]);
+  const closedSet = new Set(closed);
+  // the rows shown: a collapsed folder hides everything below it
+  const shownRows = tree.rows.filter(({ f }) => {
+    for (let p = f.parentId; p; p = folders.find((x) => x.id === p)?.parentId ?? null)
+      if (closedSet.has(p)) return false;
+    return true;
+  });
+  // a folder counts (and lists) its own requests and those of its subfolders
+  const countOf = (id: string) => {
+    const s = subOf(id);
+    return all.filter((x) => x.folderId && s.has(x.folderId)).length;
+  };
+  const inFolder = folder === 'all' || folder === 'none' ? null : subOf(folder);
   const query = q.trim().toLowerCase();
   const list = all.filter(
     (x) =>
-      (folder === 'all' || (folder === 'none' ? !x.folderId : x.folderId === folder)) &&
+      (folder === 'all' || (folder === 'none' ? !x.folderId : !!x.folderId && !!inFolder?.has(x.folderId))) &&
       (!query || `${x.title} ${x.url}`.toLowerCase().includes(query)),
   );
   const rs = act ? resps[act.id] : undefined;
@@ -503,17 +652,75 @@ export function ApiView() {
       fail();
     }
   };
+  const moveFolder = async (id: string, parentId: string | null, position: number) => {
+    const before = folders;
+    setFolders(placeFolder(before, id, parentId, position));
+    if (parentId) setClosed(closed.filter((x) => x !== parentId));
+    try {
+      const r = await api<{ folders: Folder[] }>(
+        `/api-requests/folders/${id}`,
+        { parentId, position },
+        'PATCH',
+      );
+      setFolders(r.folders);
+    } catch (e) {
+      setFolders(before);
+      toast({
+        message: (e as { code?: string }).code === 'folder_cycle' ? t('p_fCycle') : t('ne_saveFail'),
+        tone: 'error',
+      });
+    }
+  };
+  /** Drop of the dragged folder on row `target` (zone: before / after it, or inside). */
+  const dropOnFolder = (target: Folder, zone: Zone) => {
+    if (!drag) return;
+    if (drag.kind === 'req') {
+      upd(drag.id, { folderId: target.id }, 0);
+      return;
+    }
+    if (subOf(drag.id).has(target.id)) return;
+    const open = kidsOf(target.id).length > 0 && !closedSet.has(target.id);
+    if (zone === 'inside') {
+      void moveFolder(drag.id, target.id, kidsOf(target.id).filter((f) => f.id !== drag.id).length);
+    } else if (zone === 'after' && open) {
+      // below an open folder's row is the start of its subfolders
+      void moveFolder(drag.id, target.id, 0);
+    } else {
+      const sib = kidsOf(target.parentId).filter((f) => f.id !== drag.id);
+      const at = sib.findIndex((f) => f.id === target.id) + (zone === 'after' ? 1 : 0);
+      void moveFolder(drag.id, target.parentId, at);
+    }
+  };
+  const endDrag = () => {
+    setDrag(null);
+    setOver(null);
+  };
   const removeFolder = async (f: Folder) => {
+    const n = kidsOf(f.id).length;
+    if (n) {
+      const parent = folders.find((x) => x.id === f.parentId);
+      const ok = await confirm({
+        title: t('p_fDelTitle'),
+        body: (parent ? t('p_fDelSubIn').replace('{p}', parent.name) : t('p_fDelSubTop'))
+          .replace('{x}', f.name)
+          .replace('{n}', String(n)),
+        confirmLabel: t('del'),
+        cancelLabel: t('tr_cancel'),
+        danger: true,
+      });
+      if (!ok) return;
+    }
     try {
       await api(`/api-requests/folders/${f.id}`, undefined, 'DELETE');
     } catch {
       toast({ message: t('ui_delFail'), tone: 'error' });
       return;
     }
-    setFolders((cur) => cur.filter((x) => x.id !== f.id));
+    // its subfolders and requests move up to its parent ("Sem Pasta" at the top level)
+    setFolders((cur) => dropFolder(cur, f.id));
     setEnvs((cur) => cur.filter((e) => e.folderId !== f.id));
-    setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: null } : x)));
-    if (folder === f.id) setFolder('all');
+    setItems((cur) => cur && cur.map((x) => (x.folderId === f.id ? { ...x, folderId: f.parentId } : x)));
+    if (folder === f.id) setFolder(f.parentId ?? 'all');
   };
   const setEnvVars = (vars: Kv[]) => {
     if (!env) return;
@@ -566,8 +773,15 @@ export function ApiView() {
   const bodyOut = (x: Req) =>
     x.bodyType === 'form' ? encodeFormBody(parseFormBody(x.body), resolve) : resolve(x.body);
 
+  // The URL line is the request's url plus its params as a query string. Typing
+  // splits it into the two, but the input keeps showing the text as typed until
+  // it loses the focus: rebuilding it from the params on every keystroke changed
+  // it under the caret ("{" → "%7B", a lone "?" or "&" dropped, "=" put back,
+  // a half-deleted "%3A" re-encoded as "%253") and React then moved the caret
+  // to the end.
   const onUrl = (v: string) => {
     if (!act) return;
+    setUrlDraft({ id: act.id, text: v });
     const i = v.indexOf('?');
     const dec = (z: string) => {
       try {
@@ -748,18 +962,34 @@ export function ApiView() {
               <Svg d={I.plus} s={16} />
             </button>
           </div>
-          <div className="kh-em-folders kh-ap-folders">
+          <div
+            className="kh-em-folders kh-ap-folders"
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(null);
+            }}
+          >
             {[
-              { id: 'all', name: t('p_all'), top: true, n: all.length },
-              { id: 'none', name: t('p_noFolder'), top: true, n: all.filter((x) => !x.folderId).length },
-              ...folders.map((f) => ({ ...f, top: false, n: all.filter((x) => x.folderId === f.id).length })),
+              { id: 'all', name: t('p_all'), n: all.length },
+              { id: 'none', name: t('p_noFolder'), n: all.filter((x) => !x.folderId).length },
             ].map((f) => (
               <div
                 key={f.id}
-                className="kh-em-folder"
+                className="kh-em-folder kh-ap-frow"
                 data-on={folder === f.id || undefined}
-                data-top={f.top || undefined}
+                data-top
+                data-drop={over?.id === f.id ? 'inside' : undefined}
                 onClick={() => setFolder(f.id)}
+                // a request dropped on "Sem Pasta" leaves its folder
+                onDragOver={(e) => {
+                  if (drag?.kind !== 'req' || f.id !== 'none') return;
+                  e.preventDefault();
+                  setOver({ id: f.id, zone: 'inside' });
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (drag?.kind === 'req' && f.id === 'none') upd(drag.id, { folderId: null }, 0);
+                  endDrag();
+                }}
               >
                 <Svg d={I.folder} s={17} />
                 <button
@@ -773,7 +1003,105 @@ export function ApiView() {
                 >
                   {f.name}
                 </button>
-                {!f.top && (
+                <span className="kh-em-count">{f.n}</span>
+              </div>
+            ))}
+            {shownRows.map(({ f, depth }) => {
+              const kids = kidsOf(f.id);
+              const isOpen = !closedSet.has(f.id);
+              const zone = over?.id === f.id ? over.zone : undefined;
+              const pad = 4 + depth * 18;
+              const sib = kidsOf(f.parentId);
+              const i = sib.findIndex((x) => x.id === f.id);
+              return (
+                <div
+                  key={f.id}
+                  className="kh-em-folder kh-ap-frow"
+                  data-on={folder === f.id || undefined}
+                  data-depth={depth}
+                  data-drop={zone}
+                  data-dragging={(drag?.kind === 'folder' && drag.id === f.id) || undefined}
+                  style={
+                    {
+                      paddingLeft: pad,
+                      '--kh-ap-ind': `${pad + (zone === 'after' && kids.length && isOpen ? 40 : 22)}px`,
+                    } as React.CSSProperties
+                  }
+                  draggable
+                  onDragStart={(e) => {
+                    e.stopPropagation();
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', f.name);
+                    setDrag({ kind: 'folder', id: f.id });
+                  }}
+                  onDragEnd={endDrag}
+                  onDragOver={(e) => {
+                    if (!drag) return;
+                    // not into itself or one of its subfolders
+                    if (drag.kind === 'folder' && subOf(drag.id).has(f.id)) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const r = e.currentTarget.getBoundingClientRect();
+                    const y = (e.clientY - r.top) / r.height;
+                    const z: Zone =
+                      drag.kind === 'req' ? 'inside' : y < 0.28 ? 'before' : y > 0.72 ? 'after' : 'inside';
+                    if (over?.id !== f.id || over.zone !== z) setOver({ id: f.id, zone: z });
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (zone) dropOnFolder(f, zone);
+                    endDrag();
+                  }}
+                  onClick={() => setFolder(f.id)}
+                >
+                  {kids.length ? (
+                    <button
+                      type="button"
+                      className="kh-ap-chev"
+                      aria-expanded={isOpen}
+                      aria-label={`${isOpen ? t('p_fCollapse') : t('p_fExpand')} ${f.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setClosed(isOpen ? [...closed, f.id] : closed.filter((x) => x !== f.id));
+                      }}
+                    >
+                      <Svg d={I.chev} s={13} />
+                    </button>
+                  ) : (
+                    <i className="kh-ap-chev" aria-hidden="true" />
+                  )}
+                  <Svg d={I.folder} s={17} />
+                  <button
+                    type="button"
+                    className="kh-rowbtn kh-em-folder__name"
+                    aria-current={folder === f.id || undefined}
+                    aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFolder(f.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+                      e.preventDefault();
+                      const to = e.key === 'ArrowUp' ? i - 1 : i + 1;
+                      if (to >= 0 && to < sib.length) void moveFolder(f.id, f.parentId, to);
+                    }}
+                  >
+                    {f.name}
+                  </button>
+                  <button
+                    type="button"
+                    className="kh-ap-fmove"
+                    title={t('p_fMove')}
+                    aria-label={`${t('p_fMove')} ${f.name}`}
+                    aria-haspopup="dialog"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMover(f);
+                    }}
+                  >
+                    <Svg d={I.move} s={14} />
+                  </button>
                   <button
                     type="button"
                     title={t('del')}
@@ -785,10 +1113,28 @@ export function ApiView() {
                   >
                     <Svg d={I.trash} s={14} />
                   </button>
-                )}
-                <span className="kh-em-count">{f.n}</span>
+                  <span className="kh-em-count">{countOf(f.id)}</span>
+                </div>
+              );
+            })}
+            {drag?.kind === 'folder' && (
+              <div
+                className="kh-ap-droptop"
+                data-over={over?.id === 'top' || undefined}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (over?.id !== 'top') setOver({ id: 'top', zone: 'inside' });
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  void moveFolder(drag.id, null, kidsOf(null).filter((f) => f.id !== drag.id).length);
+                  endDrag();
+                }}
+              >
+                <Svg d={I.up} s={15} />
+                {t('p_fToTop')}
               </div>
-            ))}
+            )}
             <div className="kh-em-newfolder">
               <input
                 value={newFolder}
@@ -811,8 +1157,16 @@ export function ApiView() {
                   key={x.id}
                   className="kh-ap-item"
                   data-on={x.id === activeId || undefined}
+                  data-dragging={(drag?.kind === 'req' && drag.id === x.id) || undefined}
                   role="button"
                   tabIndex={0}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', x.title);
+                    setDrag({ kind: 'req', id: x.id });
+                  }}
+                  onDragEnd={endDrag}
                   onClick={() => open(x.id)}
                   onKeyDown={(e) => e.key === 'Enter' && open(x.id)}
                 >
@@ -885,9 +1239,9 @@ export function ApiView() {
                 onChange={(e) => upd(act.id, { folderId: e.target.value || null }, 0)}
               >
                 <option value="">{t('p_noFolder')}</option>
-                {folders.map((f) => (
+                {tree.rows.map(({ f, depth }) => (
                   <option key={f.id} value={f.id}>
-                    {f.name}
+                    {'\u00a0'.repeat(depth * 3) + f.name}
                   </option>
                 ))}
               </select>
@@ -939,10 +1293,11 @@ export function ApiView() {
               </select>
               <input
                 className="kh-ap-url"
-                value={fullUrl(act)}
+                value={urlDraft?.id === act.id ? urlDraft.text : fullUrl(act)}
                 spellCheck={false}
                 aria-label={t('p_url')}
                 onChange={(e) => onUrl(e.target.value)}
+                onBlur={() => setUrlDraft(null)}
                 onKeyDown={(e) => e.key === 'Enter' && void send()}
               />
               <button type="button" className="kh-ap-send" disabled={sending} onClick={() => void send()}>
@@ -1193,6 +1548,19 @@ export function ApiView() {
           <div className="kh-em-none">{t('p_noActive')}</div>
         )}
       </section>
+      {mover && (
+        <FolderMover
+          folder={mover}
+          rows={tree.rows}
+          blocked={subOf(mover.id)}
+          siblings={kidsOf(mover.parentId)}
+          onClose={() => setMover(null)}
+          onMove={(parentId, position) => {
+            setMover(null);
+            void moveFolder(mover.id, parentId, position);
+          }}
+        />
+      )}
     </div>
   );
 }

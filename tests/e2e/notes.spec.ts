@@ -132,6 +132,44 @@ test('notebook + note written with the toolbar only, saved and reloaded', async 
   );
 });
 
+test('lists from the toolbar in a brand-new note: bullets shown, nested, toggled off', async ({ page }) => {
+  await login(page);
+  await page.goto('app/notes');
+  await page.getByRole('button', { name: 'Nova Nota' }).last().click();
+  await expect(page.getByLabel('Sem título')).toHaveValue('');
+  const ed = page.locator('.kh-ne');
+  // a new note is stored without any block: the first key used to replace the list just made
+  await ed.click();
+  await tool(page, 'Lista').click();
+  await expect(tool(page, 'Lista')).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.type('Primeiro');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Segundo');
+  await page.keyboard.press('Tab');
+  await expect(ed.locator('ul > li')).toHaveCount(2);
+  await expect(ed.locator('ul ul > li')).toHaveText('Segundo');
+  // the markers are visible (the CSS reset removes them everywhere else)
+  await expect(ed.locator('ul').first()).toHaveCSS('list-style-type', 'disc');
+  await expect(ed.locator('ul ul').first()).toHaveCSS('list-style-type', 'circle');
+  await page.keyboard.press('Shift+Tab');
+  await tool(page, 'Lista').click();
+  await expect(ed.locator('ul')).toHaveCount(1);
+  await expect(ed.locator('p', { hasText: 'Segundo' })).toBeVisible();
+  // pressed by keyboard too; "Título" takes any heading back to text
+  await tool(page, 'Título').focus();
+  await page.keyboard.press('Enter');
+  await expect(ed.locator('h2')).toHaveText('Segundo');
+  await tool(page, 'Título').click();
+  await expect(ed.locator('h2')).toHaveCount(0);
+
+  // gone for good: the next tests count the notes and the Trash
+  await page.waitForTimeout(1200); // autosave debounce
+  const id = new URL(page.url()).searchParams.get('n');
+  expect(id).toBeTruthy();
+  expect((await page.request.delete(`api/v1/notes/${id}`)).ok()).toBe(true);
+  expect((await page.request.post('api/v1/trash/purge', { data: { all: true } })).ok()).toBe(true);
+});
+
 test('code blocks: syntax highlighting, detected or chosen language, kept after reload', async ({ page }) => {
   await login(page);
   await page.goto('app/notes');

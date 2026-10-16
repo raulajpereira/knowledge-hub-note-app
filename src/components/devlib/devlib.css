@@ -282,6 +282,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* the item's tags as small chips; the ones that don't fit fade out */
+.kh-dl-item__m > .kh-dl-item__tags {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent);
+}
+.kh-dl-item__tags > span {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 15px;
+}
 .kh-dl-empty {
   padding: 30px 10px;
   text-align: center;
@@ -411,9 +426,7 @@
   height: 24px;
   padding: 0 4px 0 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
   font-size: 12px;
-  color: #fbf8f5;
 }
 .kh-dl-tag > button {
   width: 18px;
@@ -428,7 +441,7 @@
 }
 .kh-dl-tag > button:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
 }
 .kh-dl-field .kh-dl-tagbox input {
   flex: 1;

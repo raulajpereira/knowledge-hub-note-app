@@ -69,6 +69,19 @@ function storable(doc: JSONContent, stored: RegExp): JSONContent {
   return walk(doc) ?? { type: 'doc', content: [] };
 }
 
+/**
+ * A new note is stored as `{ type: 'doc', content: [] }` (the column default):
+ * TipTap loads that as a document without any block and with the whole
+ * document selected, which survives clicks — the first key then replaced
+ * whatever the toolbar had just made (e.g. a new list). Start with one paragraph.
+ */
+export function editableDoc(content: unknown): JSONContent {
+  const d = content as JSONContent | null | undefined;
+  return d && d.type === 'doc' && Array.isArray(d.content) && d.content.length
+    ? d
+    : { type: 'doc', content: [{ type: 'paragraph' }] };
+}
+
 function checklist(doc: PMNode) {
   let done = 0;
   let total = 0;
@@ -229,7 +242,7 @@ export function useNoteEditor({
         TableKit.configure({ table: { resizable: false } }),
         Placeholder.configure({ placeholder: placeholder ?? t('ne_ph') }),
       ],
-      content: (content as JSONContent) ?? '',
+      content: editableDoc(content),
       editorProps: {
         attributes: { class: 'kh-ne', spellcheck: 'true', 'aria-label': label ?? t('nav_notes') },
         // Office/Chrome clipboard fragments; relative links become absolute when the source is known.
@@ -348,7 +361,8 @@ export function EditorToolbar({
   const run = (g: ToolId) => {
     if (!editor) return;
     const c = editor.chain().focus();
-    if (g === 'H1') c.toggleHeading({ level: 2 }).run();
+    // any heading (pasted h1/h3 too) shows the button pressed, so pressing it turns it back into text
+    if (g === 'H1') (editor.isActive('heading') ? c.setParagraph() : c.toggleHeading({ level: 2 })).run();
     else if (g === 'B') c.toggleBold().run();
     else if (g === 'I') c.toggleItalic().run();
     else if (g === '•') c.toggleBulletList().run();
@@ -370,9 +384,14 @@ export function EditorToolbar({
           aria-label={label[g]}
           aria-pressed={active?.[g] ?? false}
           disabled={!editor}
+          // mouse: on press, so the document keeps its focus and selection
           onMouseDown={(e) => {
             e.preventDefault();
             run(g);
+          }}
+          // keyboard (Enter / Space on the focused button): a click with no pointer
+          onClick={(e) => {
+            if (e.detail === 0) run(g);
           }}
         >
           {g}

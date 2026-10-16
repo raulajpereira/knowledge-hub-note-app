@@ -1,16 +1,68 @@
-// Prototype tagTint: a stable tint per tag name.
-const TAG_TINTS = [
-  'oklch(0.7 0.12 240 / .35)',
-  'oklch(0.7 0.14 330 / .35)',
-  'oklch(0.7 0.14 25 / .35)',
-  'oklch(0.7 0.12 290 / .35)',
-  'oklch(0.72 0.12 160 / .35)',
-  'oklch(0.8 0.1 80 / .35)',
-];
-export function tagTint(s: string): string {
+import type { CSSProperties } from 'react';
+
+// Tag colours: one stable, vivid colour per tag name, the same everywhere a
+// tag is shown (lists, editors, the Tags page, suggestions). Chips carry the
+// class `kh-tagc` (globals.css) and these custom properties inline.
+//
+// Each row: hue, lightness and chroma of the chip fill on the dark glass
+// (drawn at 45% alpha), then the chroma of the light text, of the 1px ring,
+// of the light fill on a selected (white) card and of its dark text. Chroma
+// is the most each hue holds in sRGB, so yellows/teals are a little softer
+// than reds/blues. Contrast (text vs. chip, WCAG): ≥ 6.6:1 over dark glass
+// (#1c1512), ≥ 4.7:1 over a light wallpaper showing through (#4a3d35),
+// ≥ 5.3:1 on the white selected card — checked in tests/unit/tags.test.ts.
+export const TAG_PALETTE = [
+  [25, 0.6, 0.2, 0.024, 0.174, 0.056, 0.18], // red
+  [50, 0.68, 0.178, 0.026, 0.126, 0.064, 0.118], // orange
+  [85, 0.7, 0.142, 0.05, 0.168, 0.11, 0.092], // amber
+  [130, 0.66, 0.176, 0.05, 0.18, 0.11, 0.12], // lime
+  [155, 0.66, 0.162, 0.05, 0.18, 0.11, 0.11], // green
+  [185, 0.66, 0.116, 0.05, 0.136, 0.11, 0.078], // teal
+  [225, 0.64, 0.12, 0.032, 0.144, 0.072, 0.084], // sky
+  [260, 0.58, 0.2, 0.022, 0.156, 0.052, 0.18], // blue
+  [290, 0.58, 0.2, 0.024, 0.168, 0.056, 0.18], // violet
+  [325, 0.6, 0.2, 0.042, 0.18, 0.098, 0.18], // magenta
+] as const;
+
+/** Stable index into TAG_PALETTE for a tag name (case-insensitive). */
+export function tagIndex(s: string): number {
+  const k = s.trim().toLowerCase();
   let x = 0;
-  for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) >>> 0;
-  return TAG_TINTS[x % TAG_TINTS.length]!;
+  for (let i = 0; i < k.length; i++) x = (x * 31 + k.charCodeAt(i)) >>> 0;
+  return x % TAG_PALETTE.length;
+}
+
+export type TagColors = { bg: string; fg: string; ring: string; bgOn: string; fgOn: string; ringOn: string };
+
+/** The colours of a tag chip: on the dark glass and on a selected (white) card. */
+export function tagColors(s: string): TagColors {
+  const [h, l, c, fc, rc, oc, ofc] = TAG_PALETTE[tagIndex(s)]!;
+  return {
+    bg: `oklch(${l} ${c} ${h} / 0.45)`,
+    fg: `oklch(0.95 ${fc} ${h})`,
+    ring: `oklch(${+(l + 0.12).toFixed(2)} ${rc} ${h} / 0.55)`,
+    bgOn: `oklch(0.89 ${oc} ${h})`,
+    fgOn: `oklch(0.45 ${ofc} ${h})`,
+    ringOn: `oklch(0.45 ${ofc} ${h} / 0.22)`,
+  };
+}
+
+/** Inline style for an element with the `kh-tagc` class. */
+export function tagStyle(s: string): CSSProperties {
+  const k = tagColors(s);
+  return {
+    '--tg-bg': k.bg,
+    '--tg-fg': k.fg,
+    '--tg-ring': k.ring,
+    '--tg-bg-on': k.bgOn,
+    '--tg-fg-on': k.fgOn,
+    '--tg-ring-on': k.ringOn,
+  } as CSSProperties;
+}
+
+/** The chip fill on the dark glass (kept for callers that only set a background). */
+export function tagTint(s: string): string {
+  return tagColors(s).bg;
 }
 
 // Suggestions for the tag inputs (TagInput): the app's tags arrive most used

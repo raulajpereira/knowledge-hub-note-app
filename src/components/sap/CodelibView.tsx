@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
-import { tagTint } from '@/lib/tags';
+import { tagStyle } from '@/lib/tags';
 import {
   CL_ADD,
   CL_FORMS,
@@ -743,7 +743,7 @@ export function CodelibView() {
               </span>
               <div className="kh-cl-tags">
                 {o.tags.map((tg) => (
-                  <span key={tg} className="kh-cl-tag" style={{ background: tagTint(tg) }}>
+                  <span key={tg} className="kh-cl-tag kh-tagc" style={tagStyle(tg)}>
                     {tg}
                     <button
                       type="button"

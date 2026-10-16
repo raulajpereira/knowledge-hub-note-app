@@ -7,6 +7,7 @@ import { useI18n } from '@/i18n/client';
 import { useConfirm, usePersistentState, useToast, TagInput } from '@/components/ui';
 import { isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
+import { tagStyle } from '@/lib/tags';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { ShareButton } from '@/components/share/ShareButton';
 import { FolderShareDialog } from '@/components/share/FolderShareDialog';
@@ -413,7 +414,9 @@ function NoteList({
               {n.tags.length > 0 && (
                 <div className="kh-nt-card__tags">
                   {n.tags.map((tg) => (
-                    <span key={tg}>{tg}</span>
+                    <span key={tg} className="kh-tagc" style={tagStyle(tg)}>
+                      {tg}
+                    </span>
                   ))}
                 </div>
               )}
@@ -439,7 +442,7 @@ function TagsRow({ tags, onChange }: { tags: string[]; onChange: (tags: string[]
   return (
     <div className="kh-nt-tags">
       {tags.map((tg) => (
-        <span key={tg} className="kh-nt-tag">
+        <span key={tg} className="kh-nt-tag kh-tagc" style={tagStyle(tg)}>
           <span>{tg}</span>
           <button
             type="button"
@@ -591,7 +594,9 @@ function EditorCard({
               note.tags.length > 0 && (
                 <div className="kh-nt-card__tags">
                   {note.tags.map((tg) => (
-                    <span key={tg}>{tg}</span>
+                    <span key={tg} className="kh-tagc" style={tagStyle(tg)}>
+                      {tg}
+                    </span>
                   ))}
                 </div>
               )

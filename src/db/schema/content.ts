@@ -4,6 +4,7 @@
 // owner; shared folders widen notes/tasks/artifacts to their members (0022).
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   check,
@@ -47,13 +48,16 @@ export const folders = pgTable(
     }).notNull(),
     name: text('name').notNull(),
     color: text('color').notNull(),
-    parentId: uuid('parent_id'),
+    // API Playground subfolders (0040): same owner and kind, no cycles (trigger)
+    parentId: uuid('parent_id').references((): AnyPgColumn => folders.id, { onDelete: 'set null' }),
+    // order among the folders with the same parent
     sort: integer('sort').notNull().default(0),
     createdAt: ts('created_at').notNull().defaultNow(),
     deletedAt: ts('deleted_at'),
   },
   (t) => [
     index('folders_owner_kind_idx').on(t.tenantId, t.ownerId, t.kind),
+    index('folders_parent_idx').on(t.parentId),
     check(
       'folders_kind_chk',
       sql`${t.kind} in ('notes','tasks','artifacts','passwords','emails','api','files','meetings')`,

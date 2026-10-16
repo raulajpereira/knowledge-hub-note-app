@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { useToast } from '@/components/ui';
+import { tagStyle } from '@/lib/tags';
 import './tags.css';
 
 // Etiquetas: not designed in the prototype — built with the Lixo page's
@@ -41,7 +42,9 @@ function Row({ tag, onRename }: { tag: Tag; onRename: (to: string) => Promise<vo
           }}
         />
       ) : (
-        <span className="kh-tg__chip">{tag.name}</span>
+        <span className="kh-tg__chip kh-tagc" style={tagStyle(tag.name)}>
+          {tag.name}
+        </span>
       )}
       <span className="kh-tg__count">
         {tag.count}
