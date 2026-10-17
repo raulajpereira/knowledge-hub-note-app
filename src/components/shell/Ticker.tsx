@@ -78,7 +78,7 @@ export function Ticker() {
         <span>© {new Date().getFullYear()}</span>
         <strong>
           <span>Knowledge</span>
-          <span style={{ color: 'var(--accent)' }}>Hub</span>
+          <span style={{ color: 'var(--accent-text)' }}>Hub</span>
         </strong>
       </span>
     </footer>

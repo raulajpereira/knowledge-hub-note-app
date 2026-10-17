@@ -52,19 +52,19 @@ export const CLIENT_ST: Record<string, [string, string]> = {
   active: ['Ativo', 'oklch(0.75 0.13 150 / .45)'],
   trial: ['Trial', 'oklch(0.75 0.12 245 / .5)'],
   past_due: ['Em atraso', 'oklch(0.72 0.15 50 / .55)'],
-  canceled: ['Cancelado', 'rgba(255,255,255,.14)'],
+  canceled: ['Cancelado', 'rgb(var(--w) / .14)'],
   suspended: ['Suspenso', 'oklch(0.66 0.17 25 / .5)'],
 };
 export const USER_ST: Record<string, [string, string]> = {
   active: ['Ativo', 'oklch(0.75 0.13 150 / .45)'],
   invited: ['Convidado', 'oklch(0.75 0.12 245 / .5)'],
-  disabled: ['Desativado', 'rgba(255,255,255,.14)'],
+  disabled: ['Desativado', 'rgb(var(--w) / .14)'],
   paused: ['Pausado', 'oklch(0.72 0.15 50 / .55)'],
 };
 export const CODE_ST: Record<string, [string, string]> = {
   active: ['Ativo', 'oklch(0.75 0.13 150 / .45)'],
   paused: ['Pausado', 'oklch(0.72 0.15 50 / .55)'],
-  expired: ['Expirado', 'rgba(255,255,255,.14)'],
+  expired: ['Expirado', 'rgb(var(--w) / .14)'],
   revoked: ['Revogado', 'oklch(0.66 0.17 25 / .5)'],
 };
 export const CODE_TY: Record<string, [string, string]> = {
@@ -74,7 +74,7 @@ export const CODE_TY: Record<string, [string, string]> = {
 
 export function StatusChip({ map, value }: { map: Record<string, [string, string]>; value: string }) {
   const { A } = useA();
-  const [l, c] = map[value] ?? [value, 'rgba(255,255,255,.14)'];
+  const [l, c] = map[value] ?? [value, 'rgb(var(--w) / .14)'];
   return (
     <span className="kh-ad-st" style={{ background: c }}>
       {A(l)}
@@ -90,9 +90,7 @@ export function PlanChip({ plan }: { plan: { code: string; color: string | null 
     <span
       className="kh-ad-plan"
       style={{
-        background: custom
-          ? 'linear-gradient(135deg,#b8e0ff,#d8c4ff)'
-          : (plan.color ?? 'rgba(255,255,255,.3)'),
+        background: custom ? 'linear-gradient(135deg,#b8e0ff,#d8c4ff)' : (plan.color ?? 'rgb(var(--w) / .3)'),
       }}
     >
       {custom ? A('INDIVIDUAL') : plan.code}

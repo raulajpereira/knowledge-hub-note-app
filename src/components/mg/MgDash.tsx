@@ -15,9 +15,9 @@ const PER: Record<string, [number, number, string]> = {
 };
 type Cat = 'below' | 'ok' | 'over';
 const CAT: Record<Cat, [string, string, string]> = {
-  below: ['Abaixo da Alocação', 'oklch(0.86 0.12 85)', '< 90% da capacidade'],
-  ok: ['Dentro da Alocação', 'oklch(0.86 0.12 150)', '90–100% da capacidade'],
-  over: ['Acima da Alocação', 'oklch(0.82 0.14 30)', '> 100% da capacidade'],
+  below: ['Abaixo da Alocação', 'oklch(calc(.86 * var(--lk)) .12 85)', '< 90% da capacidade'],
+  ok: ['Dentro da Alocação', 'oklch(calc(.86 * var(--lk)) .12 150)', '90–100% da capacidade'],
+  over: ['Acima da Alocação', 'oklch(calc(.82 * var(--lk)) .14 30)', '> 100% da capacidade'],
 };
 type F = {
   per?: string;
@@ -91,7 +91,7 @@ export function MgDash({ mg }: { mg: Mg }) {
   const locs = [...new Set(P.map((p) => p.loc).filter(Boolean))].sort();
   const hasFilters = !!(q || Fl.team || Fl.area || Fl.lvl || Fl.loc || Fl.proj || Fl.client || Fl.band);
   const SEL = (on: boolean) =>
-    `height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid ${on ? 'rgba(255,255,255,.4)' : 'rgba(255,255,255,.14)'};background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;max-width:220px;`;
+    `height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid ${on ? 'rgb(var(--w) / .4)' : 'rgb(var(--w) / .14)'};background-color:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:12.5px;outline:none;max-width:220px;`;
   const selects: Array<{ k: keyof F; opts: Array<{ v: string; l: string }>; label: string; mark?: boolean }> =
     [
       { k: 'team', label: tr('Equipa'), opts: mg.teamOpts.map((o) => ({ ...o, l: o.v ? o.l : tr(o.l) })) },
@@ -138,7 +138,7 @@ export function MgDash({ mg }: { mg: Mg }) {
         onClick={() => setPop(p.id)}
         onKeyDown={(e) => e.key === 'Enter' && setPop(p.id)}
         style={css(
-          'display:flex;flex-direction:column;gap:14px;padding:20px 20px 18px;border-radius:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);cursor:pointer;min-width:0;',
+          'display:flex;flex-direction:column;gap:14px;padding:20px 20px 18px;border-radius:24px;background:rgb(var(--w) / .06);border:1px solid rgb(var(--w) / .12);cursor:pointer;min-width:0;',
         )}
       >
         <div style={css('display:flex;align-items:center;gap:12px;min-width:0;')}>
@@ -153,7 +153,7 @@ export function MgDash({ mg }: { mg: Mg }) {
             </span>
             <span
               style={css(
-                'font-size:12.5px;color:rgba(255,248,240,.66);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                'font-size:12.5px;color:rgb(var(--t) / calc(.66 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
               )}
             >
               {tr(p.role)}
@@ -175,18 +175,20 @@ export function MgDash({ mg }: { mg: Mg }) {
           </span>
         </div>
         <div style={css('display:flex;flex-direction:column;gap:8px;')}>
-          <div style={css('height:8px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;')}>
+          <div style={css('height:8px;border-radius:999px;background:rgb(var(--w) / .1);overflow:hidden;')}>
             <div
               style={css(`height:100%;width:${Math.min(100, r.pct)}%;border-radius:999px;background:${c};`)}
             />
           </div>
           <div
             style={css(
-              'display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:rgba(255,248,240,.66);',
+              'display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:rgb(var(--t) / calc(.66 * var(--t-k)));',
             )}
           >
             <span
-              style={css("font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:#fbf8f5;")}
+              style={css(
+                "font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--ink);",
+              )}
             >
               {(Math.round(r.avg * 10) / 10).toString().replace('.', en ? '.' : ',')}h / {r.cap}h
             </span>
@@ -203,7 +205,7 @@ export function MgDash({ mg }: { mg: Mg }) {
                   key={i}
                   title={`${wLbl(wk(w))} · ${hh}h`}
                   style={css(
-                    `height:12px;border-radius:4px;background:${hh ? mg.heat(hh, r.cap).bg : 'rgba(255,255,255,.08)'};`,
+                    `height:12px;border-radius:4px;background:${hh ? mg.heat(hh, r.cap).bg : 'rgb(var(--w) / .08)'};`,
                   )}
                 />
               );
@@ -216,7 +218,7 @@ export function MgDash({ mg }: { mg: Mg }) {
               <span
                 key={j!.id}
                 style={css(
-                  "display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.08);font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600;",
+                  "display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;background:rgb(var(--w) / .08);font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:600;",
                 )}
               >
                 <span style={css(`width:6px;height:6px;border-radius:50%;background:${j!.color};`)} />
@@ -237,7 +239,7 @@ export function MgDash({ mg }: { mg: Mg }) {
             <h1 style={css('margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em;')}>
               {tr('Painel de Alocação')}
             </h1>
-            <span style={css('font-size:13.5px;color:rgba(255,248,240,.72);')}>
+            <span style={css('font-size:13.5px;color:rgb(var(--t) / calc(.72 * var(--t-k)));')}>
               {nW > 1 ? `${wLblY(wk(a0))} → ${wLblY(wk(b0))}` : tr(`Semana de ${wLblY(wk(a0))}`)} ·{' '}
               {tr(`${rows.length} pessoas`)}
             </span>
@@ -245,7 +247,7 @@ export function MgDash({ mg }: { mg: Mg }) {
           <div
             role="tablist"
             style={css(
-              'display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(18,12,9,.22);border:1px solid rgba(255,255,255,.12);',
+              'display:flex;gap:2px;padding:3px;border-radius:999px;background:rgb(var(--d) / calc(.22 * var(--d-k)));border:1px solid rgb(var(--w) / .12);',
             )}
           >
             {Object.entries(PER).map(([k, v]) => (
@@ -256,7 +258,7 @@ export function MgDash({ mg }: { mg: Mg }) {
                 aria-selected={per === k}
                 onClick={() => setF('per', k)}
                 style={css(
-                  `height:28px;padding:0 12px;border-radius:999px;border:0;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;background:${per === k ? '#fbf8f5' : 'transparent'};color:${per === k ? '#2a211c' : 'rgba(255,248,240,.8)'};`,
+                  `height:28px;padding:0 12px;border-radius:999px;border:0;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;background:${per === k ? 'var(--ink)' : 'transparent'};color:${per === k ? 'var(--ink-inv)' : 'rgb(var(--t) / calc(.8 * var(--t-k)))'};`,
                 )}
               >
                 {tr(v[2])}
@@ -280,12 +282,12 @@ export function MgDash({ mg }: { mg: Mg }) {
                 className="mg-h12"
                 onClick={() => setF('band', on ? '' : c)}
                 style={css(
-                  `display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px 18px;border-radius:22px;background:${on ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.07)'};border:1px solid ${on ? CAT[c][1] : 'rgba(255,255,255,.12)'};color:#fbf8f5;font:inherit;text-align:left;cursor:pointer;`,
+                  `display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px 18px;border-radius:22px;background:${on ? 'rgb(var(--w) / .16)' : 'rgb(var(--w) / .07)'};border:1px solid ${on ? CAT[c][1] : 'rgb(var(--w) / .12)'};color:var(--ink);font:inherit;text-align:left;cursor:pointer;`,
                 )}
               >
                 <span
                   style={css(
-                    'display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,248,240,.82);',
+                    'display:flex;align-items:center;gap:8px;font-size:13px;color:rgb(var(--t) / calc(.82 * var(--t-k)));',
                   )}
                 >
                   <span style={css(`width:9px;height:9px;border-radius:50%;background:${CAT[c][1]};`)} />
@@ -299,11 +301,13 @@ export function MgDash({ mg }: { mg: Mg }) {
                   >
                     {n}
                   </span>
-                  <span style={css('font-size:12.5px;color:rgba(255,248,240,.62);')}>
+                  <span style={css('font-size:12.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
                     {tr(`${rows.length ? Math.round((n / rows.length) * 100) : 0}% da equipa`)}
                   </span>
                 </span>
-                <span style={css('font-size:12px;color:rgba(255,248,240,.62);')}>{rule}</span>
+                <span style={css('font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
+                  {rule}
+                </span>
               </button>
             );
           })}
@@ -315,7 +319,7 @@ export function MgDash({ mg }: { mg: Mg }) {
             placeholder={tr('Pesquisar pessoas…')}
             aria-label={tr('Pesquisar pessoas…')}
             style={css(
-              'width:200px;height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;',
+              'width:200px;height:34px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:12.5px;outline:none;',
             )}
           />
           {selects.map((f) => (
@@ -364,13 +368,15 @@ export function MgDash({ mg }: { mg: Mg }) {
                 setFp({ per: Fp.per, sort: Fp.sort, group: Fp.group });
               }}
               style={css(
-                'height:34px;padding:0 14px;border-radius:999px;border:0;background:transparent;color:rgba(255,248,240,.8);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
+                'height:34px;padding:0 14px;border-radius:999px;border:0;background:transparent;color:rgb(var(--t) / calc(.8 * var(--t-k)));font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
               )}
             >
               {tr('Limpar filtros')}
             </button>
           )}
-          <span style={css('margin-left:auto;font-size:12.5px;color:rgba(255,248,240,.62);')}>
+          <span
+            style={css('margin-left:auto;font-size:12.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}
+          >
             {tr(`${vis.length} de ${rows.length}`)}
           </span>
         </div>
@@ -387,7 +393,7 @@ export function MgDash({ mg }: { mg: Mg }) {
                 <span style={css('font-size:15px;font-weight:600;')}>
                   {k.includes('|') ? k.split('|')[1] : k}
                 </span>
-                <span style={css('font-size:12px;color:rgba(255,248,240,.6);')}>
+                <span style={css('font-size:12px;color:rgb(var(--t) / calc(.6 * var(--t-k)));')}>
                   {tr(`${rs.length} pessoas`)}
                 </span>
                 <span
@@ -395,13 +401,13 @@ export function MgDash({ mg }: { mg: Mg }) {
                     "display:flex;gap:6px;margin-left:auto;font-family:'Geist Mono',monospace;font-size:12px;",
                   )}
                 >
-                  <span style={css('color:oklch(0.86 0.12 85);')}>
+                  <span style={css('color:oklch(calc(.86 * var(--lk)) .12 85);')}>
                     {rs.filter((r) => r.cat === 'below').length}
                   </span>
-                  <span style={css('color:oklch(0.86 0.12 150);')}>
+                  <span style={css('color:oklch(calc(.86 * var(--lk)) .12 150);')}>
                     {rs.filter((r) => r.cat === 'ok').length}
                   </span>
-                  <span style={css('color:oklch(0.82 0.14 30);')}>
+                  <span style={css('color:oklch(calc(.82 * var(--lk)) .14 30);')}>
                     {rs.filter((r) => r.cat === 'over').length}
                   </span>
                 </span>
@@ -417,7 +423,11 @@ export function MgDash({ mg }: { mg: Mg }) {
           </div>
         ))}
         {!vis.length && (
-          <div style={css('padding:40px 0;text-align:center;font-size:13.5px;color:rgba(255,248,240,.62);')}>
+          <div
+            style={css(
+              'padding:40px 0;text-align:center;font-size:13.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));',
+            )}
+          >
             {tr('Ninguém corresponde aos filtros.')}
           </div>
         )}

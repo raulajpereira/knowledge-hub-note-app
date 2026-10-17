@@ -198,10 +198,20 @@ export function Codes() {
                   r.status === 'revoked' ? (
                     <Cell main={fmtDate(r.restoreUntil)} sub={A('restaurável até')} />
                   ) : !r.expiresAt ? (
-                    <Cell main={<span style={{ color: 'oklch(0.86 0.13 150)' }}>{A('Vitalício')}</span>} />
+                    <Cell
+                      main={
+                        <span style={{ color: 'oklch(calc(.86 * var(--lk)) .13 150)' }}>
+                          {A('Vitalício')}
+                        </span>
+                      }
+                    />
                   ) : r.status === 'expired' ? (
                     <Cell
-                      main={<span style={{ color: 'oklch(0.84 0.13 60)' }}>{fmtDate(r.expiresAt)}</span>}
+                      main={
+                        <span style={{ color: 'oklch(calc(.84 * var(--lk)) .13 60)' }}>
+                          {fmtDate(r.expiresAt)}
+                        </span>
+                      }
                       sub={A('expirado')}
                     />
                   ) : (

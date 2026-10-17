@@ -24,8 +24,8 @@
   height: 44px;
   padding: 0 16px;
   border-radius: 999px;
-  background: rgba(18, 12, 9, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgb(var(--d) / calc(0.25 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.14);
 }
 .kh-vc-search input {
   flex: 1;
@@ -33,7 +33,7 @@
   border: 0;
   outline: none;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   font: inherit;
   font-size: 14px;
 }
@@ -52,14 +52,14 @@
   font: inherit;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.06);
+  color: var(--ink);
 }
 .kh-vc-filters button[data-on] {
-  border-color: #fbf8f5;
-  background: #fbf8f5;
-  color: #2a211c;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--ink-inv);
 }
 .kh-vc-items {
   flex: 1;
@@ -79,9 +79,9 @@
   cursor: pointer;
   text-align: left;
   font: inherit;
-  color: #fbf8f5;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+  background: rgb(var(--w) / 0.05);
+  border: 1px solid rgb(var(--w) / 0.08);
 }
 .kh-vc-item__ic {
   width: 40px;
@@ -91,12 +91,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fbf8f5;
+  background: rgb(var(--w) / 0.12);
+  color: var(--ink);
 }
 .kh-vc-item[data-on] .kh-vc-item__ic {
-  background: #2a211c;
-  color: #fbf8f5;
+  background: var(--sel-fg);
+  color: var(--sel-bg);
 }
 .kh-vc-item__body {
   flex: 1;
@@ -123,7 +123,7 @@
 }
 .kh-vc-item__meta {
   font-size: 12px;
-  color: rgba(255, 248, 240, 0.62);
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
   white-space: nowrap;
 }
 .kh-vc-item__mini {
@@ -136,7 +136,7 @@
 .kh-vc-item__mini span {
   width: 2px;
   border-radius: 2px;
-  background: rgba(255, 248, 240, 0.45);
+  background: rgb(var(--t) / calc(0.45 * var(--t-k)));
 }
 .kh-vc-item[data-on] .kh-vc-item__mini span {
   background: rgba(42, 33, 28, 0.55);
@@ -145,7 +145,7 @@
   padding: 40px 16px;
   text-align: center;
   font-size: 14px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
 }
 
 .kh-vc-right {
@@ -174,7 +174,7 @@
 }
 .kh-vc-rec__desc {
   font-size: 14px;
-  color: rgba(255, 248, 240, 0.72);
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
 }
 .kh-vc-rec__btns {
   display: grid;
@@ -191,9 +191,9 @@
   gap: 10px;
   height: 48px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.26);
+  background: rgb(var(--w) / 0.12);
+  color: var(--ink);
   font: inherit;
   font-weight: 600;
   font-size: 14px;
@@ -201,9 +201,9 @@
 }
 .kh-vc-btn--main {
   border: 0;
-  background: #fbf8f5;
-  color: #2a211c;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  background: var(--ink);
+  color: var(--ink-inv);
+  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.18 * var(--sh-k)));
 }
 .kh-vc-rec__btns--rec .kh-vc-btn--main {
   flex: 1;
@@ -243,7 +243,7 @@
 }
 .kh-vc-rec__time > div:first-child {
   font-size: 13px;
-  color: rgba(255, 248, 240, 0.72);
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
 }
 .kh-vc-rec__time > div:last-child {
   font-size: 28px;
@@ -265,7 +265,7 @@
   width: 3px;
   flex: none;
   border-radius: 3px;
-  background: #fbf8f5;
+  background: var(--ink);
 }
 .kh-vc-rec__stop {
   width: 12px;
@@ -288,7 +288,7 @@
   justify-content: center;
   padding: 40px;
   font-size: 15px;
-  color: rgba(255, 248, 240, 0.65);
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
 }
 .kh-vc-detail {
   display: flex;
@@ -313,7 +313,7 @@
   border: 0;
   outline: none;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   font: inherit;
   font-size: 26px;
   font-weight: 600;
@@ -334,20 +334,20 @@
   height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgb(var(--w) / 0.14);
   font-weight: 600;
 }
 .kh-vc-meta__t {
-  color: rgba(255, 248, 240, 0.68);
+  color: rgb(var(--t) / calc(0.68 * var(--t-k)));
 }
 .kh-vc-round {
   width: 40px;
   height: 40px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.08);
+  color: var(--ink);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -361,8 +361,8 @@
   gap: 14px;
   padding: 18px 20px;
   border-radius: 24px;
-  background: rgba(18, 12, 9, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgb(var(--d) / calc(0.28 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.12);
 }
 .kh-vc-wave {
   display: flex;
@@ -387,9 +387,9 @@
   height: 40px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.08);
+  color: var(--ink);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -405,13 +405,13 @@
   flex: none;
   border-radius: 50%;
   border: 0;
-  background: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  color: var(--ink-inv);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.2 * var(--sh-k)));
   padding: 0;
 }
 .kh-vc-pos {
@@ -421,16 +421,16 @@
   white-space: nowrap;
 }
 .kh-vc-pos > span {
-  color: rgba(255, 248, 240, 0.55);
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
 }
 .kh-vc-speed,
 .kh-vc-copy {
   height: 38px;
   padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.1);
+  color: var(--ink);
   font: inherit;
   font-size: 13px;
   font-weight: 500;
@@ -460,16 +460,16 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 248, 240, 0.7);
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
 }
 .kh-vc-text {
   min-height: 120px;
   resize: vertical;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(18, 12, 9, 0.25);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--d) / calc(0.25 * var(--d-k)));
+  color: var(--ink);
   font: inherit;
   font-size: 14px;
   line-height: 1.55;

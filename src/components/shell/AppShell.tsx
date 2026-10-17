@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AmbientBackground } from '@/components/ui';
+import { AmbientBackground, TagColorsProvider } from '@/components/ui';
+import type { TagColorMap } from '@/lib/tags';
 import { useI18n } from '@/i18n/client';
 import { COL_DEFAULTS, COL_LIMITS, effectivePrefs, type Prefs } from '@/lib/prefs';
 import { appearanceCss, appearanceOf } from './appearance';
@@ -17,6 +18,8 @@ import { LockScreen } from './LockScreen';
 import { PrefsProvider, usePref, usePrefsContext } from './PrefsProvider';
 import { ShellContext, type ShellApi } from './ShellContext';
 import { Sidebar } from './Sidebar';
+import { StartPageTracker } from './StartPageTracker';
+import { ThemeSync } from './ThemeSync';
 import { Ticker } from './Ticker';
 import type { ShellMe } from './types';
 import './shell.css';
@@ -143,61 +146,65 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
 
   return (
     <ShellContext.Provider value={api}>
-      <style>{appearanceCss(look)}</style>
-      <AmbientBackground
-        ambient={look.bg.mode === 'photo' ? 'Areia' : look.bg.mode}
-        photoUrl={photo}
-        blur={look.bg.blur}
-        dim={look.bg.dim}
-      />
-      <div
-        className="kh-shell kh-above"
-        data-ai-fab={(modules.has('ai') && !focus) || undefined}
-        aria-hidden={locked || undefined}
-        inert={locked || undefined}
-      >
-        <div className="kh-shell__grid">
-          <Header onActivity={() => setActOpen((o) => !o)} activityOpen={actOpen} />
-          <div
-            className="kh-main"
-            style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${width}px minmax(0,1fr)` }}
-          >
-            {!focus && (
-              <div
-                className="kh-handle"
-                style={{ left: width }}
-                title={t('resize')}
-                data-drag={dragW !== null}
-                onPointerDown={onDown}
-                onDoubleClick={onReset}
-                role="separator"
-                aria-orientation="vertical"
-                aria-valuenow={width}
-                aria-valuemin={COL_LIMITS.side[0]}
-                aria-valuemax={COL_LIMITS.side[1]}
-              >
-                <div className="kh-handle__bar" />
-              </div>
-            )}
-            {!focus && <Sidebar />}
-            <main className="kh-content">{children}</main>
+      <TagColorsProvider value={raw.tagColors as TagColorMap | undefined}>
+        <style>{appearanceCss(look)}</style>
+        <ThemeSync />
+        <StartPageTracker />
+        <AmbientBackground
+          ambient={look.bg.mode === 'photo' ? 'Areia' : look.bg.mode}
+          photoUrl={photo}
+          blur={look.bg.blur}
+          dim={look.bg.dim}
+        />
+        <div
+          className="kh-shell kh-above"
+          data-ai-fab={(modules.has('ai') && !focus) || undefined}
+          aria-hidden={locked || undefined}
+          inert={locked || undefined}
+        >
+          <div className="kh-shell__grid">
+            <Header onActivity={() => setActOpen((o) => !o)} activityOpen={actOpen} />
+            <div
+              className="kh-main"
+              style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${width}px minmax(0,1fr)` }}
+            >
+              {!focus && (
+                <div
+                  className="kh-handle"
+                  style={{ left: width }}
+                  title={t('resize')}
+                  data-drag={dragW !== null}
+                  onPointerDown={onDown}
+                  onDoubleClick={onReset}
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-valuenow={width}
+                  aria-valuemin={COL_LIMITS.side[0]}
+                  aria-valuemax={COL_LIMITS.side[1]}
+                >
+                  <div className="kh-handle__bar" />
+                </div>
+              )}
+              {!focus && <Sidebar />}
+              <main className="kh-content">{children}</main>
+            </div>
+            <Ticker />
           </div>
-          <Ticker />
         </div>
-      </div>
-      {me.tenant.status === 'suspended' && (
-        <div className="kh-suspended" role="status">
-          {t('shell_suspended')}
-        </div>
-      )}
-      <AccountModal open={accOpen} onClose={() => setAccOpen(false)} />
-      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
-      <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />
-      <AiPanel open={aiOpen} onClose={closeAi} />
-      {!locked && !focus && <AiFab open={aiOpen} onToggle={toggleAi} />}
-      {locked && (
-        <LockScreen name={me.user.name} email={me.user.email} photoV={me.assets.avatar} onUnlock={unlock} />
-      )}
+        {me.tenant.status === 'suspended' && (
+          <div className="kh-suspended" role="status">
+            {t('shell_suspended')}
+          </div>
+        )}
+        <AccountModal open={accOpen} onClose={() => setAccOpen(false)} />
+        <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
+        <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />
+        <AiPanel open={aiOpen} onClose={closeAi} />
+        {!locked && !focus && <AiFab open={aiOpen} onToggle={toggleAi} />}
+        {locked && (
+          <LockScreen name={me.user.name} email={me.user.email} photoV={me.assets.avatar} onUnlock={unlock} />
+        )}
+      </TagColorsProvider>
     </ShellContext.Provider>
   );
 }

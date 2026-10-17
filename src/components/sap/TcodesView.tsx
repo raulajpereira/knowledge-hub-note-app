@@ -188,7 +188,13 @@ export function TcodesView() {
       title={t('x_fav')}
       aria-label={`${t('x_fav')} ${x.code}`}
       aria-pressed={x.fav}
-      style={{ color: x.fav ? 'oklch(0.86 0.13 85)' : big ? '#fbf8f5' : 'rgba(255,248,240,.45)' }}
+      style={{
+        color: x.fav
+          ? 'oklch(calc(.86 * var(--lk)) .13 85)'
+          : big
+            ? 'var(--ink)'
+            : 'rgb(var(--t) / calc(.45 * var(--t-k)))',
+      }}
       onClick={fav(x)}
     >
       <Svg d={STAR} s={16} fill={x.fav ? 'currentColor' : 'none'} w={1.8} />
@@ -297,7 +303,7 @@ export function TcodesView() {
           </button>
         </div>
         <div className="kh-sap-chips">
-          {chip('all', t('x_all'), 'rgba(255,248,240,.5)', all.length)}
+          {chip('all', t('x_all'), 'rgb(var(--t) / calc(.5 * var(--t-k)))', all.length)}
           {chip('fav', `★ ${t('x_favs')}`, 'oklch(0.86 0.13 85)', all.filter((x) => x.fav).length)}
           {usedMods.map((m) => chip(m, m, modColor(m), modN.get(m)!))}
           <div style={{ flex: 1 }} />

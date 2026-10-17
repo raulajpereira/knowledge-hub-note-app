@@ -7,7 +7,7 @@ import { Av, Glass } from './ui';
 import type { Mg } from './store';
 
 const HEAD_BG =
-  'background:linear-gradient(90deg,rgba(255,255,255,.09),rgba(255,255,255,.05));backdrop-filter:blur(var(--glass-blur-user, 28px)) saturate(150%);border-right:1px solid rgba(255,255,255,.1);';
+  'background:linear-gradient(90deg,rgb(var(--sf) / calc(.09 * var(--sf-k))),rgb(var(--sf) / calc(.05 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 28px)) saturate(150%);border-right:1px solid rgb(var(--w) / .1);';
 
 // Competências (prototype isSkills): people × skill areas; a click moves the
 // level up (wrapping back to none); the footer counts Sénior + Expert per area.
@@ -37,14 +37,14 @@ export function MgSkills({ mg }: { mg: Mg }) {
       >
         <div style={css('display:flex;flex-direction:column;gap:4px;margin-right:auto;')}>
           <h1 style={css('margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em;')}>{L(19)}</h1>
-          <span style={css('font-size:13.5px;color:rgba(255,248,240,.72);')}>{L(25)}</span>
+          <span style={css('font-size:13.5px;color:rgb(var(--t) / calc(.72 * var(--t-k)));')}>{L(25)}</span>
         </div>
         <div style={css('display:flex;flex-wrap:wrap;gap:6px;align-items:center;')}>
           {lvIdx.map((l) => (
             <span
               key={l}
               style={css(
-                'display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,248,240,.8);',
+                'display:flex;align-items:center;gap:6px;font-size:12px;color:rgb(var(--t) / calc(.8 * var(--t-k)));',
               )}
             >
               <span
@@ -64,26 +64,26 @@ export function MgSkills({ mg }: { mg: Mg }) {
           placeholder={L(66)}
           aria-label={L(66)}
           style={css(
-            'width:200px;height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13px;outline:none;',
+            'width:200px;height:36px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13px;outline:none;',
           )}
         />
       </div>
       <div
         style={css(
-          'flex:1;min-height:0;overflow:auto;margin:0 12px 12px;border-radius:22px;background:rgba(18,12,9,.18);border:1px solid rgba(255,255,255,.1);',
+          'flex:1;min-height:0;overflow:auto;margin:0 12px 12px;border-radius:22px;background:rgb(var(--d) / calc(.18 * var(--d-k)));border:1px solid rgb(var(--w) / .1);',
         )}
       >
         <div role="table" aria-label={L(19)} style={css(`min-width:${260 + SKL.length * 92}px;width:100%;`)}>
           <div
             role="row"
             style={css(
-              `position:sticky;top:0;z-index:3;display:grid;grid-template-columns:${grid};align-items:stretch;height:52px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.1));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgba(255,255,255,.16);`,
+              `position:sticky;top:0;z-index:3;display:grid;grid-template-columns:${grid};align-items:stretch;height:52px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.2 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgb(var(--w) / .16);`,
             )}
           >
             <span
               role="columnheader"
               style={css(
-                `position:sticky;left:0;align-self:stretch;display:flex;align-items:center;padding:0 14px;font-size:12px;font-weight:600;color:rgba(255,248,240,.8);${HEAD_BG}`,
+                `position:sticky;left:0;align-self:stretch;display:flex;align-items:center;padding:0 14px;font-size:12px;font-weight:600;color:rgb(var(--t) / calc(.8 * var(--t-k)));${HEAD_BG}`,
               )}
             >
               {L(26)}
@@ -94,7 +94,7 @@ export function MgSkills({ mg }: { mg: Mg }) {
                 role="columnheader"
                 title={l}
                 style={css(
-                  'display:flex;align-items:center;justify-content:center;padding:0 6px;min-width:0;text-align:center;font-size:11.5px;font-weight:600;line-height:1.25;color:rgba(255,248,240,.9);overflow:hidden;',
+                  'display:flex;align-items:center;justify-content:center;padding:0 6px;min-width:0;text-align:center;font-size:11.5px;font-weight:600;line-height:1.25;color:rgb(var(--t) / calc(.9 * var(--t-k)));overflow:hidden;',
                 )}
               >
                 {l}
@@ -107,7 +107,7 @@ export function MgSkills({ mg }: { mg: Mg }) {
               role="row"
               className="mg-skrow"
               style={css(
-                `display:grid;grid-template-columns:${grid};align-items:center;height:58px;border-bottom:1px solid rgba(255,255,255,.06);`,
+                `display:grid;grid-template-columns:${grid};align-items:center;height:58px;border-bottom:1px solid rgb(var(--w) / .06);`,
               )}
             >
               <span
@@ -124,7 +124,7 @@ export function MgSkills({ mg }: { mg: Mg }) {
                   size={34}
                   fs={9.5}
                   tc={mg.tOf(p).tc}
-                  s="box-shadow:0 0 0 2px rgba(255,255,255,.12);"
+                  s="box-shadow:0 0 0 2px rgb(var(--w) / .12);"
                 />
                 <span
                   style={css(
@@ -133,7 +133,9 @@ export function MgSkills({ mg }: { mg: Mg }) {
                 >
                   {p.name}
                 </span>
-                <span style={css('font-size:10.5px;color:rgba(255,248,240,.55);')}>{LVS[p.level]}</span>
+                <span style={css('font-size:10.5px;color:rgb(var(--t) / calc(.55 * var(--t-k)));')}>
+                  {LVS[p.level]}
+                </span>
               </span>
               {SKL.map(([k, lab]) => {
                 const l = p.skills[k] ?? 0;
@@ -147,7 +149,7 @@ export function MgSkills({ mg }: { mg: Mg }) {
                       className="mg-hb"
                       onClick={() => cycle(p.id, k)}
                       style={css(
-                        `width:80px;height:26px;border-radius:8px;border:1px solid ${l ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.07)'};background:${LVC[l] ?? 'transparent'};color:#fbf8f5;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`,
+                        `width:80px;height:26px;border-radius:8px;border:1px solid ${l ? 'rgb(var(--w) / .18)' : 'rgb(var(--w) / .07)'};background:${LVC[l] ?? 'transparent'};color:var(--ink);font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`,
                       )}
                     >
                       {LV[l] || ''}
@@ -160,13 +162,13 @@ export function MgSkills({ mg }: { mg: Mg }) {
           <div
             role="row"
             style={css(
-              `position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:${grid};align-items:center;height:38px;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.08));backdrop-filter:blur(var(--glass-blur-user, 30px));border-top:1px solid rgba(255,255,255,.16);`,
+              `position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:${grid};align-items:center;height:38px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.14 * var(--sf-k))),rgb(var(--sf) / calc(.08 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 30px));border-top:1px solid rgb(var(--w) / .16);`,
             )}
           >
             <span
               role="rowheader"
               style={css(
-                'position:sticky;left:0;padding:0 14px;font-size:11.5px;font-weight:600;color:rgba(255,248,240,.8);',
+                'position:sticky;left:0;padding:0 14px;font-size:11.5px;font-weight:600;color:rgb(var(--t) / calc(.8 * var(--t-k)));',
               )}
             >
               {L(27)}
@@ -178,7 +180,7 @@ export function MgSkills({ mg }: { mg: Mg }) {
                   key={k}
                   role="cell"
                   style={css(
-                    `text-align:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:${n === 0 ? 'oklch(0.82 0.14 30)' : n === 1 ? 'oklch(0.86 0.12 75)' : 'rgba(255,248,240,.85)'};`,
+                    `text-align:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:${n === 0 ? 'oklch(0.82 0.14 30)' : n === 1 ? 'oklch(0.86 0.12 75)' : 'rgb(var(--t) / calc(.85 * var(--t-k)))'};`,
                   )}
                 >
                   {n}

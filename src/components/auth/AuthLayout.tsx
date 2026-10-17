@@ -81,7 +81,7 @@ export function AuthBadge({ tone, children }: { tone: 'neutral' | 'ok' | 'bad'; 
       ? 'oklch(0.72 0.14 150 / .7)'
       : tone === 'bad'
         ? 'oklch(0.7 0.15 40 / .65)'
-        : 'rgba(255,255,255,.12)';
+        : 'rgb(var(--w) / .12)';
   return (
     <span className="kh-auth__badge" style={{ background: bg }} aria-hidden="true">
       {children}

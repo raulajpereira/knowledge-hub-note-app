@@ -29,17 +29,19 @@ export function AboutModal({ open, onClose }: { open: boolean; onClose: () => vo
           alignItems: 'center',
           textAlign: 'center',
 
-          textShadow: '0 1px 10px rgba(0,0,0,.18)',
+          textShadow: '0 1px 10px rgb(0 0 0 / calc(.18 * var(--sh-k)))',
         }}
       >
-        <div style={{ borderRadius: 24, boxShadow: '0 14px 40px rgba(0,0,0,.25)' }}>
+        <div style={{ borderRadius: 24, boxShadow: '0 14px 40px rgb(0 0 0 / calc(.25 * var(--sh-k)))' }}>
           <Logo size={92} showWordmark={false} />
         </div>
         <div style={{ marginTop: 22, fontSize: 30, fontWeight: 700, letterSpacing: '-.02em' }}>
           <span>Knowledge</span>
-          <span style={{ color: 'var(--accent)' }}>Hub</span>
+          <span style={{ color: 'var(--accent-text)' }}>Hub</span>
         </div>
-        <div style={{ marginTop: 8, fontSize: 15, color: 'rgba(255,248,240,.85)' }}>{t('ab_tag')}</div>
+        <div style={{ marginTop: 8, fontSize: 15, color: 'rgb(var(--t) / calc(.85 * var(--t-k)))' }}>
+          {t('ab_tag')}
+        </div>
         <div
           style={{
             marginTop: 22,
@@ -47,13 +49,13 @@ export function AboutModal({ open, onClose }: { open: boolean; onClose: () => vo
             fontSize: 12.5,
             fontWeight: 700,
             letterSpacing: '.14em',
-            color: 'rgba(255,248,240,.75)',
+            color: 'rgb(var(--t) / calc(.75 * var(--t-k)))',
           }}
         >
           {t('ab_version')} {APP_VERSION}
         </div>
         <div style={{ marginTop: 24, fontSize: 15, fontWeight: 600 }}>{t('ab_dev')} Raul Pereira</div>
-        <div style={{ marginTop: 22, fontSize: 12, color: 'rgba(255,248,240,.7)' }}>
+        <div style={{ marginTop: 22, fontSize: 12, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
           © {new Date().getFullYear()} KnowledgeHub
         </div>
       </div>

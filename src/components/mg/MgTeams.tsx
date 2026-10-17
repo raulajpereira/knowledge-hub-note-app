@@ -7,10 +7,15 @@ import { CHEV, OPT, css } from './css';
 import { Av, Dialog, Glass, X, uid } from './ui';
 import type { Mg } from './store';
 
-const OCC = ['rgba(255,248,240,.55)', 'oklch(0.86 0.12 85)', 'oklch(0.86 0.12 150)', 'oklch(0.82 0.14 30)'];
+const OCC = [
+  'rgb(var(--t) / calc(.55 * var(--t-k)))',
+  'oklch(0.86 0.12 85)',
+  'oklch(0.86 0.12 150)',
+  'oklch(0.82 0.14 30)',
+];
 const INP =
-  'height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background-color:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;';
-const LBL = 'font-size:12px;color:rgba(255,248,240,.72);';
+  'height:38px;padding:0 12px;border-radius:12px;border:1px solid rgb(var(--w) / .14);background-color:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;';
+const LBL = 'font-size:12px;color:rgb(var(--t) / calc(.72 * var(--t-k)));';
 
 // Equipas (prototype isTeams): team cards, team detail and the
 // "Adicionar Membros" dialog (find existing people / create a new one).
@@ -33,7 +38,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
             <h1 style={css('margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em;')}>
               {tr('Equipas')}
             </h1>
-            <span style={css('font-size:13.5px;color:rgba(255,248,240,.72);')}>
+            <span style={css('font-size:13.5px;color:rgb(var(--t) / calc(.72 * var(--t-k)));')}>
               {tr(`${TEAMS.length} equipas · ${ALLP.length} pessoas`)}
               {noTeam ? tr(` · ${noTeam} sem equipa`) : ''}
             </span>
@@ -57,7 +62,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
               open(id);
             }}
             style={css(
-              'height:36px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;',
+              'height:36px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;',
             )}
           >
             + {tr('Nova Equipa')}
@@ -83,7 +88,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
                   onKeyDown={(e) => e.key === 'Enter' && open(t.id)}
                   style={{
                     ...css(
-                      'display:flex;flex-direction:column;gap:18px;padding:26px;border-radius:28px;border:1px solid rgba(255,255,255,.12);cursor:pointer;min-width:0;min-height:260px;transition:transform .15s,background .15s;',
+                      'display:flex;flex-direction:column;gap:18px;padding:26px;border-radius:28px;border:1px solid rgb(var(--w) / .12);cursor:pointer;min-width:0;min-height:260px;transition:transform .15s,background .15s;',
                     ),
                     ['--glow' as string]: glow,
                   }}
@@ -91,7 +96,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
                   <div style={css('display:flex;align-items:center;gap:16px;min-width:0;')}>
                     <span
                       style={css(
-                        `width:54px;height:54px;flex:none;border-radius:18px;background:${t.color};color:#1f1a16;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;letter-spacing:.02em;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 22px rgba(0,0,0,.2);`,
+                        `width:54px;height:54px;flex:none;border-radius:18px;background:${t.color};color:#1f1a16;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;letter-spacing:.02em;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 22px rgb(0 0 0 / calc(.2 * var(--sh-k)));`,
                       )}
                     >
                       {mgIni(t.name)}
@@ -104,7 +109,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
                       >
                         {t.name}
                       </span>
-                      <span style={css('font-size:13px;color:rgba(255,248,240,.66);')}>
+                      <span style={css('font-size:13px;color:rgb(var(--t) / calc(.66 * var(--t-k)));')}>
                         {tr(`${mem.length} ${mem.length === 1 ? 'colaborador' : 'colaboradores'}`)}
                       </span>
                     </span>
@@ -112,7 +117,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
                   {t.desc && (
                     <span
                       style={css(
-                        'font-size:14px;line-height:1.55;color:rgba(255,248,240,.8);text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;',
+                        'font-size:14px;line-height:1.55;color:rgb(var(--t) / calc(.8 * var(--t-k)));text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;',
                       )}
                     >
                       {t.desc}
@@ -124,7 +129,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
                         <span
                           key={k}
                           style={css(
-                            'height:26px;padding:0 11px;border-radius:999px;display:flex;align-items:center;font-size:12.5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);',
+                            'height:26px;padding:0 11px;border-radius:999px;display:flex;align-items:center;font-size:12.5px;background:rgb(var(--w) / .08);border:1px solid rgb(var(--w) / .12);',
                           )}
                         >
                           {SKN[k] ?? k}
@@ -134,10 +139,10 @@ export function MgTeams({ mg }: { mg: Mg }) {
                   )}
                   <div
                     style={css(
-                      'display:flex;align-items:center;gap:12px;margin-top:auto;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);',
+                      'display:flex;align-items:center;gap:12px;margin-top:auto;padding-top:18px;border-top:1px solid rgb(var(--w) / .08);',
                     )}
                   >
-                    <Av p={lead} size={36} fs={12} s="box-shadow:0 0 0 2px rgba(255,255,255,.12);" />
+                    <Av p={lead} size={36} fs={12} s="box-shadow:0 0 0 2px rgb(var(--w) / .12);" />
                     <span style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;')}>
                       <span
                         style={css(
@@ -146,7 +151,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
                       >
                         {lead ? lead.name : tr('Sem responsável')}
                       </span>
-                      <span style={css('font-size:12px;color:rgba(255,248,240,.6);')}>
+                      <span style={css('font-size:12px;color:rgb(var(--t) / calc(.6 * var(--t-k)));')}>
                         {tr('Responsável')}
                       </span>
                     </span>
@@ -164,7 +169,7 @@ export function MgTeams({ mg }: { mg: Mg }) {
                       {mem.length > 5 && (
                         <span
                           style={css(
-                            'height:28px;min-width:28px;margin-left:-8px;padding:0 7px;border-radius:999px;background:rgba(255,255,255,.16);box-shadow:0 0 0 2px rgba(45,36,31,.9);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;',
+                            'height:28px;min-width:28px;margin-left:-8px;padding:0 7px;border-radius:999px;background:rgb(var(--w) / .16);box-shadow:0 0 0 2px rgba(45,36,31,.9);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;',
                           )}
                         >
                           +{mem.length - 5}
@@ -207,9 +212,9 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
       });
     });
   const card =
-    'display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);min-width:0;';
+    'display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:rgb(var(--w) / .05);border:1px solid rgb(var(--w) / .12);min-width:0;';
   const btnIcon =
-    'width:30px;height:30px;flex:none;border-radius:50%;border:0;background:transparent;color:rgba(255,248,240,.5);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;';
+    'width:30px;height:30px;flex:none;border-radius:50%;border:0;background:transparent;color:rgb(var(--t) / calc(.5 * var(--t-k)));cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;';
 
   return (
     <Glass label={t.name}>
@@ -219,7 +224,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
           className="mg-h14"
           onClick={onBack}
           style={css(
-            'height:36px;padding:0 14px 0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;',
+            'height:36px;padding:0 14px 0 10px;border-radius:999px;border:1px solid rgb(var(--w) / .16);background:rgb(var(--w) / .08);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;',
           )}
         >
           <svg
@@ -266,7 +271,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
               onBack();
             }}
             style={css(
-              'height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,200,180,.35);background:transparent;color:#ffc9b8;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;',
+              'height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,200,180,.35);background:transparent;color:var(--kh-error-text);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;',
             )}
           >
             {tr('Remover Equipa')}
@@ -310,7 +315,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
               onChange={(e) => upT((x) => void (x.lead = e.target.value))}
               style={{
                 ...css(
-                  `${INP}background-color:rgba(255,255,255,.06);padding-right:30px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;`,
+                  `${INP}background-color:rgb(var(--w) / .06);padding-right:30px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme: var(--scheme);`,
                 ),
                 backgroundImage: CHEV,
                 backgroundRepeat: 'no-repeat',
@@ -352,7 +357,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
                   aria-label={c}
                   onClick={() => upT((x) => void (x.color = c))}
                   style={css(
-                    `width:28px;height:28px;border-radius:50%;border:0;padding:0;cursor:pointer;background:${c};box-shadow:${c === t.color ? '0 0 0 2px #fbf8f5' : '0 0 0 1px rgba(255,255,255,.2)'};`,
+                    `width:28px;height:28px;border-radius:50%;border:0;padding:0;cursor:pointer;background:${c};box-shadow:${c === t.color ? '0 0 0 2px var(--ink)' : '0 0 0 1px rgb(var(--w) / .2)'};`,
                   )}
                 />
               ))}
@@ -372,7 +377,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
                       upT((x) => void (x.areas = on ? x.areas.filter((y) => y !== k) : [...x.areas, k]))
                     }
                     style={css(
-                      `height:28px;padding:0 11px;border-radius:999px;border:1px solid ${on ? '#fbf8f5' : 'rgba(255,255,255,.16)'};background:${on ? '#fbf8f5' : 'rgba(255,255,255,.06)'};color:${on ? '#2a211c' : '#fbf8f5'};font:inherit;font-size:12px;font-weight:600;cursor:pointer;`,
+                      `height:28px;padding:0 11px;border-radius:999px;border:1px solid ${on ? 'var(--ink)' : 'rgb(var(--w) / .16)'};background:${on ? 'var(--ink)' : 'rgb(var(--w) / .06)'};color:${on ? 'var(--ink-inv)' : 'var(--ink)'};font:inherit;font-size:12px;font-weight:600;cursor:pointer;`,
                     )}
                   >
                     {SKN[k] ?? k}
@@ -388,7 +393,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
               <span style={css('font-size:16px;font-weight:600;')}>{tr('Membros')}</span>
               <span
                 style={css(
-                  "height:22px;min-width:22px;padding:0 8px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;background:rgba(255,255,255,.12);",
+                  "height:22px;min-width:22px;padding:0 8px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:700;background:rgb(var(--w) / .12);",
                 )}
               >
                 {mem.length}
@@ -397,7 +402,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
                 type="button"
                 onClick={() => setAdding(true)}
                 style={css(
-                  'margin-left:auto;height:34px;padding:0 14px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;',
+                  'margin-left:auto;height:34px;padding:0 14px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;',
                 )}
               >
                 <svg
@@ -421,7 +426,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
               placeholder={tr('Pesquisar membros…')}
               aria-label={tr('Pesquisar membros…')}
               style={css(
-                'height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13px;outline:none;width:100%;box-sizing:border-box;',
+                'height:36px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13px;outline:none;width:100%;box-sizing:border-box;',
               )}
             />
             <div style={css('display:flex;flex-direction:column;gap:2px;max-height:560px;overflow:auto;')}>
@@ -459,7 +464,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
                           {isLead && (
                             <span
                               style={css(
-                                'flex:none;height:18px;padding:0 7px;border-radius:999px;display:flex;align-items:center;font-size:10px;font-weight:700;color:#2a211c;background:#fbf8f5;',
+                                'flex:none;height:18px;padding:0 7px;border-radius:999px;display:flex;align-items:center;font-size:10px;font-weight:700;color:var(--ink-inv);background:var(--ink);',
                               )}
                             >
                               {tr('Responsável')}
@@ -468,7 +473,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
                         </span>
                         <span
                           style={css(
-                            'font-size:12px;color:rgba(255,248,240,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                            'font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
                           )}
                         >
                           {tr(p.role)}
@@ -538,7 +543,9 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
                 );
               })}
               {!mem.length && (
-                <div style={css('padding:18px 6px;font-size:13px;color:rgba(255,248,240,.62);')}>
+                <div
+                  style={css('padding:18px 6px;font-size:13px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}
+                >
                   {tr('Ainda sem membros. Use "Adicionar membros".')}
                 </div>
               )}
@@ -661,7 +668,7 @@ function AddMembers({
     { label: 'Email', k: 'email', type: 'email' },
   ];
   const IN2 =
-    'height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;';
+    'height:38px;padding:0 12px;border-radius:12px;border:1px solid rgb(var(--w) / .16);color:var(--ink);font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;';
 
   return (
     <Dialog
@@ -676,7 +683,7 @@ function AddMembers({
             <span style={css('font-size:20px;font-weight:600;letter-spacing:-.02em;')}>
               {tr('Adicionar Membros')}
             </span>
-            <span style={css('font-size:12.5px;color:rgba(255,248,240,.7);')}>{t.name}</span>
+            <span style={css('font-size:12.5px;color:rgb(var(--t) / calc(.7 * var(--t-k)));')}>{t.name}</span>
           </span>
           <button
             type="button"
@@ -691,7 +698,7 @@ function AddMembers({
         <div
           role="tablist"
           style={css(
-            'align-self:flex-start;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(18,12,9,.22);border:1px solid rgba(255,255,255,.12);',
+            'align-self:flex-start;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgb(var(--d) / calc(.22 * var(--d-k)));border:1px solid rgb(var(--w) / .12);',
           )}
         >
           {(
@@ -707,7 +714,7 @@ function AddMembers({
               aria-selected={tab === k}
               onClick={() => setTab(k)}
               style={css(
-                `height:30px;padding:0 14px;border-radius:999px;border:0;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;background:${tab === k ? '#fbf8f5' : 'transparent'};color:${tab === k ? '#2a211c' : 'rgba(255,248,240,.8)'};`,
+                `height:30px;padding:0 14px;border-radius:999px;border:0;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;background:${tab === k ? 'var(--ink)' : 'transparent'};color:${tab === k ? 'var(--ink-inv)' : 'rgb(var(--t) / calc(.8 * var(--t-k)))'};`,
               )}
             >
               {tr(l)}
@@ -726,10 +733,10 @@ function AddMembers({
             placeholder={tr('Pesquisar por nome, função ou área…')}
             aria-label={tr('Pesquisar por nome, função ou área…')}
             style={css(
-              'height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(18,12,9,.25);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;width:100%;box-sizing:border-box;',
+              'height:40px;padding:0 16px;border-radius:999px;border:1px solid rgb(var(--w) / .16);background:rgb(var(--d) / calc(.25 * var(--d-k)));color:var(--ink);font:inherit;font-size:13.5px;outline:none;width:100%;box-sizing:border-box;',
             )}
           />
-          <span style={css('font-size:12px;color:rgba(255,248,240,.62);')}>
+          <span style={css('font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
             {tr('Pessoas sem equipa aparecem primeiro. Cada pessoa pertence a uma só equipa.')}
           </span>
           <div
@@ -759,12 +766,12 @@ function AddMembers({
                     </span>
                     <span
                       style={css(
-                        'display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,248,240,.66);min-width:0;',
+                        'display:flex;align-items:center;gap:6px;font-size:12px;color:rgb(var(--t) / calc(.66 * var(--t-k)));min-width:0;',
                       )}
                     >
                       <span
                         style={css(
-                          `width:7px;height:7px;flex:none;border-radius:50%;background:${ft ? ft.color : 'rgba(255,248,240,.4)'};`,
+                          `width:7px;height:7px;flex:none;border-radius:50%;background:${ft ? ft.color : 'rgb(var(--t) / calc(.4 * var(--t-k)))'};`,
                         )}
                       />
                       <span style={css('white-space:nowrap;overflow:hidden;text-overflow:ellipsis;')}>
@@ -778,7 +785,7 @@ function AddMembers({
                     aria-label={`${tr(ft ? 'Mover para esta equipa' : 'Adicionar')}: ${p.name}`}
                     onClick={() => setPT(p.id, t.id)}
                     style={css(
-                      'height:32px;padding:0 14px;flex:none;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;',
+                      'height:32px;padding:0 14px;flex:none;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;',
                     )}
                   >
                     <svg
@@ -800,7 +807,9 @@ function AddMembers({
             })}
             {!cand.length && (
               <div
-                style={css('padding:24px 8px;text-align:center;font-size:13px;color:rgba(255,248,240,.62);')}
+                style={css(
+                  'padding:24px 8px;text-align:center;font-size:13px;color:rgb(var(--t) / calc(.62 * var(--t-k)));',
+                )}
               >
                 {tr('Ninguém encontrado.')}
               </div>
@@ -821,7 +830,9 @@ function AddMembers({
                   `display:flex;flex-direction:column;gap:6px;min-width:0;grid-column:${f.full ? '1 / -1' : 'auto'};`,
                 )}
               >
-                <span style={css('font-size:12px;color:rgba(255,248,240,.75);')}>{tr(f.label)}</span>
+                <span style={css('font-size:12px;color:rgb(var(--t) / calc(.75 * var(--t-k)));')}>
+                  {tr(f.label)}
+                </span>
                 <div style={css('display:flex;align-items:center;gap:8px;min-width:0;')}>
                   {f.opts ? (
                     <select
@@ -829,7 +840,7 @@ function AddMembers({
                       onChange={(e) => setF(f.k, f.num)(e.target.value)}
                       style={{
                         ...css(
-                          `${IN2}background-color:rgba(255,255,255,.06);padding-right:30px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;`,
+                          `${IN2}background-color:rgb(var(--w) / .06);padding-right:30px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme: var(--scheme);`,
                         ),
                         backgroundImage: CHEV,
                         backgroundRepeat: 'no-repeat',
@@ -850,11 +861,13 @@ function AddMembers({
                       type={f.type ?? 'text'}
                       maxLength={200}
                       onChange={(e) => setF(f.k, f.num)(e.target.value)}
-                      style={css(`${IN2}background-color:rgba(18,12,9,.25);`)}
+                      style={css(`${IN2}background-color:rgb(var(--d) / calc(.25 * var(--d-k)));`)}
                     />
                   )}
                   {f.unit && (
-                    <span style={css('flex:none;font-size:12px;color:rgba(255,248,240,.6);')}>
+                    <span
+                      style={css('flex:none;font-size:12px;color:rgb(var(--t) / calc(.6 * var(--t-k)));')}
+                    >
                       {tr(f.unit)}
                     </span>
                   )}
@@ -863,7 +876,7 @@ function AddMembers({
             ))}
           </div>
           {err && (
-            <span role="alert" style={css('font-size:12.5px;color:#ffc9b8;')}>
+            <span role="alert" style={css('font-size:12.5px;color:var(--kh-error-text);')}>
               {err}
             </span>
           )}
@@ -872,7 +885,7 @@ function AddMembers({
               type="button"
               onClick={onClose}
               style={css(
-                'height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fbf8f5;font:inherit;font-size:13px;cursor:pointer;',
+                'height:38px;padding:0 16px;border-radius:999px;border:1px solid rgb(var(--w) / .18);background:rgb(var(--w) / .08);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;',
               )}
             >
               {tr('Cancelar')}
@@ -881,7 +894,7 @@ function AddMembers({
               type="button"
               onClick={create}
               style={css(
-                'height:38px;padding:0 18px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
+                'height:38px;padding:0 18px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
               )}
             >
               {tr('Criar e Adicionar')}

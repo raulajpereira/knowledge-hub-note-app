@@ -1102,5 +1102,22 @@
   "rep_none": "Nenhum caso de teste corresponde.",
   "rep_otherEv": "Outras evidências",
   "lm_short1": "1 ordem à espera",
-  "lm_shortN": "{n} ordens à espera"
+  "lm_shortN": "{n} ordens à espera",
+  "set_themeTitle": "Tema",
+  "set_themeDesc": "Vidro escuro ou vidro branco fosco sobre o mesmo fundo. «Seguir o sistema» muda com o modo claro/escuro do dispositivo.",
+  "set_themeDark": "Escuro",
+  "set_themeLight": "Claro",
+  "set_themeSystem": "Seguir o sistema",
+  "set_densTitle": "Densidade das listas",
+  "set_densDesc": "Compacta mostra mais itens nas listas laterais de cada página (notas, tarefas, emails…). Independente do tamanho do texto e da interface.",
+  "set_densComfy": "Confortável",
+  "set_densCompact": "Compacta",
+  "set_startTitle": "Página inicial",
+  "set_startDesc": "O que abre ao entrar na aplicação (depois do login ou ao escrever o endereço). O botão Início continua a levar ao Início.",
+  "set_startHome": "Início",
+  "set_startLast": "Última página usada",
+  "set_startSearch": "Procurar página…",
+  "tg_color": "Cor da etiqueta",
+  "tg_colorAuto": "Automática",
+  "tg_colorHint": "A cor aplica-se a esta etiqueta em toda a aplicação."
 }

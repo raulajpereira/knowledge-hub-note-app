@@ -60,7 +60,9 @@ describe('tag colours', () => {
     expect(tagColors('SAP')).toEqual(tagColors('sap'));
     expect(tagStyle('go-live')).toEqual(tagStyle('go-live'));
     const used = new Set(
-      ['SAP', 'go-live', 'api', 'Fase 2', 'utils', 'async', 'abap', 'infra', 'rh', 'docs'].map(tagIndex),
+      ['SAP', 'go-live', 'api', 'Fase 2', 'utils', 'async', 'abap', 'infra', 'rh', 'docs'].map((s) =>
+        tagIndex(s),
+      ),
     );
     expect(used.size).toBeGreaterThanOrEqual(5);
   });

@@ -12,7 +12,7 @@ import { avatarBg } from '@/lib/avatarColor';
 // Shared pieces of the Management screens, styled 1:1 with Management.dc.html.
 
 export const GLASS =
-  'position:relative;isolation:isolate;flex:1;min-height:0;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);';
+  'position:relative;isolation:isolate;flex:1;min-height:0;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgb(var(--sf) / calc(.12 * var(--sf-k))),rgb(var(--sf) / calc(.04 * var(--sf-k))));border:1px solid rgb(var(--w) / .14);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);';
 const BLUR = css(
   'position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;backdrop-filter:blur(var(--glass-blur-user, 34px)) saturate(150%);',
 );
@@ -106,13 +106,13 @@ export function Split({
       >
         <div
           style={css(
-            `width:4px;height:48px;border-radius:4px;background:${live !== null ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.22)'};box-shadow:0 0 0 1px rgba(255,255,255,.08);`,
+            `width:4px;height:48px;border-radius:4px;background:${live !== null ? 'rgb(var(--w) / .75)' : 'rgb(var(--w) / .22)'};box-shadow:0 0 0 1px rgb(var(--w) / .08);`,
           )}
         />
       </div>
       <div
         style={css(
-          'min-height:0;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.1);min-width:0;',
+          'min-height:0;display:flex;flex-direction:column;border-right:1px solid rgb(var(--w) / .1);min-width:0;',
         )}
       >
         {list}
@@ -145,7 +145,7 @@ export function Av({
     <span
       aria-hidden="true"
       style={css(
-        `width:${size}px;height:${size}px;flex:none;border-radius:50%;background:${avatarBg(av ?? p?.av) ?? 'rgba(255,255,255,.15)'};outline:2px solid ${tc ?? 'transparent'};outline-offset:2px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;overflow:hidden;${s}`,
+        `width:${size}px;height:${size}px;flex:none;border-radius:50%;background:${avatarBg(av ?? p?.av) ?? 'rgb(var(--w) / .15)'};outline:2px solid ${tc ?? 'transparent'};outline-offset:2px;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;overflow:hidden;${s}`,
       )}
     >
       {photo ? (
@@ -186,7 +186,7 @@ export function Sel({
       aria-label={label}
       onChange={(e) => onChange(e.target.value)}
       style={{
-        ...css(`${s}cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;`),
+        ...css(`${s}cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme: var(--scheme);`),
         backgroundImage: CHEV,
         backgroundRepeat: 'no-repeat',
         backgroundPosition: pos,
@@ -204,7 +204,10 @@ export function Sel({
 
 /** Team filter chips above the pages (prototype teamBar). */
 export function TeamBar({ mg, manageOn }: { mg: Mg; manageOn?: boolean }) {
-  const items = [{ id: 'all', name: 'Todas as equipas', color: 'rgba(255,248,240,.55)' }, ...mg.TEAMS];
+  const items = [
+    { id: 'all', name: 'Todas as equipas', color: 'rgb(var(--t) / calc(.55 * var(--t-k)))' },
+    ...mg.TEAMS,
+  ];
   return (
     <div
       style={css('flex-shrink:0;display:flex;align-items:center;gap:10px;margin-bottom:12px;min-width:0;')}
@@ -213,7 +216,7 @@ export function TeamBar({ mg, manageOn }: { mg: Mg; manageOn?: boolean }) {
         role="group"
         aria-label={mg.tr('Equipas')}
         style={css(
-          'display:flex;gap:3px;padding:4px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(var(--glass-blur-user, 24px)) saturate(150%);overflow-x:auto;min-width:0;',
+          'display:flex;gap:3px;padding:4px;border-radius:999px;background:rgb(var(--w) / .07);border:1px solid rgb(var(--w) / .12);backdrop-filter:blur(var(--glass-blur-user, 24px)) saturate(150%);overflow-x:auto;min-width:0;',
         )}
       >
         {items.map((t) => {
@@ -225,7 +228,7 @@ export function TeamBar({ mg, manageOn }: { mg: Mg; manageOn?: boolean }) {
               aria-pressed={on}
               onClick={() => mg.setTeam(t.id)}
               style={css(
-                `flex:none;height:30px;padding:0 14px;border-radius:999px;border:0;background:${on ? '#fbf8f5' : 'transparent'};color:${on ? '#2a211c' : 'rgba(255,248,240,.85)'};font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;`,
+                `flex:none;height:30px;padding:0 14px;border-radius:999px;border:0;background:${on ? 'var(--ink)' : 'transparent'};color:${on ? 'var(--ink-inv)' : 'rgb(var(--t) / calc(.85 * var(--t-k)))'};font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;`,
               )}
             >
               <span style={css(`width:8px;height:8px;border-radius:50%;background:${t.color};`)} />
@@ -238,7 +241,7 @@ export function TeamBar({ mg, manageOn }: { mg: Mg; manageOn?: boolean }) {
         type="button"
         onClick={() => mg.nav('mg_teams')}
         style={css(
-          `flex:none;height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:${manageOn ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.07)'};backdrop-filter:blur(var(--glass-blur-user, 24px));color:#fbf8f5;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;`,
+          `flex:none;height:38px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .12);background:${manageOn ? 'rgb(var(--w) / .16)' : 'rgb(var(--w) / .07)'};backdrop-filter:blur(var(--glass-blur-user, 24px));color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;`,
         )}
       >
         <svg
@@ -302,7 +305,7 @@ export function Dialog({
       <div
         aria-hidden="true"
         style={css(
-          'position:absolute;inset:0;background:rgba(20,14,10,.12);backdrop-filter:blur(var(--glass-blur-user, 6px));',
+          'position:absolute;inset:0;background:rgb(var(--d) / calc(.12 * var(--d-k)));backdrop-filter:blur(var(--glass-blur-user, 6px));',
         )}
       />
       <div
@@ -313,7 +316,7 @@ export function Dialog({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={css(
-          `position:relative;${s}background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));backdrop-filter:blur(var(--glass-blur-user, 40px)) saturate(170%);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgba(0,0,0,.25);color:#fbf8f5;outline:none;line-height:normal;`,
+          `position:relative;${s}background:linear-gradient(180deg,rgb(var(--sf) / calc(.22 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 40px)) saturate(170%);border:1px solid rgb(var(--w) / .28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgb(0 0 0 / calc(.25 * var(--sh-k)));color:var(--ink);outline:none;line-height:normal;`,
         )}
       >
         {children}
@@ -388,13 +391,13 @@ export function Fields({
       role={title ? 'group' : undefined}
       aria-label={title}
       style={css(
-        'display:flex;flex-direction:column;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);min-width:0;',
+        'display:flex;flex-direction:column;border-radius:18px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--w) / .04);min-width:0;',
       )}
     >
       {title && (
         <div
           style={css(
-            'padding:11px 14px 3px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,248,240,.6);',
+            'padding:11px 14px 3px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgb(var(--t) / calc(.6 * var(--t-k)));',
           )}
         >
           {title}
@@ -404,16 +407,18 @@ export function Fields({
         <div
           key={f.label}
           style={css(
-            `display:grid;grid-template-columns:minmax(110px,${labelW}) minmax(0,1fr);align-items:center;gap:12px;min-height:46px;padding:5px 12px 5px 14px;border-top:1px solid ${j ? 'rgba(255,255,255,.07)' : 'transparent'};`,
+            `display:grid;grid-template-columns:minmax(110px,${labelW}) minmax(0,1fr);align-items:center;gap:12px;min-height:46px;padding:5px 12px 5px 14px;border-top:1px solid ${j ? 'rgb(var(--w) / .07)' : 'transparent'};`,
           )}
         >
-          <span style={css('font-size:12.5px;color:rgba(255,248,240,.72);')}>{f.label}</span>
+          <span style={css('font-size:12.5px;color:rgb(var(--t) / calc(.72 * var(--t-k)));')}>{f.label}</span>
           <div style={css('min-width:0;display:flex;align-items:center;gap:8px;')}>
             {f.readOnly ? (
               <output
                 aria-label={f.label}
                 title={f.title}
-                style={css('font-size:13px;padding:0 10px;color:#fbf8f5;font-variant-numeric:tabular-nums;')}
+                style={css(
+                  'font-size:13px;padding:0 10px;color:var(--ink);font-variant-numeric:tabular-nums;',
+                )}
               >
                 {f.val}
               </output>
@@ -423,7 +428,7 @@ export function Fields({
                 onChange={f.onChange}
                 opts={f.opts}
                 label={f.label}
-                s="width:100%;height:34px;padding:0 30px 0 10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13px;outline:none;"
+                s="width:100%;height:34px;padding:0 30px 0 10px;border-radius:10px;border:1px solid rgb(var(--w) / .12);background-color:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:13px;outline:none;"
               />
             ) : (
               <input
@@ -434,12 +439,14 @@ export function Fields({
                 aria-label={f.label}
                 onChange={(e) => f.onChange(e.target.value)}
                 style={css(
-                  `width:100%;min-width:0;height:34px;padding:0 10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(18,12,9,.16);color:#fbf8f5;font:inherit;font-size:13px;outline:none;box-sizing:border-box;${inputS}`,
+                  `width:100%;min-width:0;height:34px;padding:0 10px;border-radius:10px;border:1px solid rgb(var(--w) / .1);background:rgb(var(--d) / calc(.16 * var(--d-k)));color:var(--ink);font:inherit;font-size:13px;outline:none;box-sizing:border-box;${inputS}`,
                 )}
               />
             )}
             {f.unit && (
-              <span style={css('flex:none;font-size:12px;color:rgba(255,248,240,.6);')}>{f.unit}</span>
+              <span style={css('flex:none;font-size:12px;color:rgb(var(--t) / calc(.6 * var(--t-k)));')}>
+                {f.unit}
+              </span>
             )}
           </div>
         </div>
@@ -472,7 +479,12 @@ export function PersonPop({
   const my = mg.D.allocs
     .filter((x) => x.person === p.id && mg.wi(x.to) >= 0)
     .sort((x, y) => x.from.localeCompare(y.from));
-  const C = ['rgba(255,248,240,.6)', 'oklch(0.86 0.12 85)', 'oklch(0.86 0.12 150)', 'oklch(0.82 0.14 30)'][b];
+  const C = [
+    'rgb(var(--t) / calc(.6 * var(--t-k)))',
+    'oklch(0.86 0.12 85)',
+    'oklch(0.86 0.12 150)',
+    'oklch(0.82 0.14 30)',
+  ][b];
   return (
     <Dialog
       label={p.name}
@@ -489,7 +501,7 @@ export function PersonPop({
           >
             {p.name}
           </span>
-          <span style={css('font-size:13px;color:rgba(255,248,240,.72);')}>
+          <span style={css('font-size:13px;color:rgb(var(--t) / calc(.72 * var(--t-k)));')}>
             {tr(`${p.role} · ${mg.LV[p.level]} · ${cap}h/semana`)}
           </span>
         </div>
@@ -525,14 +537,14 @@ export function PersonPop({
                 >
                   <div
                     style={css(
-                      `height:38px;border-radius:10px;background:${c.bg};outline:${w >= a0 && w <= b0 ? '1.5px solid rgba(255,255,255,.55)' : '0 solid transparent'};outline-offset:1px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:${c.fg};`,
+                      `height:38px;border-radius:10px;background:${c.bg};outline:${w >= a0 && w <= b0 ? '1.5px solid rgb(var(--w) / .55)' : '0 solid transparent'};outline-offset:1px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:${c.fg};`,
                     )}
                   >
                     {hh || '·'}
                   </div>
                   <span
                     style={css(
-                      'font-size:10.5px;text-align:center;color:rgba(255,248,240,.58);white-space:nowrap;',
+                      'font-size:10.5px;text-align:center;color:rgb(var(--t) / calc(.58 * var(--t-k)));white-space:nowrap;',
                     )}
                   >
                     {wLbl(mg.wk(w))}
@@ -550,7 +562,7 @@ export function PersonPop({
               <div
                 key={x.id}
                 style={css(
-                  'display:flex;align-items:center;gap:12px;min-height:54px;padding:0 16px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);',
+                  'display:flex;align-items:center;gap:12px;min-height:54px;padding:0 16px;border-radius:16px;background:rgb(var(--w) / .06);border:1px solid rgb(var(--w) / .1);',
                 )}
               >
                 <span
@@ -566,7 +578,7 @@ export function PersonPop({
                   >
                     <span style={css("font-family:'Geist Mono',monospace;")}>{pj?.code}</span> · {pj?.name}
                   </span>
-                  <span style={css('font-size:12.5px;color:rgba(255,248,240,.64);')}>
+                  <span style={css('font-size:12.5px;color:rgb(var(--t) / calc(.64 * var(--t-k)));')}>
                     {wLblY(x.from)} → {wLblY(x.to)}
                   </span>
                 </span>
@@ -577,7 +589,7 @@ export function PersonPop({
             );
           })}
           {!my.length && (
-            <div style={css('font-size:13px;color:rgba(255,248,240,.62);')}>
+            <div style={css('font-size:13px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
               {tr('Sem alocações ativas.')}
             </div>
           )}
@@ -590,7 +602,7 @@ export function PersonPop({
               mg.nav('mg_people', { p: p.id });
             }}
             style={css(
-              'height:36px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
+              'height:36px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
             )}
           >
             {tr('Abrir Ficha Completa')}
@@ -619,7 +631,7 @@ export function Chip({
       aria-pressed={on}
       onClick={onClick}
       style={css(
-        `font:inherit;${s}border-radius:999px;border:1px solid ${on ? '#fbf8f5' : 'rgba(255,255,255,.16)'};background:${on ? '#fbf8f5' : 'rgba(255,255,255,.06)'};color:${on ? '#2a211c' : '#fbf8f5'};font-weight:600;cursor:pointer;`,
+        `font:inherit;${s}border-radius:999px;border:1px solid ${on ? 'var(--ink)' : 'rgb(var(--w) / .16)'};background:${on ? 'var(--ink)' : 'rgb(var(--w) / .06)'};color:${on ? 'var(--ink-inv)' : 'var(--ink)'};font-weight:600;cursor:pointer;`,
       )}
     >
       {label}

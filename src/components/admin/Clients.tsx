@@ -111,7 +111,9 @@ function BillCell({ c }: { c: Client }) {
     <Cell
       mono
       main={
-        <span style={c.status === 'past_due' ? { color: 'oklch(0.84 0.13 40)' } : undefined}>{main}</span>
+        <span style={c.status === 'past_due' ? { color: 'oklch(calc(.84 * var(--lk)) .13 40)' } : undefined}>
+          {main}
+        </span>
       }
       sub={sub}
     />
@@ -648,7 +650,7 @@ function DangerZone({
     <div
       className="kh-ad-card"
       style={{
-        borderColor: 'rgba(255,170,150,.28)',
+        borderColor: 'rgb(var(--err) / .28)',
         background: 'oklch(0.6 0.12 30 / .08)',
         display: 'flex',
         alignItems: 'center',

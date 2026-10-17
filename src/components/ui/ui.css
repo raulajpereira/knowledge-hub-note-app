@@ -9,10 +9,9 @@
   --kh-blur-modal: var(--glass-blur-user, 40px);
   --kh-blur-header: var(--glass-blur-user, 30px);
   --kh-danger-solid: oklch(0.62 0.18 28);
-  --kh-error-text: #ffc9b8;
-  --kh-error-border: rgba(255, 170, 150, 0.7);
-  --kh-field-border: rgba(255, 255, 255, 0.16);
-  --kh-field-focus: rgba(255, 255, 255, 0.45);
+  --kh-error-border: rgb(var(--err) / 0.7);
+  --kh-field-border: rgb(var(--w) / 0.16);
+  --kh-field-focus: rgb(var(--w) / 0.45);
 }
 
 /* ── Scrollbars: only while scrolling (data-scrolling, see lib/scrollbars) ─ */
@@ -30,10 +29,10 @@
   background: transparent;
 }
 [data-scrolling]::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgb(var(--w) / 0.22);
 }
 [data-scrolling]::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.34);
+  background: rgb(var(--w) / 0.34);
 }
 @supports (-moz-appearance: none) {
   * {
@@ -41,19 +40,23 @@
     scrollbar-color: transparent transparent;
   }
   [data-scrolling] {
-    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+    scrollbar-color: rgb(var(--w) / 0.22) transparent;
   }
 }
 
 /* ── Glass surfaces ─────────────────────────────────────────────────────── */
 .kh-glass {
   color: var(--text);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.16 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.06 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-panel)) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgb(var(--w) / 0.18);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 30px 80px rgba(0, 0, 0, 0.35);
+    0 30px 80px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
 }
 .kh-glass--panel {
   border-radius: 30px;
@@ -63,15 +66,19 @@
 }
 /* Inner, quieter surfaces (drawer, nested panels). */
 .kh-glass--soft {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.14 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.05 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-panel)) saturate(150%);
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgb(var(--w) / 0.16);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 /* Sunken area (tables, wells). */
 .kh-well {
-  background: rgba(18, 12, 9, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgb(var(--d) / calc(0.2 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.1);
   border-radius: 22px;
 }
 
@@ -127,47 +134,47 @@
 }
 /* Auth submit (Login / Register): deeper shadow, as in the prototypes. */
 .kh-btn--lg.kh-btn--primary {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 30px rgb(0 0 0 / calc(0.25 * var(--sh-k)));
 }
 .kh-btn--primary {
-  background: #fbf8f5;
-  color: #2a211c;
-  border-color: #fbf8f5;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  background: var(--ink);
+  color: var(--ink-inv);
+  border-color: var(--ink);
+  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.2 * var(--sh-k)));
 }
 .kh-btn--primary:hover:not(:disabled) {
-  background: #fff;
+  background: var(--ink-hi);
 }
 .kh-btn--glass {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: rgb(var(--w) / 0.1);
+  border-color: rgb(var(--w) / 0.22);
 }
 .kh-btn--glass:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgb(var(--w) / 0.16);
 }
 .kh-btn--ghost {
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgb(var(--w) / 0.2);
 }
 .kh-btn--ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--w) / 0.08);
 }
 .kh-btn--danger {
   background: var(--kh-danger-solid);
   border-color: var(--kh-danger-solid);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.2 * var(--sh-k)));
 }
 .kh-btn--danger:hover:not(:disabled) {
   filter: brightness(1.08);
 }
 .kh-btn--danger-ghost {
   background: transparent;
-  border-color: rgba(255, 170, 150, 0.4);
+  border-color: rgb(var(--err) / 0.4);
   color: var(--kh-error-text);
 }
 .kh-btn--danger-ghost:hover:not(:disabled) {
-  background: rgba(255, 170, 150, 0.1);
+  background: rgb(var(--err) / 0.1);
 }
 .kh-btn--accent {
   background: var(--accent);
@@ -198,20 +205,24 @@
   height: 40px;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.14 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.05 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-panel)) saturate(160%);
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s;
 }
 .kh-icon-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgb(var(--w) / 0.18);
 }
 .kh-icon-btn--sm {
   width: 34px;
   height: 34px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--w) / 0.08);
   backdrop-filter: none;
 }
 .kh-icon-btn--lg {
@@ -224,9 +235,9 @@
   color: #fff;
 }
 .kh-icon-btn--light {
-  background: #fbf8f5;
-  border-color: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-inv);
 }
 
 /* ── Chips, pills, badges ──────────────────────────────────────────────── */
@@ -237,9 +248,9 @@
   height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.06);
+  color: var(--ink);
   font: inherit;
   font-size: 13px;
   font-weight: 500;
@@ -247,12 +258,12 @@
   cursor: pointer;
 }
 .kh-chip:hover:not([aria-pressed='true']) {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--w) / 0.1);
 }
 .kh-chip[aria-pressed='true'] {
-  background: #fbf8f5;
-  border-color: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-inv);
 }
 .kh-chip__count {
   font-family: var(--font-mono);
@@ -274,8 +285,8 @@
   height: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  color: rgba(255, 248, 240, 0.85);
+  background: rgb(var(--w) / 0.14);
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
   font-family: var(--font-mono);
   font-size: 10.5px;
   font-weight: 600;
@@ -295,8 +306,8 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fbf8f5;
+  background: rgb(var(--w) / 0.14);
+  color: var(--ink);
 }
 
 /* Status variant: pill, sans, no uppercase (prototype chipC). */
@@ -315,9 +326,9 @@
   height: 28px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 248, 240, 0.85);
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.1);
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
   font-size: 12.5px;
   white-space: nowrap;
 }
@@ -332,11 +343,11 @@
 .kh-field__label {
   font-size: 12.5px;
   font-weight: 600;
-  color: rgba(255, 248, 240, 0.88);
+  color: rgb(var(--t) / calc(0.88 * var(--t-k)));
 }
 .kh-field__hint {
   font-size: 12px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
 }
 .kh-field__error {
   font-size: 12px;
@@ -349,8 +360,8 @@
   padding: 0 16px;
   border-radius: 14px;
   border: 1px solid var(--kh-field-border);
-  background: rgba(0, 0, 0, 0.25);
-  color: #fbf8f5;
+  background: rgb(var(--d) / calc(0.25 * var(--d-k)));
+  color: var(--ink);
   font: inherit;
   font-size: 14.5px;
   outline: none;
@@ -370,7 +381,7 @@
   height: 38px;
   padding: 0 12px;
   border-radius: 12px;
-  background: rgba(18, 12, 9, 0.22);
+  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
   font-size: 13.5px;
 }
 textarea.kh-input {
@@ -400,7 +411,7 @@ textarea.kh-input--md {
   border-radius: 10px;
   border: 0;
   background: transparent;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
   cursor: pointer;
   padding: 0;
   display: flex;
@@ -408,7 +419,7 @@ textarea.kh-input--md {
   justify-content: center;
 }
 .kh-input-end:hover {
-  color: #fff;
+  color: var(--ink-hi);
 }
 
 /* Header search: glass pill with icon. */
@@ -418,10 +429,14 @@ textarea.kh-input--md {
   align-items: center;
   height: 42px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.14 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.05 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-panel)) saturate(160%);
-  color: rgba(255, 248, 240, 0.7);
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
 }
 .kh-search svg {
   position: absolute;
@@ -435,7 +450,7 @@ textarea.kh-input--md {
   padding: 0 16px 0 44px;
   border: 0;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   font: inherit;
   font-size: 13px;
   outline: none;
@@ -449,7 +464,7 @@ textarea.kh-input--md {
   padding: 0;
   border: 0;
   background: transparent;
-  color: rgba(255, 248, 240, 0.88);
+  color: rgb(var(--t) / calc(0.88 * var(--t-k)));
   font: inherit;
   font-size: 13.5px;
   cursor: pointer;
@@ -461,16 +476,16 @@ textarea.kh-input--md {
   height: 18px;
   border-radius: 6px;
   box-sizing: border-box;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border: 1.5px solid rgb(var(--w) / 0.4);
   background: transparent;
-  color: #2a211c;
+  color: var(--ink-inv);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .kh-check[aria-checked='true'] .kh-check__box {
-  border-color: #fbf8f5;
-  background: #fbf8f5;
+  border-color: var(--ink);
+  background: var(--ink);
 }
 
 /* Switch (Definições). */
@@ -480,8 +495,8 @@ textarea.kh-input--md {
   height: 28px;
   flex: none;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgb(var(--w) / 0.25);
+  background: rgb(var(--w) / 0.12);
   cursor: pointer;
   padding: 0;
 }
@@ -496,8 +511,8 @@ textarea.kh-input--md {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fbf8f5;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  background: var(--ink);
+  box-shadow: 0 2px 6px rgb(0 0 0 / calc(0.25 * var(--sh-k)));
   transition: left 0.18s;
 }
 .kh-switch[aria-checked='true']::after {
@@ -516,9 +531,13 @@ textarea.kh-input--md {
   gap: 2px;
   padding: 3px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.16 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.06 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-panel)) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgb(var(--w) / 0.18);
 }
 .kh-seg button {
   height: 28px;
@@ -530,11 +549,11 @@ textarea.kh-input--md {
   font-weight: 700;
   cursor: pointer;
   background: transparent;
-  color: rgba(255, 248, 240, 0.82);
+  color: rgb(var(--t) / calc(0.82 * var(--t-k)));
 }
 .kh-seg button[aria-checked='true'] {
-  background: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  color: var(--ink-inv);
 }
 
 /* Inline message (Login: ok / error). */
@@ -580,7 +599,7 @@ textarea.kh-input--md {
   text-overflow: ellipsis;
 }
 .kh-select__placeholder {
-  color: rgba(255, 248, 240, 0.55);
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
 }
 .kh-menu {
   position: fixed;
@@ -591,13 +610,17 @@ textarea.kh-input--md {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: #fbf8f5;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  color: var(--ink);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.2 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgb(var(--w) / 0.24);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 18px 50px rgba(0, 0, 0, 0.35);
+    0 18px 50px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
 }
 .kh-menu__search {
   box-sizing: border-box;
@@ -605,9 +628,9 @@ textarea.kh-input--md {
   height: 32px;
   padding: 0 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.08);
+  color: var(--ink);
   font: inherit;
   outline: none;
 }
@@ -631,11 +654,11 @@ textarea.kh-input--md {
   background: transparent;
 }
 .kh-menu__item[aria-selected='true'] {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgb(var(--w) / 0.07);
   font-weight: 600;
 }
 .kh-menu__item[data-active='true'] {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--w) / 0.12);
 }
 .kh-menu__item[aria-disabled='true'] {
   opacity: 0.45;
@@ -649,7 +672,7 @@ textarea.kh-input--md {
 }
 .kh-menu__empty {
   padding: 10px 12px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
   font-size: 0.95em;
 }
 
@@ -661,14 +684,14 @@ textarea.kh-input--md {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(20, 14, 10, 0.18);
+  background: rgb(var(--d) / calc(0.18 * var(--d-k)));
   backdrop-filter: blur(var(--glass-blur-user, 8px));
   animation: kh-fade 0.15s ease-out;
 }
 /* Second layer (e.g. a confirm over a modal) dims less so the stack reads
    as layers of glass rather than a darker and darker screen. */
 .kh-overlay--confirm {
-  background: rgba(20, 14, 10, 0.12);
+  background: rgb(var(--d) / calc(0.12 * var(--d-k)));
   backdrop-filter: blur(var(--glass-blur-user, 6px));
 }
 .kh-modal {
@@ -681,13 +704,17 @@ textarea.kh-input--md {
   padding: 26px;
   border-radius: 30px;
   overflow: auto;
-  color: #fbf8f5;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
+  color: var(--ink);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.22 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-modal)) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgb(var(--w) / 0.28);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 40px 90px rgba(0, 0, 0, 0.35);
+    0 40px 90px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
   animation: kh-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .kh-modal--sm {
@@ -697,8 +724,8 @@ textarea.kh-input--md {
   backdrop-filter: blur(var(--kh-blur-modal)) saturate(160%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 30px 70px rgba(0, 0, 0, 0.25);
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.18);
+    0 30px 70px rgb(0 0 0 / calc(0.25 * var(--sh-k)));
+  text-shadow: 0 1px 10px rgb(0 0 0 / calc(0.18 * var(--sh-k)));
 }
 .kh-modal--lg {
   width: min(880px, 100%);
@@ -722,7 +749,7 @@ textarea.kh-input--md {
 }
 .kh-modal__sub {
   font-size: 13px;
-  color: rgba(255, 248, 240, 0.75);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
 }
 .kh-modal__foot {
   display: flex;
@@ -737,12 +764,12 @@ textarea.kh-input--md {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fbf8f5;
+  background: rgb(var(--w) / 0.16);
+  color: var(--ink);
 }
 .kh-confirm__icon--danger {
   background: oklch(0.62 0.18 28 / 0.3);
-  color: #ffd2c4;
+  color: var(--kh-error-text);
 }
 .kh-confirm__title {
   font-size: 20px;
@@ -752,7 +779,7 @@ textarea.kh-input--md {
 .kh-confirm__body {
   font-size: 14px;
   line-height: 1.5;
-  color: rgba(255, 248, 240, 0.85);
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
   text-wrap: pretty;
 }
 @keyframes kh-fade {
@@ -792,12 +819,12 @@ textarea.kh-input--md {
   width: 4px;
   height: 44px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgb(var(--w) / 0.22);
   transition: background 0.15s;
 }
 .kh-drawer__handle:hover .kh-drawer__bar,
 .kh-drawer__handle[data-dragging='true'] .kh-drawer__bar {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgb(var(--w) / 0.6);
 }
 .kh-drawer__body {
   position: relative;
@@ -828,9 +855,13 @@ textarea.kh-input--md {
   height: 46px;
   align-items: center;
   border-radius: 21px 21px 0 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.2 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-header)) saturate(160%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgb(var(--w) / 0.16);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .kh-table__th {
@@ -843,7 +874,7 @@ textarea.kh-input--md {
   padding: 0 14px;
   border: 0;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   font: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -871,14 +902,14 @@ button.kh-table__th {
   min-height: 48px;
   align-items: center;
   font-size: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgb(var(--w) / 0.07);
 }
 .kh-table__row--click {
   cursor: pointer;
 }
 .kh-table__row--click:hover,
 .kh-table__row[aria-selected='true'] {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--w) / 0.08);
 }
 .kh-table__td {
   min-width: 0;
@@ -890,7 +921,7 @@ button.kh-table__th {
 .kh-table__empty {
   padding: 28px 14px;
   text-align: center;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
   font-size: 14px;
 }
 .kh-resize-line {
@@ -898,7 +929,7 @@ button.kh-table__th {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgb(var(--w) / 0.7);
   z-index: 9999;
   pointer-events: none;
 }
@@ -925,15 +956,19 @@ button.kh-table__th {
   min-height: 44px;
   padding: 0 8px 0 16px;
   border-radius: 999px;
-  color: #fbf8f5;
+  color: var(--ink);
   font-size: 13.5px;
   font-weight: 500;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.2 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgb(var(--w) / 0.24);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 18px 50px rgba(0, 0, 0, 0.35);
+    0 18px 50px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
   animation: kh-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .kh-toast__dot {
@@ -964,12 +999,12 @@ button.kh-table__th {
   border-radius: 50%;
   border: 0;
   background: transparent;
-  color: rgba(255, 248, 240, 0.7);
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
   cursor: pointer;
 }
 .kh-toast__close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgb(var(--w) / 0.1);
+  color: var(--ink-hi);
 }
 
 /* ── Ambient background ────────────────────────────────────────────────── */
@@ -985,6 +1020,13 @@ button.kh-table__th {
 .kh-ambient__blob {
   position: absolute;
   border-radius: 50%;
+}
+.kh-ambient::after {
+  /* light theme: a pale veil so the white glass reads over any wallpaper */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bg-veil, transparent);
 }
 .kh-ambient__photo {
   position: absolute;
@@ -1014,11 +1056,11 @@ button.kh-table__th {
   gap: 56px 96px;
   padding: 96px clamp(24px, 7vw, 120px) 64px;
   background: var(--bg-gradient);
-  color: #fbf8f5;
+  color: var(--ink);
   overflow: hidden;
 }
 .kh-auth a {
-  color: #fbf8f5;
+  color: var(--ink);
   text-decoration: underline;
 }
 .kh-auth a.kh-btn {
@@ -1064,7 +1106,7 @@ button.kh-table__th {
 }
 .kh-auth__sub {
   font-size: 14px;
-  color: rgba(255, 248, 240, 0.75);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
   text-wrap: pretty;
 }
 .kh-auth__badge {
@@ -1080,7 +1122,7 @@ button.kh-table__th {
 .kh-auth__foot {
   text-align: center;
   font-size: 13.5px;
-  color: rgba(255, 248, 240, 0.78);
+  color: rgb(var(--t) / calc(0.78 * var(--t-k)));
 }
 .kh-auth__foot a {
   font-weight: 600;
@@ -1089,7 +1131,7 @@ button.kh-table__th {
   text-align: center;
   font-size: 12.5px;
   line-height: 1.5;
-  color: rgba(255, 248, 240, 0.7);
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
   text-wrap: pretty;
 }
 .kh-auth .kh-msg {
@@ -1099,7 +1141,7 @@ button.kh-table__th {
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
-  color: rgba(255, 248, 240, 0.72);
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
 }
 
 /* Popover: a menu-like glass panel under its anchor (see Popover.tsx) */
@@ -1113,13 +1155,17 @@ button.kh-table__th {
   gap: 2px;
   padding: 8px;
   border-radius: 20px;
-  color: #fbf8f5;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  color: var(--ink);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.2 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgb(var(--w) / 0.24);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 18px 50px rgba(0, 0, 0, 0.35);
+    0 18px 50px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
 }
 
 /* TagInput suggestions: sits right on top of form fields, so the glass is
@@ -1138,7 +1184,7 @@ button.kh-table__th {
   border: 0;
   border-radius: 10px;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   font: inherit;
   font-size: 13px;
   text-align: left;
@@ -1149,7 +1195,7 @@ button.kh-table__th {
 }
 .kh-taglist > button:hover,
 .kh-taglist > button[aria-selected='true'] {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgb(var(--w) / 0.16);
 }
 /* TagInput: each suggestion shown as the tag's coloured chip */
 .kh-taglist__chip {

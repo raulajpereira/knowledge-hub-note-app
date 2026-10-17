@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react';
 
 // Tag colours: one stable, vivid colour per tag name, the same everywhere a
-// tag is shown (lists, editors, the Tags page, suggestions). Chips carry the
+// tag is shown (lists, editors, the Tags page, suggestions) — automatic from
+// the name, or chosen by the user on the Tags page (prefs.tagColors). Chips carry the
 // class `kh-tagc` (globals.css) and these custom properties inline.
 //
 // Each row: hue, lightness and chroma of the chip fill on the dark glass
@@ -24,19 +25,39 @@ export const TAG_PALETTE = [
   [325, 0.6, 0.2, 0.042, 0.18, 0.098, 0.18], // magenta
 ] as const;
 
-/** Stable index into TAG_PALETTE for a tag name (case-insensitive). */
-export function tagIndex(s: string): number {
-  const k = s.trim().toLowerCase();
+/**
+ * Colours chosen on the Tags page (prefs.tagColors): lower-cased tag name →
+ * index into TAG_PALETTE. Tags without an entry keep their automatic colour.
+ */
+export type TagColorMap = Readonly<Record<string, number>>;
+
+/** The key of a tag in a TagColorMap (tags are case-insensitive). */
+export const tagKey = (s: string) => s.trim().toLowerCase();
+
+/** The colour chosen for a tag, if any (a valid palette index). */
+export function chosenTagIndex(s: string, chosen?: TagColorMap | null): number | undefined {
+  const i = chosen?.[tagKey(s)];
+  return Number.isInteger(i) && i! >= 0 && i! < TAG_PALETTE.length ? i : undefined;
+}
+
+/** The automatic colour of a tag name: a stable index into TAG_PALETTE (case-insensitive). */
+export function autoTagIndex(s: string): number {
+  const k = tagKey(s);
   let x = 0;
   for (let i = 0; i < k.length; i++) x = (x * 31 + k.charCodeAt(i)) >>> 0;
   return x % TAG_PALETTE.length;
 }
 
+/** Index into TAG_PALETTE for a tag: the chosen colour, else the automatic one. */
+export function tagIndex(s: string, chosen?: TagColorMap | null): number {
+  return chosenTagIndex(s, chosen) ?? autoTagIndex(s);
+}
+
 export type TagColors = { bg: string; fg: string; ring: string; bgOn: string; fgOn: string; ringOn: string };
 
-/** The colours of a tag chip: on the dark glass and on a selected (white) card. */
-export function tagColors(s: string): TagColors {
-  const [h, l, c, fc, rc, oc, ofc] = TAG_PALETTE[tagIndex(s)]!;
+/** The colours of palette entry `i`: on the dark glass and on a selected (white) card / the light theme. */
+export function paletteColors(i: number): TagColors {
+  const [h, l, c, fc, rc, oc, ofc] = TAG_PALETTE[i]!;
   return {
     bg: `oklch(${l} ${c} ${h} / 0.45)`,
     fg: `oklch(0.95 ${fc} ${h})`,
@@ -47,9 +68,14 @@ export function tagColors(s: string): TagColors {
   };
 }
 
-/** Inline style for an element with the `kh-tagc` class. */
-export function tagStyle(s: string): CSSProperties {
-  const k = tagColors(s);
+/** The colours of a tag chip: on the dark glass and on a selected (white) card. */
+export function tagColors(s: string, chosen?: TagColorMap | null): TagColors {
+  return paletteColors(tagIndex(s, chosen));
+}
+
+/** Inline style (custom properties) for palette entry `i` on a `kh-tagc` element. */
+export function paletteStyle(i: number): CSSProperties {
+  const k = paletteColors(i);
   return {
     '--tg-bg': k.bg,
     '--tg-fg': k.fg,
@@ -60,9 +86,14 @@ export function tagStyle(s: string): CSSProperties {
   } as CSSProperties;
 }
 
+/** Inline style for an element with the `kh-tagc` class (in components: useTagStyle()). */
+export function tagStyle(s: string, chosen?: TagColorMap | null): CSSProperties {
+  return paletteStyle(tagIndex(s, chosen));
+}
+
 /** The chip fill on the dark glass (kept for callers that only set a background). */
-export function tagTint(s: string): string {
-  return tagColors(s).bg;
+export function tagTint(s: string, chosen?: TagColorMap | null): string {
+  return tagColors(s, chosen).bg;
 }
 
 // Suggestions for the tag inputs (TagInput): the app's tags arrive most used

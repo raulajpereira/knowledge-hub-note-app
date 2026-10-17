@@ -177,7 +177,7 @@ export function TrashView() {
             height="15"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="rgba(255,248,240,.6)"
+            stroke="rgb(var(--t) / calc(.6 * var(--t-k)))"
             strokeWidth="2"
             strokeLinecap="round"
             aria-hidden="true"
@@ -306,7 +306,12 @@ export function TrashView() {
                 <span
                   role="cell"
                   className="kh-tr__left"
-                  style={{ color: i.daysLeft <= 3 ? 'oklch(0.8 0.14 35)' : 'rgba(255,248,240,.7)' }}
+                  style={{
+                    color:
+                      i.daysLeft <= 3
+                        ? 'oklch(calc(.8 * var(--lk)) .14 35)'
+                        : 'rgb(var(--t) / calc(.7 * var(--t-k)))',
+                  }}
                 >
                   {i.daysLeft}
                   {i.daysLeft === 1 ? t('tr_day') : t('tr_days')}

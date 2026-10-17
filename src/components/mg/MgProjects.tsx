@@ -21,7 +21,7 @@ const PHC = [
   'oklch(0.7 0.1 300 / .55)',
 ];
 const WSEL =
-  'min-width:0;height:32px;padding:0 8px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;appearance:none;-webkit-appearance:none;color-scheme:dark;cursor:pointer;';
+  'min-width:0;height:32px;padding:0 8px;border-radius:9px;border:1px solid rgb(var(--w) / .1);background-color:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:12.5px;outline:none;appearance:none;-webkit-appearance:none;color-scheme: var(--scheme);cursor:pointer;';
 
 /** A new project as the prototype creates it (two phases over 13 weeks). */
 export function mgNewProject(mg: Mg, p: Partial<MgProject>): MgProject {
@@ -84,7 +84,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
             aria-label={L(67)}
             onClick={() => setAdding(true)}
             style={css(
-              'width:32px;height:32px;border-radius:50%;border:0;background:#fbf8f5;color:#2a211c;cursor:pointer;font-size:18px;line-height:1;',
+              'width:32px;height:32px;border-radius:50%;border:0;background:var(--ink);color:var(--ink-inv);cursor:pointer;font-size:18px;line-height:1;',
             )}
           >
             +
@@ -96,7 +96,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
           placeholder={L(68)}
           aria-label={L(68)}
           style={css(
-            'height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;',
+            'height:38px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13.5px;outline:none;',
           )}
         />
         <div style={css('display:flex;flex-wrap:wrap;gap:4px;')}>
@@ -123,7 +123,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
               onClick={() => select(p.id)}
               onKeyDown={(e) => e.key === 'Enter' && select(p.id)}
               style={css(
-                `flex-shrink:0;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:18px;cursor:pointer;background:${on ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.03)'};border:1px solid ${on ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.08)'};`,
+                `flex-shrink:0;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:18px;cursor:pointer;background:${on ? 'rgb(var(--w) / .14)' : 'rgb(var(--w) / .03)'};border:1px solid ${on ? 'rgb(var(--w) / .22)' : 'rgb(var(--w) / .08)'};`,
               )}
             >
               <div style={css('display:flex;align-items:center;gap:8px;min-width:0;')}>
@@ -148,7 +148,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
               <span style={css('font-size:14px;font-weight:600;line-height:1.3;')}>{p.name}</span>
               <div
                 style={css(
-                  'display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,248,240,.64);',
+                  'display:flex;align-items:center;gap:8px;font-size:12px;color:rgb(var(--t) / calc(.64 * var(--t-k)));',
                 )}
               >
                 <span
@@ -159,7 +159,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                 <span style={css("font-family:'Geist Mono',monospace;")}>{tr(`${u}% orç.`)}</span>
               </div>
               <div
-                style={css('height:4px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;')}
+                style={css('height:4px;border-radius:999px;background:rgb(var(--w) / .1);overflow:hidden;')}
               >
                 <div
                   style={css(
@@ -242,8 +242,8 @@ export function MgProjects({ mg }: { mg: Mg }) {
       d.projects.find((x) => x.id === sel.id)!.phases[i]![k] = v;
     });
   const kpis: Array<[string, string, string]> = [
-    [tr('Orçamento'), mgEur(sel.budget), '#fbf8f5'],
-    [`${tr('Consumido')} · ${Math.round(used.h)}h`, mgEur(used.v), '#fbf8f5'],
+    [tr('Orçamento'), mgEur(sel.budget), 'var(--ink)'],
+    [`${tr('Consumido')} · ${Math.round(used.h)}h`, mgEur(used.v), 'var(--ink)'],
     [tr('Previsão final'), mgEur(tot), good],
     [tr('Desvio'), (over ? '+' : '') + mgEur(tot - sel.budget), good],
   ];
@@ -271,7 +271,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                 spellCheck={false}
                 onChange={(e) => set('code')(e.target.value.toUpperCase())}
                 style={css(
-                  "width:160px;padding:0;border:0;background:transparent;color:rgba(255,248,240,.8);font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;outline:none;",
+                  "width:160px;padding:0;border:0;background:transparent;color:rgb(var(--t) / calc(.8 * var(--t-k)));font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;outline:none;",
                 )}
               />
             </div>
@@ -281,14 +281,14 @@ export function MgProjects({ mg }: { mg: Mg }) {
               aria-label={tr('Nome')}
               onChange={(e) => set('name')(e.target.value)}
               style={css(
-                'width:100%;padding:0;border:0;background:transparent;color:#fbf8f5;font:inherit;font-size:26px;font-weight:600;letter-spacing:-.02em;outline:none;',
+                'width:100%;padding:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:26px;font-weight:600;letter-spacing:-.02em;outline:none;',
               )}
             />
             <button
               type="button"
               onClick={() => sel.client && mg.nav('mg_clients', { c: sel.client })}
               style={css(
-                'align-self:flex-start;padding:0;border:0;background:transparent;color:oklch(0.84 0.12 240);font:inherit;font-size:13.5px;cursor:pointer;',
+                'align-self:flex-start;padding:0;border:0;background:transparent;color:oklch(calc(.84 * var(--lk)) .12 240);font:inherit;font-size:13.5px;cursor:pointer;',
               )}
             >
               {mg.cById[sel.client]?.name ?? tr('Sem cliente')} →
@@ -299,7 +299,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
             className="mg-round"
             title={L(69)}
             aria-label={L(69)}
-            style={{ color: '#ffc9b8' }}
+            style={{ color: 'var(--kh-error-text)' }}
             onClick={() => {
               if (!mg.cf(`Remover o projeto ${sel.code} e as suas alocações?`)) return;
               mg.upd((d) => {
@@ -319,10 +319,10 @@ export function MgProjects({ mg }: { mg: Mg }) {
             <div
               key={l}
               style={css(
-                'display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);',
+                'display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:18px;background:rgb(var(--w) / .06);border:1px solid rgb(var(--w) / .12);',
               )}
             >
-              <span style={css('font-size:12px;color:rgba(255,248,240,.68);')}>{l}</span>
+              <span style={css('font-size:12px;color:rgb(var(--t) / calc(.68 * var(--t-k)));')}>{l}</span>
               <span
                 style={css(`font-family:'Geist Mono',monospace;font-size:19px;font-weight:600;color:${c};`)}
               >
@@ -334,12 +334,12 @@ export function MgProjects({ mg }: { mg: Mg }) {
         <div style={css('display:flex;flex-direction:column;gap:6px;')}>
           <div
             style={css(
-              'position:relative;height:10px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;',
+              'position:relative;height:10px;border-radius:999px;background:rgb(var(--w) / .1);overflow:hidden;',
             )}
           >
             <div
               style={css(
-                `position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, mg.pct(tot, sel.budget))}%;background:rgba(255,255,255,.2);border-radius:999px;`,
+                `position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, mg.pct(tot, sel.budget))}%;background:rgb(var(--w) / .2);border-radius:999px;`,
               )}
             />
             <div
@@ -348,9 +348,11 @@ export function MgProjects({ mg }: { mg: Mg }) {
               )}
             />
           </div>
-          <div style={css('display:flex;gap:16px;font-size:12px;color:rgba(255,248,240,.68);')}>
+          <div
+            style={css('display:flex;gap:16px;font-size:12px;color:rgb(var(--t) / calc(.68 * var(--t-k)));')}
+          >
             <span>{L(29)}</span>
-            <span style={css('color:rgba(255,248,240,.5);')}>{L(30)}</span>
+            <span style={css('color:rgb(var(--t) / calc(.5 * var(--t-k)));')}>{L(30)}</span>
           </div>
         </div>
         <Fields
@@ -422,7 +424,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                 })
               }
               style={css(
-                'height:30px;padding:0 12px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background:transparent;color:rgba(255,248,240,.85);font:inherit;font-size:12px;font-weight:600;cursor:pointer;',
+                'height:30px;padding:0 12px;border-radius:999px;border:1.5px dashed rgb(var(--w) / .28);background:transparent;color:rgb(var(--t) / calc(.85 * var(--t-k)));font:inherit;font-size:12px;font-weight:600;cursor:pointer;',
               )}
             >
               {L(32)}
@@ -430,7 +432,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
           </div>
           <div
             style={css(
-              'position:relative;height:30px;border-radius:10px;background:rgba(255,255,255,.06);overflow:hidden;',
+              'position:relative;height:30px;border-radius:10px;background:rgb(var(--w) / .06);overflow:hidden;',
             )}
           >
             {sel.phases.map((ph, i) => {
@@ -441,7 +443,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                   key={i}
                   title={ph.name}
                   style={css(
-                    `position:absolute;top:3px;bottom:3px;left:${((f - s0) / span) * 100}%;width:${(Math.max(0, t - f + 1) / span) * 100}%;border-radius:7px;background:${PHC[i % PHC.length]};border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;box-sizing:border-box;`,
+                    `position:absolute;top:3px;bottom:3px;left:${((f - s0) / span) * 100}%;width:${(Math.max(0, t - f + 1) / span) * 100}%;border-radius:7px;background:${PHC[i % PHC.length]};border:1px solid rgb(var(--w) / .2);display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;box-sizing:border-box;`,
                   )}
                 >
                   {ph.name}
@@ -450,7 +452,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
             })}
             <div
               style={css(
-                `position:absolute;top:0;bottom:0;left:${Math.max(0, Math.min(100, ((0 - s0) / span) * 100))}%;width:2px;background:#fbf8f5;box-shadow:0 0 8px rgba(255,255,255,.6);`,
+                `position:absolute;top:0;bottom:0;left:${Math.max(0, Math.min(100, ((0 - s0) / span) * 100))}%;width:2px;background:var(--ink);box-shadow:0 0 8px rgb(var(--w) / .6);`,
               )}
             />
           </div>
@@ -472,7 +474,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                   aria-label={`${L(31)} ${i + 1}`}
                   onChange={(e) => updPh(i, 'name')(e.target.value)}
                   style={css(
-                    'min-width:0;height:32px;padding:0 10px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(18,12,9,.16);color:#fbf8f5;font:inherit;font-size:13px;outline:none;',
+                    'min-width:0;height:32px;padding:0 10px;border-radius:9px;border:1px solid rgb(var(--w) / .1);background:rgb(var(--d) / calc(.16 * var(--d-k)));color:var(--ink);font:inherit;font-size:13px;outline:none;',
                   )}
                 />
                 {weekSel(ph.from, updPh(i, 'from'), `${ph.name} · ${tr('Início')}`)}
@@ -486,7 +488,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                     mg.upd((d) => void d.projects.find((x) => x.id === sel.id)!.phases.splice(i, 1))
                   }
                   style={css(
-                    'width:28px;height:28px;border-radius:50%;border:0;background:transparent;color:rgba(255,248,240,.55);cursor:pointer;padding:0;font-size:14px;',
+                    'width:28px;height:28px;border-radius:50%;border:0;background:transparent;color:rgb(var(--t) / calc(.55 * var(--t-k)));cursor:pointer;padding:0;font-size:14px;',
                   )}
                 >
                   ×
@@ -521,7 +523,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                 mg.nav('mg_staff', { r: id, rf: 'all' });
               }}
               style={css(
-                'height:30px;padding:0 12px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12px;font-weight:600;cursor:pointer;',
+                'height:30px;padding:0 12px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:12px;font-weight:600;cursor:pointer;',
               )}
             >
               {L(33)}
@@ -539,13 +541,13 @@ export function MgProjects({ mg }: { mg: Mg }) {
                 onClick={() => mg.nav('mg_people', { p: a.person })}
                 onKeyDown={(e) => e.key === 'Enter' && mg.nav('mg_people', { p: a.person })}
                 style={css(
-                  'display:flex;align-items:center;gap:10px;min-height:46px;padding:0 12px;border-radius:14px;background:rgba(255,255,255,.04);cursor:pointer;',
+                  'display:flex;align-items:center;gap:10px;min-height:46px;padding:0 12px;border-radius:14px;background:rgb(var(--w) / .04);cursor:pointer;',
                 )}
               >
                 <Av p={p} size={30} fs={11} tc={tm.tc} />
                 <span style={css('flex:1;min-width:0;display:flex;flex-direction:column;')}>
                   <span style={css('font-size:13.5px;font-weight:600;')}>{p?.name ?? '?'}</span>
-                  <span style={css('font-size:11.5px;color:rgba(255,248,240,.62);')}>
+                  <span style={css('font-size:11.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
                     {tr(p?.role ?? '')}
                     {tm.tn && (
                       <>
@@ -556,7 +558,11 @@ export function MgProjects({ mg }: { mg: Mg }) {
                     · {p ? LV[p.level] : ''}
                   </span>
                 </span>
-                <span style={css('font-size:12px;color:rgba(255,248,240,.62);white-space:nowrap;')}>
+                <span
+                  style={css(
+                    'font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));white-space:nowrap;',
+                  )}
+                >
                   {wLbl(a.from)} → {wLbl(a.to)}
                 </span>
                 <span
@@ -573,7 +579,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
             <div style={css('display:flex;flex-direction:column;gap:6px;margin-top:6px;')}>
               <span
                 style={css(
-                  'font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,248,240,.7);',
+                  'font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgb(var(--t) / calc(.7 * var(--t-k)));',
                 )}
               >
                 {L(34)}
@@ -587,14 +593,14 @@ export function MgProjects({ mg }: { mg: Mg }) {
                   onClick={() => mg.nav('mg_staff', { r: r.id, rf: 'all' })}
                   onKeyDown={(e) => e.key === 'Enter' && mg.nav('mg_staff', { r: r.id, rf: 'all' })}
                   style={css(
-                    'display:flex;align-items:center;gap:10px;min-height:40px;padding:0 12px;border-radius:14px;border:1px dashed rgba(255,255,255,.2);cursor:pointer;',
+                    'display:flex;align-items:center;gap:10px;min-height:40px;padding:0 12px;border-radius:14px;border:1px dashed rgb(var(--w) / .2);cursor:pointer;',
                   )}
                 >
                   <span style={css('flex:1;min-width:0;font-size:13px;')}>
                     {r.skills.map((s) => `${SKN[s.k] ?? s.k} · ${LV[s.l] ?? ''}`).join(' + ')} ·{' '}
                     {r.hours || 0}h
                   </span>
-                  <span style={css('font-size:12px;color:rgba(255,248,240,.62);')}>
+                  <span style={css('font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
                     {wLbl(r.from)} → {wLbl(r.to)}
                   </span>
                   <span
@@ -616,9 +622,9 @@ export function MgProjects({ mg }: { mg: Mg }) {
 }
 
 const IN =
-  'height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background-color:rgba(18,12,9,.25);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;';
+  'height:38px;padding:0 12px;border-radius:12px;border:1px solid rgb(var(--w) / .16);background-color:rgb(var(--d) / calc(.25 * var(--d-k)));color:var(--ink);font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;';
 const LB = 'display:flex;flex-direction:column;gap:6px;min-width:0;';
-const LT = 'font-size:12px;color:rgba(255,248,240,.75);';
+const LT = 'font-size:12px;color:rgb(var(--t) / calc(.75 * var(--t-k)));';
 
 function NewProject({
   mg,
@@ -674,7 +680,7 @@ function NewProject({
   };
   const selS = {
     ...css(
-      `${IN}background-color:rgba(255,255,255,.06);padding-right:30px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;`,
+      `${IN}background-color:rgb(var(--w) / .06);padding-right:30px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme: var(--scheme);`,
     ),
     backgroundImage: CHEV,
     backgroundRepeat: 'no-repeat',
@@ -722,7 +728,7 @@ function NewProject({
         <div
           role="tablist"
           style={css(
-            'align-self:flex-start;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(18,12,9,.22);border:1px solid rgba(255,255,255,.12);',
+            'align-self:flex-start;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgb(var(--d) / calc(.22 * var(--d-k)));border:1px solid rgb(var(--w) / .12);',
           )}
         >
           {(
@@ -738,7 +744,7 @@ function NewProject({
               aria-selected={n.mode === m}
               onClick={() => setF('mode')(m)}
               style={css(
-                `height:28px;padding:0 14px;border-radius:999px;border:0;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;background:${n.mode === m ? '#fbf8f5' : 'transparent'};color:${n.mode === m ? '#2a211c' : 'rgba(255,248,240,.8)'};`,
+                `height:28px;padding:0 14px;border-radius:999px;border:0;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;background:${n.mode === m ? 'var(--ink)' : 'transparent'};color:${n.mode === m ? 'var(--ink-inv)' : 'rgb(var(--t) / calc(.8 * var(--t-k)))'};`,
               )}
             >
               {tr(l)}
@@ -761,7 +767,7 @@ function NewProject({
         ) : (
           <div
             style={css(
-              'display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:rgba(18,12,9,.16);border:1px solid rgba(255,255,255,.1);',
+              'display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:rgb(var(--d) / calc(.16 * var(--d-k)));border:1px solid rgb(var(--w) / .1);',
             )}
           >
             <div style={css('display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:10px;')}>
@@ -786,7 +792,7 @@ function NewProject({
         )}
       </div>
       {err && (
-        <span role="alert" style={css('font-size:12.5px;color:#ffc9b8;')}>
+        <span role="alert" style={css('font-size:12.5px;color:var(--kh-error-text);')}>
           {err}
         </span>
       )}
@@ -795,7 +801,7 @@ function NewProject({
           type="button"
           onClick={onClose}
           style={css(
-            'height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fbf8f5;font:inherit;font-size:13px;cursor:pointer;',
+            'height:36px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .18);background:rgb(var(--w) / .08);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;',
           )}
         >
           {tr('Cancelar')}
@@ -804,7 +810,7 @@ function NewProject({
           type="button"
           onClick={save}
           style={css(
-            'height:36px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
+            'height:36px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
           )}
         >
           {tr('Criar Projeto')}

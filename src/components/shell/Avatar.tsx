@@ -8,7 +8,7 @@ export function AvatarFace({
   photoV,
   size,
   fontSize,
-  ring = '0 0 0 2px rgba(255,255,255,.14)',
+  ring = '0 0 0 2px rgb(var(--w) / .14)',
 }: {
   name: string;
   photoV?: number;

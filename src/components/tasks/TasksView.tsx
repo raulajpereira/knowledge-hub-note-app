@@ -80,7 +80,7 @@ const TYPE_C: Record<Type, string> = { tech: 'oklch(0.78 0.13 245)', mgmt: 'oklc
 const PRI: Record<Prio, [string, string, string]> = {
   high: ['t_high', 'oklch(0.82 0.1 35)', '#3a1d12'],
   medium: ['t_med', 'oklch(0.88 0.09 85)', '#3a2a0e'],
-  low: ['t_low', 'rgba(255,255,255,.16)', '#fbf8f5'],
+  low: ['t_low', 'rgb(var(--w) / .16)', 'var(--ink)'],
 };
 /** ISO instant → the value of a datetime-local input (local time). */
 const toLocalInput = (iso: string) => {
@@ -345,7 +345,7 @@ function Detail({
             title={task.pinned ? t('v_unpin') : t('v_pin')}
             aria-label={task.pinned ? t('v_unpin') : t('v_pin')}
             aria-pressed={task.pinned}
-            style={{ background: task.pinned ? 'rgba(255,255,255,.24)' : undefined }}
+            style={{ background: task.pinned ? 'rgb(var(--w) / .24)' : undefined }}
             onClick={() => onPatch({ pinned: !task.pinned })}
           >
             <Pin size={16} sw={1.8} fill={task.pinned ? 'currentColor' : 'none'} />
@@ -354,7 +354,7 @@ function Detail({
         <button
           type="button"
           className="kh-tk-round"
-          style={{ color: '#ffc9b8' }}
+          style={{ color: 'var(--kh-error-text)' }}
           title={t('del')}
           aria-label={t('del')}
           onClick={onDelete}
@@ -809,7 +809,7 @@ export function TasksView() {
                 height="16"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="rgba(255,248,240,.6)"
+                stroke="rgb(var(--t) / calc(.6 * var(--t-k)))"
                 strokeWidth="2"
                 strokeLinecap="round"
                 aria-hidden="true"
@@ -861,7 +861,7 @@ export function TasksView() {
                 <span
                   className="kh-tk-dot kh-tk-dot--ring"
                   aria-hidden="true"
-                  style={{ background: typeF === 'all' ? 'rgba(255,255,255,.35)' : TYPE_C[typeF] }}
+                  style={{ background: typeF === 'all' ? 'rgb(var(--w) / .35)' : TYPE_C[typeF] }}
                 />
                 <select
                   className="kh-tk-sort"
@@ -991,7 +991,7 @@ export function TasksView() {
                   </button>
                   <div className="kh-tk-item__body">
                     <div className="kh-tk-item__title" data-done={done || undefined}>
-                      {x.pinned && <Pin size={12} fill="#fbf8f5" />}
+                      {x.pinned && <Pin size={12} fill="var(--ink)" />}
                       {x.sharedFolderId && (
                         <span
                           className="kh-tk-shmark"
@@ -1022,7 +1022,11 @@ export function TasksView() {
                       {x.dueOn && (
                         <span
                           style={{
-                            color: over ? 'oklch(0.8 0.13 30)' : tod ? '#fbf8f5' : 'rgba(255,248,240,.62)',
+                            color: over
+                              ? 'oklch(calc(.8 * var(--lk)) .13 30)'
+                              : tod
+                                ? 'var(--ink)'
+                                : 'rgb(var(--t) / calc(.62 * var(--t-k)))',
                             fontWeight: over || tod ? 600 : 400,
                           }}
                         >

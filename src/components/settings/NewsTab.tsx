@@ -39,12 +39,12 @@ export function NewsTab() {
   };
   const st = (s: NewsSource) =>
     !s.on
-      ? [t('set_newsOff'), 'rgba(255,248,240,.45)']
+      ? [t('set_newsOff'), 'rgb(var(--t) / calc(.45 * var(--t-k)))']
       : status?.live.has(s.name)
         ? [t('set_newsLive'), 'oklch(0.84 0.13 150)']
         : status?.failed.includes(s.name)
           ? [t('set_newsErr'), 'oklch(0.82 0.14 40)']
-          : ['…', 'rgba(255,248,240,.5)'];
+          : ['…', 'rgb(var(--t) / calc(.5 * var(--t-k)))'];
 
   return (
     <Card
@@ -94,7 +94,7 @@ export function NewsTab() {
                   className="kh-mono"
                   style={{
                     fontSize: 11,
-                    color: 'rgba(255,248,240,.55)',
+                    color: 'rgb(var(--t) / calc(.55 * var(--t-k)))',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -116,7 +116,7 @@ export function NewsTab() {
                   borderRadius: '50%',
                   border: 0,
                   background: 'transparent',
-                  color: 'rgba(255,248,240,.55)',
+                  color: 'rgb(var(--t) / calc(.55 * var(--t-k)))',
                   cursor: 'pointer',
                   padding: 0,
                   fontSize: 16,

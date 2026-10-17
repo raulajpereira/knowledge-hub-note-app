@@ -16,7 +16,7 @@ const LockIcon = () => (
     height="26"
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#fbf8f5"
+    stroke="var(--ink)"
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
@@ -31,7 +31,7 @@ export const OkIcon = () => (
     height="28"
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#fbf8f5"
+    stroke="var(--ink)"
     strokeWidth="2.4"
     strokeLinecap="round"
     strokeLinejoin="round"
@@ -45,7 +45,7 @@ export const BadIcon = () => (
     height="28"
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#fbf8f5"
+    stroke="var(--ink)"
     strokeWidth="2.2"
     strokeLinecap="round"
     strokeLinejoin="round"
@@ -100,7 +100,7 @@ export function ResetForm({ token, email, setup }: { token: string; email: strin
             title={setup ? t('auth_setupTitle') : t('reset_title')}
             sub={
               <>
-                {t('reset_sub')} <b style={{ color: '#fbf8f5', fontWeight: 600 }}>{email}</b>
+                {t('reset_sub')} <b style={{ color: 'var(--ink)', fontWeight: 600 }}>{email}</b>
               </>
             }
           />

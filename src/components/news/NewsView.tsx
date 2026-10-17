@@ -159,7 +159,7 @@ export function NewsView() {
   }, []);
 
   const SB = Object.fromEntries(sources.map((s) => [s.id, s]));
-  const srcOf = (id: string) => SB[id] ?? { name: id, color: 'oklch(0.8 0 0)' };
+  const srcOf = (id: string) => SB[id] ?? { name: id, color: 'oklch(calc(.8 * var(--lk)) 0 0)' };
   const fmt = (d: string) => {
     const tm = Date.parse(d);
     return tm
@@ -171,7 +171,7 @@ export function NewsView() {
       : '';
   };
   const ph = (src: string) =>
-    `linear-gradient(135deg,${srcOf(src).color.replace(')', ' / .55)')},rgba(255,255,255,.06))`;
+    `linear-gradient(135deg,${srcOf(src).color.replace(')', ' / .55)')},rgb(var(--w) / .06))`;
   const isSaved = (x: Item) => saved.some((y) => y.link === x.link);
   const toggleSave = async (x: Item) => {
     const was = isSaved(x);
@@ -246,7 +246,7 @@ export function NewsView() {
               height="14"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="rgba(255,248,240,.6)"
+              stroke="rgb(var(--t) / calc(.6 * var(--t-k)))"
               strokeWidth="2"
               strokeLinecap="round"
               aria-hidden="true"

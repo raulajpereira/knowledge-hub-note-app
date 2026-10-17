@@ -3,7 +3,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/client/api';
 import type { TagCount } from '@/lib/tags';
-import { suggestTags, tagStyle } from '@/lib/tags';
+import { suggestTags } from '@/lib/tags';
+import { useTagStyle } from './TagColors';
 import { Popover } from './Popover';
 
 // Every tag in the app (notes, artifacts, snippets, SAP objects), most used
@@ -76,6 +77,7 @@ export function TagInput({
   maxLength?: number;
   'aria-label'?: string;
 }) {
+  const tagStyle = useTagStyle();
   const all = useAllTags();
   const ref = useRef<HTMLInputElement>(null);
   const id = useId();

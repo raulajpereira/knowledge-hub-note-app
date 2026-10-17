@@ -10,9 +10,9 @@ import { Av, Glass, Split, uid } from './ui';
 import type { Mg } from './store';
 
 const SEG =
-  'display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(18,12,9,.22);border:1px solid rgba(255,255,255,.12);';
+  'display:flex;gap:2px;padding:3px;border-radius:999px;background:rgb(var(--d) / calc(.22 * var(--d-k)));border:1px solid rgb(var(--w) / .12);';
 const STICKY =
-  'background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.07));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(150%);border-right:1px solid rgba(255,255,255,.12);';
+  'background:linear-gradient(90deg,rgb(var(--sf) / calc(.12 * var(--sf-k))),rgb(var(--sf) / calc(.07 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(150%);border-right:1px solid rgb(var(--w) / .12);';
 const TSGRID = 'minmax(200px,1fr) repeat(5,72px) 72px';
 const stC = (s: string) =>
   s === 'Submetido'
@@ -68,7 +68,7 @@ export function MgTime({ mg }: { mg: Mg }) {
             setOpen({});
           }}
           style={css(
-            `height:28px;padding:0 12px;border-radius:999px;border:0;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;background:${cur === k ? '#fbf8f5' : 'transparent'};color:${cur === k ? '#2a211c' : 'rgba(255,248,240,.8)'};`,
+            `height:28px;padding:0 12px;border-radius:999px;border:0;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;background:${cur === k ? 'var(--ink)' : 'transparent'};color:${cur === k ? 'var(--ink-inv)' : 'rgb(var(--t) / calc(.8 * var(--t-k)))'};`,
           )}
         >
           {tr(l)}
@@ -147,7 +147,7 @@ export function MgTime({ mg }: { mg: Mg }) {
     const fmt = (v: number) => (v ? `${Math.round(v * 10) / 10}h` : '·');
     const varC = (l: number, pl: number) =>
       !pl
-        ? 'rgba(255,248,240,.6)'
+        ? 'rgb(var(--t) / calc(.6 * var(--t-k)))'
         : l > pl * 1.05
           ? 'oklch(0.84 0.13 30)'
           : l < pl * 0.9
@@ -157,9 +157,12 @@ export function MgTime({ mg }: { mg: Mg }) {
       const l = x.cells.reduce((a, b) => a + b, 0);
       const d = l - x.plan;
       return [
-        ...x.cells.map((v) => ({ t: fmt(v), c: v ? '#fbf8f5' : 'rgba(255,248,240,.35)' })),
-        { t: fmt(l), c: '#fbf8f5' },
-        { t: fmt(x.plan), c: 'rgba(255,248,240,.75)' },
+        ...x.cells.map((v) => ({
+          t: fmt(v),
+          c: v ? 'var(--ink)' : 'rgb(var(--t) / calc(.35 * var(--t-k)))',
+        })),
+        { t: fmt(l), c: 'var(--ink)' },
+        { t: fmt(x.plan), c: 'rgb(var(--t) / calc(.75 * var(--t-k)))' },
         { t: x.plan || l ? `${d > 0 ? '+' : ''}${Math.round(d * 10) / 10}h` : '·', c: varC(l, x.plan) },
         last,
       ];
@@ -167,15 +170,15 @@ export function MgTime({ mg }: { mg: Mg }) {
     const meta = (g: string) => {
       if (VM === 'project') {
         const pj = mg.pjById[g];
-        return { name: `${pj?.code ?? '—'} · ${pj?.name ?? ''}`, dot: pj?.color ?? 'rgba(255,255,255,.4)' };
+        return { name: `${pj?.code ?? '—'} · ${pj?.name ?? ''}`, dot: pj?.color ?? 'rgb(var(--w) / .4)' };
       }
       if (VM === 'client')
-        return { name: mg.cById[g]?.name ?? tr('Sem cliente'), dot: 'rgba(255,255,255,.55)' };
+        return { name: mg.cById[g]?.name ?? tr('Sem cliente'), dot: 'rgb(var(--w) / .55)' };
       if (VM === 'role') return { name: tr(g), dot: `oklch(0.78 0.1 ${(g.length * 37) % 360})` };
       // Por Equipa: the person's team (the prototype grouped by main area)
       return {
         name: mg.tById[g]?.name ?? tr('Sem equipa'),
-        dot: mg.tById[g]?.color ?? 'rgba(255,255,255,.4)',
+        dot: mg.tById[g]?.color ?? 'rgb(var(--w) / .4)',
       };
     };
     const groups = Object.entries(G)
@@ -208,14 +211,14 @@ export function MgTime({ mg }: { mg: Mg }) {
     body = (
       <div
         style={css(
-          'flex:1;min-height:0;overflow:auto;margin:12px;border-radius:22px;background:rgba(18,12,9,.18);border:1px solid rgba(255,255,255,.1);',
+          'flex:1;min-height:0;overflow:auto;margin:12px;border-radius:22px;background:rgb(var(--d) / calc(.18 * var(--d-k)));border:1px solid rgb(var(--w) / .1);',
         )}
       >
         <div role="treegrid" aria-label={L(48)} style={css(`min-width:${240 + N * 64 + 3 * 88 + 104}px;`)}>
           <div
             role="row"
             style={css(
-              `position:sticky;top:0;z-index:3;display:grid;grid-template-columns:${gcols};align-items:center;height:44px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.1));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgba(255,255,255,.16);font-size:12px;font-weight:600;color:rgba(255,248,240,.88);`,
+              `position:sticky;top:0;z-index:3;display:grid;grid-template-columns:${gcols};align-items:center;height:44px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.2 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgb(var(--w) / .16);font-size:12px;font-weight:600;color:rgb(var(--t) / calc(.88 * var(--t-k)));`,
             )}
           >
             <span
@@ -243,9 +246,7 @@ export function MgTime({ mg }: { mg: Mg }) {
             return (
               <div
                 key={g}
-                style={css(
-                  'display:flex;flex-direction:column;border-bottom:1px solid rgba(255,255,255,.07);',
-                )}
+                style={css('display:flex;flex-direction:column;border-bottom:1px solid rgb(var(--w) / .07);')}
               >
                 <div
                   role="row"
@@ -291,7 +292,11 @@ export function MgTime({ mg }: { mg: Mg }) {
                       >
                         {m.name}
                       </span>
-                      <span style={css('font-size:11.5px;color:rgba(255,248,240,.62);white-space:nowrap;')}>
+                      <span
+                        style={css(
+                          'font-size:11.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));white-space:nowrap;',
+                        )}
+                      >
                         {tr(`${kids.length} pessoas`)}
                       </span>
                     </span>
@@ -319,7 +324,7 @@ export function MgTime({ mg }: { mg: Mg }) {
                         onClick={go}
                         onKeyDown={(e) => e.key === 'Enter' && go()}
                         style={css(
-                          `display:grid;grid-template-columns:${gcols};align-items:center;min-height:40px;cursor:pointer;border-top:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02);`,
+                          `display:grid;grid-template-columns:${gcols};align-items:center;min-height:40px;cursor:pointer;border-top:1px solid rgb(var(--w) / .05);background:rgb(var(--w) / .02);`,
                         )}
                       >
                         <span
@@ -333,7 +338,7 @@ export function MgTime({ mg }: { mg: Mg }) {
                             size={24}
                             fs={9.5}
                             tc={mg.tOf(o.p).tc}
-                            s="border:1px solid rgba(255,255,255,.2);"
+                            s="border:1px solid rgb(var(--w) / .2);"
                           />
                           <span
                             style={css(
@@ -353,7 +358,7 @@ export function MgTime({ mg }: { mg: Mg }) {
           <div
             role="row"
             style={css(
-              `position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:${gcols};align-items:center;height:44px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.09));backdrop-filter:blur(var(--glass-blur-user, 30px));border-top:1px solid rgba(255,255,255,.16);`,
+              `position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:${gcols};align-items:center;height:44px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.16 * var(--sf-k))),rgb(var(--sf) / calc(.09 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 30px));border-top:1px solid rgb(var(--w) / .16);`,
             )}
           >
             <span
@@ -381,7 +386,7 @@ export function MgTime({ mg }: { mg: Mg }) {
           </div>
         </div>
         {!groups.length && (
-          <div style={css('padding:24px;font-size:13px;color:rgba(255,248,240,.62);')}>
+          <div style={css('padding:24px;font-size:13px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
             {tr('Sem horas registadas ou planeadas neste período.')}
           </div>
         )}
@@ -393,14 +398,14 @@ export function MgTime({ mg }: { mg: Mg }) {
     <Glass label={L(48)}>
       <div
         style={css(
-          'flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:20px 22px 14px;border-bottom:1px solid rgba(255,255,255,.1);',
+          'flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:20px 22px 14px;border-bottom:1px solid rgb(var(--w) / .1);',
         )}
       >
         <div style={css('display:flex;flex-direction:column;gap:3px;margin-right:auto;min-width:0;')}>
           <h1 style={css('margin:0;font-size:26px;font-weight:600;letter-spacing:-.02em;')}>
             {tr('Folhas de Tempos')}
           </h1>
-          <span style={css('font-size:12.5px;color:rgba(255,248,240,.68);')}>{summary}</span>
+          <span style={css('font-size:12.5px;color:rgb(var(--t) / calc(.68 * var(--t-k)));')}>{summary}</span>
         </div>
         <div style={css('display:flex;align-items:center;gap:6px;')}>
           <button
@@ -409,7 +414,7 @@ export function MgTime({ mg }: { mg: Mg }) {
             aria-label={L(73)}
             onClick={() => setW(w - 1)}
             style={css(
-              'width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;',
+              'width:32px;height:32px;border-radius:50%;border:1px solid rgb(var(--w) / .16);background:rgb(var(--w) / .08);color:var(--ink);cursor:pointer;padding:0;',
             )}
           >
             ‹
@@ -427,7 +432,7 @@ export function MgTime({ mg }: { mg: Mg }) {
             aria-label={L(74)}
             onClick={() => setW(w + 1)}
             style={css(
-              'width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;',
+              'width:32px;height:32px;border-radius:50%;border:1px solid rgb(var(--w) / .16);background:rgb(var(--w) / .08);color:var(--ink);cursor:pointer;padding:0;',
             )}
           >
             ›
@@ -502,7 +507,7 @@ function PersonSheet({
             onClick={() => mg.nav('mg_time', { p: p.id })}
             onKeyDown={(ev) => ev.key === 'Enter' && mg.nav('mg_time', { p: p.id })}
             style={css(
-              `flex-shrink:0;display:flex;align-items:center;gap:10px;min-height:46px;padding:0 10px;border-radius:14px;cursor:pointer;background:${on ? 'rgba(255,255,255,.14)' : 'transparent'};border:1px solid ${on ? 'rgba(255,255,255,.2)' : 'transparent'};`,
+              `flex-shrink:0;display:flex;align-items:center;gap:10px;min-height:46px;padding:0 10px;border-radius:14px;cursor:pointer;background:${on ? 'rgb(var(--w) / .14)' : 'transparent'};border:1px solid ${on ? 'rgb(var(--w) / .2)' : 'transparent'};`,
             )}
           >
             <Av p={p} size={30} fs={11} tc={mg.tOf(p).tc} />
@@ -553,7 +558,7 @@ function PersonSheet({
         <div style={css('display:flex;flex-wrap:wrap;align-items:center;gap:12px;')}>
           <div style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;')}>
             <span style={css('font-size:24px;font-weight:600;letter-spacing:-.02em;')}>{sel.name}</span>
-            <span style={css('font-size:13px;color:rgba(255,248,240,.7);')}>
+            <span style={css('font-size:13px;color:rgb(var(--t) / calc(.7 * var(--t-k)));')}>
               {weekLbl} ·{' '}
               <span
                 style={css(
@@ -573,7 +578,7 @@ function PersonSheet({
               })
             }
             style={css(
-              'height:36px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
+              'height:36px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
             )}
           >
             {locked ? L(42) : tr('Submeter Semana')}
@@ -581,14 +586,14 @@ function PersonSheet({
         </div>
         <div
           style={css(
-            'border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(18,12,9,.16);overflow:auto;',
+            'border-radius:20px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--d) / calc(.16 * var(--d-k)));overflow:auto;',
           )}
         >
           <div role="table" aria-label={`${L(48)} · ${sel.name}`} style={css('min-width:640px;')}>
             <div
               role="row"
               style={css(
-                `display:grid;grid-template-columns:${TSGRID};align-items:center;height:42px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.1));border-bottom:1px solid rgba(255,255,255,.16);font-size:12px;font-weight:600;color:rgba(255,248,240,.85);`,
+                `display:grid;grid-template-columns:${TSGRID};align-items:center;height:42px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.2 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));border-bottom:1px solid rgb(var(--w) / .16);font-size:12px;font-weight:600;color:rgb(var(--t) / calc(.85 * var(--t-k)));`,
               )}
             >
               <span role="columnheader" style={css('padding:0 14px;')}>
@@ -612,7 +617,7 @@ function PersonSheet({
                   key={pr}
                   role="row"
                   style={css(
-                    `display:grid;grid-template-columns:${TSGRID};align-items:center;min-height:46px;border-bottom:1px solid rgba(255,255,255,.07);`,
+                    `display:grid;grid-template-columns:${TSGRID};align-items:center;min-height:46px;border-bottom:1px solid rgb(var(--w) / .07);`,
                   )}
                 >
                   <span
@@ -632,7 +637,7 @@ function PersonSheet({
                       </span>
                       <span
                         style={css(
-                          'font-size:11.5px;color:rgba(255,248,240,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                          'font-size:11.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
                         )}
                       >
                         {pj.name} {L(51)} {a ? a.hours : 0}h
@@ -652,7 +657,7 @@ function PersonSheet({
                         disabled={locked}
                         onChange={(ev) => setCell(pr, i)(ev.target.value)}
                         style={css(
-                          "justify-self:center;width:58px;height:32px;padding:0 6px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(18,12,9,.2);color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:13px;text-align:center;outline:none;box-sizing:border-box;",
+                          "justify-self:center;width:58px;height:32px;padding:0 6px;border-radius:9px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--d) / calc(.2 * var(--d-k)));color:var(--ink);font-family:'Geist Mono',monospace;font-size:13px;text-align:center;outline:none;box-sizing:border-box;",
                         )}
                       />
                     </span>
@@ -671,7 +676,7 @@ function PersonSheet({
             <div
               role="row"
               style={css(
-                `display:grid;grid-template-columns:${TSGRID};align-items:center;height:42px;background:rgba(255,255,255,.06);font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;`,
+                `display:grid;grid-template-columns:${TSGRID};align-items:center;height:42px;background:rgb(var(--w) / .06);font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;`,
               )}
             >
               <span style={css('padding:0 14px;font-family:inherit;')}>
@@ -680,14 +685,16 @@ function PersonSheet({
               {dayT.map((v, i) => (
                 <span
                   key={i}
-                  style={css(`text-align:center;color:${v > 8 ? 'oklch(0.84 0.13 30)' : '#fbf8f5'};`)}
+                  style={css(
+                    `text-align:center;color:${v > 8 ? 'oklch(calc(.84 * var(--lk)) .13 30)' : 'var(--ink)'};`,
+                  )}
                 >
                   {v}h
                 </span>
               ))}
               <span
                 style={css(
-                  `text-align:center;color:${tot > cap ? 'oklch(0.84 0.13 30)' : tot >= cap * 0.9 ? 'oklch(0.86 0.13 150)' : '#fbf8f5'};`,
+                  `text-align:center;color:${tot > cap ? 'oklch(calc(.84 * var(--lk)) .13 30)' : tot >= cap * 0.9 ? 'oklch(calc(.86 * var(--lk)) .13 150)' : 'var(--ink)'};`,
                 )}
               >
                 {tot}h
@@ -705,7 +712,7 @@ function PersonSheet({
             }}
             style={{
               ...css(
-                'align-self:flex-start;height:32px;padding:0 28px 0 12px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background-color:transparent;color:rgba(255,248,240,.85);font:inherit;font-size:12.5px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;',
+                'align-self:flex-start;height:32px;padding:0 28px 0 12px;border-radius:999px;border:1.5px dashed rgb(var(--w) / .28);background-color:transparent;color:rgb(var(--t) / calc(.85 * var(--t-k)));font:inherit;font-size:12.5px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme: var(--scheme);',
               ),
               backgroundImage: CHEV,
               backgroundRepeat: 'no-repeat',

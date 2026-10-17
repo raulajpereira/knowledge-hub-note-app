@@ -1102,5 +1102,22 @@
   "rep_none": "No test case matches.",
   "rep_otherEv": "Other evidence",
   "lm_short1": "1 request waiting",
-  "lm_shortN": "{n} requests waiting"
+  "lm_shortN": "{n} requests waiting",
+  "set_themeTitle": "Theme",
+  "set_themeDesc": "Dark glass or frosted white glass over the same background. “Follow system” switches with the device’s light/dark mode.",
+  "set_themeDark": "Dark",
+  "set_themeLight": "Light",
+  "set_themeSystem": "Follow system",
+  "set_densTitle": "List density",
+  "set_densDesc": "Compact fits more items in the side lists of every page (notes, tasks, emails…). Independent of the text and interface size.",
+  "set_densComfy": "Comfortable",
+  "set_densCompact": "Compact",
+  "set_startTitle": "Start page",
+  "set_startDesc": "What opens when you enter the app (after signing in or typing the address). The Home button still takes you Home.",
+  "set_startHome": "Home",
+  "set_startLast": "Last page used",
+  "set_startSearch": "Search page…",
+  "tg_color": "Tag colour",
+  "tg_colorAuto": "Automatic",
+  "tg_colorHint": "The colour applies to this tag everywhere in the app."
 }

@@ -26,7 +26,7 @@ type Req = {
 const ST: Record<Req['status'], [string, string]> = {
   new: ['Novo', 'oklch(0.75 0.12 245 / .5)'],
   approved: ['Aprovado', 'oklch(0.75 0.13 150 / .45)'],
-  rejected: ['Recusado', 'rgba(255,255,255,.14)'],
+  rejected: ['Recusado', 'rgb(var(--w) / .14)'],
 };
 
 /** Pedidos (D43): plan and custom package requests from the app; approve applies them to the client. */

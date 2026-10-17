@@ -52,7 +52,7 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
             <Logo size={45} showWordmark={false} />
             <div className="kh-hdr__word">
               <span>Knowledge</span>
-              <span style={{ color: 'var(--accent)' }}>Hub</span>
+              <span style={{ color: 'var(--accent-text)' }}>Hub</span>
             </div>
           </>
         )}

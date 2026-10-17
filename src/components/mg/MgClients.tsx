@@ -50,7 +50,7 @@ export function MgClients({ mg }: { mg: Mg }) {
             select(id);
           }}
           style={css(
-            'width:32px;height:32px;border-radius:50%;border:0;background:#fbf8f5;color:#2a211c;cursor:pointer;font-size:18px;line-height:1;',
+            'width:32px;height:32px;border-radius:50%;border:0;background:var(--ink);color:var(--ink-inv);cursor:pointer;font-size:18px;line-height:1;',
           )}
         >
           +
@@ -74,12 +74,12 @@ export function MgClients({ mg }: { mg: Mg }) {
               onClick={() => select(c.id)}
               onKeyDown={(e) => e.key === 'Enter' && select(c.id)}
               style={css(
-                `flex-shrink:0;display:flex;align-items:center;gap:12px;min-height:58px;padding:0 12px;border-radius:18px;cursor:pointer;background:${on ? 'rgba(255,255,255,.14)' : 'transparent'};border:1px solid ${on ? 'rgba(255,255,255,.2)' : 'transparent'};`,
+                `flex-shrink:0;display:flex;align-items:center;gap:12px;min-height:58px;padding:0 12px;border-radius:18px;cursor:pointer;background:${on ? 'rgb(var(--w) / .14)' : 'transparent'};border:1px solid ${on ? 'rgb(var(--w) / .2)' : 'transparent'};`,
               )}
             >
               <span
                 style={css(
-                  'width:38px;height:38px;flex:none;border-radius:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;',
+                  'width:38px;height:38px;flex:none;border-radius:12px;background:rgb(var(--w) / .12);border:1px solid rgb(var(--w) / .16);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;',
                 )}
               >
                 {mgIni(c.name)}
@@ -92,12 +92,14 @@ export function MgClients({ mg }: { mg: Mg }) {
                 >
                   {c.name}
                 </span>
-                <span style={css('font-size:12px;color:rgba(255,248,240,.64);')}>
+                <span style={css('font-size:12px;color:rgb(var(--t) / calc(.64 * var(--t-k)));')}>
                   {tr(c.type)} · {c.sector || '—'}
                 </span>
               </span>
               <span
-                style={css("font-family:'Geist Mono',monospace;font-size:12px;color:rgba(255,248,240,.75);")}
+                style={css(
+                  "font-family:'Geist Mono',monospace;font-size:12px;color:rgb(var(--t) / calc(.75 * var(--t-k)));",
+                )}
               >
                 {n} proj.
               </span>
@@ -133,7 +135,7 @@ export function MgClients({ mg }: { mg: Mg }) {
         <div style={css('display:flex;align-items:center;gap:14px;')}>
           <span
             style={css(
-              'width:52px;height:52px;flex:none;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;',
+              'width:52px;height:52px;flex:none;border-radius:16px;background:rgb(var(--w) / .12);border:1px solid rgb(var(--w) / .18);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;',
             )}
           >
             {mgIni(sel.name)}
@@ -144,7 +146,7 @@ export function MgClients({ mg }: { mg: Mg }) {
             aria-label={tr('Nome')}
             onChange={(e) => set('name')(e.target.value)}
             style={css(
-              'flex:1;min-width:0;padding:0;border:0;background:transparent;color:#fbf8f5;font:inherit;font-size:26px;font-weight:600;letter-spacing:-.02em;outline:none;',
+              'flex:1;min-width:0;padding:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:26px;font-weight:600;letter-spacing:-.02em;outline:none;',
             )}
           />
           <button
@@ -152,7 +154,7 @@ export function MgClients({ mg }: { mg: Mg }) {
             className="mg-round"
             title={L(76)}
             aria-label={L(76)}
-            style={{ color: '#ffc9b8' }}
+            style={{ color: 'var(--kh-error-text)' }}
             onClick={() => {
               if (
                 my.length &&
@@ -178,10 +180,12 @@ export function MgClients({ mg }: { mg: Mg }) {
             <div
               key={l}
               style={css(
-                'display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);',
+                'display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:18px;background:rgb(var(--w) / .06);border:1px solid rgb(var(--w) / .12);',
               )}
             >
-              <span style={css('font-size:12px;color:rgba(255,248,240,.68);')}>{tr(l!)}</span>
+              <span style={css('font-size:12px;color:rgb(var(--t) / calc(.68 * var(--t-k)));')}>
+                {tr(l!)}
+              </span>
               <span style={css("font-family:'Geist Mono',monospace;font-size:19px;font-weight:600;")}>
                 {v}
               </span>
@@ -216,7 +220,7 @@ export function MgClients({ mg }: { mg: Mg }) {
                 mg.nav('mg_projects', { pj: id });
               }}
               style={css(
-                'height:30px;padding:0 12px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background:transparent;color:rgba(255,248,240,.85);font:inherit;font-size:12px;font-weight:600;cursor:pointer;',
+                'height:30px;padding:0 12px;border-radius:999px;border:1.5px dashed rgb(var(--w) / .28);background:transparent;color:rgb(var(--t) / calc(.85 * var(--t-k)));font:inherit;font-size:12px;font-weight:600;cursor:pointer;',
               )}
             >
               {L(55)}
@@ -231,7 +235,7 @@ export function MgClients({ mg }: { mg: Mg }) {
               onClick={() => mg.nav('mg_projects', { pj: p.id })}
               onKeyDown={(e) => e.key === 'Enter' && mg.nav('mg_projects', { pj: p.id })}
               style={css(
-                'display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;',
+                'display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border-radius:16px;background:rgb(var(--w) / .05);border:1px solid rgb(var(--w) / .1);cursor:pointer;',
               )}
             >
               <span
@@ -245,7 +249,7 @@ export function MgClients({ mg }: { mg: Mg }) {
                 >
                   <span style={css("font-family:'Geist Mono',monospace;")}>{p.code}</span> · {p.name}
                 </span>
-                <span style={css('font-size:12px;color:rgba(255,248,240,.62);')}>
+                <span style={css('font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
                   {wLblY(p.from)} → {wLblY(p.to)} · {mgK(p.budget)}
                 </span>
               </span>
@@ -271,12 +275,16 @@ export function MgClients({ mg }: { mg: Mg }) {
                   className="mg-h12"
                   onClick={() => mg.nav('mg_people', { p: pid })}
                   style={css(
-                    'height:34px;padding:0 12px 0 4px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:8px;',
+                    'height:34px;padding:0 12px 0 4px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:8px;',
                   )}
                 >
                   <Av p={p} size={26} fs={10} tc={mg.tOf(p).tc} />
                   {p?.name ?? '?'}
-                  <span style={css("font-family:'Geist Mono',monospace;color:rgba(255,248,240,.65);")}>
+                  <span
+                    style={css(
+                      "font-family:'Geist Mono',monospace;color:rgb(var(--t) / calc(.65 * var(--t-k)));",
+                    )}
+                  >
                     {h}h
                   </span>
                 </button>
@@ -284,7 +292,7 @@ export function MgClients({ mg }: { mg: Mg }) {
             })}
           </div>
           {!Object.keys(tm).length && (
-            <div style={css('font-size:13px;color:rgba(255,248,240,.62);')}>{L(57)}</div>
+            <div style={css('font-size:13px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>{L(57)}</div>
           )}
         </div>
       </div>

@@ -183,7 +183,7 @@ export function PricingModal({ onClose }: { onClose: () => void }) {
               const lims = LIMIT_KEYS.filter((k) => p.limits[k] !== undefined).map(
                 (k) => `${p.limits[k]} ${t(`pr_lim_${k}`)}`,
               );
-              const c = p.color ?? '#fbf8f5';
+              const c = p.color ?? 'var(--ink)';
               return (
                 <div
                   key={p.code}
@@ -272,7 +272,7 @@ export function PricingModal({ onClose }: { onClose: () => void }) {
           <div className="kh-pr-why">
             <span className="kh-pr-why__blob" aria-hidden="true" />
             <span className="kh-pr-why__t">
-              {t('pr_whyKicker')} Knowledge<span style={{ color: 'var(--accent)' }}>Hub</span>?
+              {t('pr_whyKicker')} Knowledge<span style={{ color: 'var(--accent-text)' }}>Hub</span>?
             </span>
             <div className="kh-pr-why__grid">
               {[1, 2, 3, 4].map((i) => (
@@ -310,7 +310,7 @@ export function PricingModal({ onClose }: { onClose: () => void }) {
                     <span key={p.code} style={{ display: 'flex', justifyContent: 'center' }}>
                       <span
                         className="kh-pr-chip kh-pr-chip--sm"
-                        style={{ ['--c' as string]: p.color ?? '#fbf8f5' }}
+                        style={{ ['--c' as string]: p.color ?? 'var(--ink)' }}
                       >
                         {p.code}
                       </span>
@@ -386,7 +386,9 @@ export function PricingModal({ onClose }: { onClose: () => void }) {
                 })}
               </div>
             </div>
-            <span style={{ fontSize: 12, color: 'rgba(255,248,240,.62)' }}>{t('pr_foot')}</span>
+            <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.62 * var(--t-k)))' }}>
+              {t('pr_foot')}
+            </span>
           </div>
         </div>
       </div>
@@ -498,7 +500,7 @@ export function PricingModal({ onClose }: { onClose: () => void }) {
                     flexDirection: 'column',
                     gap: 6,
                     paddingTop: 12,
-                    borderTop: '1px solid rgba(255,255,255,.12)',
+                    borderTop: '1px solid rgb(var(--w) / .12)',
                   }}
                 >
                   <span style={{ fontSize: 13 }}>{t('pr_groupsN').replace('{n}', String(cust.length))}</span>
@@ -506,7 +508,14 @@ export function PricingModal({ onClose }: { onClose: () => void }) {
                     {fmt(cEff)} <span className="kh-pr-note">{t('pr_perUserMo')}</span>
                   </span>
                   {annual && d.customDisc > 0 && (
-                    <span style={{ display: 'flex', gap: 12, fontSize: 12.5, color: 'oklch(0.86 0.13 150)' }}>
+                    <span
+                      style={{
+                        display: 'flex',
+                        gap: 12,
+                        fontSize: 12.5,
+                        color: 'oklch(calc(.86 * var(--lk)) .13 150)',
+                      }}
+                    >
                       <span style={{ flex: 1 }}>{t('pr_annualSave')}</span>
                       <span className="kh-pr-mono">
                         −{fmt((sum - cEff) * seats * 12)}

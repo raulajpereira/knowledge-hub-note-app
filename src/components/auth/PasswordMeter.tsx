@@ -18,12 +18,12 @@ export function StrengthMeter({ password }: { password: string }) {
             style={{
               height: 4,
               borderRadius: 999,
-              background: password && i < Math.max(1, sc) ? STRENGTH_COLORS[sc] : 'rgba(255,255,255,.12)',
+              background: password && i < Math.max(1, sc) ? STRENGTH_COLORS[sc] : 'rgb(var(--w) / .12)',
             }}
           />
         ))}
       </div>
-      <span style={{ fontSize: 11.5, color: 'rgba(255,248,240,.7)' }}>
+      <span style={{ fontSize: 11.5, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
         {password ? labels[sc] : t('reg_sNone')}
       </span>
     </div>
@@ -58,7 +58,7 @@ export function PasswordRules({ password }: { password: string }) {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            color: ok ? '#fbf8f5' : 'rgba(255,248,240,.62)',
+            color: ok ? 'var(--ink)' : 'rgb(var(--t) / calc(.62 * var(--t-k)))',
           }}
         >
           <span
@@ -70,7 +70,7 @@ export function PasswordRules({ password }: { password: string }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: ok ? 'oklch(0.8 0.14 150)' : 'rgba(255,255,255,.16)',
+              background: ok ? 'oklch(0.8 0.14 150)' : 'rgb(var(--w) / .16)',
               fontSize: 10,
               fontWeight: 700,
               color: '#16131f',

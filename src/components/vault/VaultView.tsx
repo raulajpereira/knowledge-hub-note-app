@@ -761,7 +761,7 @@ export function VaultView() {
           <div className="kh-pw-title">
             <div>{t('nav_passwords')}</div>
             <div>
-              <span style={{ color: 'oklch(0.82 0.12 150)', display: 'flex' }}>
+              <span style={{ color: 'oklch(calc(.82 * var(--lk)) .12 150)', display: 'flex' }}>
                 <Svg d={I.shieldOk} s={13} w={2} />
               </span>
               {t('vt_sub')}
@@ -813,7 +813,7 @@ export function VaultView() {
               items.filter((x) => folderOf(x.e) === f).length,
               {
                 title: t('p_folderTip'),
-                style: dropOn === f ? { outline: '2px solid #fbf8f5' } : undefined,
+                style: dropOn === f ? { outline: '2px solid var(--ink)' } : undefined,
                 onDoubleClick: (e) => {
                   e.preventDefault();
                   setFolderEdit(f);
@@ -958,7 +958,7 @@ export function VaultView() {
                 title={t('x_fav')}
                 aria-label={t('x_fav')}
                 aria-pressed={a.e.fav}
-                style={{ color: a.e.fav ? 'oklch(0.86 0.13 85)' : undefined }}
+                style={{ color: a.e.fav ? 'oklch(calc(.86 * var(--lk)) .13 85)' : undefined }}
                 onClick={() => patch(a.id, { fav: !a.e.fav })}
               >
                 <Svg d={I.star} s={16} w={1.8} fill={a.e.fav ? 'currentColor' : 'none'} />
@@ -1040,7 +1040,7 @@ export function VaultView() {
                       <div
                         className="kh-pw-totp__ring"
                         style={{
-                          background: `conic-gradient(oklch(0.85 0.12 160) ${Math.round((left / 30) * 100)}%, rgba(255,255,255,.14) 0)`,
+                          background: `conic-gradient(oklch(0.85 0.12 160) ${Math.round((left / 30) * 100)}%, rgb(var(--sf) / calc(.14 * var(--sf-k))) 0)`,
                         }}
                       >
                         <div>{left}</div>

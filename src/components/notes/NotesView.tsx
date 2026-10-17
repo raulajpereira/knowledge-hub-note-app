@@ -4,10 +4,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { JSONContent } from '@tiptap/react';
 import { useI18n } from '@/i18n/client';
-import { useConfirm, usePersistentState, useToast, TagInput } from '@/components/ui';
+import { useConfirm, usePersistentState, useToast, TagInput, useTagStyle } from '@/components/ui';
 import { isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
-import { tagStyle } from '@/lib/tags';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { ShareButton } from '@/components/share/ShareButton';
 import { FolderShareDialog } from '@/components/share/FolderShareDialog';
@@ -28,7 +27,7 @@ import './notes.css';
 // ZNotes.dc.html `isNotes`: folders + list column · editor · inspector.
 
 type Cols = { side?: number; list?: number; insp?: number };
-const NO_FOLDER = { name: '', color: 'rgba(255,248,240,.35)' };
+const NO_FOLDER = { name: '', color: 'rgb(var(--t) / calc(.35 * var(--t-k)))' };
 
 const P = {
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
@@ -126,12 +125,24 @@ function FoldersPanel({
     sh?: SharedFolder;
   }> = [
     { id: 'all', name: t('all'), color: 'transparent', count: data?.total ?? 0, top: true },
-    { id: 'fav', name: t('fav'), color: 'oklch(0.85 0.13 85)', count: data?.favorites ?? 0, top: true },
+    {
+      id: 'fav',
+      name: t('fav'),
+      color: 'oklch(calc(.85 * var(--lk)) .13 85)',
+      count: data?.favorites ?? 0,
+      top: true,
+    },
     ...(data?.folders ?? []).map((f) => ({ id: f.id, name: f.name, color: f.color, count: f.count, f })),
     // standalone shared folders (own "Nova pasta partilhada" and the ones shared with the caller)
     ...shared
       .filter((x) => !x.folderId)
-      .map((x) => ({ id: SH + x.id, name: x.name, color: 'oklch(0.78 0.13 150)', count: null, sh: x })),
+      .map((x) => ({
+        id: SH + x.id,
+        name: x.name,
+        color: 'oklch(calc(.78 * var(--lk)) .13 150)',
+        count: null,
+        sh: x,
+      })),
   ];
 
   return (
@@ -234,7 +245,7 @@ function FoldersPanel({
                     type="button"
                     title={t('sh_fpTitle')}
                     aria-label={t('sh_fpTitle')}
-                    style={linked ? { color: 'oklch(0.86 0.13 150)' } : undefined}
+                    style={linked ? { color: 'oklch(calc(.86 * var(--lk)) .13 150)' } : undefined}
                     onClick={(e) => {
                       e.stopPropagation();
                       onShare({ folder: r.f });
@@ -273,7 +284,7 @@ function FoldersPanel({
                   type="button"
                   title={t('sh_fpTitle')}
                   aria-label={t('sh_fpTitle')}
-                  style={{ color: 'oklch(0.86 0.13 150)' }}
+                  style={{ color: 'oklch(calc(.86 * var(--lk)) .13 150)' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onShare({ shared: r.sh });
@@ -361,6 +372,7 @@ function NoteList({
   /** set while the server has more notes than the ones listed */
   onMore?: () => void;
 }) {
+  const tagStyle = useTagStyle();
   const { t } = useI18n();
   const when = useWhen();
   const [dragId, setDragId] = useState<string | null>(null);
@@ -392,7 +404,7 @@ function NoteList({
           const sf = n.sharedFolderId ? shared.get(n.sharedFolderId) : undefined;
           const f =
             (n.mine && n.folderId && folders.get(n.folderId)) ||
-            (sf ? { name: sf, color: 'oklch(0.78 0.13 150)' } : NO_FOLDER);
+            (sf ? { name: sf, color: 'oklch(calc(.78 * var(--lk)) .13 150)' } : NO_FOLDER);
           const on = n.id === activeId;
           return (
             <button
@@ -454,6 +466,7 @@ function NoteList({
 
 // ── Tags row under the title ───────────────────────────────────────────────
 function TagsRow({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
+  const tagStyle = useTagStyle();
   const { t } = useI18n();
   const [adding, setAdding] = useState(false);
   // Enter adds the tag and leaves the box open for the next one
@@ -515,6 +528,7 @@ function EditorCard({
   onPatch: (patch: Partial<Pick<Note, 'title' | 'content' | 'tags' | 'favorite'>>) => void;
   onDelete: () => void;
 }) {
+  const tagStyle = useTagStyle();
   const { t } = useI18n();
   const [title, setTitle] = useState(note.title);
   const [ask, setAsk] = useState<'link' | 'img' | null>(null);
@@ -571,7 +585,12 @@ function EditorCard({
           <button
             type="button"
             className="kh-nt-round"
-            style={{ color: note.favorite ? 'oklch(0.85 0.13 85)' : 'rgba(255,248,240,.6)', fontSize: 17 }}
+            style={{
+              color: note.favorite
+                ? 'oklch(calc(.85 * var(--lk)) .13 85)'
+                : 'rgb(var(--t) / calc(.6 * var(--t-k)))',
+              fontSize: 17,
+            }}
             title={note.favorite ? t('ne_unfav') : t('ne_addFav')}
             aria-label={note.favorite ? t('ne_unfav') : t('ne_addFav')}
             aria-pressed={note.favorite}
@@ -584,7 +603,7 @@ function EditorCard({
           <button
             type="button"
             className="kh-nt-round"
-            style={{ color: '#ffc9b8' }}
+            style={{ color: 'var(--kh-error-text)' }}
             title={t('del')}
             aria-label={t('del')}
             onClick={onDelete}

@@ -1,5 +1,7 @@
 // App background: warm gradient + four blurred colour blobs (ZNotes root),
 // or the user's photo with a dim layer. Presets from the prototype `AMB`.
+// The light theme lays a pale veil over either (.kh-ambient::after) and dims
+// the photo towards white (--dim-rgb).
 export const AMBIENTS = {
   Areia: {
     base: 'linear-gradient(160deg,#4a3c33 0%,#2b221d 55%,#1d1714 100%)',
@@ -55,7 +57,13 @@ export function AmbientBackground({ ambient = 'Areia', photoUrl, dim = 20, blur 
                 : undefined
             }
           />
-          <div style={{ position: 'absolute', inset: 0, background: `rgba(22,16,12,${dim / 100})` }} />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: `rgb(var(--dim-rgb, 22 16 12) / ${dim / 100})`,
+            }}
+          />
         </>
       ) : (
         <>

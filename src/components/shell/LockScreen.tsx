@@ -72,7 +72,7 @@ export function LockScreen({
           photoV={photoV}
           size={88}
           fontSize={28}
-          ring="0 0 0 3px rgba(255,255,255,.25)"
+          ring="0 0 0 3px rgb(var(--w) / .25)"
         />
         <div
           style={{
@@ -90,7 +90,7 @@ export function LockScreen({
           <span
             style={{
               fontSize: 13.5,
-              color: 'rgba(255,248,240,.75)',
+              color: 'rgb(var(--t) / calc(.75 * var(--t-k)))',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -139,7 +139,7 @@ export function LockScreen({
           </button>
         </span>
         {err && (
-          <span role="alert" style={{ marginTop: -8, fontSize: 12.5, color: '#ffc9b8' }}>
+          <span role="alert" style={{ marginTop: -8, fontSize: 12.5, color: 'var(--kh-error-text)' }}>
             {err}
           </span>
         )}
@@ -149,7 +149,12 @@ export function LockScreen({
         <a
           href="#"
           onClick={other}
-          style={{ textAlign: 'center', alignSelf: 'center', fontSize: 12.5, color: 'rgba(255,248,240,.75)' }}
+          style={{
+            textAlign: 'center',
+            alignSelf: 'center',
+            fontSize: 12.5,
+            color: 'rgb(var(--t) / calc(.75 * var(--t-k)))',
+          }}
         >
           {t('lock_other')}
         </a>
