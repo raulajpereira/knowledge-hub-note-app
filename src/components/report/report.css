@@ -1,0 +1,243 @@
+/* Relatório de testes — a document page: white paper on screen, A4 in print. */
+html:has(.kh-rep),
+body:has(.kh-rep) {
+  background: #e9e6e2 !important;
+  color: #1d1a17;
+}
+.kh-rep {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+  color: #1d1a17;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.kh-rep--empty {
+  padding: 60px;
+  text-align: center;
+}
+.kh-rep-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #5b5047;
+  font-size: 12.5px;
+}
+.kh-rep-print {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 0;
+  background: #1d1a17;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kh-rep-cover,
+.kh-rep-case {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 40px 44px;
+  margin-bottom: 20px;
+}
+.kh-rep-brand {
+  min-height: 48px;
+  margin-bottom: 28px;
+  color: #1d1a17;
+}
+.kh-rep-logo {
+  max-height: 56px;
+  max-width: 240px;
+  object-fit: contain;
+}
+.kh-rep h1 {
+  margin: 0 0 18px;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+.kh-rep h2 {
+  margin: 26px 0 10px;
+  font-size: 17px;
+}
+.kh-rep h3 {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5b5047;
+}
+.kh-rep-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 20px;
+  margin: 0;
+}
+.kh-rep-meta dt {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a6e64;
+}
+.kh-rep-meta dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+.kh-rep-meta--case {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #f6f4f1;
+}
+.kh-rep table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+.kh-rep th,
+.kh-rep td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #e3ded8;
+  text-align: left;
+  vertical-align: top;
+}
+.kh-rep th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5b5047;
+  background: #f6f4f1;
+}
+.kh-rep-sum td {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+}
+.kh-rep-sum th {
+  text-align: center;
+}
+.kh-rep-sum td[data-st='pass'] {
+  color: #1f7a3c;
+}
+.kh-rep-sum td[data-st='fail'] {
+  color: #b42318;
+}
+.kh-rep-sum td[data-st='block'] {
+  color: #6b3fa0;
+}
+.kh-rep-steps {
+  color: #5b5047;
+  font-size: 12px;
+}
+.kh-rep-mono {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+.kh-rep-pill {
+  display: inline-block;
+  padding: 1px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #ece8e3;
+  white-space: nowrap;
+}
+.kh-rep-pill[data-st='pass'] {
+  background: #d7f0de;
+  color: #1f6b36;
+}
+.kh-rep-pill[data-st='fail'] {
+  background: #fbdcd8;
+  color: #9b1c12;
+}
+.kh-rep-pill[data-st='block'] {
+  background: #e8dcf5;
+  color: #55308a;
+}
+.kh-rep-pill[data-st='run'] {
+  background: #fbefcc;
+  color: #7a5600;
+}
+.kh-rep-case header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.kh-rep-case header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 20px;
+}
+.kh-rep-area p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.kh-rep-res {
+  display: inline-block;
+  padding: 0 8px;
+  border-left: 4px solid;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.kh-rep-evrow td {
+  border-bottom: 1px solid #e3ded8;
+  padding-top: 0;
+}
+.kh-rep-ev {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.kh-rep-ev figure {
+  margin: 0;
+  max-width: 100%;
+  break-inside: avoid;
+}
+.kh-rep-ev img {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  border: 1px solid #ddd6ce;
+  border-radius: 4px;
+}
+.kh-rep-ev figcaption {
+  font-size: 10.5px;
+  color: #7a6e64;
+}
+.kh-rep-file {
+  font-size: 12px;
+  color: #5b5047;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  html:has(.kh-rep),
+  body:has(.kh-rep) {
+    background: #fff !important;
+  }
+  .kh-rep {
+    max-width: none;
+    padding: 0;
+  }
+  .kh-rep-tools {
+    display: none;
+  }
+  .kh-rep-cover,
+  .kh-rep-case {
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .kh-rep-case {
+    break-before: page;
+  }
+  .kh-rep-step,
+  .kh-rep-evrow {
+    break-inside: avoid;
+  }
+}

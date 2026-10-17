@@ -6,6 +6,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -13,7 +14,9 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { mgProjects } from './mg';
 import { tenants, users } from './identity';
@@ -68,6 +71,10 @@ export const sapSystems = pgTable(
     sapUser: text('sap_user').notNull().default(''),
     fiori: text('fiori').notNull().default(''),
     notes: text('notes').notNull().default(''),
+    /** landscape / track the system belongs to (map lanes), e.g. "S/4 Core" */
+    track: text('track').notNull().default(''),
+    /** where its transports go next (empty: the next role of the same landscape) */
+    nextId: uuid('next_id').references((): AnyPgColumn => sapSystems.id, { onDelete: 'set null' }),
     createdBy: userRef('created_by'),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
@@ -75,7 +82,11 @@ export const sapSystems = pgTable(
   },
   (t) => [
     index('sap_systems_tenant_idx').on(t.tenantId),
-    check('sap_systems_env_chk', sql`${t.env} in ('DEV','QAS','PRD')`),
+    check('sap_systems_env_chk', sql`${t.env} in ('DEV','QAS','PRD','SBX','OTH')`),
+    check(
+      'sap_systems_track_chk',
+      sql`char_length(${t.track}) <= 60 and (${t.nextId} is null or ${t.nextId} <> ${t.id})`,
+    ),
     check(
       'sap_systems_len',
       sql`char_length(${t.name}) between 1 and 200 and char_length(${t.sid}) <= 8 and char_length(${t.host}) <= 255 and char_length(${t.router}) <= 500 and char_length(${t.fiori}) <= 2000 and char_length(${t.notes}) <= 20000`,
@@ -241,6 +252,132 @@ export const sapFnRecords = pgTable(
     check(
       'sap_fn_records_len',
       sql`char_length(${t.title}) <= 300 and char_length(${t.code}) <= 120 and pg_column_size(${t.f}) + pg_column_size(${t.rows}) <= 2000000`,
+    ),
+  ],
+);
+
+/**
+ * Notas SAP (OSS notes): one per number per tenant (migration 0044), with the
+ * status in each system of the landscape (sap_note_systems) and the related
+ * transports (sap_note_transports). Shared by the tenant (D40).
+ */
+export const sapNotes = pgTable(
+  'sap_notes',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    number: integer('number').notNull(),
+    version: integer('version').notNull().default(1),
+    title: text('title').notNull().default(''),
+    component: text('component').notNull().default(''),
+    category: text('category').notNull().default(''),
+    priority: text('priority').notNull().default(''),
+    releasedOn: date('released_on'),
+    /** software components and releases / SPs it applies to: [{ swc, rel, sp }] */
+    validity: jsonb('validity')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    impl: text('impl')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** prerequisite notes, by number (they may not be in the library yet) */
+    prereqs: integer('prereqs')
+      .array()
+      .notNull()
+      .default(sql`'{}'::integer[]`),
+    projectId: uuid('project_id').references(() => mgProjects.id, { onDelete: 'set null' }),
+    tags: text('tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    body: jsonb('body'),
+    createdBy: userRef('created_by'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    deletedAt: ts('deleted_at'),
+  },
+  (t) => [
+    uniqueIndex('sap_notes_number_uq').on(t.tenantId, t.number),
+    check(
+      'sap_notes_number_chk',
+      sql`${t.number} between 1 and 99999999 and ${t.version} between 1 and 9999`,
+    ),
+    check(
+      'sap_notes_category_chk',
+      sql`${t.category} in ('','fix','consult','legal','perf','security','doc','other')`,
+    ),
+    check('sap_notes_priority_chk', sql`${t.priority} in ('','hot','high','medium','low','info')`),
+    check('sap_notes_impl_chk', sql`${t.impl} <@ ARRAY['snote','manual','sp']::text[]`),
+    check(
+      'sap_notes_len',
+      sql`char_length(${t.title}) <= 300 and char_length(${t.component}) <= 40 and cardinality(${t.tags}) <= 30 and cardinality(${t.prereqs}) <= 50 and pg_column_size(${t.validity}) <= 20000 and coalesce(pg_column_size(${t.body}), 0) <= 1000000`,
+    ),
+  ],
+);
+
+export const sapNoteSystems = pgTable(
+  'sap_note_systems',
+  {
+    tenantId: tenantId(),
+    noteId: uuid('note_id')
+      .notNull()
+      .references(() => sapNotes.id, { onDelete: 'cascade' }),
+    systemId: uuid('system_id')
+      .notNull()
+      .references(() => sapSystems.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('new'),
+    implOn: date('impl_on'),
+    transportId: uuid('transport_id').references(() => sapTransports.id, { onDelete: 'set null' }),
+    updatedBy: userRef('updated_by'),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: 'sap_note_systems_pk', columns: [t.noteId, t.systemId] }),
+    index('sap_note_systems_system_idx').on(t.systemId),
+    check('sap_note_systems_status_chk', sql`${t.status} in ('new','nrel','todo','done','obs')`),
+  ],
+);
+
+export const sapNoteTransports = pgTable(
+  'sap_note_transports',
+  {
+    tenantId: tenantId(),
+    noteId: uuid('note_id')
+      .notNull()
+      .references(() => sapNotes.id, { onDelete: 'cascade' }),
+    transportId: uuid('transport_id')
+      .notNull()
+      .references(() => sapTransports.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ name: 'sap_note_transports_pk', columns: [t.noteId, t.transportId] }),
+    index('sap_note_transports_tr_idx').on(t.transportId),
+  ],
+);
+
+/** Funcional › Testes: evidence files (screenshots…) of one step (row id) of a test case. */
+export const sapFnEvidence = pgTable(
+  'sap_fn_evidence',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    recordId: uuid('record_id')
+      .notNull()
+      .references(() => sapFnRecords.id, { onDelete: 'cascade' }),
+    rowId: text('row_id').notNull(),
+    storageKey: text('storage_key').notNull(),
+    name: text('name').notNull().default(''),
+    mime: text('mime').notNull(),
+    size: integer('size').notNull(),
+    createdBy: userRef('created_by'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('sap_fn_evidence_record_idx').on(t.recordId, t.rowId),
+    check(
+      'sap_fn_evidence_len',
+      sql`char_length(${t.rowId}) between 1 and 16 and char_length(${t.name}) <= 200 and ${t.size} between 1 and 10485760`,
     ),
   ],
 );

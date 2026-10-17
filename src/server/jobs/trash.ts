@@ -37,9 +37,13 @@ export async function pruneNoteImages() {
   return r?.n ?? 0;
 }
 
-/** The same for meeting records' topics and for whiteboards (their files go with the storage sweep). */
+/**
+ * The same for meeting records' topics, whiteboards and the evidence of test
+ * steps that were removed (their files go with the storage sweep).
+ */
 export async function pruneOtherImages() {
   const [m] = await db().execute<{ n: number }>(sql`select kh_prune_meeting_attachments() as n`);
   const [w] = await db().execute<{ n: number }>(sql`select kh_prune_whiteboard_images() as n`);
-  return { meetings: m?.n ?? 0, whiteboards: w?.n ?? 0 };
+  const [e] = await db().execute<{ n: number }>(sql`select kh_prune_fn_evidence() as n`);
+  return { meetings: m?.n ?? 0, whiteboards: w?.n ?? 0, evidence: e?.n ?? 0 };
 }

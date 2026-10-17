@@ -44,7 +44,23 @@ export function normalizeNav(saved: NavEntry[] | undefined): NavEntry[] {
     }
     out.push({ ...e });
   }
-  for (const d of NAV_DEFAULT) if (d.type === 'item' && !seen.has(d.id)) out.push({ ...d, nested: false });
+  // items missing from it (new modules): next to the item they follow in the
+  // default layout when the user still has that one (e.g. Notas SAP after
+  // Ordens de Transporte, inside the SAP group), otherwise at the end
+  let prev: string | null = null;
+  for (const d of NAV_DEFAULT) {
+    if (d.type !== 'item') continue;
+    if (!seen.has(d.id)) {
+      const at = prev ? out.findIndex((e) => e.type === 'item' && e.id === prev) : -1;
+      const after = at >= 0 ? out[at]! : null;
+      const nested = after?.type === 'item' ? !!after.nested : false;
+      const entry = { ...d, nested } as NavEntry;
+      if (at >= 0) out.splice(at + 1, 0, entry);
+      else out.push({ ...d, nested: false } as NavEntry);
+      seen.add(d.id);
+    }
+    prev = d.id;
+  }
   return out;
 }
 

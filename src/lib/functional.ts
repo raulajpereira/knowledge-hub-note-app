@@ -156,6 +156,7 @@ export const FN: Record<FnPage, FnPageDef> = {
       cols: [
         ['step', L('Passo', 'Step'), 'text', 2],
         ['expected', L('Resultado esperado', 'Expected result'), 'text', 2],
+        ['actual', L('Resultado obtido', 'Actual result'), 'text', 2],
         ['st', L('Resultado', 'Result'), 'rst', 1],
       ],
     },
@@ -264,9 +265,36 @@ export function fnProgress(page: FnPage, rows: FnRow[]) {
   };
 }
 
+/** A new row id: stable, so evidence and cutover dependencies can point at a row. */
+export const fnRowId = () => {
+  const a = new Uint8Array(8);
+  crypto.getRandomValues(a);
+  return Array.from(a, (b) => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('');
+};
+export const ROW_ID_RE = /^[a-z0-9]{4,16}$/;
+/** Rows with an id each (rows saved before ids existed, or duplicated ones, get a new one). */
+export function withRowIds(rows: FnRow[]): FnRow[] {
+  const seen = new Set<string>();
+  let changed = false;
+  const out = rows.map((r) => {
+    if (r.id && ROW_ID_RE.test(r.id) && !seen.has(r.id)) {
+      seen.add(r.id);
+      return r;
+    }
+    changed = true;
+    let id = fnRowId();
+    while (seen.has(id)) id = fnRowId();
+    seen.add(id);
+    return { ...r, id };
+  });
+  return changed ? out : rows;
+}
+
 /** A blank row of the page (result columns start "todo"). */
-export const fnBlankRow = (page: FnPage): FnRow =>
-  Object.fromEntries(FN[page].rows.cols.map((c) => [c[0], c[2] === 'rst' ? 'todo' : '']));
+export const fnBlankRow = (page: FnPage): FnRow => ({
+  id: fnRowId(),
+  ...Object.fromEntries(FN[page].rows.cols.map((c) => [c[0], c[2] === 'rst' ? 'todo' : ''])),
+});
 
 // ── Validation (server edge) ─────────────────────────────────────────────────
 const line = (max: number) =>
@@ -295,6 +323,19 @@ function fieldSchema(fd: FnField): z.ZodType {
       return line(500);
   }
 }
+/**
+ * Row keys besides the visible columns: every row has an id; cutover rows also
+ * have a phase, a planned start (local date-time), a planned duration in
+ * minutes and their predecessors (ids, comma-separated; checked by the service).
+ */
+const ROW_EXTRA: Partial<Record<FnPage, Record<string, z.ZodType>>> = {
+  fn_cut: {
+    phase: line(60),
+    start: z.union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)]),
+    dur: z.union([z.literal(''), z.string().regex(/^\d{1,6}$/)]),
+    dep: z.string().regex(/^(?:[a-z0-9]{4,16}(?:,[a-z0-9]{4,16}){0,49})?$/),
+  },
+};
 const schemas = new Map<FnPage, { f: z.ZodType; rows: z.ZodType; st: z.ZodType }>();
 export function fnSchemas(page: FnPage) {
   let s = schemas.get(page);
@@ -304,8 +345,9 @@ export function fnSchemas(page: FnPage) {
       f: z.strictObject(Object.fromEntries(P.fields.map((fd) => [fd.k, fieldSchema(fd).optional()]))),
       rows: z
         .array(
-          z.strictObject(
-            Object.fromEntries(
+          z.strictObject({
+            id: z.string().regex(ROW_ID_RE).optional(),
+            ...Object.fromEntries(
               P.rows.cols.map((c) => [
                 c[0],
                 (c[2] === 'rst'
@@ -314,7 +356,8 @@ export function fnSchemas(page: FnPage) {
                 ).optional(),
               ]),
             ),
-          ),
+            ...Object.fromEntries(Object.entries(ROW_EXTRA[page] ?? {}).map(([k, v]) => [k, v.optional()])),
+          }),
         )
         .max(500),
       st: z.enum(P.st.map((x) => x[0]) as [string, ...string[]]),

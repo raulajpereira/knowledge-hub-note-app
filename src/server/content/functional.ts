@@ -1,10 +1,11 @@
 import 'server-only';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { mgClients, sapFnRecords } from '@/db/schema';
+import { mgClients, sapFnEvidence, sapFnRecords } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
-import { FN, fnSchemas, type FnPage, type FnRow, type FnVal } from '@/lib/functional';
-import { asUser, type Tx } from './tenant';
+import { FN, fnSchemas, withRowIds, type FnPage, type FnRow, type FnVal } from '@/lib/functional';
+import { checkDeps } from '@/lib/cutover';
+import { asUser, removeFilesAfterCommit, type Tx } from './tenant';
 
 // Funcional SAP (SapFunctional.dc.html): records shared by the tenant (D40),
 // one list per page. The fields and rows are checked against the page's
@@ -83,10 +84,17 @@ function parse(page: FnPage, p: { st?: string; f?: unknown; rows?: unknown }) {
   if (st && !st.success) throw bad('status');
   if (f && !f.success) throw bad('fields');
   if (rows && !rows.success) throw bad('rows');
+  // every row gets a stable id (evidence and cutover dependencies point at it)
+  const rs = rows ? withRowIds(rows.data as FnRow[]) : undefined;
+  if (rs && page === 'fn_cut') {
+    // predecessors: in the same runbook, never the row itself, no cycles
+    const p = checkDeps(rs);
+    if (p) throw new ApiError(422, p.code, undefined, { row: p.row });
+  }
   return {
     st: st?.data as string | undefined,
     f: f?.data as Record<string, FnVal> | undefined,
-    rows: rows?.data as FnRow[] | undefined,
+    rows: rs,
   };
 }
 
@@ -175,7 +183,17 @@ export async function trashRecord(auth: AuthContext, page: FnPage, id: string) {
 }
 
 export async function purgeRecordsTx(tx: Tx, ids: string[]) {
-  if (ids.length) await tx.delete(sapFnRecords).where(inArray(sapFnRecords.id, ids));
+  if (!ids.length) return;
+  // the test evidence goes with the record (rows by cascade, files after commit)
+  const files = await tx
+    .delete(sapFnEvidence)
+    .where(inArray(sapFnEvidence.recordId, ids))
+    .returning({ key: sapFnEvidence.storageKey });
+  await tx.delete(sapFnRecords).where(inArray(sapFnRecords.id, ids));
+  removeFilesAfterCommit(
+    tx,
+    files.map((f) => f.key),
+  );
 }
 
 /** Sidebar counts per page (prototype navCounts). */

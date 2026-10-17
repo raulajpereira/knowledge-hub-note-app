@@ -5,8 +5,14 @@ describe('functional model', () => {
   it('has the four pages of the prototype, each with rows', () => {
     expect(FN_PAGES).toEqual(['fn_proc', 'fn_test', 'fn_mig', 'fn_cut']);
     for (const p of FN_PAGES) expect(FN[p].rows.cols.length).toBeGreaterThan(0);
-    expect(fnBlankRow('fn_test')).toEqual({ step: '', expected: '', st: 'todo' });
-    expect(fnBlankRow('fn_mig')).toEqual({ src: '', dst: '', rule: '' });
+    expect(fnBlankRow('fn_test')).toEqual({
+      id: expect.stringMatching(/^[a-z0-9]{8}$/),
+      step: '',
+      expected: '',
+      actual: '',
+      st: 'todo',
+    });
+    expect(fnBlankRow('fn_mig')).toEqual({ id: expect.any(String), src: '', dst: '', rule: '' });
   });
 
   it('progress: passed, done and not applicable count; only tests and cutover have it', () => {

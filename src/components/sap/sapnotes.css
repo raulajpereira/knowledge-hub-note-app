@@ -1,0 +1,463 @@
+/* Notas SAP — list, matrix "note × system" and detail panel (on top of sap.css). */
+.kh-sn-filters {
+  align-items: center;
+}
+.kh-sn-fsel {
+  height: 32px;
+  min-width: 0;
+  max-width: 230px;
+  padding: 0 26px 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px;
+  color-scheme: dark;
+}
+.kh-sn-fsel[data-on] {
+  border-color: rgba(255, 255, 255, 0.45);
+  background-color: rgba(255, 255, 255, 0.16);
+}
+.kh-sn-fsel option,
+.kh-sn-mcell option,
+.kh-sn-stsel option {
+  background-color: var(--kh-option-bg, #2b2622);
+  color: var(--kh-option-fg, #f4f2f0);
+}
+.kh-sn-clear {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: rgba(255, 248, 240, 0.8);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.kh-sn-count {
+  margin-left: auto;
+}
+.kh-sn-prio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgba(0, 0, 0, 0.12);
+}
+.kh-sn-prio i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.kh-sn-dots {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.kh-sn-dots i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* matrix */
+.kh-sn-mwrap {
+  overflow: auto;
+  padding: 0 22px 22px;
+}
+.kh-sn-matrix {
+  border-collapse: separate;
+  border-spacing: 4px;
+  font-size: 12.5px;
+}
+.kh-sn-matrix th {
+  font-weight: 600;
+  text-align: center;
+  vertical-align: bottom;
+  padding: 4px 6px;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(40, 30, 24, 0.55);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+}
+.kh-sn-msys {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Geist Mono', monospace;
+}
+.kh-sn-msys i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.kh-sn-menv {
+  display: block;
+  font-size: 10.5px;
+  color: rgba(255, 248, 240, 0.6);
+  font-weight: 500;
+}
+.kh-sn-matrix th.kh-sn-mnote {
+  text-align: left;
+  left: 0;
+  z-index: 2;
+  min-width: 260px;
+  max-width: 380px;
+}
+.kh-sn-matrix tbody th.kh-sn-mnote {
+  position: sticky;
+  top: auto;
+  background: rgba(40, 30, 24, 0.45);
+  padding: 0;
+}
+.kh-sn-mnote button {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 10px;
+}
+.kh-sn-mnote button span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: rgba(255, 248, 240, 0.85);
+}
+.kh-sn-matrix tr[data-on] th.kh-sn-mnote {
+  background: #fff;
+}
+.kh-sn-matrix tr[data-on] th.kh-sn-mnote button,
+.kh-sn-matrix tr[data-on] th.kh-sn-mnote button span:last-child {
+  color: #1d1a17;
+}
+.kh-sn-matrix td {
+  padding: 0;
+}
+.kh-sn-mcell {
+  width: 132px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  color-scheme: dark;
+}
+.kh-sn-mcell:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+.kh-sn-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.8);
+}
+.kh-sn-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kh-sn-legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.kh-sn-legend b {
+  font-family: 'Geist Mono', monospace;
+  font-weight: 600;
+}
+
+/* panel */
+.kh-sn-me {
+  height: 30px;
+  padding: 0 12px;
+  gap: 6px;
+  font-size: 12px;
+}
+.kh-sn-numrow {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 1.2fr;
+  gap: 10px;
+}
+.kh-sn-title {
+  resize: none;
+  font-size: 19px;
+  line-height: 1.35;
+}
+.kh-sn-full {
+  grid-column: 1 / -1;
+}
+.kh-sn-toggle {
+  font-family: inherit !important;
+  font-weight: 600 !important;
+}
+.kh-sn-toggle[data-on] {
+  background: rgba(255, 255, 255, 0.24) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+.kh-sn-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+.kh-sn-sechead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 240, 0.7);
+}
+.kh-sn-sechead button {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 11.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.kh-sn-muted {
+  font-size: 12.5px;
+  color: rgba(255, 248, 240, 0.6);
+}
+.kh-sn-sysrow {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.9fr) minmax(120px, 1.1fr) 130px minmax(0, 1.3fr);
+  gap: 6px;
+  align-items: center;
+}
+.kh-sn-sysname {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+.kh-sn-sysname i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.kh-sn-sysname small {
+  color: rgba(255, 248, 240, 0.55);
+  font-size: 10.5px;
+}
+.kh-sn-stsel {
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color-scheme: dark;
+  min-width: 0;
+}
+.kh-sn-date,
+.kh-sn-trsel {
+  height: 34px !important;
+  font-size: 12px !important;
+}
+.kh-sn-vt {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr 28px;
+  gap: 6px;
+  align-items: center;
+}
+.kh-sn-vt > span {
+  font-size: 11px;
+  color: rgba(255, 248, 240, 0.6);
+}
+.kh-sn-vt .kh-sap-input {
+  height: 34px;
+}
+.kh-sn-vdel {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fbf8f5;
+  cursor: pointer;
+}
+.kh-sn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.kh-sn-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border-radius: 999px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+  overflow: hidden;
+}
+.kh-sn-chip[data-in] {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.1);
+}
+.kh-sn-chip > a,
+.kh-sn-chip > button:first-child {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  padding: 4px 4px 4px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.kh-sn-chip span {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 248, 240, 0.75);
+}
+.kh-sn-chip > button:last-child,
+.kh-sn-tag button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0 9px 0 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.kh-sn-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 0 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.kh-sn-chipin {
+  flex: 1;
+  min-width: 120px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(18, 12, 9, 0.25);
+  color: #fbf8f5;
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.kh-sn-addtr {
+  height: 30px !important;
+  width: auto !important;
+  max-width: 260px;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+}
+.kh-sn-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.kh-sn-paste {
+  min-height: 180px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+}
+
+/* the team's notes (Notes editor, no images) */
+.kh-sn-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 160px;
+  padding: 10px 14px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 12, 9, 0.2);
+}
+.kh-sn-doc:focus-within {
+  border-color: rgba(255, 255, 255, 0.36);
+}
+.kh-sn-doc .kh-ne-tools {
+  align-self: flex-start;
+}
+.kh-sn-doc .kh-ne-ask {
+  margin: 0;
+}
+.kh-sn-doc .kh-ne {
+  min-height: 110px;
+  font-size: 14px;
+}
+.kh-sn-doc .kh-ne p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.kh-sn-doc .kh-ne li p {
+  margin: 0;
+}
+.kh-sn-doc .kh-ne ul,
+.kh-sn-doc .kh-ne ol {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}

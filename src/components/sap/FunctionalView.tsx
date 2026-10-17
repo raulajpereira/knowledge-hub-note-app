@@ -11,6 +11,7 @@ import {
   FN_RC,
   fnBlankRow,
   fnProgress,
+  withRowIds,
   type FnField,
   type FnPage,
   type FnRow,
@@ -23,7 +24,13 @@ import { AiButton } from '@/components/ai/AiButton';
 import { aiError, useAi } from '@/components/ai/useAi';
 import { SaveTemplateButton, TemplateButton } from '@/components/templates/Templates';
 import { fnToTpl, type FnTpl } from '@/lib/templates';
+import { CutoverPanel } from './CutoverPanel';
+import { EvidenceStrip, Lightbox, type Evidence } from './TestEvidence';
 import './functional.css';
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+/** Screenshots are shrunk like note images; other files go as they are. */
+const EV_MAX = 10 * 1024 * 1024;
 
 // Funcional SAP — SapFunctional.dc.html: Processos, Testes, Migração de
 // Dados and Cutover share this screen; fn-schema.js (src/lib/functional.ts)
@@ -75,12 +82,25 @@ export function FunctionalView({ page }: { page: FnPage }) {
   conflictRef.current = conflict;
   const sectionRef = useRef<HTMLElement>(null);
   const selId = sp.get('r');
+  const unsaved = useRef(new Set<string>());
+  const [fCycle, setFCycle] = useState('');
+  const [evidence, setEvidence] = useState<Record<string, Evidence[]>>({});
+  const [evBusy, setEvBusy] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ items: Evidence[]; i: number } | null>(null);
 
   const load = useCallback(async () => {
     const r = await api<{ records: Rec[]; clients: Opt[]; projects: Opt[]; people: Opt[] }>(
       `/sap/functional?page=${page}`,
     );
     for (const x of r.records) base.current.set(x.id, x.updatedAt);
+    // rows saved before rows had ids get one now (stored with the next save)
+    for (const x of r.records) {
+      const rs = withRowIds(x.rows);
+      if (rs !== x.rows) {
+        x.rows = rs;
+        unsaved.current.add(x.id);
+      }
+    }
     setClients(r.clients);
     setProjects(r.projects);
     setPeople(r.people);
@@ -119,10 +139,14 @@ export function FunctionalView({ page }: { page: FnPage }) {
           const prev = pending.current.get(id);
           pending.current.set(id, { patch: { ...patch, ...(prev?.patch ?? {}) }, tm: prev?.tm });
           setConflict(id);
+        } else if (isApiFailure(e) && e.code.startsWith('cutover_')) {
+          toast({ message: t('cutover_cycle'), tone: 'error' });
+          const fresh = await load().catch(() => null);
+          if (fresh) setItems(fresh);
         } else toast({ message: t('ne_saveFail'), tone: 'error' });
       }
     },
-    [page, t, toast],
+    [page, t, toast, load],
   );
   // one save at a time per record: the next one waits and carries the updatedAt
   // the previous one returned (two in flight would conflict with each other)
@@ -177,6 +201,77 @@ export function FunctionalView({ page }: { page: FnPage }) {
     if (fresh) setItems(fresh);
   };
 
+  // ── Test evidence (per step) ────────────────────────────────────────────────
+  const uploadEvidence = async (rec: Rec, rowId: string, files: File[]) => {
+    // the step must be stored before evidence can point at it
+    if (unsaved.current.has(rec.id) && !pending.current.has(rec.id))
+      pending.current.set(rec.id, { patch: { rows: rec.rows } });
+    unsaved.current.delete(rec.id);
+    if (pending.current.has(rec.id)) await flush(rec.id);
+    setEvBusy(rowId);
+    try {
+      for (const f of files) {
+        if (f.size > EV_MAX) {
+          toast({ message: t('ev_big'), tone: 'error' });
+          continue;
+        }
+        const name =
+          f.name || `screenshot-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`;
+        const res = await fetch(
+          `${BASE}/api/v1/sap/functional/${rec.id}/evidence?row=${rowId}&name=${encodeURIComponent(name)}`,
+          {
+            method: 'POST',
+            body: f,
+            headers: { 'Content-Type': f.type || 'application/octet-stream' },
+            credentials: 'same-origin',
+          },
+        );
+        const data = (await res.json().catch(() => ({}))) as {
+          evidence?: Evidence;
+          error?: { code?: string };
+        };
+        if (!res.ok || !data.evidence) {
+          const c = data.error?.code;
+          toast({
+            message: t(
+              c === 'unsupported_file'
+                ? 'ev_type'
+                : c === 'file_too_large'
+                  ? 'ev_big'
+                  : c === 'limit_reached'
+                    ? 'ev_limit'
+                    : 'ne_saveFail',
+            ),
+            tone: 'error',
+          });
+          continue;
+        }
+        const ev = data.evidence;
+        setEvidence((cur) => ({ ...cur, [rec.id]: [...(cur[rec.id] ?? []), ev] }));
+      }
+    } finally {
+      setEvBusy(null);
+    }
+  };
+  const deleteEvidence = async (recId: string, ev: Evidence) => {
+    const ok = await confirm({
+      title: t('ev_delTitle'),
+      body: ev.name,
+      confirmLabel: t('del'),
+      cancelLabel: t('tr_cancel'),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api(`/sap/functional/evidence/${ev.id}`, undefined, 'DELETE');
+      setEvidence((cur) => ({ ...cur, [recId]: (cur[recId] ?? []).filter((x) => x.id !== ev.id) }));
+    } catch {
+      toast({ message: t('ne_saveFail'), tone: 'error' });
+    }
+  };
+  const openReport = (ids: string[]) =>
+    window.open(`${BASE}/report/tests?ids=${ids.slice(0, 300).join(',')}`, '_blank', 'noopener');
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const all = useMemo(() => items ?? [], [items]);
   const query = q.trim().toLowerCase();
@@ -186,9 +281,22 @@ export function FunctionalView({ page }: { page: FnPage }) {
       (!fCli || r.f.client === fCli) &&
       (!fProj || r.f.project === fProj) &&
       (!fSt || r.st === fSt) &&
+      (!fCycle || r.f.cycle === fCycle) &&
       (!query || JSON.stringify([r.title, r.code, r.f, r.rows]).toLowerCase().includes(query)),
   );
   const sel = all.find((r) => r.id === selId) ?? list[0] ?? null;
+  const selKey = sel?.id;
+  useEffect(() => {
+    if (page !== 'fn_test' || !selKey || evidence[selKey]) return;
+    let live = true;
+    api<{ evidence: Record<string, Evidence[]> }>(`/sap/functional/evidence?ids=${selKey}`)
+      .then((r) => live && setEvidence((cur) => ({ ...cur, [selKey]: r.evidence[selKey] ?? [] })))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, selKey]);
   const stOf = (k: string) => P.st.find((x) => x[0] === k) ?? P.st[0]!;
   const cName = (id: FnVal | undefined) => clients.find((c) => c.id === id)?.name;
   const pCode = (id: FnVal | undefined) => projects.find((p) => p.id === id)?.code;
@@ -310,6 +418,19 @@ export function FunctionalView({ page }: { page: FnPage }) {
       'project',
       projects.filter((p) => used('project').has(p.id)).map((p) => [p.id, p.code ?? p.name]),
     ],
+    ...(page === 'fn_test'
+      ? ([
+          [
+            t('ev_allCycles'),
+            fCycle,
+            setFCycle,
+            'cycle',
+            (P.fields.find((x) => x.k === 'cycle')?.opts ?? [])
+              .filter(([v]) => used('cycle').has(v))
+              .map(([v, l]) => [v, tr(l)]),
+          ],
+        ] as typeof filters)
+      : []),
   ];
 
   if (!items) return <section className="kh-fn" aria-busy="true" />;
@@ -340,6 +461,17 @@ export function FunctionalView({ page }: { page: FnPage }) {
               <h1>{tr(P.title)}</h1>
               <span>{tr(P.sub)}</span>
             </div>
+            {page === 'fn_test' && (
+              <button
+                type="button"
+                className="kh-fn-rep"
+                title={t('rep_listHint')}
+                disabled={!list.length}
+                onClick={() => openReport(list.map((r) => r.id))}
+              >
+                {t('rep_btn')}
+              </button>
+            )}
             <TemplateButton kind={page} compact onPick={(tpl) => void create(tpl.body as FnTpl)} />
             <button
               type="button"
@@ -531,6 +663,16 @@ export function FunctionalView({ page }: { page: FnPage }) {
                   </option>
                 ))}
               </select>
+              {page === 'fn_test' && (
+                <button
+                  type="button"
+                  className="kh-fn-rep"
+                  title={t('rep_oneHint')}
+                  onClick={() => openReport([sel.id])}
+                >
+                  {t('rep_btn')}
+                </button>
+              )}
               <SaveTemplateButton
                 kind={page}
                 compact
@@ -695,73 +837,116 @@ export function FunctionalView({ page }: { page: FnPage }) {
                     }}
                   />
                 )}
-                <button
-                  type="button"
-                  disabled={sel.rows.length >= 500}
-                  onClick={() => upd(sel.id, { rows: [...sel.rows, fnBlankRow(page)] }, 0)}
-                >
-                  + {t('fn_addRow')}
-                </button>
+                {page !== 'fn_cut' && (
+                  <button
+                    type="button"
+                    disabled={sel.rows.length >= 500}
+                    onClick={() => upd(sel.id, { rows: [...sel.rows, fnBlankRow(page)] }, 0)}
+                  >
+                    + {t('fn_addRow')}
+                  </button>
+                )}
               </div>
-              <div className="kh-fn-table">
-                <div style={{ minWidth: 560 }}>
-                  <div className="kh-fn-thead" style={{ gridTemplateColumns: gridTpl }}>
-                    <span>#</span>
-                    {R.cols.map((c) => (
-                      <span key={c[0]}>{tr(c[1])}</span>
-                    ))}
-                    <span />
-                  </div>
-                  {sel.rows.map((row, i) => (
-                    <div key={i} className="kh-fn-trow" style={{ gridTemplateColumns: gridTpl }}>
-                      <span className="kh-fn-rn">{i + 1}</span>
-                      {R.cols.map(([k, lb, kind, , mono]) => {
-                        const v = row[k] || (kind === 'rst' ? 'todo' : '');
-                        const label = `${tr(lb)} ${i + 1}`;
-                        return (
-                          <span key={k} className="kh-fn-cell">
-                            {kind === 'rst' ? (
-                              <select
-                                className="kh-fn-rst"
-                                value={v}
-                                aria-label={label}
-                                style={{ backgroundColor: FN_RBG[v] ?? 'rgba(255,255,255,.1)' }}
-                                onChange={(e) => updRow(i, k, e.target.value)}
-                              >
-                                {R.status!.map(([sk, sl]) => (
-                                  <option key={sk} value={sk}>
-                                    {tr(sl)}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <input
-                                className="kh-fn-cin"
-                                data-mono={mono || undefined}
-                                value={v}
-                                maxLength={2000}
-                                spellCheck={false}
-                                aria-label={label}
-                                onChange={(e) => updRow(i, k, e.target.value.replace(/[\r\n]/g, ' '))}
-                              />
-                            )}
-                          </span>
-                        );
-                      })}
-                      <button
-                        type="button"
-                        className="kh-fn-rdel"
-                        title={t('fn_delRow')}
-                        aria-label={`${t('fn_delRow')} ${i + 1}`}
-                        onClick={() => upd(sel.id, { rows: sel.rows.filter((_, j) => j !== i) }, 0)}
-                      >
-                        ×
-                      </button>
+              {page === 'fn_cut' ? (
+                <CutoverPanel
+                  rows={sel.rows}
+                  golive={typeof sel.f.golive === 'string' ? sel.f.golive : ''}
+                  tr={tr}
+                  onChange={(rows, delay) => upd(sel.id, { rows }, delay)}
+                />
+              ) : (
+                <div className="kh-fn-table">
+                  <div style={{ minWidth: 560 }}>
+                    <div className="kh-fn-thead" style={{ gridTemplateColumns: gridTpl }}>
+                      <span>#</span>
+                      {R.cols.map((c) => (
+                        <span key={c[0]}>{tr(c[1])}</span>
+                      ))}
+                      <span />
                     </div>
-                  ))}
-                  {!sel.rows.length && <div className="kh-fn-norows">{t('fn_noRows')}</div>}
+                    {sel.rows.map((row, i) => (
+                      <div key={row.id ?? i} className="kh-fn-rowwrap">
+                        <div
+                          className="kh-fn-trow"
+                          style={{ gridTemplateColumns: gridTpl }}
+                          onPaste={
+                            page === 'fn_test' && row.id
+                              ? (e) => {
+                                  const fs = [...e.clipboardData.files].filter((f) =>
+                                    f.type.startsWith('image/'),
+                                  );
+                                  if (!fs.length) return;
+                                  e.preventDefault();
+                                  void uploadEvidence(sel, row.id!, fs);
+                                }
+                              : undefined
+                          }
+                        >
+                          <span className="kh-fn-rn">{i + 1}</span>
+                          {R.cols.map(([k, lb, kind, , mono]) => {
+                            const v = row[k] || (kind === 'rst' ? 'todo' : '');
+                            const label = `${tr(lb)} ${i + 1}`;
+                            return (
+                              <span key={k} className="kh-fn-cell">
+                                {kind === 'rst' ? (
+                                  <select
+                                    className="kh-fn-rst"
+                                    value={v}
+                                    aria-label={label}
+                                    style={{ backgroundColor: FN_RBG[v] ?? 'rgba(255,255,255,.1)' }}
+                                    onChange={(e) => updRow(i, k, e.target.value)}
+                                  >
+                                    {R.status!.map(([sk, sl]) => (
+                                      <option key={sk} value={sk}>
+                                        {tr(sl)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    className="kh-fn-cin"
+                                    data-mono={mono || undefined}
+                                    value={v}
+                                    maxLength={2000}
+                                    spellCheck={false}
+                                    aria-label={label}
+                                    onChange={(e) => updRow(i, k, e.target.value.replace(/[\r\n]/g, ' '))}
+                                  />
+                                )}
+                              </span>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            className="kh-fn-rdel"
+                            title={t('fn_delRow')}
+                            aria-label={`${t('fn_delRow')} ${i + 1}`}
+                            onClick={() => upd(sel.id, { rows: sel.rows.filter((_, j) => j !== i) }, 0)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                        {page === 'fn_test' && row.id && (
+                          <EvidenceStrip
+                            items={(evidence[sel.id] ?? []).filter((x) => x.rowId === row.id)}
+                            busy={evBusy === row.id}
+                            label={`${t('ev_add')} ${i + 1}`}
+                            onAdd={(fs) => void uploadEvidence(sel, row.id!, fs)}
+                            onDelete={(ev) => void deleteEvidence(sel.id, ev)}
+                            onOpen={(ev) => {
+                              const imgs = (evidence[sel.id] ?? []).filter(
+                                (x) => x.rowId === row.id && x.mime.startsWith('image/'),
+                              );
+                              setLightbox({ items: imgs, i: Math.max(0, imgs.indexOf(ev)) });
+                            }}
+                          />
+                        )}
+                      </div>
+                    ))}
+                    {!sel.rows.length && <div className="kh-fn-norows">{t('fn_noRows')}</div>}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             <span className="kh-fn-meta">
               {t('fn_created')} {when(sel.createdAt)} · {t('fn_updated')} {when(sel.updatedAt)}
@@ -769,6 +954,7 @@ export function FunctionalView({ page }: { page: FnPage }) {
           </div>
         )}
       </div>
+      {lightbox && <Lightbox items={lightbox.items} start={lightbox.i} onClose={() => setLightbox(null)} />}
     </section>
   );
 }

@@ -1359,3 +1359,108 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0 0 10px 10px;
 }
+
+/* Mapa da paisagem (LandscapeMap) */
+.kh-lm {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 22px 22px;
+  min-height: 0;
+}
+.kh-lm-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kh-lm-hint {
+  margin-right: auto;
+  font-size: 12.5px;
+  color: rgba(255, 248, 240, 0.65);
+}
+.kh-lm-btn {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+.kh-lm-scroll {
+  overflow: auto;
+  border-radius: 18px;
+}
+.kh-lm-svg {
+  display: block;
+}
+.kh-lm-box,
+.kh-lm-edge {
+  cursor: pointer;
+  outline: none;
+}
+.kh-lm-box:hover rect:first-child,
+.kh-lm-box:focus-visible rect:first-child {
+  stroke-width: 3;
+}
+.kh-lm-edge:focus-visible path:nth-child(2) {
+  stroke-width: 4;
+}
+.kh-lm-list {
+  position: absolute;
+  right: 34px;
+  top: 52px;
+  width: min(360px, calc(100% - 68px));
+  max-height: 60%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(40, 30, 24, 0.85);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.kh-lm-lhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.kh-lm-lhead span {
+  flex: 1;
+  color: rgba(255, 248, 240, 0.7);
+  font-size: 12px;
+}
+.kh-lm-lhead button {
+  border: 0;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fbf8f5;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.kh-lm-list a {
+  display: flex;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  color: #fbf8f5;
+  text-decoration: none;
+  font-size: 12.5px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.kh-lm-list a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.kh-lm-list a span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 248, 240, 0.75);
+}
+.kh-lm-note {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.6);
+}

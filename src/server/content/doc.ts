@@ -117,14 +117,22 @@ function clean(node: unknown, depth: number, imageSrc: RegExp): PMNode {
   return out;
 }
 
+/** Documents without images (e.g. the notes of a SAP note): no src is accepted. */
+const NO_IMAGES = /(?!)/;
+
 /**
  * `images`: where the document's images must live — a note's files (default)
- * or a meeting record's (MEETING_FILE_SRC); only one store per document.
+ * or a meeting record's (MEETING_FILE_SRC); only one store per document;
+ * 'none' for documents that take no images.
  */
-export function validateDoc(input: unknown, opts: { images?: 'notes' | 'meetings' } = {}): PMNode {
+export function validateDoc(input: unknown, opts: { images?: 'notes' | 'meetings' | 'none' } = {}): PMNode {
   const size = JSON.stringify(input ?? null).length;
   if (size > MAX_DOC_BYTES) throw new ApiError(413, 'doc_too_large');
-  const d = clean(input, 0, opts.images === 'meetings' ? MEETING_FILE_SRC : FILE_SRC);
+  const d = clean(
+    input,
+    0,
+    opts.images === 'meetings' ? MEETING_FILE_SRC : opts.images === 'none' ? NO_IMAGES : FILE_SRC,
+  );
   if (d.type !== 'doc') throw new ApiError(400, 'doc_invalid');
   return d;
 }

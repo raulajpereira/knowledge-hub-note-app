@@ -25,6 +25,9 @@ export type SapSystem = {
   sapUser: string;
   fiori: string;
   notes: string;
+  /** landscape / track (map lanes) and where its transports go next */
+  track: string;
+  nextId: string | null;
   fav: boolean;
   createdAt: string;
 };
@@ -90,6 +93,8 @@ const sysCols = {
   sapUser: sapSystems.sapUser,
   fiori: sapSystems.fiori,
   notes: sapSystems.notes,
+  track: sapSystems.track,
+  nextId: sapSystems.nextId,
   createdAt: sapSystems.createdAt,
 };
 type SysRow = Omit<SapSystem, 'fav' | 'createdAt' | 'env'> & { env: string; createdAt: Date };
@@ -137,8 +142,22 @@ export type SystemPatch = Partial<
     | 'sapUser'
     | 'fiori'
     | 'notes'
+    | 'track'
+    | 'nextId'
   >
 >;
+
+/** The transport target must be another live system of the tenant. */
+async function checkNext(tx: Tx, id: string | null | undefined, self?: string) {
+  if (!id) return null;
+  if (id === self) throw new ApiError(400, 'invalid_input', 'a system cannot be its own target');
+  const [s] = await tx
+    .select({ id: sapSystems.id })
+    .from(sapSystems)
+    .where(and(eq(sapSystems.id, id), isNull(sapSystems.deletedAt)));
+  if (!s) throw new ApiError(404, 'system_not_found');
+  return s.id;
+}
 
 export async function createSystem(
   auth: AuthContext,
@@ -152,6 +171,7 @@ export async function createSystem(
         ...input,
         sid: input.sid?.toUpperCase(),
         clientId: await checkClient(tx, input.clientId),
+        nextId: await checkNext(tx, input.nextId),
         tenantId: auth.tenant.id,
         createdBy: auth.user.id,
       })
@@ -165,6 +185,7 @@ export async function updateSystem(auth: AuthContext, id: string, patch: SystemP
     const p = { ...patch };
     if (p.clientId !== undefined) p.clientId = await checkClient(tx, p.clientId);
     if (p.sid !== undefined) p.sid = p.sid.toUpperCase();
+    if (p.nextId !== undefined) p.nextId = await checkNext(tx, p.nextId, id);
     const [r] = await tx
       .update(sapSystems)
       .set({ ...p, updatedAt: new Date() })
