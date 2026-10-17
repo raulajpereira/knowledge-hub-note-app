@@ -1341,3 +1341,107 @@
   font-size: 16px;
   cursor: pointer;
 }
+
+/* Histórico (note versions) */
+.kh-modal.kh-hist {
+  width: min(980px, 100%);
+}
+.kh-hist__grid {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 14px;
+  height: min(62vh, 620px);
+}
+.kh-hist__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.kh-hist__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kh-hist__item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.kh-hist__when {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.kh-hist__meta {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.7);
+}
+.kh-hist__ex {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.kh-hist__badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: oklch(0.75 0.11 245 / 0.3);
+  color: inherit;
+}
+.kh-hist__pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 12, 9, 0.22);
+}
+.kh-hist__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.kh-hist__ro {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.65);
+}
+.kh-hist__doc {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 22px;
+}
+.kh-hist__title {
+  margin: 0 0 10px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.kh-hist__empty {
+  padding: 30px 10px;
+  text-align: center;
+  color: rgba(255, 248, 240, 0.7);
+  font-size: 14px;
+}
+@media (max-width: 720px) {
+  .kh-hist__grid {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .kh-hist__list {
+    max-height: 30vh;
+  }
+}

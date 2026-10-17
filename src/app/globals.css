@@ -178,7 +178,8 @@ select optgroup {
   .kh-cl-item,
   .kh-vc-item,
   .kh-tk-item,
-  .kh-fn-item
+  .kh-fn-item,
+  .kh-hist__item
 )[data-on],
 :is(
     .kh-ar-item,
@@ -190,7 +191,8 @@ select optgroup {
     .kh-cl-item,
     .kh-vc-item,
     .kh-tk-item,
-    .kh-fn-item
+    .kh-fn-item,
+    .kh-hist__item
   )[data-on]:hover {
   --kh-sel-fg: #2a211c;
   --kh-sel-dim: rgba(42, 33, 28, 0.66);
@@ -207,6 +209,7 @@ select optgroup {
 :is(.kh-mt-item, .kh-fl-item, .kh-ap-item)[data-on] > div > span:last-child,
 .kh-cl-item[data-on] :is(.kh-cl-idesc, .kh-cl-meta),
 .kh-fn-item[data-on] .kh-fn-imeta,
+.kh-hist__item[data-on] :is(.kh-hist__meta, .kh-hist__ex),
 .kh-mt-item[data-on] .kh-mt-day span {
   color: var(--kh-sel-dim);
 }

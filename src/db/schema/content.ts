@@ -682,3 +682,87 @@ export const newsSaved = pgTable(
     check('news_saved_len', sql`char_length(${t.link}) <= 2000 and pg_column_size(${t.item}) <= 400000`),
   ],
 );
+
+/**
+ * Note history (0042): a snapshot of the title and document, taken by the
+ * server when a note is saved after 10 minutes without one, and before a
+ * restore. owner_id is the note's owner; author_id who was editing.
+ */
+export const noteVersions = pgTable(
+  'note_versions',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    noteId: uuid('note_id')
+      .notNull()
+      .references(() => notes.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    title: text('title').notNull().default(''),
+    content: jsonb('content').notNull(),
+    contentText: text('content_text').notNull().default(''),
+    /** characters of plain text (the list shows the size and the change) */
+    chars: integer('chars').notNull().default(0),
+    reason: text('reason', { enum: ['auto', 'restore'] })
+      .notNull()
+      .default('auto'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('note_versions_note_idx').on(t.noteId, t.createdAt),
+    check('note_versions_reason_chk', sql`${t.reason} in ('auto','restore')`),
+    check(
+      'note_versions_len',
+      sql`char_length(${t.title}) <= 300 and char_length(${t.contentText}) <= 200000`,
+    ),
+  ],
+);
+
+/** "Vistas guardadas": a named filter of Notes or Tasks, pinned in the sidebar (filter: see server/content/views.ts). */
+export const savedViews = pgTable(
+  'saved_views',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    kind: text('kind', { enum: ['notes', 'tasks'] }).notNull(),
+    name: text('name').notNull(),
+    filter: jsonb('filter').notNull().default({}),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('saved_views_owner_idx').on(t.tenantId, t.ownerId, t.position),
+    check('saved_views_kind_chk', sql`${t.kind} in ('notes','tasks')`),
+    check(
+      'saved_views_len',
+      sql`char_length(${t.name}) between 1 and 60 and pg_column_size(${t.filter}) <= 8000`,
+    ),
+  ],
+);
+
+export const EXPORT_STATUSES = ['pending', 'running', 'ready', 'failed', 'expired'] as const;
+
+/** "Exportar os meus dados": a ZIP built by the worker under exports/ in the bucket, kept 7 days. */
+export const dataExports = pgTable(
+  'data_exports',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    status: text('status', { enum: EXPORT_STATUSES }).notNull().default('pending'),
+    storageKey: text('storage_key'),
+    size: bigint('size', { mode: 'number' }),
+    error: text('error'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    startedAt: ts('started_at'),
+    finishedAt: ts('finished_at'),
+    expiresAt: ts('expires_at'),
+  },
+  (t) => [
+    index('data_exports_owner_idx').on(t.tenantId, t.ownerId, t.createdAt),
+    check('data_exports_status_chk', sql`${t.status} in ('pending','running','ready','failed','expired')`),
+    check('data_exports_error_len', sql`char_length(${t.error}) <= 500`),
+  ],
+);

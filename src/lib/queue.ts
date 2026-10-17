@@ -5,6 +5,8 @@ import { createQueueConnection } from '@/lib/redis';
 export const QUEUES = {
   system: 'kh-system',
   mail: 'kh-mail',
+  /** "Exportar os meus dados": one ZIP at a time */
+  export: 'kh-export',
 } as const;
 
 export const WORKER_HEARTBEAT_KEY = 'kh:worker:heartbeat';

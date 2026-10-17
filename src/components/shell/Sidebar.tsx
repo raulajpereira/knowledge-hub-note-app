@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
+import { SidebarViews } from '@/components/views/Views';
 import { useI18n } from '@/i18n/client';
 import type { NavEntry } from '@/lib/prefs';
 import { normalizeNav, sideRows } from './nav';
@@ -74,6 +75,9 @@ export function Sidebar() {
           ),
         )}
       </nav>
+      <Suspense>
+        <SidebarViews />
+      </Suspense>
       <div className="kh-aside__fill" />
 
       {tier === 'FREE' && (

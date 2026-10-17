@@ -1,6 +1,6 @@
 // Background worker (BullMQ). Runs as its own container from the same
-// codebase: `node dist/worker.mjs`. Heartbeat, the daily license job and the
-// transactional email queue.
+// codebase: `node dist/worker.mjs`. Heartbeat, the daily license job, the
+// transactional email queue and the data exports.
 import { Worker } from 'bullmq';
 import { QUEUES, WORKER_HEARTBEAT_KEY, queue } from '@/lib/queue';
 import { createQueueConnection, redis } from '@/lib/redis';
@@ -14,6 +14,7 @@ import { expireTrash, pruneNoteImages, pruneOtherImages } from '@/server/jobs/tr
 import { pruneNotifications, runNotify } from '@/server/notify/generate';
 import { runInbound } from '@/server/inbound/imap';
 import { inboundConfigured } from '@/server/notify/service';
+import { expireExports, runExport } from '@/server/jobs/export';
 
 type JobHandler = () => Promise<unknown>;
 
@@ -36,9 +37,10 @@ const handlers: Record<string, JobHandler> = {
     const trash = await step(expireTrash);
     const noteImages = await step(pruneNoteImages);
     const otherImages = await step(pruneOtherImages);
+    const exports = await step(() => expireExports());
     const files = await step(() => sweepStorage());
     const notifications = await step(pruneNotifications);
-    const out = { licenses: r, trash, noteImages, otherImages, files, notifications };
+    const out = { licenses: r, trash, noteImages, otherImages, exports, files, notifications };
     console.log('[worker] licenses', JSON.stringify(out));
     return out;
   },
@@ -101,12 +103,20 @@ async function main() {
     console.error(`[worker] mail to ${job?.data.to} failed:`, err.message),
   );
 
+  // "Exportar os meus dados": one ZIP at a time (they stream, but are long and heavy)
+  const exportWorker = new Worker<{ exportId: string; tenantId: string; userId: string }>(
+    QUEUES.export,
+    (job) => runExport(job.data),
+    { connection: createQueueConnection(), concurrency: 1, lockDuration: 5 * 60_000 },
+  );
+  exportWorker.on('failed', (job, err) => console.error(`[worker] export ${job?.id} failed:`, err.message));
+
   await handlers.heartbeat!();
   console.log('[worker] started');
 
   const shutdown = async () => {
     console.log('[worker] shutting down');
-    await Promise.all([worker.close(), mailWorker.close()]);
+    await Promise.all([worker.close(), mailWorker.close(), exportWorker.close()]);
     process.exit(0);
   };
   process.on('SIGTERM', shutdown);

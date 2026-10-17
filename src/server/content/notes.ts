@@ -48,6 +48,7 @@ import { folderError } from './folderError';
 export { folderError };
 import { safeFetchBytes } from '@/server/net/safeFetch';
 import { docChecklist, docText, FILE_SRC, validateDoc, type PMNode } from './doc';
+import { lockNote, snapshotIfDue } from './noteVersions';
 
 type Tx = Parameters<Parameters<typeof asUser>[1]>[0];
 
@@ -231,13 +232,53 @@ export async function duplicateFolder(auth: AuthContext, id: string, copySuffix:
 }
 
 // ── Notes ──────────────────────────────────────────────────────────────────
+export type NoteFilter = {
+  folder?: string;
+  fav?: boolean;
+  search?: string;
+  shared?: { id: string; folderId: string | null };
+  /** labels: any of them (default) or all of them */
+  tags?: string[];
+  tagMode?: 'any' | 'all';
+  /** updated in the last N days */
+  days?: number;
+};
+
+/** The WHERE of a notes list (also the live count of a saved view). */
+export function noteConds(q: NoteFilter) {
+  const conds = [isNull(notes.deletedAt)];
+  if (q.folder) conds.push(eq(notes.folderId, q.folder));
+  if (q.shared)
+    conds.push(
+      q.shared.folderId
+        ? or(eq(notes.sharedFolderId, q.shared.id), eq(notes.folderId, q.shared.folderId))!
+        : eq(notes.sharedFolderId, q.shared.id),
+    );
+  if (q.fav) conds.push(eq(notes.favorite, true));
+  if (q.search) {
+    const like = `%${q.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    conds.push(
+      or(
+        ilike(notes.title, like),
+        ilike(notes.contentText, like),
+        sql`array_to_string(${notes.tags}, ' ') ilike ${like}`,
+      )!,
+    );
+  }
+  if (q.tags?.length) {
+    const arr = sql`array[${sql.join(
+      q.tags.map((t) => sql`${t}`),
+      sql`, `,
+    )}]::text[]`;
+    conds.push(q.tagMode === 'all' ? sql`${notes.tags} @> ${arr}` : sql`${notes.tags} && ${arr}`);
+  }
+  if (q.days) conds.push(sql`${notes.updatedAt} >= now() - make_interval(days => ${q.days})`);
+  return conds;
+}
+
 export async function listNotes(
   auth: AuthContext,
-  q: {
-    folder?: string;
-    fav?: boolean;
-    search?: string;
-    shared?: { id: string; folderId: string | null };
+  q: NoteFilter & {
     /** the next page starts after this note (cursor "updatedAt|id" from the previous page) */
     after?: string;
     limit?: number;
@@ -245,25 +286,7 @@ export async function listNotes(
 ) {
   // a shared folder's list runs with the share scope (the notes of every member)
   return (q.shared ? asSharer : asUser)(auth, async (tx) => {
-    const conds = [isNull(notes.deletedAt)];
-    if (q.folder) conds.push(eq(notes.folderId, q.folder));
-    if (q.shared)
-      conds.push(
-        q.shared.folderId
-          ? or(eq(notes.sharedFolderId, q.shared.id), eq(notes.folderId, q.shared.folderId))!
-          : eq(notes.sharedFolderId, q.shared.id),
-      );
-    if (q.fav) conds.push(eq(notes.favorite, true));
-    if (q.search) {
-      const like = `%${q.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-      conds.push(
-        or(
-          ilike(notes.title, like),
-          ilike(notes.contentText, like),
-          sql`array_to_string(${notes.tags}, ' ') ilike ${like}`,
-        )!,
-      );
-    }
+    const conds = noteConds(q);
     if (q.after) {
       const [at, id] = q.after.split('|');
       const d = new Date(at ?? '');
@@ -363,6 +386,12 @@ export async function updateNote(
   const ownerOnly =
     input.favorite !== undefined || input.folderId !== undefined || input.sharedFolderId !== undefined;
   return asSharer(auth, async (tx) => {
+    // history: the state before this save is kept when the last version is
+    // more than 10 minutes old (decided here, whatever the client sends)
+    if (input.title !== undefined || input.content !== undefined) {
+      const before = await lockNote(tx, id);
+      if (before) await snapshotIfDue(tx, auth, before);
+    }
     const r = await tx
       .update(notes)
       .set(set)

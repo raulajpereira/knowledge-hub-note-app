@@ -122,6 +122,32 @@ function useEditorTick(editor: Editor | null) {
 export type ToolId = 'H1' | 'B' | 'I' | '•' | '☐' | '</>' | '!' | '↗' | 'IMG';
 export const TOOLS: ToolId[] = ['H1', 'B', 'I', '•', '☐', '</>', '!', '↗', 'IMG'];
 
+/** The document nodes of Notes (also the read-only previews: version history). */
+export function docExtensions() {
+  return [
+    StarterKit.configure({
+      heading: { levels: [1, 2, 3, 4] },
+      codeBlock: false,
+      link: {
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        defaultProtocol: 'https',
+        protocols: ['http', 'https', 'mailto'],
+        isAllowedUri: (url) => /^(https?:|mailto:)/i.test(url) || /^\/app(\/|$|\?)/.test(url),
+        HTMLAttributes: { rel: 'noopener noreferrer', target: null },
+      },
+    }),
+    TaskList,
+    TaskItem.configure({ nested: true }),
+    NoteCodeBlock.configure({ defaultLanguage: null }),
+    NoteImage,
+    Callout,
+    LinkCard,
+    TableKit.configure({ table: { resizable: false } }),
+  ];
+}
+
 export function useNoteEditor({
   noteId,
   content,
@@ -219,29 +245,7 @@ export function useNoteEditor({
   const editor = useEditor(
     {
       immediatelyRender: false,
-      extensions: [
-        StarterKit.configure({
-          heading: { levels: [1, 2, 3, 4] },
-          codeBlock: false,
-          link: {
-            openOnClick: false,
-            autolink: true,
-            linkOnPaste: true,
-            defaultProtocol: 'https',
-            protocols: ['http', 'https', 'mailto'],
-            isAllowedUri: (url) => /^(https?:|mailto:)/i.test(url) || /^\/app(\/|$|\?)/.test(url),
-            HTMLAttributes: { rel: 'noopener noreferrer', target: null },
-          },
-        }),
-        TaskList,
-        TaskItem.configure({ nested: true }),
-        NoteCodeBlock.configure({ defaultLanguage: null }),
-        NoteImage,
-        Callout,
-        LinkCard,
-        TableKit.configure({ table: { resizable: false } }),
-        Placeholder.configure({ placeholder: placeholder ?? t('ne_ph') }),
-      ],
+      extensions: [...docExtensions(), Placeholder.configure({ placeholder: placeholder ?? t('ne_ph') })],
       content: editableDoc(content),
       editorProps: {
         attributes: { class: 'kh-ne', spellcheck: 'true', 'aria-label': label ?? t('nav_notes') },

@@ -3,8 +3,9 @@ import { body, handler, json } from '@/server/http';
 import { requireContent } from '@/server/content/guard';
 import { createNote, listNotes } from '@/server/content/notes';
 import { reachableFolder } from '@/server/share/folders';
+import { noteViewParams } from '@/server/content/views';
 
-// GET /notes?folder=&fav=1&q=&shared=  ·  POST /notes { folderId?, title?, sharedFolderId? }
+// GET /notes?folder=&fav=1&q=&shared=&tag=a&tag=b&tm=all&days=30  ·  POST /notes { folderId?, title?, sharedFolderId? }
 export const GET = handler(async (req) => {
   const auth = await requireContent('notes');
   const sp = new URL(req.url).searchParams;
@@ -19,6 +20,7 @@ export const GET = handler(async (req) => {
     folder: folder ? z.uuid().parse(folder) : undefined,
     fav: sp.get('fav') === '1',
     search: sp.get('q')?.trim().slice(0, 200) || undefined,
+    ...noteViewParams(sp),
     after: sp.get('after')?.slice(0, 80) || undefined,
     limit: PAGE + 1,
   });

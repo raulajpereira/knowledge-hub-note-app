@@ -16,6 +16,16 @@ import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
 import { useDraft } from '@/components/content/useDraft';
 import { sharedConfirm, useSharedFolders, type SharedFolder } from '@/components/share/useSharedFolders';
+import { saveView, ViewNameDialog } from '@/components/views/Views';
+import {
+  TASK_VIEW_DEFAULT,
+  TASK_VIEW_KEYS,
+  taskMatches,
+  taskViewFromParams,
+  taskViewParams,
+  type TaskViewFilter,
+} from '@/lib/views';
+import { TaskFiltersActive, TaskFiltersButton } from './TaskFilters';
 import './tasks.css';
 
 // ZNotes.dc.html `isTasks`: list (search, filters, types, sort) · detail.
@@ -558,18 +568,61 @@ export function TasksView() {
   const path = usePathname();
   const sp = useSearchParams();
   const { focus } = useShell();
-  const [filter, setFilter] = usePersistentState<'active' | 'done' | 'all'>('tasks.filter', 'active');
-  const [typeF, setTypeF] = usePersistentState<'all' | Type>('tasks.type', 'all');
+  const [savedFilter, setSavedFilter] = usePersistentState<'active' | 'done' | 'all'>(
+    'tasks.filter',
+    'active',
+  );
+  const [savedType, setSavedType] = usePersistentState<'all' | Type>('tasks.type', 'all');
   const [sort, setSort] = usePersistentState<'recent' | 'due' | 'prio'>('tasks.sort', 'recent');
   const [cols, setCols] = usePref<Cols>('cols', {});
   const [liveList, setLiveList] = useState<number | null>(null);
-  const [q, setQ] = useState('');
+  const [localQ, setLocalQ] = useState('');
   const [items, setItems] = useState<TaskItem[] | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const activeId = sp.get('t');
   // prototype tShF: the tasks of one shared folder (every member's)
   const sh = useSharedFolders('tasks');
-  const [shF0, setShF] = usePersistentState<string>('tasks.shf', '');
+  const [savedShF, setSavedShF] = usePersistentState<string>('tasks.shf', '');
+  // A saved view (or a shared link) carries the whole filter in the URL:
+  // ?view=&st=&ty=&pr=&pj=&due=&sh=&q= — while it is there it wins over the
+  // filters kept in prefs, and changing a filter edits the URL (leaving the view).
+  const urlKey = TASK_VIEW_KEYS.map((k) => sp.getAll(k).join(',')).join('|');
+  const urlT = useMemo(
+    () => taskViewFromParams(new URLSearchParams(sp.toString())),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- urlKey covers the view params
+    [urlKey],
+  );
+  const cur: TaskViewFilter = urlT ?? {
+    ...TASK_VIEW_DEFAULT,
+    status: savedFilter,
+    type: savedType,
+    shared: savedShF || null,
+    q: localQ,
+  };
+  const setT = (patch: Partial<TaskViewFilter>) => {
+    const n = { ...cur, ...patch };
+    const extras = n.priority.length > 0 || !!n.project || n.due !== 'any';
+    if (urlT || extras) {
+      const p = taskViewParams(n);
+      if (activeId) p.set('t', activeId);
+      router.replace(`${path}?${p}`, { scroll: false });
+      return;
+    }
+    if (patch.status) setSavedFilter(patch.status);
+    if (patch.type) setSavedType(patch.type);
+    if (patch.shared !== undefined) setSavedShF(patch.shared ?? '');
+    if (patch.q !== undefined) setLocalQ(patch.q);
+  };
+  const filter = cur.status;
+  const typeF = cur.type;
+  const q = cur.q;
+  const setFilter = (v: TaskViewFilter['status']) => setT({ status: v });
+  const setTypeF = (v: TaskViewFilter['type']) => setT({ type: v });
+  const setQ = (v: string) => setT({ q: v });
+  const setShF = (v: string) => setT({ shared: v || null });
+  const extra = { priority: cur.priority, project: cur.project, due: cur.due };
+  const [saveOpen, setSaveOpen] = useState(false);
+  const shF0 = cur.shared ?? '';
   const shF = shF0 && (!sh.loaded || sh.folders.some((f) => f.id === shF0)) ? shF0 : '';
   const curShared = sh.folders.find((f) => f.id === shF);
 
@@ -628,10 +681,12 @@ export function TasksView() {
         (x) =>
           (typeF === 'all' || x.type === typeF) &&
           (filter === 'all' || (filter === 'done' ? !!x.doneAt : !x.doneAt)) &&
+          taskMatches(x, extra, today) &&
           (!s || x.title.toLowerCase().includes(s) || x.notes.toLowerCase().includes(s)),
       )
       .sort((a, b) => Number(b.pinned) - Number(a.pinned) || cmp(a, b));
-  }, [all, filter, typeF, sort, q]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- extra is rebuilt from urlKey each render
+  }, [all, filter, typeF, sort, q, urlKey, today]);
 
   // Open the first task when none is selected (prototype tActive).
   useEffect(() => {
@@ -769,6 +824,7 @@ export function TasksView() {
                 aria-label={t('t_search')}
               />
             </label>
+            <TaskFiltersButton value={extra} onChange={(p) => setT(p)} onSave={() => setSaveOpen(true)} />
             <button
               type="button"
               className="kh-tk-new"
@@ -867,6 +923,36 @@ export function TasksView() {
               )}
             </div>
           </div>
+          <TaskFiltersActive value={extra} onChange={(p) => setT(p)} />
+          <ViewNameDialog
+            open={saveOpen}
+            title={t('vw_save')}
+            initial={[
+              t(filter === 'done' ? 't_done' : filter === 'all' ? 't_all' : 't_active'),
+              typeF !== 'all' ? t(typeF === 'tech' ? 'tk_tech' : 'tk_mgmt') : '',
+              q,
+            ]
+              .filter(Boolean)
+              .join(' · ')
+              .slice(0, 60)}
+            onClose={() => setSaveOpen(false)}
+            onSave={async (name) => {
+              const f = { ...cur, shared: shF || null, q: q.trim() };
+              try {
+                const v = await saveView('tasks', name, f);
+                setSaveOpen(false);
+                const p = taskViewParams(f, v.id);
+                if (activeId) p.set('t', activeId);
+                router.replace(`${path}?${p}`, { scroll: false });
+                toast({ message: t('vw_saved'), tone: 'success' });
+              } catch (e) {
+                toast({
+                  message: t(isApiFailure(e) && e.code === 'too_many_items' ? 'vw_tooMany' : 'ne_saveFail'),
+                  tone: 'error',
+                });
+              }
+            }}
+          />
           <div className="kh-tk-items">
             {list.map((x) => {
               const on = x.id === activeId;

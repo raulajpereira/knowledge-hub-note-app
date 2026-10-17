@@ -61,6 +61,18 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
     }
   }, []);
 
+  // ?account=export (the "export ready" email): opens Conta e Dados at the export
+  useEffect(() => {
+    const u = new URL(window.location.href);
+    if (!u.searchParams.has('account')) return;
+    const at = u.searchParams.get('account');
+    u.searchParams.delete('account');
+    window.history.replaceState(window.history.state, '', u.toString());
+    setAccOpen(true);
+    if (at === 'export')
+      setTimeout(() => document.getElementById('kh-acc-export')?.scrollIntoView({ block: 'center' }), 300);
+  }, []);
+
   const lock = useCallback(() => {
     setAccOpen(false);
     setAboutOpen(false);

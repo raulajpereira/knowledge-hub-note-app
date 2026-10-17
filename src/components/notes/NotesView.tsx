@@ -18,6 +18,10 @@ import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
 import { ColHandle } from '@/components/content/ColHandle';
 import { ChecklistBar, EditorContent, EditorToolbar, InsertBar, useNoteEditor } from './NoteEditor';
+import { NoteHistory } from './NoteHistory';
+import { NoteFiltersActive, NoteFiltersButton, type NoteExtra } from './NoteFilters';
+import { NOTE_VIEW_KEYS, noteViewFromParams, noteViewParams } from '@/lib/views';
+import { saveView, ViewNameDialog } from '@/components/views/Views';
 import { notesApi, type Folder, type FolderList, type Note, type NoteItem } from './notesApi';
 import './notes.css';
 
@@ -34,6 +38,8 @@ const P = {
   trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   x: '<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+  history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
+  filter: '<path d="M4 5h16l-6 8v5l-4 2v-7z"/>',
   share:
     '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4"/><path d="M8.2 13.2l7.6 4.4"/>',
 };
@@ -337,9 +343,14 @@ function NoteList({
   onOpen,
   onNew,
   onMore,
+  tools,
+  below,
 }: {
   title: string;
   items: NoteItem[];
+  /** filters button (next to "Nova nota") and the active filters (under the title) */
+  tools?: React.ReactNode;
+  below?: React.ReactNode;
   folders: Map<string, Folder>;
   /** shared folder names by id */
   shared: Map<string, string>;
@@ -364,6 +375,7 @@ function NoteList({
             {items.length === 1 && !onMore ? t('note1') : t('noteN')}
           </div>
         </div>
+        {tools}
         <button
           type="button"
           className="kh-nt-list__new"
@@ -374,6 +386,7 @@ function NoteList({
           <Svg d={P.plus} size={15} sw={2.4} />
         </button>
       </div>
+      {below}
       <div className="kh-nt-list__items">
         {items.map((n) => {
           const sf = n.sharedFolderId ? shared.get(n.sharedFolderId) : undefined;
@@ -482,10 +495,13 @@ function EditorCard({
   folder,
   onPatch,
   onDelete,
+  onHistory,
   readOnly,
   sharedBy,
 }: {
   note: Note;
+  /** opens "Histórico" (versions) */
+  onHistory: () => void;
   folder: { name: string; color: string };
   /** a note of a shared folder the caller can only read */
   readOnly: boolean;
@@ -531,6 +547,16 @@ function EditorCard({
           <span className="kh-nt-crumb__cur">{title || t('ne_untitled')}</span>
         </div>
         <div style={{ flex: 1 }} />
+        <button
+          type="button"
+          className="kh-nt-round"
+          style={{ color: 'rgba(255,248,240,.75)' }}
+          title={t('hist_title')}
+          aria-label={t('hist_title')}
+          onClick={onHistory}
+        >
+          <Svg d={P.history} size={16} sw={2} />
+        </button>
         {readOnly ? (
           <span className="kh-nt-ro">{t('sh_readOnly')}</span>
         ) : (
@@ -685,7 +711,53 @@ export function NotesView() {
   const path = usePathname();
   const sp = useSearchParams();
   const { me, focus, query } = useShell();
-  const [filter, setFilter] = usePersistentState<string>('notes.filter', 'all');
+  const [savedFilter, setSavedFilter] = usePersistentState<string>('notes.filter', 'all');
+  // A saved view (or a shared link) puts its filters in the URL: ?view=&f=&tag=&tm=&days=&q=
+  const urlKey = NOTE_VIEW_KEYS.map((k) => sp.getAll(k).join(',')).join('|');
+  const urlF = useMemo(
+    () => noteViewFromParams(new URLSearchParams(sp.toString())),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- urlKey covers the view params
+    [urlKey],
+  );
+  const filter = sp.has('f') && urlF ? urlF.folder : sp.has('view') ? 'all' : savedFilter;
+  const extra = useMemo<NoteExtra>(
+    () =>
+      urlF
+        ? { tags: urlF.tags, tagMode: urlF.tagMode, days: urlF.days, q: urlF.q }
+        : { tags: [], tagMode: 'any', days: null, q: '' },
+    [urlF],
+  );
+  const replaceParams = useCallback(
+    (mut: (p: URLSearchParams) => void) => {
+      const next = new URLSearchParams(sp.toString());
+      mut(next);
+      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+    },
+    [path, router, sp],
+  );
+  // choosing a notebook leaves the saved view (its other filters stay)
+  const setFilter = useCallback(
+    (x: string) => {
+      setSavedFilter(x);
+      if (sp.has('f') || sp.has('view'))
+        replaceParams((p) => {
+          p.delete('f');
+          p.delete('view');
+        });
+    },
+    [setSavedFilter, sp, replaceParams],
+  );
+  const setExtra = (patch: Partial<NoteExtra>) => {
+    const n = { ...extra, ...patch };
+    replaceParams((p) => {
+      for (const k of ['tag', 'tm', 'days', 'q', 'view']) p.delete(k);
+      for (const tg of n.tags) p.append('tag', tg);
+      if (n.tags.length > 1 && n.tagMode === 'all') p.set('tm', 'all');
+      if (n.days) p.set('days', String(n.days));
+      if (n.q) p.set('q', n.q);
+    });
+  };
+  const [saveOpen, setSaveOpen] = useState(false);
   const [cols, setCols] = usePref<Cols>('cols', {});
   const [liveList, setLiveList] = useState<number | null>(null);
   const [liveInsp, setLiveInsp] = useState<number | null>(null);
@@ -695,6 +767,9 @@ export function NotesView() {
   const [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState<Note | null>(null);
+  const [histOpen, setHistOpen] = useState(false);
+  // bumped by a restore: the editor is rebuilt with the restored document
+  const [rev, setRev] = useState(0);
   const activeId = sp.get('n');
 
   const sh = useSharedFolders('notes');
@@ -714,7 +789,10 @@ export function NotesView() {
     folder: !shId && validFilter !== 'all' && validFilter !== 'fav' ? validFilter : undefined,
     shared: shId,
     fav: validFilter === 'fav',
-    q: query.trim() || undefined,
+    q: query.trim() || extra.q.trim() || undefined,
+    tags: extra.tags,
+    tm: extra.tagMode,
+    days: extra.days,
   });
   // "Carregar mais": the next page of the same list; dropped if the filter changed meanwhile
   const moreBusy = useRef(false);
@@ -759,7 +837,7 @@ export function NotesView() {
   }, [loadFolders]);
 
   // List for the current filter + header search.
-  const listKey = `${validFilter}|${query.trim()}`;
+  const listKey = `${validFilter}|${query.trim()}|${extra.tags.join('\n')}|${extra.tagMode}|${extra.days}|${extra.q.trim()}`;
   const listKeyRef = useRef(listKey);
   useEffect(() => {
     listKeyRef.current = listKey;
@@ -779,13 +857,13 @@ export function NotesView() {
           })
           .catch(() => live && setLoading(false));
       },
-      query ? 200 : 0,
+      query || extra.q ? 200 : 0,
     );
     return () => {
       live = false;
       clearTimeout(h);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- listKey covers filter + query
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- listKey covers filter + query + view filters
   }, [listKey]);
 
   // Open the first note when none is selected (prototype: NOTES[0]).
@@ -1058,15 +1136,49 @@ export function NotesView() {
           onOpen={open}
           onNew={() => void newNote(validFilter !== 'all' && validFilter !== 'fav' ? validFilter : null)}
           onMore={next ? () => void loadMore() : undefined}
+          tools={<NoteFiltersButton value={extra} onChange={setExtra} onSave={() => setSaveOpen(true)} />}
+          below={<NoteFiltersActive value={extra} onChange={setExtra} />}
+        />
+        <ViewNameDialog
+          open={saveOpen}
+          title={t('vw_save')}
+          initial={[listTitle, ...extra.tags.map((x) => `#${x}`)].filter(Boolean).join(' ').slice(0, 60)}
+          onClose={() => setSaveOpen(false)}
+          onSave={async (name) => {
+            const f = {
+              folder: validFilter,
+              tags: extra.tags,
+              tagMode: extra.tagMode,
+              q: (query.trim() || extra.q.trim()).slice(0, 200),
+              days: extra.days,
+            };
+            try {
+              const v = await saveView('notes', name, f);
+              setSaveOpen(false);
+              const p = noteViewParams(f, v.id);
+              if (activeId) p.set('n', activeId);
+              router.replace(`${path}?${p}`, { scroll: false });
+              toast({ message: t('vw_saved'), tone: 'success' });
+            } catch (e) {
+              toast({
+                message: t(isApiFailure(e) && e.code === 'too_many_items' ? 'vw_tooMany' : 'ne_saveFail'),
+                tone: 'error',
+              });
+            }
+          }}
         />
       </div>
       {note ? (
         <EditorCard
-          key={note.id}
+          key={`${note.id}:${rev}`}
           note={note}
           folder={curFolder}
           onPatch={patch}
           onDelete={() => void trashNote()}
+          onHistory={() => {
+            // the history starts from what is saved: send pending edits first
+            void flush().then(() => setHistOpen(true));
+          }}
           readOnly={readOnly}
           sharedBy={note.mine ? null : (noteShared?.owner?.name ?? '')}
         />
@@ -1126,6 +1238,22 @@ export function NotesView() {
             />
           )}
         </>
+      )}
+      {histOpen && note && (
+        <NoteHistory
+          note={note}
+          canEdit={!readOnly}
+          onClose={() => setHistOpen(false)}
+          onRestored={(n) => {
+            pending.current = null;
+            setHistOpen(false);
+            setNote(n);
+            setRev((r) => r + 1);
+            setItems((all) =>
+              all.map((x) => (x.id === n.id ? { ...x, title: n.title, updatedAt: n.updatedAt } : x)),
+            );
+          }}
+        />
       )}
       {fs && (
         <FolderShareDialog
