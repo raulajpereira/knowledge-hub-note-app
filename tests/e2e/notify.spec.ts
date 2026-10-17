@@ -6,7 +6,13 @@ import path from 'node:path';
 // Header bell: a task due today → the notification job → counter on the bell,
 // popup, open the task (marks it read), "Marcar todas como lidas"; and the
 // Notificações tab in Definições.
-test.use({ locale: 'pt-PT', timezoneId: 'Europe/Lisbon', viewport: { width: 1440, height: 900 } });
+// its own address for the registration limit (10 an hour per IP)
+test.use({
+  locale: 'pt-PT',
+  timezoneId: 'Europe/Lisbon',
+  viewport: { width: 1440, height: 900 },
+  extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.162' },
+});
 test.describe.configure({ mode: 'serial' });
 
 const outbox = process.env.MAIL_OUTBOX_DIR;
@@ -146,7 +152,9 @@ test('Definições › Notificações and the task reminder', async ({ page }) =
   await page.goto('app/tasks');
   await page.getByText('Rever proposta').click();
   const rem = page.getByTestId('task-remind');
+  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && /\/tasks\//.test(r.url()));
   await rem.selectOption('day_before');
+  await saved;
   await page.reload();
   await expect(page.getByTestId('task-remind')).toHaveValue('day_before');
   await page.getByTestId('task-remind').selectOption('custom');

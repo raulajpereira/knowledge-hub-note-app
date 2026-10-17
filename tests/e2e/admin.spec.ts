@@ -64,6 +64,7 @@ async function verifyLink(who = email): Promise<string> {
 }
 
 test('console: 2FA gate, overview, generate and pause a code, audit and CSV', async ({ page }) => {
+  test.setTimeout(75_000); // long flow (2FA, codes, audit) and the full suite runs in parallel
   const code = /KH-LIC-\d{6}/.exec(cli('codes:create', '--type', 'license', '--plan', 'PRO'))![0];
   await page.goto('register');
   await page.getByLabel('Nome').fill('Console Tester');

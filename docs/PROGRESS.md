@@ -404,6 +404,18 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
   - *API Playground*: pastas reordenáveis e dentro de outras pastas (arrastar: em cima/baixo muda a ordem, no meio põe lá dentro; zona "Mover para o topo"; "Mover pasta…" com Subir/Descer e escolha da pasta; Alt+↑/↓); pedidos arrastam-se para qualquer pasta; apagar uma pasta com subpastas sobe-as e aos pedidos para a pasta-mãe (com aviso). A base impede ciclos e pastas de outro utilizador (trigger + lock). O cursor do URL já não salta ao escrever/apagar.
   - Screenshots `correcoes/43–47`.
 
+- **Lote C** (migrações `0041`–`0044`):
+  - *Notificações*: sino do cabeçalho com contador e popup (tarefas para hoje e em atraso, lembretes "Lembrar-me" nas tarefas, reuniões de hoje com antecedência configurável, convites de partilha e aceitações, notas/tarefas criadas por email; tarefas de projeto também); marcar como lidas; separador **Definições › Notificações** (tipos, antecedência das reuniões, emails, resumo diário por email à hora escolhida no fuso do browser). Gerado por um job do worker a cada minuto, sem duplicados.
+  - *Email para a app*: cada pessoa tem um endereço `entrada+código@…` (Definições › Notificações); o worker lê a caixa da Hostinger por IMAP e cria uma nota (com as imagens) ou tarefa; só aceita remetentes autorizados e rejeita SPF/DKIM/DMARC falhados; 50/dia. Configuração `INBOUND_IMAP_*` (DEPLOY §5d).
+  - *Exportar os meus dados* (Conta e Dados): ZIP com notas em Markdown e imagens, tarefas CSV/JSON, reuniões, voz, artefactos, código, ficheiros, emails, problemas, API Playground (sem credenciais), quadros, SAP criado pela pessoa; sem o cofre; feito no worker, pronto por 7 dias, 3 por dia.
+  - *Histórico das notas*: versão guardada no servidor no máximo a cada 10 min de edição (50 + a primeira), pré-visualizar e restaurar; membros com edição numa pasta partilhada também restauram.
+  - *Vistas guardadas*: filtros de Notas (pasta, etiquetas, texto, últimos N dias) e Tarefas (estado, tipo, prioridade, projeto, prazo relativo) guardados como vistas na barra lateral, com contagem; filtros no URL.
+  - *Tema claro / escuro / seguir o sistema*, *página inicial* à escolha (Início, última página ou um módulo), *densidade das listas* (confortável/compacta) e *cor de cada etiqueta* escolhida na página Etiquetas — em Definições › Aparência. Cores da app passaram a tokens (`scripts/theme-tokens.mjs`).
+  - *Pesquisa semântica* com modelo local gratuito (multilingual-e5-small) no worker + pgvector; o assistente IA combina palavras e significado; a lista de Notas mostra resultados "Semântica". *OCR* gratuito (tesseract.js por+eng) em imagens das notas/reuniões, anexos de email e imagens/PDF dos Ficheiros, pesquisável. Postgres passa a `pgvector/pgvector:pg16` (DEPLOY §6c).
+  - *SAP*: módulo **Notas SAP** (número, versão, componente, categoria, prioridade, validade, tipo de implementação, pré-requisitos, estado por sistema com data e ordem, matriz nota × sistema, importar números, CSV); **evidências** por passo nos testes (colar/arrastar, lightbox) e **relatório de testes** imprimível para PDF; **mapa da paisagem** (DEV → QAS → PRD com ordens à espera, exporta SVG/PNG); **cutover com dependências**, bloqueios, caminho crítico e cronograma.
+  - Correção: o painel das Tarefas só mostra a tarefa selecionada (antes, uma alteração rápida podia ir para a tarefa anterior enquanto a nova carregava).
+  - Screenshots `correcoes/48–62`.
+
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
 - Opcional: chaves Cloudflare Turnstile e `ADMIN_IP_ALLOWLIST` no `.env`.
@@ -411,6 +423,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups adiados por decisão do utilizador (D17).
 - Caixa SMTP da Hostinger para envio (`no-reply@knowledge-hub.cloud`).
+- Caixa `entrada@knowledge-hub.cloud` na Hostinger + `INBOUND_IMAP_*` no `.env` para o Email para a app (DEPLOY §5d); confirmar se `entrada+x@` chega (senão, apanha-tudo).
 - Monitor externo grátis para `/api/health?strict=1` (UptimeRobot ou semelhante) — `DEPLOY.md §6b`.
 
 ## Decisões tomadas
@@ -460,6 +473,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D44 | Visão Geral da consola sem o gráfico de 12 meses nem a variação do protótipo (eram inventados): só MRR e ARR atuais | utilizador |
 | D45 | Revogar código só impede novos registos com ele; quem já entrou mantém o acesso e nada é apagado (revisto no lote B; antes cortava o acesso e apagava aos 30 dias) | utilizador |
 | D61 | Pastas partilhadas: convite a quem já tem conta tem de ser aceite; o dono distingue membros (com conta) de externos (convite por email) | utilizador |
+| D64 | Lote C: notificações em tabela própria (worker precisa do fuso e hora do resumo); email de entrada por IMAP numa caixa Hostinger com endereço por pessoa; exportação sem Lixo nem cofre; vistas com prazo relativo; tema/densidade/página inicial/cores de etiquetas em user_prefs; pesquisa semântica com modelo local + pgvector; OCR com tesseract.js | utilizador + Claude |
 | D63 | Registos Reuniões: a pergunta para criar tarefas das coisas a fazer aparece ao sair do registo; API Playground: pastas com subpastas e ordem | utilizador |
 | D62 | Um cartão por página com divisórias finas, como Recursos; só o menu lateral fica separado | utilizador |
 | D46 | Papel Suporte: vê clientes e utilizadores (dados comerciais só leitura), repõe password, reenvia convite, pausa/reativa utilizadores, trata pedidos e vê a auditoria; papéis verificados no servidor | utilizador |

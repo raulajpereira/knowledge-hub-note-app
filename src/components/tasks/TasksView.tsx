@@ -1059,7 +1059,8 @@ export function TasksView() {
         </section>
       )}
       <section className="kh-tk-pane">
-        {task ? (
+        {/* only the task the URL points at: while another one loads, edits must not land on the previous one */}
+        {task && task.id === activeId ? (
           <Detail
             key={task.id}
             task={task}

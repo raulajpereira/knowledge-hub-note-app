@@ -6,7 +6,12 @@ import { paletteColors } from '@/lib/tags';
 
 // Definições › Aparência: light theme (token + persistence), list density,
 // start page; Tags page: chosen tag colour shown on a notes card.
-test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 } });
+// its own address for the registration limit (10 an hour per IP)
+test.use({
+  locale: 'pt-PT',
+  viewport: { width: 1440, height: 900 },
+  extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.161' },
+});
 test.describe.configure({ mode: 'serial' });
 
 const outbox = process.env.MAIL_OUTBOX_DIR;

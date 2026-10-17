@@ -5,7 +5,12 @@ import path from 'node:path';
 
 // Batch C "data": "Exportar os meus dados" (request → ready → download; needs
 // the worker), note history (restore) and saved views in the sidebar.
-test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 } });
+// its own address for the registration limit (10 an hour per IP)
+test.use({
+  locale: 'pt-PT',
+  viewport: { width: 1440, height: 900 },
+  extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.160' },
+});
 test.describe.configure({ mode: 'serial' });
 
 const outbox = process.env.MAIL_OUTBOX_DIR;

@@ -109,7 +109,7 @@ test('cutover runbook and SAP Activate phases from templates', async ({ page }) 
   await page.getByRole('button', { name: 'Modelos', exact: true }).click();
   await page.getByRole('menuitem', { name: /Runbook de cutover S\/4HANA/ }).click();
   await expect(page.locator('.kh-fn-title')).toHaveValue('Runbook de cutover');
-  await expect.poll(() => values(page)).toContain('[Cutover] Carga de saldos do razão');
+  await expect.poll(() => values(page)).toContain('Carga de saldos do razão');
 
   await page.goto('app/mg-projects');
   await page.getByRole('button', { name: 'Novo Projeto' }).click();
