@@ -1,0 +1,296 @@
+
+> knowledgehub@2.0.0-alpha.0 build
+> next build && npm run build:worker && npm run build:migrate && npm run build:seed && npm run build:cli
+
+   ▲ Next.js 15.5.27
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 48s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/104) ...
+   Generating static pages (26/104) 
+   Generating static pages (52/104) 
+   Generating static pages (78/104) 
+ ✓ Generating static pages (104/104)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                           Size  First Load JS
+┌ ƒ /                                              5.84 kB         181 kB
+├ ƒ /_not-found                                       1 kB         104 kB
+├ ƒ /admin                                         27.4 kB         236 kB
+├ ƒ /api/admin/v1/admins                             540 B         103 kB
+├ ƒ /api/admin/v1/admins/[id]                        540 B         103 kB
+├ ƒ /api/admin/v1/audit                              540 B         103 kB
+├ ƒ /api/admin/v1/audit/actors                       540 B         103 kB
+├ ƒ /api/admin/v1/clients                            540 B         103 kB
+├ ƒ /api/admin/v1/clients/[id]                       540 B         103 kB
+├ ƒ /api/admin/v1/clients/[id]/invite                540 B         103 kB
+├ ƒ /api/admin/v1/codes                              540 B         103 kB
+├ ƒ /api/admin/v1/codes/[code]                       540 B         103 kB
+├ ƒ /api/admin/v1/codes/[code]/[op]                  540 B         103 kB
+├ ƒ /api/admin/v1/me                                 540 B         103 kB
+├ ƒ /api/admin/v1/overview                           540 B         103 kB
+├ ƒ /api/admin/v1/plans                              540 B         103 kB
+├ ƒ /api/admin/v1/plans/[code]                       540 B         103 kB
+├ ƒ /api/admin/v1/plans/[code]/limits                540 B         103 kB
+├ ƒ /api/admin/v1/plans/[code]/modules               540 B         103 kB
+├ ƒ /api/admin/v1/plans/custom                       540 B         103 kB
+├ ƒ /api/admin/v1/requests                           540 B         103 kB
+├ ƒ /api/admin/v1/requests/[id]/[op]                 540 B         103 kB
+├ ƒ /api/admin/v1/tenants/[id]/action                540 B         103 kB
+├ ƒ /api/admin/v1/users/[id]                         540 B         103 kB
+├ ƒ /api/admin/v1/users/[id]/[op]                    540 B         103 kB
+├ ƒ /api/admin/v1/users/[id]/files                   540 B         103 kB
+├ ƒ /api/health                                      540 B         103 kB
+├ ƒ /api/v1/ai/action                                540 B         103 kB
+├ ƒ /api/v1/ai/chat                                  540 B         103 kB
+├ ƒ /api/v1/ai/chats                                 540 B         103 kB
+├ ƒ /api/v1/ai/chats/[id]                            540 B         103 kB
+├ ƒ /api/v1/ai/models                                540 B         103 kB
+├ ƒ /api/v1/ai/settings                              540 B         103 kB
+├ ƒ /api/v1/ai/voice/[id]                            540 B         103 kB
+├ ƒ /api/v1/api-envs                                 540 B         103 kB
+├ ƒ /api/v1/api-envs/[id]                            540 B         103 kB
+├ ƒ /api/v1/api-requests                             540 B         103 kB
+├ ƒ /api/v1/api-requests/[id]                        540 B         103 kB
+├ ƒ /api/v1/api-requests/[id]/duplicate              540 B         103 kB
+├ ƒ /api/v1/api-requests/folders                     540 B         103 kB
+├ ƒ /api/v1/api-requests/folders/[id]                540 B         103 kB
+├ ƒ /api/v1/api-requests/send                        540 B         103 kB
+├ ƒ /api/v1/artifacts                                540 B         103 kB
+├ ƒ /api/v1/artifacts/[id]                           540 B         103 kB
+├ ƒ /api/v1/artifacts/[id]/html                      540 B         103 kB
+├ ƒ /api/v1/artifacts/[id]/versions/[vid]/restore    540 B         103 kB
+├ ƒ /api/v1/artifacts/[id]/view                      540 B         103 kB
+├ ƒ /api/v1/artifacts/folders                        540 B         103 kB
+├ ƒ /api/v1/artifacts/folders/[id]                   540 B         103 kB
+├ ƒ /api/v1/auth/2fa/disable                         540 B         103 kB
+├ ƒ /api/v1/auth/2fa/enable                          540 B         103 kB
+├ ƒ /api/v1/auth/2fa/setup                           540 B         103 kB
+├ ƒ /api/v1/auth/forgot                              540 B         103 kB
+├ ƒ /api/v1/auth/login                               540 B         103 kB
+├ ƒ /api/v1/auth/login/2fa                           540 B         103 kB
+├ ƒ /api/v1/auth/logout                              540 B         103 kB
+├ ƒ /api/v1/auth/reauth                              540 B         103 kB
+├ ƒ /api/v1/auth/register                            540 B         103 kB
+├ ƒ /api/v1/auth/reset                               540 B         103 kB
+├ ƒ /api/v1/auth/verify-email                        540 B         103 kB
+├ ƒ /api/v1/drive                                    540 B         103 kB
+├ ƒ /api/v1/drive/[id]                               540 B         103 kB
+├ ƒ /api/v1/drive/[id]/raw                           540 B         103 kB
+├ ƒ /api/v1/drive/folders                            540 B         103 kB
+├ ƒ /api/v1/drive/folders/[id]                       540 B         103 kB
+├ ƒ /api/v1/drive/uploads                            540 B         103 kB
+├ ƒ /api/v1/drive/uploads/[id]                       540 B         103 kB
+├ ƒ /api/v1/drive/uploads/[id]/[n]                   540 B         103 kB
+├ ƒ /api/v1/emails                                   540 B         103 kB
+├ ƒ /api/v1/emails/[id]                              540 B         103 kB
+├ ƒ /api/v1/emails/[id]/attachments/[attId]          540 B         103 kB
+├ ƒ /api/v1/emails/[id]/original                     540 B         103 kB
+├ ƒ /api/v1/emails/[id]/to-task                      540 B         103 kB
+├ ƒ /api/v1/emails/folders                           540 B         103 kB
+├ ƒ /api/v1/emails/folders/[id]                      540 B         103 kB
+├ ƒ /api/v1/emails/import                            540 B         103 kB
+├ ƒ /api/v1/favicon                                  540 B         103 kB
+├ ƒ /api/v1/files/[id]                               540 B         103 kB
+├ ƒ /api/v1/folders                                  540 B         103 kB
+├ ƒ /api/v1/folders/[id]                             540 B         103 kB
+├ ƒ /api/v1/folders/[id]/duplicate                   540 B         103 kB
+├ ƒ /api/v1/home                                     540 B         103 kB
+├ ƒ /api/v1/issues                                   540 B         103 kB
+├ ƒ /api/v1/issues/[id]                              540 B         103 kB
+├ ƒ /api/v1/links                                    540 B         103 kB
+├ ƒ /api/v1/links/candidates                         540 B         103 kB
+├ ƒ /api/v1/me                                       540 B         103 kB
+├ ƒ /api/v1/me/assets/[kind]                         540 B         103 kB
+├ ƒ /api/v1/me/counts                                540 B         103 kB
+├ ƒ /api/v1/me/export                                540 B         103 kB
+├ ƒ /api/v1/me/password                              540 B         103 kB
+├ ƒ /api/v1/me/prefs                                 540 B         103 kB
+├ ƒ /api/v1/me/sessions                              540 B         103 kB
+├ ƒ /api/v1/me/sessions/[id]                         540 B         103 kB
+├ ƒ /api/v1/meetings                                 540 B         103 kB
+├ ƒ /api/v1/meetings/[id]                            540 B         103 kB
+├ ƒ /api/v1/meetings/[id]/attachments                540 B         103 kB
+├ ƒ /api/v1/meetings/files/[id]                      540 B         103 kB
+├ ƒ /api/v1/meetings/folders                         540 B         103 kB
+├ ƒ /api/v1/meetings/folders/[id]                    540 B         103 kB
+├ ƒ /api/v1/mg                                       540 B         103 kB
+├ ƒ /api/v1/mg/ops                                   540 B         103 kB
+├ ƒ /api/v1/mg/options                               540 B         103 kB
+├ ƒ /api/v1/mg/people/[id]/photo                     540 B         103 kB
+├ ƒ /api/v1/mg/sample                                540 B         103 kB
+├ ƒ /api/v1/news/sap                                 540 B         103 kB
+├ ƒ /api/v1/news/saved                               540 B         103 kB
+├ ƒ /api/v1/news/ticker                              540 B         103 kB
+├ ƒ /api/v1/notes                                    540 B         103 kB
+├ ƒ /api/v1/notes/[id]                               540 B         103 kB
+├ ƒ /api/v1/notes/[id]/attachments                   540 B         103 kB
+├ ƒ /api/v1/notes/[id]/duplicate                     540 B         103 kB
+├ ƒ /api/v1/notes/[id]/move                          540 B         103 kB
+├ ƒ /api/v1/plan-requests                            540 B         103 kB
+├ ƒ /api/v1/plans                                    540 B         103 kB
+├ ƒ /api/v1/public/[token]/files/[id]                540 B         103 kB
+├ ƒ /api/v1/public/[token]/raw                       540 B         103 kB
+├ ƒ /api/v1/public/[token]/unlock                    540 B         103 kB
+├ ƒ /api/v1/public/[token]/view                      540 B         103 kB
+├ ƒ /api/v1/sap/clients                              540 B         103 kB
+├ ƒ /api/v1/sap/functional                           540 B         103 kB
+├ ƒ /api/v1/sap/functional/[id]                      540 B         103 kB
+├ ƒ /api/v1/sap/functional/[id]/evidence             540 B         103 kB
+├ ƒ /api/v1/sap/functional/evidence                  540 B         103 kB
+├ ƒ /api/v1/sap/functional/evidence/[id]             540 B         103 kB
+├ ƒ /api/v1/sap/notes                                540 B         103 kB
+├ ƒ /api/v1/sap/notes/[id]                           540 B         103 kB
+├ ƒ /api/v1/sap/notes/[id]/systems/[systemId]        540 B         103 kB
+├ ƒ /api/v1/sap/notes/import                         540 B         103 kB
+├ ƒ /api/v1/sap/objects                              540 B         103 kB
+├ ƒ /api/v1/sap/objects/[id]                         540 B         103 kB
+├ ƒ /api/v1/sap/objects/[id]/duplicate               540 B         103 kB
+├ ƒ /api/v1/sap/systems                              540 B         103 kB
+├ ƒ /api/v1/sap/systems/[id]                         540 B         103 kB
+├ ƒ /api/v1/sap/systems/[id]/fav                     540 B         103 kB
+├ ƒ /api/v1/sap/tcodes                               540 B         103 kB
+├ ƒ /api/v1/sap/tcodes/[id]                          540 B         103 kB
+├ ƒ /api/v1/sap/tcodes/[id]/touch                    540 B         103 kB
+├ ƒ /api/v1/sap/transports                           540 B         103 kB
+├ ƒ /api/v1/sap/transports/[id]                      540 B         103 kB
+├ ƒ /api/v1/share/folders                            540 B         103 kB
+├ ƒ /api/v1/share/folders/[id]                       540 B         103 kB
+├ ƒ /api/v1/share/folders/[id]/members               540 B         103 kB
+├ ƒ /api/v1/share/invites                            540 B         103 kB
+├ ƒ /api/v1/share/invites/[id]                       540 B         103 kB
+├ ƒ /api/v1/share/links                              540 B         103 kB
+├ ƒ /api/v1/share/links/[id]                         540 B         103 kB
+├ ƒ /api/v1/share/members/[id]                       540 B         103 kB
+├ ƒ /api/v1/share/people                             540 B         103 kB
+├ ƒ /api/v1/share/suggest                            540 B         103 kB
+├ ƒ /api/v1/snippets                                 540 B         103 kB
+├ ƒ /api/v1/snippets/[id]                            540 B         103 kB
+├ ƒ /api/v1/tags                                     540 B         103 kB
+├ ƒ /api/v1/tags/all                                 540 B         103 kB
+├ ƒ /api/v1/tasks                                    540 B         103 kB
+├ ƒ /api/v1/tasks/[id]                               540 B         103 kB
+├ ƒ /api/v1/tasks/[id]/subtasks                      540 B         103 kB
+├ ƒ /api/v1/tasks/[id]/subtasks/[subId]              540 B         103 kB
+├ ƒ /api/v1/templates                                540 B         103 kB
+├ ƒ /api/v1/templates/[id]                           540 B         103 kB
+├ ƒ /api/v1/trash                                    540 B         103 kB
+├ ƒ /api/v1/trash/purge                              540 B         103 kB
+├ ƒ /api/v1/trash/restore                            540 B         103 kB
+├ ƒ /api/v1/vault                                    540 B         103 kB
+├ ƒ /api/v1/vault/items                              540 B         103 kB
+├ ƒ /api/v1/vault/items/[id]                         540 B         103 kB
+├ ƒ /api/v1/vault/keys                               540 B         103 kB
+├ ƒ /api/v1/vault/meta                               540 B         103 kB
+├ ƒ /api/v1/vault/setup                              540 B         103 kB
+├ ƒ /api/v1/voice                                    540 B         103 kB
+├ ƒ /api/v1/voice/[id]                               540 B         103 kB
+├ ƒ /api/v1/voice/[id]/audio                         540 B         103 kB
+├ ƒ /api/v1/weather                                  540 B         103 kB
+├ ƒ /api/v1/weather/geocode                          540 B         103 kB
+├ ƒ /api/v1/whiteboards                              540 B         103 kB
+├ ƒ /api/v1/whiteboards/[id]                         540 B         103 kB
+├ ƒ /api/v1/whiteboards/[id]/duplicate               540 B         103 kB
+├ ƒ /api/v1/whiteboards/[id]/images                  540 B         103 kB
+├ ƒ /api/v1/whiteboards/images/[id]                  540 B         103 kB
+├ ƒ /api/v1/whiteboards/items                        540 B         103 kB
+├ ƒ /api/v1/whiteboards/peek                         540 B         103 kB
+├ ƒ /app                                           18.6 kB         229 kB
+├ ƒ /app/[view]                                      540 B         103 kB
+├ ƒ /app/api                                       11.8 kB         224 kB
+├ ƒ /app/artifacts                                  5.9 kB         219 kB
+├ ƒ /app/calendar                                   5.5 kB         178 kB
+├ ƒ /app/codelib                                   11.5 kB         229 kB
+├ ƒ /app/devlib                                     7.3 kB         219 kB
+├ ƒ /app/emails                                    7.44 kB         208 kB
+├ ƒ /app/files                                     7.75 kB         226 kB
+├ ƒ /app/fn-cut                                      148 B         227 kB
+├ ƒ /app/fn-mig                                      147 B         227 kB
+├ ƒ /app/fn-proc                                     147 B         227 kB
+├ ƒ /app/fn-test                                     148 B         227 kB
+├ ƒ /app/issues                                    5.18 kB         183 kB
+├ ƒ /app/meetings                                  9.71 kB         395 kB
+├ ƒ /app/mg-alloc                                    148 B         265 kB
+├ ƒ /app/mg-clients                                  147 B         265 kB
+├ ƒ /app/mg-dash                                     148 B         265 kB
+├ ƒ /app/mg-overview                                 147 B         265 kB
+├ ƒ /app/mg-people                                   148 B         265 kB
+├ ƒ /app/mg-projects                                 146 B         265 kB
+├ ƒ /app/mg-skills                                   147 B         265 kB
+├ ƒ /app/mg-staff                                    148 B         265 kB
+├ ƒ /app/mg-teams                                    147 B         265 kB
+├ ƒ /app/mg-time                                     147 B         265 kB
+├ ƒ /app/news                                      4.54 kB         177 kB
+├ ƒ /app/notes                                        7 kB         385 kB
+├ ƒ /app/passwords                                   23 kB         195 kB
+├ ƒ /app/pricing                                      4 kB         176 kB
+├ ƒ /app/sapnotes                                  10.8 kB         382 kB
+├ ƒ /app/settings                                  13.7 kB         235 kB
+├ ƒ /app/systems                                    9.6 kB         182 kB
+├ ƒ /app/tags                                      1.49 kB         173 kB
+├ ƒ /app/tasks                                     7.96 kB         214 kB
+├ ƒ /app/tcodes                                      283 B         178 kB
+├ ƒ /app/transports                                   8 kB         180 kB
+├ ƒ /app/trash                                     5.69 kB         178 kB
+├ ƒ /app/voice                                     8.01 kB         214 kB
+├ ƒ /app/whiteboard                                17.4 kB         224 kB
+├ ○ /apple-icon.png                                    0 B            0 B
+├ ○ /icon.svg                                          0 B            0 B
+├ ƒ /login                                         3.98 kB         179 kB
+├ ○ /manifest.webmanifest                            540 B         103 kB
+├ ƒ /p/[token]                                     1.41 kB         104 kB
+├ ƒ /privacy                                       1.62 kB         177 kB
+├ ƒ /register                                      3.82 kB         179 kB
+├ ƒ /report/tests                                    316 B         103 kB
+├ ƒ /reset-password                                  172 B         179 kB
+├ ○ /robots.txt                                      540 B         103 kB
+├ ƒ /terms                                         1.62 kB         177 kB
+├ ƒ /ui                                              167 B         106 kB
+├ ƒ /ui/[slug]                                     7.84 kB         180 kB
+└ ƒ /verify-email                                    645 B         180 kB
++ First Load JS shared by all                       103 kB
+  ├ chunks/1255-ae8f8bad61118f22.js                46.2 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js            54.2 kB
+  └ other shared chunks (total)                    2.27 kB
+
+
+ƒ Middleware                                       34.4 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> knowledgehub@2.0.0-alpha.0 build:worker
+> esbuild src/worker/index.ts --bundle --platform=node --target=node22 --format=esm --packages=external --alias:server-only=./src/lib/server-only-shim.ts --outfile=dist/worker.mjs
+
+
+  dist/worker.mjs  163.2kb
+
+⚡ Done in 73ms
+
+> knowledgehub@2.0.0-alpha.0 build:migrate
+> esbuild src/db/migrate.ts --bundle --platform=node --target=node22 --format=esm --packages=external --alias:server-only=./src/lib/server-only-shim.ts --outfile=dist/migrate.mjs
+
+
+  dist/migrate.mjs  576b 
+
+⚡ Done in 6ms
+
+> knowledgehub@2.0.0-alpha.0 build:seed
+> esbuild src/db/seed/index.ts --bundle --platform=node --target=node22 --format=esm --packages=external --alias:server-only=./src/lib/server-only-shim.ts --outfile=dist/seed.mjs
+
+
+  dist/seed.mjs  92.5kb
+
+⚡ Done in 64ms
+
+> knowledgehub@2.0.0-alpha.0 build:cli
+> esbuild src/cli/index.ts --bundle --platform=node --target=node22 --format=esm --packages=external --alias:server-only=./src/lib/server-only-shim.ts --outfile=dist/cli.mjs
+
+
+  dist/cli.mjs  94.3kb
+
+⚡ Done in 39ms

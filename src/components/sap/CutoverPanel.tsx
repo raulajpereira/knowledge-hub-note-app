@@ -369,7 +369,14 @@ function Timeline({
   const crit = new Set(P.path);
   return (
     <div className="kh-cu-tl">
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('cu_timeline')}>
+      <svg
+        width={W}
+        height={H}
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ width: '100%', minWidth: 760, height: 'auto' }}
+        role="img"
+        aria-label={t('cu_timeline')}
+      >
         <defs>
           <marker
             id="kh-cu-ar"

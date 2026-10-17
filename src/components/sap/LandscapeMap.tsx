@@ -14,7 +14,7 @@ export type MapTransport = LTransport & { trkorr: string; description: string };
 
 const BOX_W = 200;
 const BOX_H = 84;
-const COL_W = 390;
+const COL_W = 350;
 const PAD = 28;
 const LANE_HEAD = 34;
 const ROW_GAP = 18;
@@ -142,6 +142,7 @@ export function LandscapeMap({
           width={W}
           height={H}
           viewBox={`0 0 ${W} ${H}`}
+          style={{ width: '100%', maxWidth: W, minWidth: Math.min(W, 820), height: 'auto' }}
           role="img"
           aria-label={t('lm_title')}
           className="kh-lm-svg"
@@ -251,9 +252,9 @@ export function LandscapeMap({
                 {on && (
                   <g>
                     <rect
-                      x={mx - 85}
+                      x={mx - 62}
                       y={my - 26}
-                      width="170"
+                      width="124"
                       height="20"
                       rx="10"
                       fill="#f2c14e"
@@ -267,7 +268,7 @@ export function LandscapeMap({
                       fontWeight="700"
                       fill="#2a211c"
                     >
-                      {clip(label, 30)}
+                      {t(n === 1 ? 'lm_short1' : 'lm_shortN').replace('{n}', String(n))}
                     </text>
                   </g>
                 )}

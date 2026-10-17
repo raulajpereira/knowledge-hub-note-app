@@ -947,5 +947,7 @@
   "rep_total": "Total",
   "rep_steps": "Steps",
   "rep_none": "No test case matches.",
-  "rep_otherEv": "Other evidence"
+  "rep_otherEv": "Other evidence",
+  "lm_short1": "1 request waiting",
+  "lm_shortN": "{n} requests waiting"
 }

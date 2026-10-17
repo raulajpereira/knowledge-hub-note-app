@@ -947,5 +947,7 @@
   "rep_total": "Total",
   "rep_steps": "Passos",
   "rep_none": "Nenhum caso de teste corresponde.",
-  "rep_otherEv": "Outras evidências"
+  "rep_otherEv": "Outras evidências",
+  "lm_short1": "1 ordem à espera",
+  "lm_shortN": "{n} ordens à espera"
 }
