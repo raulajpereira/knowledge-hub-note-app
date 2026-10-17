@@ -133,6 +133,22 @@ const COPY: Record<string, Record<Lang, Copy>> = {
       foot: 'You receive this email as a console administrator.',
     },
   },
+  exportReady: {
+    pt: {
+      subject: 'A exportação dos seus dados está pronta · KnowledgeHub',
+      title: 'Exportação pronta',
+      body: 'Olá {name}, o ficheiro ZIP com os seus dados está pronto. Inicie sessão no KnowledgeHub e descarregue-o em Conta e Dados. Fica disponível durante {days} dias.',
+      cta: 'Abrir Conta e Dados',
+      foot: 'Se não foi você a pedir esta exportação, altere a sua palavra-passe e termine as outras sessões.',
+    },
+    en: {
+      subject: 'Your data export is ready · KnowledgeHub',
+      title: 'Export ready',
+      body: 'Hi {name}, the ZIP file with your data is ready. Sign in to KnowledgeHub and download it from Account & Data. It stays available for {days} days.',
+      cta: 'Open Account & Data',
+      foot: "If you didn't ask for this export, change your password and end your other sessions.",
+    },
+  },
   accountDeleted: {
     pt: {
       subject: 'A sua conta foi eliminada · KnowledgeHub',

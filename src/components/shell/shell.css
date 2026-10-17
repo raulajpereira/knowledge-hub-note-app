@@ -1012,3 +1012,23 @@
 .kh-acc__del:hover {
   background: oklch(0.6 0.16 28 / 0.16);
 }
+
+/* Account modal: data export */
+.kh-exp-spin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--text);
+  animation: kh-exp-spin 0.9s linear infinite;
+}
+@keyframes kh-exp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kh-exp-spin {
+    animation: none;
+  }
+}

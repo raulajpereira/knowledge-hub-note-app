@@ -15,6 +15,7 @@ import { AvatarFace } from './Avatar';
 import { removeImage, uploadImage } from './uploadImage';
 import { useShell } from './ShellContext';
 import { useReauth } from './useReauth';
+import { ExportCard } from './ExportCard';
 
 type Session = {
   id: string;
@@ -529,11 +530,8 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
           </Link>
         )}
 
+        <ExportCard />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
-          <a href={`${BASE}/api/v1/me/export`} download className="kh-acc__wide">
-            <Icon name="download" size={15} sw={2} />
-            {t('acc_export')}
-          </a>
           <button type="button" className="kh-acc__wide kh-acc__wide--danger" onClick={logout}>
             <Icon name="logout" size={15} sw={2} />
             {t('acc_logout')}

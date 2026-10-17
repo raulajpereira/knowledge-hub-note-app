@@ -36,8 +36,21 @@ export const notesApi = {
   duplicateFolder: (id: string, suffix: string) =>
     api<{ folder: Folder }>(`/folders/${id}/duplicate`, { suffix }),
 
-  list: (q: { folder?: string; shared?: string; fav?: boolean; q?: string; after?: string }) => {
+  list: (q: {
+    folder?: string;
+    shared?: string;
+    fav?: boolean;
+    q?: string;
+    after?: string;
+    /** labels (any of them, or all with tm: 'all') and "updated in the last N days" */
+    tags?: string[];
+    tm?: 'any' | 'all';
+    days?: number | null;
+  }) => {
     const sp = new URLSearchParams();
+    for (const t of q.tags ?? []) sp.append('tag', t);
+    if (q.tm === 'all') sp.set('tm', 'all');
+    if (q.days) sp.set('days', String(q.days));
     if (q.folder) sp.set('folder', q.folder);
     if (q.shared) sp.set('shared', q.shared);
     if (q.fav) sp.set('fav', '1');
