@@ -60,13 +60,16 @@ export default async function TestReportPage({
         (!sp.st || r.st === sp.st),
     )
     .sort((a, b) =>
-      order ? order.indexOf(a.id) - order.indexOf(b.id) : (a.code || a.title).localeCompare(b.code || b.title),
+      order
+        ? order.indexOf(a.id) - order.indexOf(b.id)
+        : (a.code || a.title).localeCompare(b.code || b.title),
     );
   const ev = await listEvidence(
     auth,
     recs.map((r) => r.id),
   );
-  const logo = ent.modules.includes('brand') && assets.logo ? `${BASE}/api/v1/me/assets/logo?v=${assets.logo}` : null;
+  const logo =
+    ent.modules.includes('brand') && assets.logo ? `${BASE}/api/v1/me/assets/logo?v=${assets.logo}` : null;
   const person = (id: unknown) => mg.people.find((p) => p.id === id)?.name ?? '';
   const project = (id: unknown) => {
     const p = mg.projects.find((x) => x.id === id);
@@ -156,7 +159,8 @@ export default async function TestReportPage({
           </tbody>
         </table>
         <p className="kh-rep-steps">
-          {t('rep_steps')}: {steps.length} · {P.rows.status!.map(([k, l]) => `${tr(l)} ${stepCount(k)}`).join(' · ')}
+          {t('rep_steps')}: {steps.length} ·{' '}
+          {P.rows.status!.map(([k, l]) => `${tr(l)} ${stepCount(k)}`).join(' · ')}
         </p>
         <table className="kh-rep-index">
           <thead>

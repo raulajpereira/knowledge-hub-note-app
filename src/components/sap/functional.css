@@ -882,10 +882,9 @@
 }
 .kh-cu-row {
   display: grid;
-  grid-template-columns: 38px minmax(220px, 3fr) minmax(90px, 1fr) minmax(
-      90px,
-      1fr
-    ) 170px 74px 120px 120px 36px;
+  grid-template-columns:
+    38px minmax(220px, 3fr) minmax(90px, 1fr) minmax(90px, 1fr)
+    170px 74px 120px 120px 36px;
   align-items: center;
   gap: 4px;
   padding: 6px 6px 6px 0;
