@@ -16,6 +16,8 @@ x-app-env: &app-env
   DATABASE_ADMIN_URL: ''
   REDIS_URL: redis://redis:6379
   S3_ENDPOINT: http://minio:9000
+  # semantic search: web asks the worker (internal network only) for query vectors
+  EMBED_URL: http://worker:3210
 
 x-app: &app
   env_file: .env
@@ -40,7 +42,17 @@ services:
   worker:
     <<: *app
     image: ${KH_IMAGE_REPO:-ghcr.io/raulajpereira/knowledgehub}-worker:${KH_IMAGE_TAG:-latest}
-    mem_limit: 384m
+    environment:
+      <<: *app-env
+      # the embedding endpoint listens on the compose network (never published on the host)
+      EMBED_HOST: 0.0.0.0
+      MODEL_CACHE_DIR: /models
+    # model (~120 MB, downloaded once) and OCR languages survive image updates
+    volumes: [models:/models]
+    # search model ~450 MB while loaded (freed after EMBED_IDLE_MIN idle minutes)
+    # + OCR ~180 MB while files are being read; see docs/DEPLOY.md §6c
+    mem_limit: 1g
+    cpus: 0.6
 
   migrate:
     <<: *app
@@ -58,7 +70,10 @@ services:
       redis: { condition: service_healthy }
 
   postgres:
-    image: postgres:16-alpine
+    # Postgres 16 + pgvector (semantic search). Same major version and data
+    # format as postgres:16-alpine; switching keeps the pgdata volume
+    # (docs/DEPLOY.md §6c — migration 0043 rebuilds text indexes once).
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -162,6 +177,7 @@ services:
     logging: *logging
 
 volumes:
+  models:
   pgdata:
   redisdata:
   miniodata:

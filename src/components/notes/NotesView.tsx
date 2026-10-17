@@ -419,6 +419,11 @@ function NoteList({
                     <Svg d={P.share} size={12} sw={2} />
                   </span>
                 )}
+                {n.semantic && (
+                  <span className="kh-nt-card__sem" title={t('sem_matchTip')}>
+                    {t('sem_match')}
+                  </span>
+                )}
                 {n.favorite && n.mine && <span className="kh-nt-card__star">★</span>}
                 <span>{when(n.updatedAt)}</span>
               </div>

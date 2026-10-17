@@ -4,6 +4,8 @@ import { requireContent } from '@/server/content/guard';
 import { createNote, listNotes } from '@/server/content/notes';
 import { reachableFolder } from '@/server/share/folders';
 import { noteViewParams } from '@/server/content/views';
+import { semanticQuery } from '@/lib/search/text';
+import { embedQuery } from '@/server/search/embedClient';
 
 // GET /notes?folder=&fav=1&q=&shared=&tag=a&tag=b&tm=all&days=30  ·  POST /notes { folderId?, title?, sharedFolderId? }
 export const GET = handler(async (req) => {
@@ -15,18 +17,24 @@ export const GET = handler(async (req) => {
   if (shared && shared.kind !== 'notes') return json({ notes: [], next: null });
   // pages of 200, newest first; `next` is the cursor for the following page
   const PAGE = 200;
+  const search = sp.get('q')?.trim().slice(0, 200) || undefined;
+  const after = sp.get('after')?.slice(0, 80) || undefined;
+  // meaning matches only on the first page (a quick vector from the worker, or none)
+  const sq = search && !after ? semanticQuery(search) : null;
   const list = await listNotes(auth, {
     shared,
     folder: folder ? z.uuid().parse(folder) : undefined,
     fav: sp.get('fav') === '1',
-    search: sp.get('q')?.trim().slice(0, 200) || undefined,
+    search,
     ...noteViewParams(sp),
-    after: sp.get('after')?.slice(0, 80) || undefined,
+    after,
     limit: PAGE + 1,
+    vector: sq ? await embedQuery(sq) : null,
   });
-  const more = list.length > PAGE;
-  const notes = more ? list.slice(0, PAGE) : list;
-  const last = notes.at(-1);
+  const words = list.filter((n) => !n.semantic);
+  const more = words.length > PAGE;
+  const notes = [...words.slice(0, PAGE), ...list.filter((n) => n.semantic)];
+  const last = words.slice(0, PAGE).at(-1);
   return json({ notes, next: more && last ? `${last.updatedAt}|${last.id}` : null });
 });
 

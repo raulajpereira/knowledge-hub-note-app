@@ -352,9 +352,25 @@ export function DriveView() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const query = q.trim().toLowerCase();
+  // files whose recognised text (OCR) matches too, asked from the server after a pause in typing
+  const [byText, setByText] = useState<{ q: string; ids: Set<string> }>({ q: '', ids: new Set() });
+  useEffect(() => {
+    if (query.length < 3) return;
+    let live = true;
+    const h = setTimeout(() => {
+      api<{ ids: string[] }>(`/drive/text-search?q=${encodeURIComponent(query)}`)
+        .then((r) => live && setByText({ q: query, ids: new Set(r.ids) }))
+        .catch(() => {});
+    }, 250);
+    return () => {
+      live = false;
+      clearTimeout(h);
+    };
+  }, [query]);
   const list = (shId ? (shItems ?? []) : all).filter(
     (a) =>
-      (folder === 'all' || shId || a.folderId === folder) && (!query || a.name.toLowerCase().includes(query)),
+      (folder === 'all' || shId || a.folderId === folder) &&
+      (!query || a.name.toLowerCase().includes(query) || (byText.q === query && byText.ids.has(a.id))),
   );
   const linkedOf = (folderId: string) => sh.folders.find((x) => x.mine && x.folderId === folderId);
   const isShared = (a: DFile) => {
@@ -710,6 +726,9 @@ export function DriveView() {
               </div>
             </div>
             <Preview key={active.id} f={active} />
+            {(previewKind(active.name) === 'image' || previewKind(active.name) === 'pdf') && (
+              <OcrText key={`ocr-${active.id}`} id={active.id} />
+            )}
           </div>
         ) : (
           <div className="kh-em-none kh-fl-none">
@@ -731,6 +750,32 @@ export function DriveView() {
         />
       )}
     </div>
+  );
+}
+
+// ── Recognised text (OCR, done by the worker) ───────────────────────────────
+
+function OcrText({ id }: { id: string }) {
+  const { t } = useI18n();
+  const [ocr, setOcr] = useState<{ status: string; text: string; pages: number } | null>(null);
+  useEffect(() => {
+    let live = true;
+    api<{ ocr: { status: string; text: string; pages: number } | null }>(`/drive/${id}/text`)
+      .then((r) => live && setOcr(r.ocr))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [id]);
+  if (ocr?.status !== 'done' || !ocr.text) return null;
+  return (
+    <details className="kh-fl-ocr" data-testid="ocr-text">
+      <summary>
+        {t('sem_ocrText')}
+        {ocr.pages > 1 && <span> · {t('sem_ocrPages').replace('{n}', String(ocr.pages))}</span>}
+      </summary>
+      <pre>{ocr.text}</pre>
+    </details>
   );
 }
 

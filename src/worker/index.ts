@@ -1,6 +1,7 @@
 // Background worker (BullMQ). Runs as its own container from the same
 // codebase: `node dist/worker.mjs`. Heartbeat, the daily license job, the
-// transactional email queue and the data exports.
+// transactional email queue, the data exports, and search: embeddings (semantic
+// search) and OCR, with the internal endpoint that turns a search query into a vector.
 import { Worker } from 'bullmq';
 import { QUEUES, WORKER_HEARTBEAT_KEY, queue } from '@/lib/queue';
 import { createQueueConnection, redis } from '@/lib/redis';
@@ -15,6 +16,10 @@ import { pruneNotifications, runNotify } from '@/server/notify/generate';
 import { runInbound } from '@/server/inbound/imap';
 import { inboundConfigured } from '@/server/notify/service';
 import { expireExports, runExport } from '@/server/jobs/export';
+import { backfill, startIndexer } from './search/indexer';
+import { startEmbedServer } from './search/server';
+import { stopOcr } from './search/ocr';
+import { unloadModel } from './search/embedder';
 
 type JobHandler = () => Promise<unknown>;
 
@@ -111,12 +116,34 @@ async function main() {
   );
   exportWorker.on('failed', (job, err) => console.error(`[worker] export ${job?.id} failed:`, err.message));
 
+  // Search (docs/DEPLOY.md §6c): one job at a time from the search_jobs queue;
+  // the model and tesseract load on first use. A failure here never stops the
+  // rest of the worker (search just stays keyword-only).
+  const e = env();
+  const embedServer = e.SEMANTIC_SEARCH
+    ? await startEmbedServer().catch((err: unknown) => {
+        console.error('[search] embedding endpoint failed to start:', err);
+        return null;
+      })
+    : null;
+  const stopIndexer = e.SEMANTIC_SEARCH || e.OCR ? startIndexer() : async () => {};
+  // what existed before (or was missed while the worker was down), a minute after start
+  setTimeout(
+    () =>
+      void backfill()
+        .then((n) => n && console.log(`[search] backfill queued ${n} jobs`))
+        .catch((err: unknown) => console.error('[search] backfill failed:', err)),
+    60_000,
+  ).unref();
+
   await handlers.heartbeat!();
   console.log('[worker] started');
 
   const shutdown = async () => {
     console.log('[worker] shutting down');
-    await Promise.all([worker.close(), mailWorker.close(), exportWorker.close()]);
+    embedServer?.close();
+    await Promise.all([worker.close(), mailWorker.close(), exportWorker.close(), stopIndexer()]);
+    await Promise.all([stopOcr(), unloadModel()]);
     process.exit(0);
   };
   process.on('SIGTERM', shutdown);
