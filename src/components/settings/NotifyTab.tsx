@@ -209,7 +209,9 @@ export function NotifyTab() {
               <div className="kh-set__desc">{t('nf_inDesc')}</div>
             </div>
             <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, flex: 'none' }}>
-              <span style={{ color: 'rgba(255,248,240,.75)' }}>{ib.enabled ? t('ai_on') : t('ai_off')}</span>
+              <span style={{ color: 'rgb(var(--t) / calc(.75 * var(--t-k)))' }}>
+                {ib.enabled ? t('ai_on') : t('ai_off')}
+              </span>
               <Toggle
                 on={ib.enabled}
                 label={t('nf_inTitle')}

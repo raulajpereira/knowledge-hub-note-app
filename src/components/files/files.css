@@ -340,18 +340,18 @@
 .kh-fl-ocr {
   flex: none;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(18, 12, 9, 0.22);
+  border: 1px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
   font-size: 13px;
 }
 .kh-fl-ocr summary {
   cursor: pointer;
   padding: 10px 16px;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
   user-select: none;
 }
 .kh-fl-ocr summary span {
-  color: rgba(255, 248, 240, 0.55);
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
 }
 .kh-fl-ocr pre {
   margin: 0;
@@ -362,5 +362,5 @@
   word-break: break-word;
   font: inherit;
   line-height: 1.5;
-  color: rgba(255, 248, 240, 0.86);
+  color: rgb(var(--t) / calc(0.86 * var(--t-k)));
 }

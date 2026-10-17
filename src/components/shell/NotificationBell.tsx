@@ -245,7 +245,7 @@ export function NotificationBell() {
               </div>
             ) : (
               items.map((n) => {
-                const [ic, color] = ICON_OF[n.kind] ?? ['task', 'rgba(255,255,255,.7)'];
+                const [ic, color] = ICON_OF[n.kind] ?? ['task', 'rgb(var(--w) / .7)'];
                 return (
                   <button
                     key={n.id}

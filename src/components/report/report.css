@@ -37,9 +37,9 @@ body:has(.kh-rep) {
 }
 .kh-rep-cover,
 .kh-rep-case {
-  background: #fff;
+  background: var(--ink-hi);
   border-radius: 6px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 24px rgb(0 0 0 / calc(0.08 * var(--sh-k)));
   padding: 40px 44px;
   margin-bottom: 20px;
 }
@@ -217,7 +217,7 @@ body:has(.kh-rep) {
   }
   html:has(.kh-rep),
   body:has(.kh-rep) {
-    background: #fff !important;
+    background: var(--ink-hi) !important;
   }
   .kh-rep {
     max-width: none;

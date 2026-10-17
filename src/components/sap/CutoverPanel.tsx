@@ -268,7 +268,7 @@ export function CutoverPanel({
                         style={{
                           backgroundColor: bl
                             ? 'oklch(0.6 0.12 300 / .55)'
-                            : (FN_RBG[r.st ?? ''] ?? 'rgba(255,255,255,.1)'),
+                            : (FN_RBG[r.st ?? ''] ?? 'rgb(var(--w) / .1)'),
                         }}
                         onChange={(e) => void setSt(r, e.target.value)}
                       >
@@ -387,7 +387,7 @@ function Timeline({
             markerHeight="6"
             orient="auto"
           >
-            <path d="M0 0L10 5L0 10z" fill="#fbf8f5" fillOpacity="0.6" />
+            <path d="M0 0L10 5L0 10z" fill="var(--ink)" fillOpacity="0.6" />
           </marker>
           <marker
             id="kh-cu-arc"
@@ -404,7 +404,7 @@ function Timeline({
         {ticks.map((s) => (
           <g key={s}>
             <line x1={x(s)} x2={x(s)} y1={22} y2={H} stroke="#fff" strokeOpacity="0.08" />
-            <text x={x(s) + 3} y={16} fontSize="10" fill="#fbf8f5" fillOpacity="0.6">
+            <text x={x(s) + 3} y={16} fontSize="10" fill="var(--ink)" fillOpacity="0.6">
               {dt(s)}
             </text>
           </g>
@@ -417,7 +417,7 @@ function Timeline({
           const w = Math.max(x(p.ef) - x(p.es), 4);
           return (
             <g key={r.id} data-crit={c || undefined} className="kh-cu-bar">
-              <text x={8} y={y + 17} fontSize="11.5" fill="#fbf8f5" fillOpacity={done ? 0.55 : 0.9}>
+              <text x={8} y={y + 17} fontSize="11.5" fill="var(--ink)" fillOpacity={done ? 0.55 : 0.9}>
                 #{num.get(r.id)} {(r.act ?? '').slice(0, 36)}
               </text>
               <rect
@@ -426,7 +426,7 @@ function Timeline({
                 width={w}
                 height={RH - 10}
                 rx="5"
-                fill={c ? CRIT : done ? 'oklch(0.74 0.14 150)' : p.late ? 'oklch(0.8 0.15 60)' : '#fbf8f5'}
+                fill={c ? CRIT : done ? 'oklch(0.74 0.14 150)' : p.late ? 'oklch(0.8 0.15 60)' : 'var(--ink)'}
                 fillOpacity={c ? 0.95 : done ? 0.7 : 0.35}
                 stroke={c ? CRIT : 'none'}
               />
@@ -448,7 +448,7 @@ function Timeline({
                 key={`${d}>${r.id}`}
                 d={`M${xa} ${ya} C${xa + 14} ${ya}, ${xb - 14} ${yb}, ${xb - 1} ${yb}`}
                 fill="none"
-                stroke={c ? CRIT : '#fbf8f5'}
+                stroke={c ? CRIT : 'var(--ink)'}
                 strokeOpacity={c ? 1 : 0.4}
                 strokeWidth={c ? 2 : 1.2}
                 markerEnd={`url(#${c ? 'kh-cu-arc' : 'kh-cu-ar'})`}
@@ -458,8 +458,21 @@ function Timeline({
         )}
         {now >= P.start && now <= P.end + span * 0.05 && (
           <g>
-            <line x1={x(now)} x2={x(now)} y1={20} y2={H} stroke="oklch(0.85 0.15 85)" strokeWidth="1.5" />
-            <text x={x(now) + 4} y={30} fontSize="10" fontWeight="700" fill="oklch(0.85 0.15 85)">
+            <line
+              x1={x(now)}
+              x2={x(now)}
+              y1={20}
+              y2={H}
+              stroke="oklch(calc(.85 * var(--lk)) .15 85)"
+              strokeWidth="1.5"
+            />
+            <text
+              x={x(now) + 4}
+              y={30}
+              fontSize="10"
+              fontWeight="700"
+              fill="oklch(calc(.85 * var(--lk)) .15 85)"
+            >
               {t('cu_now')}
             </text>
           </g>

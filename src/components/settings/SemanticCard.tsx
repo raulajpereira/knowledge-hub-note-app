@@ -60,14 +60,14 @@ export function SemanticCard() {
   };
 
   const row = { gridTemplateColumns: 'minmax(120px,30%) minmax(0,1fr)' };
-  const val = { fontSize: 13.5, color: 'rgba(255,248,240,.85)' };
+  const val = { fontSize: 13.5, color: 'rgb(var(--t) / calc(.85 * var(--t-k)))' };
   const state = st ? t(`sem_${st.service}`) : '…';
   const dot =
     st?.service === 'up' || st?.service === 'loading'
       ? 'oklch(0.78 0.15 150)'
       : st?.service === 'down'
         ? 'oklch(0.8 0.15 75)'
-        : 'rgba(255,248,240,.4)';
+        : 'rgb(var(--t) / calc(.4 * var(--t-k)))';
 
   return (
     <div className="kh-set__card" data-testid="semantic-card">
@@ -94,7 +94,7 @@ export function SemanticCard() {
             <span style={val} data-testid="semantic-indexed">
               {fmt(st.indexed)}
               {st.pending > 0 && (
-                <span style={{ color: 'rgba(255,248,240,.6)' }}>
+                <span style={{ color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
                   {' '}
                   · {t('sem_pending')}: {fmt(st.pending)}
                 </span>
@@ -113,13 +113,13 @@ export function SemanticCard() {
               <>
                 {fmt(st.ocrDone)}
                 {st.ocrPending > 0 && (
-                  <span style={{ color: 'rgba(255,248,240,.6)' }}>
+                  <span style={{ color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
                     {' '}
                     · {t('sem_pending')}: {fmt(st.ocrPending)}
                   </span>
                 )}
                 {st.ocrFailed > 0 && (
-                  <span style={{ color: 'rgba(255,248,240,.6)' }}>
+                  <span style={{ color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
                     {' '}
                     · {t('sem_ocrFailed').replace('{n}', fmt(st.ocrFailed))}
                   </span>
@@ -138,7 +138,7 @@ export function SemanticCard() {
         >
           {t('sem_reindex')}
         </button>
-        <span style={{ fontSize: 12.5, color: 'rgba(255,248,240,.62)', flex: '1 1 260px' }}>
+        <span style={{ fontSize: 12.5, color: 'rgb(var(--t) / calc(.62 * var(--t-k)))', flex: '1 1 260px' }}>
           {t('sem_reindexHint')}
         </span>
       </div>

@@ -470,7 +470,7 @@
   padding: 10px 16px;
 }
 .kh-nf__row + .kh-nf__row {
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgb(var(--w) / 0.07);
 }
 .kh-nf__lbl {
   display: flex;
@@ -482,7 +482,7 @@
 .kh-nf__sub {
   font-size: 12.5px;
   line-height: 1.45;
-  color: rgba(255, 248, 240, 0.62);
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
 }
 .kh-nf__ctl {
   flex: none;
@@ -512,8 +512,8 @@
   flex-wrap: wrap;
   padding: 12px 14px;
   border-radius: 16px;
-  background: rgba(18, 12, 9, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgb(var(--d) / calc(0.28 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.12);
 }
 .kh-nf__addr code {
   flex: 1;

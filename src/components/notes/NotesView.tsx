@@ -569,7 +569,7 @@ function EditorCard({
         <button
           type="button"
           className="kh-nt-round"
-          style={{ color: 'rgba(255,248,240,.75)' }}
+          style={{ color: 'rgb(var(--t) / calc(.75 * var(--t-k)))' }}
           title={t('hist_title')}
           aria-label={t('hist_title')}
           onClick={onHistory}

@@ -87,6 +87,13 @@ export function LandscapeMap({
     if (!el) return null;
     const c = el.cloneNode(true) as SVGSVGElement;
     c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    // theme colours are CSS variables: a file outside the app needs the resolved values
+    const src = [el, ...el.querySelectorAll('*')];
+    [c, ...c.querySelectorAll('*')].forEach((n, i) => {
+      const cs = getComputedStyle(src[i]!);
+      for (const a of ['fill', 'stroke'] as const)
+        if (n.getAttribute(a)?.includes('var(')) n.setAttribute(a, cs.getPropertyValue(a));
+    });
     c.querySelectorAll('[data-ui]').forEach((n) => n.remove());
     return new XMLSerializer().serializeToString(c);
   };
@@ -158,7 +165,7 @@ export function LandscapeMap({
               markerHeight="7"
               orient="auto"
             >
-              <path d="M0 0L10 5L0 10z" fill="#fbf8f5" fillOpacity="0.75" />
+              <path d="M0 0L10 5L0 10z" fill="var(--ink)" fillOpacity="0.75" />
             </marker>
             <marker
               id="kh-lm-arrow-on"
@@ -172,7 +179,7 @@ export function LandscapeMap({
               <path d="M0 0L10 5L0 10z" fill="#f2c14e" />
             </marker>
           </defs>
-          <rect x="0" y="0" width={W} height={H} rx="18" fill="#2a211c" />
+          <rect x="0" y="0" width={W} height={H} rx="18" fill="var(--ink-inv)" />
           {cols.map((c, i) => (
             <text
               key={c}
@@ -200,7 +207,7 @@ export function LandscapeMap({
                 stroke="#ffffff"
                 strokeOpacity="0.12"
               />
-              <text x={PAD} y={l.y + 22} fontSize="13" fontWeight="600" fill="#fbf8f5" fillOpacity="0.85">
+              <text x={PAD} y={l.y + 22} fontSize="13" fontWeight="600" fill="var(--ink)" fillOpacity="0.85">
                 {l.title}
               </text>
             </g>
@@ -243,7 +250,7 @@ export function LandscapeMap({
                 <path
                   d={d}
                   fill="none"
-                  stroke={on ? '#f2c14e' : '#fbf8f5'}
+                  stroke={on ? '#f2c14e' : 'var(--ink)'}
                   strokeOpacity={on ? 1 : 0.45}
                   strokeWidth={edge === k ? 3.5 : on ? 2.5 : 1.6}
                   strokeDasharray={on ? undefined : '5 5'}
@@ -266,7 +273,7 @@ export function LandscapeMap({
                       textAnchor="middle"
                       fontSize="11"
                       fontWeight="700"
-                      fill="#2a211c"
+                      fill="var(--ink-inv)"
                     >
                       {t(n === 1 ? 'lm_short1' : 'lm_shortN').replace('{n}', String(n))}
                     </text>
@@ -307,7 +314,7 @@ export function LandscapeMap({
                   fontSize="17"
                   fontWeight="700"
                   fontFamily={MONO}
-                  fill={sel ? '#1d1a17' : '#fbf8f5'}
+                  fill={sel ? '#1d1a17' : 'var(--ink)'}
                 >
                   {s.sid || '—'}
                   <tspan fontSize="12" fontWeight="500" fillOpacity="0.7">
@@ -337,7 +344,7 @@ export function LandscapeMap({
                   x={p.x + 16}
                   y={p.y + 50}
                   fontSize="12"
-                  fill={sel ? '#3b332c' : '#fbf8f5'}
+                  fill={sel ? '#3b332c' : 'var(--ink)'}
                   fillOpacity="0.85"
                 >
                   {clip(s.name, 28)}
@@ -346,7 +353,7 @@ export function LandscapeMap({
                   x={p.x + 16}
                   y={p.y + 68}
                   fontSize="11"
-                  fill={sel ? '#5b5047' : '#fbf8f5'}
+                  fill={sel ? '#5b5047' : 'var(--ink)'}
                   fillOpacity="0.6"
                 >
                   {clip(clientName(s.clientId) || '—', 30)}

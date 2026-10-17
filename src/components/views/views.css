@@ -16,7 +16,7 @@
   padding-right: 40px;
 }
 .kh-vw-icon {
-  color: oklch(0.85 0.09 250);
+  color: oklch(calc(0.85 * var(--lk)) 0.09 250);
 }
 .kh-vw-more {
   position: absolute;
@@ -28,7 +28,7 @@
   border-radius: 9px;
   border: 0;
   background: transparent;
-  color: rgba(255, 248, 240, 0.75);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -38,7 +38,7 @@
 .kh-vw-more:focus-visible,
 .kh-vw-more[aria-expanded='true'] {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--w) / 0.12);
 }
 .kh-vw-row:hover .kh-nav__count,
 .kh-vw-row:focus-within .kh-nav__count {
@@ -67,14 +67,14 @@
   cursor: pointer;
 }
 .kh-vw-mi:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--w) / 0.12);
 }
 .kh-vw-mi:disabled {
   opacity: 0.4;
   cursor: default;
 }
 .kh-vw-mi[data-danger] {
-  color: #ffc9b8;
+  color: var(--kh-error-text);
 }
 @media (hover: none) {
   .kh-vw-more {
@@ -97,7 +97,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(255, 248, 240, 0.65);
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
 }
 .kh-vf__chips {
   display: flex;
@@ -108,17 +108,17 @@
   height: 28px;
   padding: 0 11px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.07);
   color: var(--text);
   font: inherit;
   font-size: 12.5px;
   cursor: pointer;
 }
 .kh-vf__chip[aria-pressed='true'] {
-  background: rgba(251, 248, 245, 0.92);
-  color: #2a211c;
-  border-color: rgba(255, 255, 255, 0.9);
+  background: rgb(var(--ink-rgb) / 0.92);
+  color: var(--ink-inv);
+  border-color: rgb(var(--w) / 0.9);
 }
 .kh-vf__foot {
   display: flex;
@@ -126,12 +126,12 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgb(var(--w) / 0.1);
 }
 .kh-vf__link {
   border: 0;
   background: transparent;
-  color: rgba(255, 248, 240, 0.75);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
   font: inherit;
   font-size: 12.5px;
   cursor: pointer;
@@ -142,8 +142,8 @@
   height: 34px;
   padding: 0 14px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgb(var(--w) / 0.22);
+  background: rgb(var(--w) / 0.14);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -154,13 +154,13 @@
   gap: 6px;
 }
 .kh-vf__btn:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgb(var(--w) / 0.22);
 }
 .kh-vf__sel {
   height: 34px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(18, 12, 9, 0.3);
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--d) / calc(0.3 * var(--d-k)));
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -181,8 +181,8 @@
   height: 26px;
   padding: 0 4px 0 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgb(var(--w) / 0.12);
+  border: 1px solid rgb(var(--w) / 0.16);
   font-size: 12px;
 }
 .kh-vf-active__chip button {
@@ -190,7 +190,7 @@
   height: 20px;
   border-radius: 50%;
   border: 0;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgb(var(--w) / 0.14);
   color: inherit;
   cursor: pointer;
   font-size: 12px;
@@ -201,8 +201,8 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.1);
   color: var(--text);
   display: inline-flex;
   align-items: center;

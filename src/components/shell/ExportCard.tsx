@@ -83,13 +83,13 @@ export function ExportCard() {
   const status = cur?.status;
   const chip =
     status === 'pending'
-      ? { label: t('exp_stPending'), bg: 'rgba(255,255,255,.16)' }
+      ? { label: t('exp_stPending'), bg: 'rgb(var(--w) / .16)' }
       : status === 'running'
         ? { label: t('exp_stRunning'), bg: 'oklch(0.75 0.11 245 / .35)' }
         : status === 'ready'
           ? { label: t('exp_stReady'), bg: 'oklch(0.72 0.13 155 / .4)' }
           : status === 'expired'
-            ? { label: t('exp_stExpired'), bg: 'rgba(255,255,255,.1)' }
+            ? { label: t('exp_stExpired'), bg: 'rgb(var(--w) / .1)' }
             : status === 'failed'
               ? { label: t('exp_stFailed'), bg: 'oklch(0.6 0.16 28 / .4)' }
               : null;
@@ -107,7 +107,7 @@ export function ExportCard() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(255,255,255,.14)',
+            background: 'rgb(var(--w) / .14)',
           }}
         >
           <Icon name="download" size={17} sw={2} />
@@ -127,7 +127,7 @@ export function ExportCard() {
               fontSize: 12,
               fontWeight: 600,
               background: chip.bg,
-              border: '1px solid rgba(255,255,255,.18)',
+              border: '1px solid rgb(var(--w) / .18)',
             }}
           >
             {chip.label}
@@ -136,7 +136,7 @@ export function ExportCard() {
       </div>
 
       {cur && (
-        <div style={{ fontSize: 12.5, color: 'rgba(255,248,240,.78)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12.5, color: 'rgb(var(--t) / calc(.78 * var(--t-k)))', lineHeight: 1.5 }}>
           {status === 'ready' && cur.expiresAt
             ? t('exp_readyLine')
                 .replace('{size}', fmtSize(cur.size ?? 0))
@@ -185,7 +185,7 @@ export function ExportCard() {
             {t('exp_wait')}
           </span>
         )}
-        <span style={{ fontSize: 12, color: 'rgba(255,248,240,.6)' }}>
+        <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
           {left === 0 ? t('exp_none') : t('exp_left').replace('{n}', String(left))}
         </span>
       </div>

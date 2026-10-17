@@ -1042,7 +1042,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  border: 2px solid rgb(var(--w) / 0.25);
   border-top-color: var(--text);
   animation: kh-exp-spin 0.9s linear infinite;
 }

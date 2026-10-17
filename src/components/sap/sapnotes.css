@@ -8,9 +8,9 @@
   max-width: 230px;
   padding: 0 26px 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background-color: rgb(var(--w) / 0.06);
+  color: var(--ink);
   font: inherit;
   font-size: 12px;
   appearance: none;
@@ -21,25 +21,25 @@
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 10px;
-  color-scheme: dark;
+  color-scheme: var(--scheme);
 }
 .kh-sn-fsel[data-on] {
-  border-color: rgba(255, 255, 255, 0.45);
-  background-color: rgba(255, 255, 255, 0.16);
+  border-color: rgb(var(--w) / 0.45);
+  background-color: rgb(var(--w) / 0.16);
 }
 .kh-sn-fsel option,
 .kh-sn-mcell option,
 .kh-sn-stsel option {
   background-color: var(--kh-option-bg, #2b2622);
-  color: var(--kh-option-fg, #f4f2f0);
+  color: var(--kh-option-fg, var(--ink));
 }
 .kh-sn-clear {
   height: 30px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgb(var(--w) / 0.14);
   background: transparent;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
   font: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -60,7 +60,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgb(var(--d) / calc(0.12 * var(--d-k)));
 }
 .kh-sn-prio i {
   width: 7px;
@@ -77,7 +77,7 @@
   width: 14px;
   height: 14px;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid rgb(var(--w) / 0.22);
 }
 
 /* matrix */
@@ -118,7 +118,7 @@
 .kh-sn-menv {
   display: block;
   font-size: 10.5px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
   font-weight: 500;
 }
 .kh-sn-matrix th.kh-sn-mnote {
@@ -152,10 +152,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
-  color: rgba(255, 248, 240, 0.85);
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
 }
 .kh-sn-matrix tr[data-on] th.kh-sn-mnote {
-  background: #fff;
+  background: var(--ink-hi);
 }
 .kh-sn-matrix tr[data-on] th.kh-sn-mnote button,
 .kh-sn-matrix tr[data-on] th.kh-sn-mnote button span:last-child {
@@ -169,8 +169,8 @@
   height: 34px;
   padding: 0 8px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.16);
+  color: var(--ink);
   font: inherit;
   font-size: 11.5px;
   font-weight: 600;
@@ -179,10 +179,10 @@
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
-  color-scheme: dark;
+  color-scheme: var(--scheme);
 }
 .kh-sn-mcell:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--ink-hi);
   outline-offset: 1px;
 }
 .kh-sn-legend {
@@ -191,7 +191,7 @@
   gap: 14px;
   margin-top: 14px;
   font-size: 12px;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
 }
 .kh-sn-legend span {
   display: flex;
@@ -202,7 +202,7 @@
   width: 12px;
   height: 12px;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgb(var(--w) / 0.25);
 }
 .kh-sn-legend b {
   font-family: 'Geist Mono', monospace;
@@ -234,8 +234,8 @@
   font-weight: 600 !important;
 }
 .kh-sn-toggle[data-on] {
-  background: rgba(255, 255, 255, 0.24) !important;
-  border-color: rgba(255, 255, 255, 0.55) !important;
+  background: rgb(var(--w) / 0.24) !important;
+  border-color: rgb(var(--w) / 0.55) !important;
 }
 .kh-sn-sec {
   display: flex;
@@ -243,8 +243,8 @@
   gap: 8px;
   padding: 12px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--w) / 0.04);
 }
 .kh-sn-sechead {
   display: flex;
@@ -254,15 +254,15 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 248, 240, 0.7);
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
 }
 .kh-sn-sechead button {
   height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.08);
+  color: var(--ink);
   font: inherit;
   font-size: 11.5px;
   letter-spacing: 0;
@@ -271,7 +271,7 @@
 }
 .kh-sn-muted {
   font-size: 12.5px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
 }
 .kh-sn-sysrow {
   display: grid;
@@ -293,19 +293,19 @@
   flex-shrink: 0;
 }
 .kh-sn-sysname small {
-  color: rgba(255, 248, 240, 0.55);
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
   font-size: 10.5px;
 }
 .kh-sn-stsel {
   height: 34px;
   padding: 0 8px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.16);
+  color: var(--ink);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
-  color-scheme: dark;
+  color-scheme: var(--scheme);
   min-width: 0;
 }
 .kh-sn-date,
@@ -321,7 +321,7 @@
 }
 .kh-sn-vt > span {
   font-size: 11px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
 }
 .kh-sn-vt .kh-sap-input {
   height: 34px;
@@ -331,8 +331,8 @@
   height: 28px;
   border-radius: 50%;
   border: 0;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fbf8f5;
+  background: rgb(var(--w) / 0.08);
+  color: var(--ink);
   cursor: pointer;
 }
 .kh-sn-chips {
@@ -346,14 +346,14 @@
   align-items: center;
   max-width: 100%;
   border-radius: 999px;
-  border: 1px dashed rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgb(var(--w) / 0.3);
+  background: rgb(var(--w) / 0.05);
   font-size: 12px;
   overflow: hidden;
 }
 .kh-sn-chip[data-in] {
   border-style: solid;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--w) / 0.1);
 }
 .kh-sn-chip > a,
 .kh-sn-chip > button:first-child {
@@ -374,7 +374,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(255, 248, 240, 0.75);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
 }
 .kh-sn-chip > button:last-child,
 .kh-sn-tag button {
@@ -399,9 +399,9 @@
   height: 30px;
   padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(18, 12, 9, 0.25);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--d) / calc(0.25 * var(--d-k)));
+  color: var(--ink);
   font: inherit;
   font-size: 12.5px;
   outline: none;
@@ -432,11 +432,11 @@
   min-height: 160px;
   padding: 10px 14px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(18, 12, 9, 0.2);
+  border: 1px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--d) / calc(0.2 * var(--d-k)));
 }
 .kh-sn-doc:focus-within {
-  border-color: rgba(255, 255, 255, 0.36);
+  border-color: rgb(var(--w) / 0.36);
 }
 .kh-sn-doc .kh-ne-tools {
   align-self: flex-start;
