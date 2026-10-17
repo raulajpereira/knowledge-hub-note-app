@@ -13,3 +13,4 @@ infra/backup/.env.backup
 *.tmp.mjs
 *.tmp.mts
 .cache/
+.wt-*

@@ -14,7 +14,8 @@ import './content.css';
 // With `transports`, a second card "Ordens de Transporte" (cr_*) links SAP
 // transport requests, with their stage as a badge.
 
-export type ItemType = 'note' | 'task' | 'voice' | 'issue' | 'meeting' | 'artifact' | 'code' | 'transport';
+export type ItemType =
+  'note' | 'task' | 'voice' | 'issue' | 'meeting' | 'artifact' | 'code' | 'transport' | 'sapnote';
 type Stage = 'mod' | 'rel' | 'qas' | 'prd' | 'junk';
 type Link = { type: ItemType; id: string; title: string; sub?: string; stage?: Stage };
 type Candidate = Link & { sub: string; at: string };
@@ -28,6 +29,7 @@ export const ITEM_DOT: Record<ItemType, string> = {
   artifact: 'oklch(0.8 0.1 160)',
   code: 'oklch(0.84 0.1 245)',
   transport: 'oklch(0.82 0.11 210)',
+  sapnote: 'oklch(0.8 0.13 20)',
 };
 const ITEM_KIND: Record<ItemType, string> = {
   note: 'k_note',
@@ -38,6 +40,7 @@ const ITEM_KIND: Record<ItemType, string> = {
   artifact: 'k_art',
   code: 'k_code',
   transport: 'k_tr',
+  sapnote: 'k_sapnote',
 };
 /** Prototype trStage: badge text and colour. */
 const STAGE: Record<Stage, [string, string]> = {
@@ -56,6 +59,7 @@ export const itemHref = (type: ItemType, id: string) =>
     artifact: `/app/artifacts?a=${id}`,
     code: `/app/codelib?o=${id}`,
     transport: `/app/transports?o=${id}`,
+    sapnote: `/app/sapnotes?n=${id}`,
     note: `/app/notes?n=${id}`,
   })[type];
 

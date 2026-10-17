@@ -107,6 +107,62 @@ function rows(page: FnPage, s: string): FnRow[] {
   });
 }
 
+/**
+ * Cutover rows with ids, the phase taken from the "[Fase]" prefix, planned
+ * durations (hours) and predecessors (by position) — the runbook's dependencies.
+ */
+function cutPlan(rs: FnRow[], plan: Array<[number, number[]]>): FnRow[] {
+  const id = (i: number) => `cut${String(i + 1).padStart(2, '0')}`;
+  return rs.map((r, i) => {
+    const m = /^\s*\[([^\]]+)\]\s*/.exec(r.act ?? '');
+    const [h, deps] = plan[i] ?? [0, []];
+    return {
+      ...r,
+      id: id(i),
+      act: m ? (r.act ?? '').slice(m[0].length) : (r.act ?? ''),
+      phase: m ? m[1]!.trim() : (r.phase ?? ''),
+      dur: h ? String(Math.round(h * 60)) : '',
+      dep: deps.map(id).join(','),
+    };
+  });
+}
+// [hours, predecessors] per activity of the S/4HANA runbook below
+const RUNBOOK_PLAN: Array<[number, number[]]> = [
+  [1, []],
+  [8, [0]],
+  [16, [1]],
+  [8, []],
+  [24, [2]],
+  [2, []],
+  [2, [1, 2, 3, 4, 5]],
+  [1, [6]],
+  [4, [7]],
+  [4, [8]],
+  [6, [9]],
+  [6, [9]],
+  [6, [9]],
+  [8, [10, 11, 12]],
+  [4, [13]],
+  [2, [13]],
+  [3, [14, 15]],
+  [1, [16]],
+  [672, [17]],
+  [672, [17]],
+  [24, [17]],
+  [8, [18, 19, 20]],
+];
+const BASIS_PLAN: Array<[number, number[]]> = [
+  [1, []],
+  [0.5, [0]],
+  [2, [1]],
+  [2, [2]],
+  [1, [2]],
+  [2, [3, 4]],
+  [1, [3]],
+  [1, [5]],
+  [2, [5, 6, 7]],
+];
+
 const BUILTIN: B[] = [
   // Registos Reuniões
   {
@@ -324,10 +380,11 @@ Decisão:`,
           ? 'T-n = days before go-live (T-0). Each activity has an owner and is ticked during the cutover call.'
           : 'T-n = dias antes do go-live (T-0). Cada atividade tem um responsável e é marcada durante a chamada de cutover.',
       },
-      rows: rows(
-        'fn_cut',
-        en
-          ? `[Pre] Development freeze | T-21 | Technical lead
+      rows: cutPlan(
+        rows(
+          'fn_cut',
+          en
+            ? `[Pre] Development freeze | T-21 | Technical lead
 [Pre] Final transports to production approved and imported | T-14 | Basis
 [Pre] Manual (non-transportable) configuration in production | T-10 | Functional team
 [Pre] Users and roles created in production | T-7 | Security
@@ -349,7 +406,7 @@ Decisão:`,
 [Hypercare] Daily defects triage | T+2 → T+30 | PMO
 [Hypercare] First month-end close supported | T+30 | Finance
 [Hypercare] Hand over to support (AMS) | T+30 | PMO`
-          : `[Pré] Congelamento de desenvolvimentos | T-21 | Lead técnico
+            : `[Pré] Congelamento de desenvolvimentos | T-21 | Lead técnico
 [Pré] Transportes finais para produção aprovados e importados | T-14 | Basis
 [Pré] Configuração manual (não transportável) em produção | T-10 | Equipa funcional
 [Pré] Utilizadores e perfis criados em produção | T-7 | Segurança
@@ -371,6 +428,8 @@ Decisão:`,
 [Hypercare] Triagem diária de defeitos | T+2 → T+30 | PMO
 [Hypercare] Primeiro fecho mensal acompanhado | T+30 | Finanças
 [Hypercare] Passagem ao suporte (AMS) | T+30 | PMO`,
+        ),
+        RUNBOOK_PLAN,
       ),
     }),
   },
@@ -383,10 +442,11 @@ Decisão:`,
       title: en ? 'Technical go-live checklist' : 'Checklist técnica de go-live',
       code: 'Basis',
       f: {},
-      rows: rows(
-        'fn_cut',
-        en
-          ? `Production client settings locked (SCC4) | T-1 | Basis
+      rows: cutPlan(
+        rows(
+          'fn_cut',
+          en
+            ? `Production client settings locked (SCC4) | T-1 | Basis
 System change option closed (SE06) | T-1 | Basis
 Backup taken before data loads | T-0 | Basis
 RFC destinations and logical systems checked (SM59, BD54) | T-0 | Basis
@@ -395,7 +455,7 @@ Background jobs scheduled (SM36 / SM37) | T+1 | Basis
 Emergency users (firefighter) ready | T+1 | Security
 Monitoring on: ST22, SM21, SM12, SM13, SM58, WE05 | T+1 | Basis
 Backup after go-live | T+1 | Basis`
-          : `Definições do mandante de produção bloqueadas (SCC4) | T-1 | Basis
+            : `Definições do mandante de produção bloqueadas (SCC4) | T-1 | Basis
 Opção de modificação do sistema fechada (SE06) | T-1 | Basis
 Backup antes das cargas de dados | T-0 | Basis
 Destinos RFC e sistemas lógicos verificados (SM59, BD54) | T-0 | Basis
@@ -404,6 +464,8 @@ Jobs agendados (SM36 / SM37) | T+1 | Basis
 Utilizadores de emergência (firefighter) prontos | T+1 | Segurança
 Monitorização ativa: ST22, SM21, SM12, SM13, SM58, WE05 | T+1 | Basis
 Backup depois do go-live | T+1 | Basis`,
+        ),
+        BASIS_PLAN,
       ),
     }),
   },

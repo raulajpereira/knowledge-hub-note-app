@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
-import { connectionText, envColor, sapShortcut, SAP_ENVS, type SapEnv } from '@/lib/sap';
+import { connectionText, envColor, ENV_ORDER, sapShortcut, SAP_ENVS, type SapEnv } from '@/lib/sap';
 import {
   onActivateKey,
   ResizableTable,
@@ -15,7 +15,9 @@ import {
   type Column,
 } from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
+import { ShellContext } from '@/components/shell/ShellContext';
 import { downloadShortcut, SidePanel } from './SidePanel';
+import { LandscapeMap, type MapTransport } from './LandscapeMap';
 import './sap.css';
 
 // SAP Systems — ZNotes.dc.html `isSystems`: the landscape per client, as a
@@ -37,12 +39,14 @@ export type SapSystem = {
   sapUser: string;
   fiori: string;
   notes: string;
+  track: string;
+  nextId: string | null;
   fav: boolean;
   createdAt: string;
 };
 type Client = { id: string; name: string };
 type Patch = Partial<Omit<SapSystem, 'id' | 'fav' | 'createdAt'>>;
-const EO: Record<SapEnv, number> = { DEV: 0, QAS: 1, PRD: 2 };
+const EO = ENV_ORDER;
 
 const Svg = ({ d, s = 14, fill = 'none' }: { d: string; s?: number; fill?: string }) => (
   <svg
@@ -60,6 +64,7 @@ const Svg = ({ d, s = 14, fill = 'none' }: { d: string; s?: number; fill?: strin
 );
 const I = {
   list: '<line x1="8" y1="6" x2="20" y2="6"></line><line x1="8" y1="12" x2="20" y2="12"></line><line x1="8" y1="18" x2="20" y2="18"></line><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle>',
+  map: '<rect x="2" y="9" width="6" height="6" rx="1.5"></rect><rect x="16" y="3" width="6" height="6" rx="1.5"></rect><rect x="16" y="15" width="6" height="6" rx="1.5"></rect><path d="M8 12h4"></path><path d="M12 6v12"></path><path d="M12 6h4"></path><path d="M12 18h4"></path>',
   cards:
     '<rect x="3" y="3" width="8" height="8" rx="2"></rect><rect x="13" y="3" width="8" height="8" rx="2"></rect><rect x="3" y="13" width="8" height="8" rx="2"></rect><rect x="13" y="13" width="8" height="8" rx="2"></rect>',
   search: '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>',
@@ -83,7 +88,10 @@ export function SystemsView() {
   const activeId = sp.get('s');
   const [items, setItems] = useState<SapSystem[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
-  const [view, setView] = usePersistentState<'list' | 'cards'>('systems.view', 'cards');
+  const [view, setView] = usePersistentState<'list' | 'cards' | 'map'>('systems.view', 'cards');
+  const shell = useContext(ShellContext);
+  const hasTr = !!shell?.modules.has('transports');
+  const [trs, setTrs] = useState<MapTransport[] | null>(null);
   const [envF, setEnvF] = usePersistentState<'all' | SapEnv>('systems.env', 'all');
   const [clientF, setClientF] = usePersistentState<string>('systems.client', 'all');
   const [sort, setSort] = usePersistentState<{ key: string; dir: 'asc' | 'desc' } | null>(
@@ -108,6 +116,19 @@ export function SystemsView() {
       })
       .catch(fail);
   }, [fail]);
+
+  // the map shows the transport requests waiting on each route
+  useEffect(() => {
+    if (view !== 'map' || !hasTr) return;
+    let live = true;
+    api<{ transports: MapTransport[] }>('/sap/transports')
+      .then((r) => live && setTrs(r.transports))
+      .catch(() => live && setTrs([]));
+    return () => {
+      live = false;
+    };
+  }, [view, hasTr]);
+  const envName = (e: SapEnv) => (e === 'OTH' ? t('s_envOTH') : e);
 
   const open = (id: string | null) => {
     const p = new URLSearchParams(sp.toString());
@@ -332,7 +353,7 @@ export function SystemsView() {
             <div>{t('s_sub')}</div>
           </div>
           <div className="kh-sap-seg" role="radiogroup" aria-label={t('s_list')}>
-            {(['list', 'cards'] as const).map((v) => (
+            {(['list', 'cards', 'map'] as const).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -342,7 +363,7 @@ export function SystemsView() {
                 onClick={() => setView(v)}
               >
                 <Svg d={I[v]} />
-                {t(v === 'list' ? 's_list' : 's_cards')}
+                {t(v === 'list' ? 's_list' : v === 'map' ? 'lm_view' : 's_cards')}
               </button>
             ))}
           </div>
@@ -364,7 +385,7 @@ export function SystemsView() {
           {(['all', ...SAP_ENVS] as const).map((e) => (
             <button key={e} type="button" {...chip(envF === e)} onClick={() => setEnvF(e)}>
               {e !== 'all' && <span className="kh-sap-dot" style={{ background: envColor(e) }} />}
-              {e === 'all' ? t('s_all') : e}
+              {e === 'all' ? t('s_all') : envName(e)}
               <span className="kh-sap-n">
                 {e === 'all' ? base.length : base.filter((x) => x.env === e).length}
               </span>
@@ -380,7 +401,17 @@ export function SystemsView() {
             </button>
           ))}
         </div>
-        {view === 'list' ? (
+        {view === 'map' ? (
+          <div className="kh-sap-body">
+            <LandscapeMap
+              systems={base}
+              transports={hasTr ? (trs ?? []) : null}
+              clientName={cName}
+              activeId={activeId}
+              onOpenSystem={open}
+            />
+          </div>
+        ) : view === 'list' ? (
           <div className="kh-sap-body">
             <ResizableTable
               id="systems"
@@ -538,7 +569,7 @@ export function SystemsView() {
                     }
                     onClick={() => upd(act.id, { env: e }, 0)}
                   >
-                    {e}
+                    {envName(e)}
                   </button>
                 ))}
               </div>
@@ -588,6 +619,42 @@ export function SystemsView() {
                   />
                 </label>
               ))}
+            </div>
+            <div className="kh-sap-grid2">
+              <label className="kh-sap-fld">
+                <span>{t('lm_track')}</span>
+                <input
+                  className="kh-sap-input"
+                  value={act.track}
+                  maxLength={60}
+                  list="kh-sys-tracks"
+                  placeholder={t('lm_trackPh')}
+                  onChange={(e) => upd(act.id, { track: e.target.value.replace(/[\r\n]/g, ' ') })}
+                />
+                <datalist id="kh-sys-tracks">
+                  {[...new Set(all.map((x) => x.track).filter(Boolean))].map((x) => (
+                    <option key={x} value={x} />
+                  ))}
+                </datalist>
+              </label>
+              <label className="kh-sap-fld">
+                <span>{t('lm_next')}</span>
+                <select
+                  className="kh-sap-select"
+                  aria-label={t('lm_next')}
+                  value={act.nextId ?? ''}
+                  onChange={(e) => upd(act.id, { nextId: e.target.value || null }, 0)}
+                >
+                  <option value="">{t('lm_nextAuto')}</option>
+                  {all
+                    .filter((x) => x.id !== act.id)
+                    .map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.sid || '—'} · {x.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
             </div>
             <label className="kh-sap-fld">
               <span>{t('s_user')}</span>

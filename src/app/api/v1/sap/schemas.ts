@@ -39,6 +39,12 @@ export const SystemInput = z
       .regex(/^[^\r\n]*$/),
     fiori: z.union([z.literal(''), z.url({ protocol: /^https?$/ }).max(2000)]),
     notes: z.string().max(20000),
+    track: z
+      .string()
+      .trim()
+      .max(60)
+      .regex(/^[^\r\n]*$/),
+    nextId: z.uuid().nullable(),
   })
   .partial()
   .strict();

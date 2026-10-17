@@ -2,13 +2,18 @@
 // isSystems / isTcodes): environment colours, transaction modules and types,
 // the prototype's transaction catalogue and the SAP GUI shortcut file.
 
-export const SAP_ENVS = ['DEV', 'QAS', 'PRD'] as const;
+/** System role: DEV → QAS → PRD, plus sandbox and "other" (outside the transport route). */
+export const SAP_ENVS = ['DEV', 'QAS', 'PRD', 'SBX', 'OTH'] as const;
 export type SapEnv = (typeof SAP_ENVS)[number];
 export const ENV_C: Record<SapEnv, string> = {
   DEV: 'oklch(0.82 0.11 210)',
   QAS: 'oklch(0.85 0.12 75)',
   PRD: 'oklch(0.72 0.17 25)',
+  SBX: 'oklch(0.8 0.1 300)',
+  OTH: 'oklch(0.8 0.02 250)',
 };
+/** Order of the roles in lists and in the landscape map. */
+export const ENV_ORDER: Record<SapEnv, number> = { SBX: -1, DEV: 0, QAS: 1, PRD: 2, OTH: 3 };
 export const envColor = (e: string) => ENV_C[e as SapEnv] ?? 'oklch(0.8 0 0)';
 
 export const TX_MODS: Record<string, string> = {

@@ -19,6 +19,7 @@ import {
   sapTransports,
   sapObjects,
   sapFnRecords,
+  sapNotes,
   tasks,
   vaultItems,
   voiceNotes,
@@ -35,6 +36,7 @@ import { purgeTransportsTx } from './transports';
 import { purgeObjectsTx } from './codelib';
 import { purgeDriveFilesTx } from './drive';
 import { countRecords, purgeRecordsTx } from './functional';
+import { purgeSapNotesTx } from './sapNotes';
 import { countSaved } from '@/server/news/saved';
 import { purgeApiRequestsTx } from './apiPlayground';
 import { env } from '@/lib/env';
@@ -514,7 +516,8 @@ export type TrashKind =
   | 'tcode'
   | 'transport'
   | 'code'
-  | 'fn';
+  | 'fn'
+  | 'sapnote';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -561,6 +564,14 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       })
       .from(sapFnRecords)
       .where(isNotNull(sapFnRecords.deletedAt));
+    const sns = await tx
+      .select({
+        id: sapNotes.id,
+        title: sql<string>`trim(${sapNotes.number}::text || ' · ' || ${sapNotes.title}, ' ·')`,
+        deletedAt: sapNotes.deletedAt,
+      })
+      .from(sapNotes)
+      .where(isNotNull(sapNotes.deletedAt));
     const cls = await tx
       .select({ id: sapObjects.id, title: sapObjects.name, deletedAt: sapObjects.deletedAt })
       .from(sapObjects)
@@ -624,6 +635,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...fns.map((x) => ({
         id: x.id,
         kind: 'fn' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...sns.map((x) => ({
+        id: x.id,
+        kind: 'sapnote' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -760,6 +778,8 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     const clIds = items.filter((i) => i.kind === 'code').map((i) => i.id);
     if (clIds.length)
       await tx.update(sapObjects).set({ deletedAt: null }).where(inArray(sapObjects.id, clIds));
+    const snIds = items.filter((i) => i.kind === 'sapnote').map((i) => i.id);
+    if (snIds.length) await tx.update(sapNotes).set({ deletedAt: null }).where(inArray(sapNotes.id, snIds));
     const aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
     if (aIds.length) await tx.update(artifacts).set({ deletedAt: null }).where(inArray(artifacts.id, aIds));
     const iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
@@ -862,6 +882,7 @@ export async function purgeTrash(
     let otIds: string[];
     let clIds: string[];
     let fnIds: string[];
+    let snIds: string[];
     let rIds: string[];
     if (items === 'all') {
       rIds = (
@@ -888,6 +909,9 @@ export async function purgeTrash(
       fnIds = (
         await tx.select({ id: sapFnRecords.id }).from(sapFnRecords).where(isNotNull(sapFnRecords.deletedAt))
       ).map((r) => r.id);
+      snIds = (await tx.select({ id: sapNotes.id }).from(sapNotes).where(isNotNull(sapNotes.deletedAt))).map(
+        (r) => r.id,
+      );
       sIds = (await tx.select({ id: snippets.id }).from(snippets).where(isNotNull(snippets.deletedAt))).map(
         (r) => r.id,
       );
@@ -989,6 +1013,14 @@ export async function purgeTrash(
             .from(sapFnRecords)
             .where(and(inArray(sapFnRecords.id, fnIds), isNotNull(sapFnRecords.deletedAt)))
         ).map((r) => r.id);
+      snIds = items.filter((i) => i.kind === 'sapnote').map((i) => i.id);
+      if (snIds.length)
+        snIds = (
+          await tx
+            .select({ id: sapNotes.id })
+            .from(sapNotes)
+            .where(and(inArray(sapNotes.id, snIds), isNotNull(sapNotes.deletedAt)))
+        ).map((r) => r.id);
       clIds = items.filter((i) => i.kind === 'code').map((i) => i.id);
       if (clIds.length)
         clIds = (
@@ -1054,6 +1086,7 @@ export async function purgeTrash(
     await purgeTransportsTx(tx, otIds);
     await purgeObjectsTx(tx, clIds);
     await purgeRecordsTx(tx, fnIds);
+    await purgeSapNotesTx(tx, snIds);
     await purgeApiRequestsTx(tx, rIds);
     if (aIds.length) {
       await unlinkAll(tx, 'artifact', aIds);
@@ -1248,6 +1281,11 @@ const LINKABLE = {
   artifact: { table: artifacts, title: artifacts.title, at: artifacts.updatedAt },
   code: { table: sapObjects, title: sapObjects.name, at: sapObjects.updatedAt },
   transport: { table: sapTransports, title: sapTransports.trkorr, at: sapTransports.createdAt },
+  sapnote: {
+    table: sapNotes,
+    title: sql<string>`(${sapNotes.number}::text || ' · ' || ${sapNotes.title})`,
+    at: sapNotes.updatedAt,
+  },
 } as const;
 export type LinkType = keyof typeof LINKABLE;
 export type LinkStage = 'mod' | 'rel' | 'qas' | 'prd' | 'junk';
