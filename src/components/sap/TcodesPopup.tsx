@@ -95,7 +95,7 @@ export function TcodesPopup({ onClose }: { onClose: () => void }) {
             height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="rgba(255,248,240,.7)"
+            stroke="rgb(var(--t) / calc(.7 * var(--t-k)))"
             strokeWidth="2"
             strokeLinecap="round"
           >

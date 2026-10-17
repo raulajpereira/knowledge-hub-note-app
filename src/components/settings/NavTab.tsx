@@ -111,8 +111,8 @@ export function NavTab() {
                 boxShadow:
                   drag !== null && over === i && drag !== i
                     ? drag < i
-                      ? 'inset 0 -3px 0 #fbf8f5'
-                      : 'inset 0 3px 0 #fbf8f5'
+                      ? 'inset 0 -3px 0 var(--ink)'
+                      : 'inset 0 3px 0 var(--ink)'
                     : 'none',
               }}
               onDragOver={(ev) => {
@@ -209,8 +209,8 @@ export function NavTab() {
                     className="kh-navrow__in"
                     style={{
                       fontWeight: 600,
-                      background: 'rgba(18,12,9,.25)',
-                      borderColor: 'rgba(255,255,255,.16)',
+                      background: 'rgb(var(--d) / calc(.25 * var(--d-k)))',
+                      borderColor: 'rgb(var(--w) / .16)',
                     }}
                     value={e.name}
                     maxLength={60}
@@ -227,10 +227,12 @@ export function NavTab() {
               )}
               {e.type === 'spacer' && (
                 <>
-                  <span style={{ flex: 'none', fontSize: 12, color: 'rgba(255,248,240,.6)' }}>
+                  <span
+                    style={{ flex: 'none', fontSize: 12, color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}
+                  >
                     {t('spacerTag')}
                   </span>
-                  <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.22)' }} />
+                  <span style={{ flex: 1, height: 1, background: 'rgb(var(--w) / .22)' }} />
                 </>
               )}
               <button

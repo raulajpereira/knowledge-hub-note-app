@@ -24,6 +24,21 @@ function useTimeZoneCookie() {
   }, []);
 }
 
+/** Public pages: a "system" theme (from the cookie) follows the OS switch live. */
+function useSystemTheme() {
+  useEffect(() => {
+    const d = document.documentElement;
+    if (d.getAttribute('data-theme-pref') !== 'system') return;
+    const mq = matchMedia('(prefers-color-scheme: light)');
+    const on = () => {
+      if (d.getAttribute('data-theme-pref') === 'system')
+        d.setAttribute('data-theme', mq.matches ? 'light' : 'dark');
+    };
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+}
+
 function UiProviders({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   return (
@@ -35,6 +50,7 @@ function UiProviders({ children }: { children: React.ReactNode }) {
 
 export function Providers({ lang, children }: { lang: Lang; children: React.ReactNode }) {
   useTimeZoneCookie();
+  useSystemTheme();
   // scrollbars appear while scrolling and fade away after (ui.css)
   useEffect(() => watchScrollbars(document), []);
   return (

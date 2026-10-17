@@ -54,7 +54,7 @@ export function ActivityModal({
           onChange={(e) => setFrom(e.target.value)}
           aria-label={t('act_fromDate')}
         />
-        <span style={{ fontSize: 14, color: 'rgba(255,248,240,.65)' }}>{t('actTo')}</span>
+        <span style={{ fontSize: 14, color: 'rgb(var(--t) / calc(.65 * var(--t-k)))' }}>{t('actTo')}</span>
         <input
           type="date"
           className="kh-date"
@@ -80,7 +80,7 @@ export function ActivityModal({
         ))}
       </div>
       {list.length === 0 ? (
-        <div style={{ padding: '10px 0 20px', fontSize: 14, color: 'rgba(255,248,240,.7)' }}>
+        <div style={{ padding: '10px 0 20px', fontSize: 14, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
           {t('actNone')}
         </div>
       ) : (
@@ -91,7 +91,7 @@ export function ActivityModal({
               fontWeight: 600,
               letterSpacing: '.08em',
               textTransform: 'uppercase',
-              color: 'rgba(255,248,240,.65)',
+              color: 'rgb(var(--t) / calc(.65 * var(--t-k)))',
             }}
           >
             {list.length}
@@ -102,7 +102,7 @@ export function ActivityModal({
               <div key={i} className="kh-act__row">
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 14, fontWeight: 500 }}>{a.title}</span>
-                  <span style={{ fontSize: 12, color: 'rgba(255,248,240,.62)' }}>
+                  <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.62 * var(--t-k)))' }}>
                     {a.kind} · {a.action}
                   </span>
                 </div>

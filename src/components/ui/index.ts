@@ -9,6 +9,7 @@ export { ConfirmDialog, ConfirmProvider, Modal, useConfirm, type ConfirmOptions 
 export { ResizableTable, type Column, type SortState } from './ResizableTable';
 export { Popover } from './Popover';
 export { TagInput } from './TagInput';
+export { TagColorsProvider, useTagColors, useTagStyle } from './TagColors';
 export { Select, type SelectOption } from './Select';
 export { ToastProvider, useToast, type ToastTone } from './Toast';
 export { Checkbox, Message, Segmented, Switch } from './Toggles';

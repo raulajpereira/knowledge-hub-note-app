@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { DENSITIES, THEMES } from './theme';
+import { TAG_PALETTE } from './tags';
 
 // user_prefs.data (DATA_MODEL.md: "tema, fundo, blur, accent, escala, idioma,
 // nav layout, larguras, dashboard…"). Shared by the API (validation) and the
@@ -139,6 +141,26 @@ export const WeatherLoc = z.object({
 });
 export type WeatherLoc = z.infer<typeof WeatherLoc>;
 
+/** Definições › Aparência › Página inicial: Início, the last page used, or a module page (nav id). */
+export const START_PAGE = z.union([
+  z.literal('home'),
+  z.literal('last'),
+  z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
+]);
+export const LAST_PAGE_KEY = 'ui.lastPage';
+
+/** Tags page: chosen colour per tag (lower-cased name → index into TAG_PALETTE). */
+export const TagColorsPref = z
+  .record(
+    z.string().trim().min(1).max(60),
+    z
+      .number()
+      .int()
+      .min(0)
+      .max(TAG_PALETTE.length - 1),
+  )
+  .refine((r) => Object.keys(r).length <= 500, 'too_many');
+
 export const PREF_SCHEMAS = {
   cols: z.object({ side: col('side'), list: col('list'), insp: col('insp') }).partial(),
   nav: z.array(NavEntry).max(120),
@@ -152,6 +174,10 @@ export const PREF_SCHEMAS = {
   accent: Accent,
   home: HomePrefs,
   weatherLoc: WeatherLoc,
+  theme: z.enum(THEMES),
+  density: z.enum(DENSITIES),
+  startPage: START_PAGE,
+  tagColors: TagColorsPref,
 } satisfies Record<string, z.ZodTypeAny>;
 
 /**

@@ -73,7 +73,7 @@ export function Landing({ plans, entity }: { plans: LandingPlan[]; entity: Entit
         <p className="kh-lp-sec__sub">{t('lp_plansSub')}</p>
         <div className="kh-lp-plans">
           {plans.map((p) => (
-            <div key={p.code} className="kh-lp-plan" style={{ ['--c' as string]: p.color ?? '#fbf8f5' }}>
+            <div key={p.code} className="kh-lp-plan" style={{ ['--c' as string]: p.color ?? 'var(--ink)' }}>
               <span className="kh-lp-chip">{p.code}</span>
               <span className="kh-lp-plan__tag">{t(`pr_tag_${p.code}`)}</span>
               <span className="kh-lp-plan__price">
@@ -110,7 +110,7 @@ export function Landing({ plans, entity }: { plans: LandingPlan[]; entity: Entit
 
       <section className="kh-lp-sec kh-lp-why" aria-labelledby="lp-why">
         <h2 id="lp-why">
-          {t('pr_whyKicker')} Knowledge<span style={{ color: 'var(--accent)' }}>Hub</span>?
+          {t('pr_whyKicker')} Knowledge<span style={{ color: 'var(--accent-text)' }}>Hub</span>?
         </h2>
         <div className="kh-lp-why__grid">
           {[1, 2, 3, 4].map((i) => (

@@ -39,7 +39,7 @@ const STATUS: Record<Status, [string, string]> = {
   done: ['s_done', 'oklch(0.8 0.14 150)'],
 };
 const PRIO: Record<Prio, [string, string]> = {
-  low: ['t_low', 'rgba(255,248,240,.55)'],
+  low: ['t_low', 'rgb(var(--t) / calc(.55 * var(--t-k)))'],
   medium: ['t_med', 'oklch(0.85 0.12 75)'],
   high: ['t_high', 'oklch(0.78 0.13 45)'],
   critical: ['p_critical', 'oklch(0.7 0.19 25)'],
@@ -58,7 +58,7 @@ const COLS_DEF: Record<Col, number> = {
   created: 160,
 };
 const KAN_DEF: Record<Status, number> = { open: 300, progress: 300, waiting: 300, done: 300 };
-const tint = (c: string) => (c.startsWith('oklch') ? c.replace(')', ' / .2)') : 'rgba(255,255,255,.1)');
+const tint = (c: string) => (c.startsWith('oklch') ? c.replace(')', ' / .2)') : 'rgb(var(--w) / .1)');
 const PO: Record<Prio, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 const SO: Record<Status, number> = { open: 0, progress: 1, waiting: 2, done: 3 };
 
@@ -229,9 +229,9 @@ export function IssuesView() {
     x.dueOn
       ? {
           label: fmtDue(x.dueOn),
-          color: x.status !== 'done' && x.dueOn < today ? 'oklch(0.8 0.13 30)' : undefined,
+          color: x.status !== 'done' && x.dueOn < today ? 'oklch(calc(.8 * var(--lk)) .13 30)' : undefined,
         }
-      : { label: '—', color: 'rgba(255,248,240,.5)' };
+      : { label: '—', color: 'rgb(var(--t) / calc(.5 * var(--t-k)))' };
   const width = (c: Col) => (live?.key === `col:${c}` ? live.w : (colW[c] ?? COLS_DEF[c]));
   const grid = COLS.map((c) => `minmax(${width(c)}px,${width(c)}fr)`).join(' ');
   const tableW = COLS.reduce((a, c) => a + width(c), 0);
@@ -319,7 +319,7 @@ export function IssuesView() {
               height="15"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="rgba(255,248,240,.6)"
+              stroke="rgb(var(--t) / calc(.6 * var(--t-k)))"
               strokeWidth="2"
               strokeLinecap="round"
               aria-hidden="true"

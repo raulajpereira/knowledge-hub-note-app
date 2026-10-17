@@ -121,7 +121,7 @@ export function SettingsView() {
         >
           <div
             className="kh-handle__bar"
-            style={dragW !== null ? { background: 'rgba(255,255,255,.75)' } : undefined}
+            style={dragW !== null ? { background: 'rgb(var(--w) / .75)' } : undefined}
           />
         </div>
         <nav className="kh-set__nav" data-zs="">
@@ -129,7 +129,9 @@ export function SettingsView() {
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: '-.02em' }}>
               {t('settings')}
             </h1>
-            <div style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,248,240,.65)' }}>
+            <div
+              style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgb(var(--t) / calc(.65 * var(--t-k)))' }}
+            >
               {t('settingsSub')}
             </div>
           </div>

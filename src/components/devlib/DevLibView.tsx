@@ -6,9 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { tagStyle } from '@/lib/tags';
 import { DEV_LANGS, DEV_TYPES, highlight, langOf, type DevLang, type DevType } from '@/lib/devlib';
-import { Modal, TagInput, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Modal, TagInput, useConfirm, usePersistentState, useTagStyle, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import './devlib.css';
 
@@ -34,6 +33,7 @@ type Patch = Partial<Pick<Snippet, 'title' | 'type' | 'tags' | 'fav' | 'descript
 const COL = { def: 340, min: 240 };
 
 export function DevLibView() {
+  const tagStyle = useTagStyle();
   const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
@@ -330,7 +330,7 @@ export function DevLibView() {
               height="14"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="rgba(255,248,240,.6)"
+              stroke="rgb(var(--t) / calc(.6 * var(--t-k)))"
               strokeWidth="2"
               strokeLinecap="round"
               aria-hidden="true"
@@ -409,7 +409,7 @@ export function DevLibView() {
                     height="11"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="rgba(255,248,240,.7)"
+                    stroke="rgb(var(--t) / calc(.7 * var(--t-k)))"
                     strokeWidth="2.8"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -441,7 +441,7 @@ export function DevLibView() {
                               width="12"
                               height="12"
                               viewBox="0 0 24 24"
-                              fill="oklch(0.86 0.13 85)"
+                              fill="oklch(calc(.86 * var(--lk)) .13 85)"
                               aria-hidden="true"
                             >
                               <path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4l-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z" />
@@ -523,7 +523,7 @@ export function DevLibView() {
                 title={t('dl_fav')}
                 aria-label={t('dl_fav')}
                 aria-pressed={sel.fav}
-                style={{ color: sel.fav ? 'oklch(0.86 0.13 85)' : undefined }}
+                style={{ color: sel.fav ? 'oklch(calc(.86 * var(--lk)) .13 85)' : undefined }}
                 onClick={() => upd(sel.id, { fav: !sel.fav }, 0)}
               >
                 <svg

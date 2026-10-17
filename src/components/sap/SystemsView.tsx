@@ -241,7 +241,9 @@ export function SystemsView() {
       title={t('s_fav')}
       aria-label={`${t('s_fav')} ${x.name}`}
       aria-pressed={x.fav}
-      style={{ color: x.fav ? 'oklch(0.86 0.13 85)' : 'rgba(255,248,240,.75)' }}
+      style={{
+        color: x.fav ? 'oklch(calc(.86 * var(--lk)) .13 85)' : 'rgb(var(--t) / calc(.75 * var(--t-k)))',
+      }}
       onClick={fav(x)}
     >
       <Svg d={I.star} fill={x.fav ? 'currentColor' : 'none'} />
@@ -423,7 +425,7 @@ export function SystemsView() {
                       onClick={() => open(x.id)}
                       onKeyDown={onActivateKey(() => open(x.id))}
                       style={{
-                        background: `linear-gradient(160deg,${envColor(x.env).replace(')', ' / .16)')},rgba(255,255,255,.04))`,
+                        background: `linear-gradient(160deg,${envColor(x.env).replace(')', ' / .16)')},rgb(var(--w) / .04))`,
                       }}
                     >
                       <div className="kh-sap-card__bar" style={{ background: envColor(x.env) }} />

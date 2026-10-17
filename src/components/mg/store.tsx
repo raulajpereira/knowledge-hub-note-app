@@ -221,13 +221,18 @@ export function useMg() {
       const r = h / c;
       return !h ? 0 : r > 1.0001 ? 3 : r >= 0.9 ? 2 : 1;
     };
-    const LC = ['rgba(255,248,240,.5)', 'oklch(0.86 0.12 85)', 'oklch(0.86 0.12 150)', 'oklch(0.82 0.14 30)'];
+    const LC = [
+      'rgb(var(--t) / calc(.5 * var(--t-k)))',
+      'oklch(0.86 0.12 85)',
+      'oklch(0.86 0.12 150)',
+      'oklch(0.82 0.14 30)',
+    ];
     const lc = (h: number, cap: number | string) => LC[band(h, cap)]!;
     const HEAT = [
-      { bg: 'rgba(255,255,255,.04)', fg: 'rgba(255,248,240,.35)' },
-      { bg: 'oklch(0.78 0.12 85 / .42)', fg: '#fbf8f5' },
-      { bg: 'oklch(0.7 0.12 150 / .6)', fg: '#fff' },
-      { bg: 'oklch(0.66 0.16 25 / .75)', fg: '#fff' },
+      { bg: 'rgb(var(--w) / .04)', fg: 'rgb(var(--t) / calc(.35 * var(--t-k)))' },
+      { bg: 'oklch(0.78 0.12 85 / .42)', fg: 'var(--ink)' },
+      { bg: 'oklch(0.7 0.12 150 / .6)', fg: 'var(--ink-hi)' },
+      { bg: 'oklch(0.66 0.16 25 / .75)', fg: 'var(--ink-hi)' },
     ];
     const heat = (h: number, cap: number | string) => HEAT[band(h, cap)]!;
     const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);

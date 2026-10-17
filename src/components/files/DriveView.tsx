@@ -509,7 +509,7 @@ export function DriveView() {
                       type="button"
                       title={t('sh_fpTitle')}
                       aria-label={`${t('sh_fpTitle')} ${f.name}`}
-                      style={marked || shf ? { color: 'oklch(0.86 0.13 150)' } : undefined}
+                      style={marked || shf ? { color: 'oklch(calc(.86 * var(--lk)) .13 150)' } : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
                         setFs(shf ? { sharedId: shf.id } : { folderId: f.id, title: f.name });
@@ -894,6 +894,7 @@ const cell = (c: unknown, loc: string) =>
         : String(c);
 
 const DOC_CSS =
+  // theme-keep: an exported document, always light
   'html{background:#fff}body{margin:0 auto;max-width:820px;padding:40px 48px;font:15px/1.6 Geist,system-ui,sans-serif;color:#1d1a17}' +
   'img{max-width:100%;height:auto}table{border-collapse:collapse;margin:12px 0}td,th{border:1px solid #d8d2cb;padding:5px 8px;vertical-align:top}' +
   'h1,h2,h3{line-height:1.25}p{margin:0 0 10px}';

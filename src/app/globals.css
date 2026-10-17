@@ -10,29 +10,79 @@
   --font-scale: 1;
   --ui-scale: 1;
 
+  /* ── Theme palette (Definições › Aparência › Tema). The chrome never uses
+     raw colours: components use these channels with their own alpha
+     (scripts/theme-tokens.mjs converts new hard-coded values):
+       --w   overlays / borders / dividers   rgb(var(--w) / a)
+       --sf  glass surfaces                  rgb(var(--sf) / calc(a * var(--sf-k)))
+       --t   text tints                      rgb(var(--t) / calc(a * var(--t-k)))
+       --d   sunken wells / fields           rgb(var(--d) / calc(a * var(--d-k)))
+       shadows                               rgb(0 0 0 / calc(a * var(--sh-k)))
+       --ink / --ink-inv                     light text & white pills / their dark text
+       --lk  lightness factor of pale coloured text: oklch(calc(L * var(--lk)) C H)
+     The dark theme is the original look (every factor 1). */
+  color-scheme: dark;
+  --scheme: dark;
+  --w: 255 255 255;
+  --sf: 255 255 255;
+  --sf-k: 1;
+  --t: 255 248 240;
+  --t-k: 1;
+  --d: 18 12 9;
+  --d-k: 1;
+  --sh-k: 1;
+  --lk: 1;
+  --err: 255 170 150;
+  --ink: #fbf8f5;
+  --ink-rgb: 251 248 245;
+  --ink-hi: #fff;
+  --ink-inv: #2a211c;
+  --dim-rgb: 22 16 12;
+  --bg-veil: transparent;
+  --accent-text: var(--accent);
+  --kh-error-text: #ffc9b8;
+
   --bg-base: #121315;
   --bg-gradient:
     radial-gradient(1100px 700px at 15% 20%, rgba(255, 255, 255, 0.07), transparent 60%),
     radial-gradient(900px 600px at 85% 85%, oklch(0.45 0.08 245 / 0.28), transparent 60%),
     linear-gradient(160deg, #1f2124, #17181b 55%, #121315);
 
-  --text: #fbf8f5;
-  --text-2: rgba(255, 248, 240, 0.75);
-  --text-3: rgba(255, 248, 240, 0.6);
-  --placeholder: rgba(255, 248, 240, 0.42);
+  --text: var(--ink);
+  --text-2: rgb(var(--t) / calc(0.75 * var(--t-k)));
+  --text-3: rgb(var(--t) / calc(0.6 * var(--t-k)));
+  --placeholder: rgb(var(--t) / calc(0.42 * var(--t-k)));
 
-  --glass-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
-  --glass-border: rgba(255, 255, 255, 0.18);
-  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 30px 80px rgba(0, 0, 0, 0.35);
+  --glass-bg: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.16 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.06 * var(--sf-k)))
+  );
+  --glass-border: rgb(var(--w) / 0.18);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 30px 80px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
   --glass-filter: blur(var(--glass-blur-user, var(--glass-blur))) saturate(160%);
 
-  --btn-primary-bg: #fbf8f5;
-  --btn-primary-fg: #2a211c;
+  --btn-primary-bg: var(--ink);
+  --btn-primary-fg: var(--ink-inv);
 
   --ok: oklch(0.78 0.14 150);
   --warn: oklch(0.82 0.13 85);
   --danger: oklch(0.7 0.17 25);
   --mgmt: oklch(0.76 0.14 305);
+
+  /* the selected item of a list: a white card with dark text */
+  --sel-bg: rgba(251, 248, 245, 0.94);
+  --sel-fg: #2a211c;
+  --sel-dim: rgba(42, 33, 28, 0.66);
+  --sel-border: rgba(255, 255, 255, 0.9);
+  --sel-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+
+  /* syntax highlighting (.kh-hl-*) */
+  --hl-c: rgba(255, 248, 240, 0.42);
+  --hl-s: oklch(0.85 0.12 150);
+  --hl-n: oklch(0.85 0.12 60);
+  --hl-t: oklch(0.8 0.14 25);
+  --hl-k: oklch(0.8 0.13 250);
 
   --radius-pill: 999px;
   --radius-panel: 30px;
@@ -41,12 +91,75 @@
 
   /* One-card pages (Management › Resources): the thin line between columns,
      the glassy sticky table headers/columns and native <option> lists. */
-  --kh-divider: rgba(255, 255, 255, 0.1);
-  --kh-sticky-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.1));
-  --kh-sticky-col-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.05));
+  --kh-divider: rgb(var(--w) / 0.1);
+  --kh-sticky-bg: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.18 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
+  --kh-sticky-col-bg: linear-gradient(
+    90deg,
+    rgb(var(--sf) / calc(0.09 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.05 * var(--sf-k)))
+  );
   --kh-sticky-filter: blur(var(--glass-blur-user, 30px)) saturate(160%);
   --kh-option-bg: #2b2c33;
   --kh-option-fg: #f4f2f0;
+}
+
+/* Light theme: frosted white glass and dark text over the same wallpaper
+   (veiled). Set on <html> by the server from the kh_theme cookie (mirrored
+   from prefs.theme); "system" is resolved before the first paint by the
+   inline script of src/lib/theme.ts. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --scheme: light;
+  --w: 46 36 30;
+  --sf: 255 255 255;
+  --sf-k: 3.4;
+  --t: 30 23 19;
+  --t-k: 1.22;
+  --d: 255 255 255;
+  --d-k: 2.2;
+  --sh-k: 0.42;
+  --lk: 0.58;
+  --err: 196 64 44;
+  --ink: #221a15;
+  --ink-rgb: 34 26 21;
+  --ink-hi: #000;
+  --ink-inv: #fbf8f5;
+  --dim-rgb: 248 245 241;
+  --bg-veil: linear-gradient(180deg, rgba(250, 247, 243, 0.64), rgba(244, 240, 235, 0.56));
+  --accent-text: oklch(from var(--accent) min(l, 0.5) max(c, 0.1) h);
+  --kh-error-text: oklch(0.5 0.17 28);
+
+  --bg-base: #ece7e1;
+  --bg-gradient:
+    radial-gradient(1100px 700px at 15% 20%, rgba(255, 255, 255, 0.7), transparent 60%),
+    radial-gradient(900px 600px at 85% 85%, oklch(0.88 0.05 245 / 0.5), transparent 60%),
+    linear-gradient(160deg, #f4f1ed, #ebe6e0 55%, #e3ddd6);
+
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 24px 60px rgb(40 30 20 / 0.12);
+
+  --ok: oklch(0.52 0.14 150);
+  --warn: oklch(0.58 0.13 70);
+  --danger: oklch(0.55 0.19 25);
+  --mgmt: oklch(0.52 0.17 305);
+
+  --sel-bg: color-mix(in oklch, var(--accent) 20%, #fff);
+  --sel-fg: #1d1612;
+  --sel-dim: rgba(29, 22, 18, 0.7);
+  --sel-border: color-mix(in oklch, var(--accent) 60%, #fff);
+  --sel-shadow: 0 8px 22px color-mix(in oklch, var(--accent) 22%, transparent);
+
+  --hl-c: rgba(30, 23, 19, 0.52);
+  --hl-s: oklch(0.47 0.13 150);
+  --hl-n: oklch(0.52 0.14 55);
+  --hl-t: oklch(0.5 0.17 25);
+  --hl-k: oklch(0.46 0.16 255);
+
+  --kh-option-bg: #fbf9f7;
+  --kh-option-fg: #221a15;
 }
 
 @theme inline {
@@ -79,7 +192,7 @@ a {
   color: var(--text);
 }
 a:hover {
-  color: #fff;
+  color: var(--ink-hi);
 }
 input::placeholder,
 textarea::placeholder {
@@ -108,8 +221,12 @@ textarea::placeholder {
   min-height: 0;
   min-width: 0;
   border-radius: var(--radius-panel);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.12 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.04 * var(--sf-k)))
+  );
+  border: 1px solid rgb(var(--w) / 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 .kh-page-card::before {
@@ -149,25 +266,26 @@ select optgroup {
 
 /* Syntax highlighting (Developer library, notes, public pages). */
 .kh-hl-c {
-  color: rgba(255, 248, 240, 0.42);
+  color: var(--hl-c);
   font-style: italic;
 }
 .kh-hl-s {
-  color: oklch(0.85 0.12 150);
+  color: var(--hl-s);
 }
 .kh-hl-n {
-  color: oklch(0.85 0.12 60);
+  color: var(--hl-n);
 }
 .kh-hl-t {
-  color: oklch(0.8 0.14 25);
+  color: var(--hl-t);
 }
 .kh-hl-k {
-  color: oklch(0.8 0.13 250);
+  color: var(--hl-k);
   font-weight: 600;
 }
 
 /* Selected item of a list (inside folders): the same white card as a selected
-   note (.kh-nt-card[data-on]); dark text, secondary text dimmed */
+   note (.kh-nt-card[data-on]); dark text, secondary text dimmed. In the light
+   theme it is a soft accent-tinted card (--sel-*). */
 :is(
   .kh-ar-item,
   .kh-mt-item,
@@ -192,12 +310,12 @@ select optgroup {
     .kh-tk-item,
     .kh-fn-item
   )[data-on]:hover {
-  --kh-sel-fg: #2a211c;
-  --kh-sel-dim: rgba(42, 33, 28, 0.66);
+  --kh-sel-fg: var(--sel-fg);
+  --kh-sel-dim: var(--sel-dim);
   color: var(--kh-sel-fg);
-  background: rgba(251, 248, 245, 0.94);
-  border-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+  background: var(--sel-bg);
+  border-color: var(--sel-border);
+  box-shadow: var(--sel-shadow);
 }
 .kh-dl-item[data-on] .kh-dl-item__m,
 .kh-em-item[data-on] :is(.kh-em-item__from, .kh-em-item__snip, .kh-em-item__date),
@@ -236,11 +354,17 @@ select optgroup {
 /* Tag chips (every place a tag is shown): a vivid colour per tag name set
    inline by tagStyle() (src/lib/tags.ts) — tinted fill + light text on the
    dark glass; a light fill + dark text of the same hue on a selected (white)
-   card. Size/shape stay with each place's own class. */
+   card and everywhere in the light theme. Size/shape stay with each place's own class. */
 .kh-tagc {
-  background: var(--tg-bg, rgba(255, 255, 255, 0.14));
-  color: var(--tg-fg, #fbf8f5);
+  background: var(--tg-bg, rgb(var(--w) / 0.14));
+  color: var(--tg-fg, var(--ink));
   box-shadow: inset 0 0 0 1px var(--tg-ring, transparent);
+}
+/* light theme: the light fill + dark text of the tag's hue everywhere */
+:root[data-theme='light'] .kh-tagc {
+  background: var(--tg-bg-on, rgb(var(--w) / 0.08));
+  color: var(--tg-fg-on, var(--ink));
+  box-shadow: inset 0 0 0 1px var(--tg-ring-on, transparent);
 }
 :is(
     .kh-nt-card,
@@ -259,4 +383,66 @@ select optgroup {
   background: var(--tg-bg-on, rgba(42, 33, 28, 0.08));
   color: var(--tg-fg-on, #2a211c);
   box-shadow: inset 0 0 0 1px var(--tg-ring-on, transparent);
+}
+
+/* List density (Definições › Aparência › Densidade das listas): "compacta"
+   tightens the items of every page's side list and the table rows — less
+   padding, gaps and line spacing — independently of the font/UI scales. */
+:root[data-density='compact']
+  :is(
+    .kh-nt-card,
+    .kh-ar-item,
+    .kh-mt-item,
+    .kh-em-item,
+    .kh-fl-item,
+    .kh-ap-item,
+    .kh-dl-item,
+    .kh-cl-item,
+    .kh-vc-item,
+    .kh-tk-item,
+    .kh-fn-item,
+    .kh-sap-card
+  ) {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  row-gap: 3px;
+  line-height: 1.25;
+  min-height: 0;
+}
+:root[data-density='compact'] :is(.kh-nt-card, .kh-sap-card) {
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: 16px;
+}
+:root[data-density='compact'] :is(.kh-nt-card, .kh-sap-card) :is(p, div) {
+  line-height: 1.3;
+}
+/* the lists holding those items */
+:root[data-density='compact']
+  :has(
+    > :is(
+      .kh-nt-card,
+      .kh-ar-item,
+      .kh-mt-item,
+      .kh-em-item,
+      .kh-fl-item,
+      .kh-ap-item,
+      .kh-dl-item,
+      .kh-cl-item,
+      .kh-vc-item,
+      .kh-tk-item,
+      .kh-fn-item,
+      .kh-sap-card
+    )
+  ) {
+  row-gap: 4px;
+}
+/* table rows (issues, trash, tags, passwords) */
+:root[data-density='compact'] :is(.kh-is-tr, .kh-tr__row, .kh-tg__row, .kh-pw-tr) {
+  min-height: 36px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+:root[data-density='compact'] :has(> :is(.kh-tr__row, .kh-tg__row, .kh-pw-tr)) {
+  row-gap: 2px;
 }

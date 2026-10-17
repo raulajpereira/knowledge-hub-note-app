@@ -91,7 +91,7 @@ type HomeData = {
 const H_PRI = {
   high: 'oklch(0.82 0.1 35)',
   medium: 'oklch(0.88 0.09 85)',
-  low: 'rgba(255,255,255,.35)',
+  low: 'rgb(var(--w) / .35)',
 } as const;
 const H_GROUPS = [
   ['tech', 'tk_tech', 'oklch(0.8 0.13 245)'],
@@ -362,7 +362,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           ? t('h_tomorrow')
           : `${t('h_inDays')}${d}${t('h_days')}`;
   const relColor = (d: number) =>
-    d < 0 ? 'oklch(0.8 0.13 30)' : d <= 1 ? '#fbf8f5' : 'rgba(255,248,240,.62)';
+    d < 0 ? 'oklch(0.8 0.13 30)' : d <= 1 ? 'var(--ink)' : 'rgb(var(--t) / calc(.62 * var(--t-k)))';
   const active = data.tasks ?? [];
   const dueToday = active.filter((x) => x.dueOn === today);
   const overdue = active.filter((x) => x.dueOn && dayDiff(x.dueOn) < 0);
@@ -480,7 +480,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                     alignItems: 'center',
                     gap: 6,
                     fontSize: 12,
-                    color: 'rgba(255,248,240,.75)',
+                    color: 'rgb(var(--t) / calc(.75 * var(--t-k)))',
                     maxWidth: '100%',
                   }}
                 >
@@ -504,7 +504,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                 <span
                   style={{
                     fontSize: 12,
-                    color: 'rgba(255,248,240,.6)',
+                    color: 'rgb(var(--t) / calc(.6 * var(--t-k)))',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -537,7 +537,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                     scroll={false}
                     className="kh-quick"
                     style={{
-                      background: `linear-gradient(160deg,${QUICK_TINT[id] ?? 'rgba(255,255,255,.14)'},rgba(255,255,255,.04))`,
+                      background: `linear-gradient(160deg,${QUICK_TINT[id] ?? 'rgb(var(--sf) / calc(.14 * var(--sf-k)))'},rgb(var(--sf) / calc(.04 * var(--sf-k))))`,
                     }}
                   >
                     <span className="kh-quick__ic">
@@ -563,7 +563,13 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                       >
                         {navLabel(id)}
                       </span>
-                      <span style={{ fontSize: 11, color: 'rgba(255,248,240,.65)', whiteSpace: 'nowrap' }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: 'rgb(var(--t) / calc(.65 * var(--t-k)))',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {t('qk_goTo').trim()}
                       </span>
                     </span>
@@ -590,7 +596,9 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
             </div>
             {editing && quickEdit && (
               <div className="kh-form-row" style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: 12, color: 'rgba(255,248,240,.7)' }}>{t('qk_pick')}</span>
+                <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
+                  {t('qk_pick')}
+                </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {quickAvail.map((id) => (
                     <button
@@ -605,7 +613,9 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                     </button>
                   ))}
                   {quickAvail.length === 0 && (
-                    <span style={{ fontSize: 12, color: 'rgba(255,248,240,.6)' }}>{t('qk_all')}</span>
+                    <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
+                      {t('qk_all')}
+                    </span>
                   )}
                 </div>
               </div>
@@ -650,7 +660,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                         <span
                           style={{
                             fontSize: 12.5,
-                            color: 'rgba(255,248,240,.62)',
+                            color: 'rgb(var(--t) / calc(.62 * var(--t-k)))',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -695,7 +705,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                     flexDirection: 'row',
                     minHeight: 78,
                     fontSize: 14,
-                    color: 'rgba(255,248,240,.85)',
+                    color: 'rgb(var(--t) / calc(.85 * var(--t-k)))',
                   }}
                   onClick={() => setScForm(scForm ? null : { id: null, title: '', url: '' })}
                 >
@@ -783,7 +793,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                   position: 'absolute',
                   inset: 0,
                   borderRadius: '50%',
-                  background: `conic-gradient(#fbf8f5 ${Math.round((1 - p.left / pomo.total()) * 100)}%,rgba(255,255,255,.12) 0)`,
+                  background: `conic-gradient(var(--ink) ${Math.round((1 - p.left / pomo.total()) * 100)}%,rgb(var(--sf) / calc(.12 * var(--sf-k))) 0)`,
                   mask: 'radial-gradient(farthest-side, transparent calc(100% - 8.5px), #000 calc(100% - 8px))',
                 }}
               />
@@ -823,7 +833,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                 {t('h_reset2')}
               </button>
             </div>
-            <span style={{ fontSize: 12, color: 'rgba(255,248,240,.62)' }}>
+            <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.62 * var(--t-k)))' }}>
               {pomoDone}
               {pomoDone === 1 ? t('h_session1') : t('h_sessions')}
             </span>
@@ -1008,8 +1018,8 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                         d < 0
                           ? 'oklch(0.65 0.17 30 / .3)'
                           : d <= 1
-                            ? 'rgba(255,255,255,.22)'
-                            : 'rgba(255,255,255,.1)',
+                            ? 'rgb(var(--w) / .22)'
+                            : 'rgb(var(--w) / .1)',
                     }}
                   >
                     <span>{MON[dt.getMonth()]}</span>
@@ -1032,7 +1042,10 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           <div className="kh-hlist">
             {data.recentNotes.map((n) => (
               <Link key={n.id} href={`/app/notes?n=${n.id}`} className={rowCls} scroll={false}>
-                <span className="kh-hdot" style={{ background: n.color ?? 'rgba(255,248,240,.35)' }} />
+                <span
+                  className="kh-hdot"
+                  style={{ background: n.color ?? 'rgb(var(--t) / calc(.35 * var(--t-k)))' }}
+                />
                 <span className="kh-hrow__col">
                   <span className="kh-hrow__t">{n.title || t('ne_untitled')}</span>
                   <span className="kh-hrow__s">
@@ -1066,7 +1079,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                 role="link"
                 tabIndex={0}
                 style={{
-                  background: `linear-gradient(160deg,${modColor(x.module).replace(')', ' / .22)')},rgba(255,255,255,.04))`,
+                  background: `linear-gradient(160deg,${modColor(x.module).replace(')', ' / .22)')},rgb(var(--w) / .04))`,
                 }}
                 onClick={() => router.push(`/app/tcodes?x=${x.id}`)}
                 onKeyDown={(e) => e.key === 'Enter' && router.push(`/app/tcodes?x=${x.id}`)}
@@ -1149,7 +1162,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           <div className="kh-hlist">
             {data.emails.starred.map((m) => (
               <Link key={m.id} href={`/app/emails?m=${m.id}`} className={rowCls} scroll={false}>
-                <span style={{ color: 'oklch(0.86 0.13 85)', display: 'flex' }}>
+                <span style={{ color: 'oklch(calc(.86 * var(--lk)) .13 85)', display: 'flex' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" />
                   </svg>
@@ -1224,8 +1237,8 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
             height: 42,
             padding: '0 18px',
             fontSize: 14,
-            borderColor: editing ? undefined : 'rgba(255,255,255,.2)',
-            background: editing ? undefined : 'rgba(255,255,255,.1)',
+            borderColor: editing ? undefined : 'rgb(var(--w) / .2)',
+            background: editing ? undefined : 'rgb(var(--w) / .1)',
           }}
         >
           {svg(
@@ -1246,7 +1259,9 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
             }}
           >
             <span style={{ fontSize: 14, fontWeight: 600 }}>{t('h_addCard')}</span>
-            <span style={{ fontSize: 12, color: 'rgba(255,248,240,.65)' }}>{t('h_editHint')}</span>
+            <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.65 * var(--t-k)))' }}>
+              {t('h_editHint')}
+            </span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {catalog.map((k) => (
@@ -1255,12 +1270,14 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
               </button>
             ))}
             {catalog.length === 0 && (
-              <span style={{ fontSize: 13, color: 'rgba(255,248,240,.6)' }}>{t('h_allAdded')}</span>
+              <span style={{ fontSize: 13, color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
+                {t('h_allAdded')}
+              </span>
             )}
             <button
               type="button"
               className="kh-chip-add"
-              style={{ background: 'rgba(255,255,255,.06)' }}
+              style={{ background: 'rgb(var(--w) / .06)' }}
               onClick={() => save({ showWx: home.showWx === false })}
             >
               {home.showWx === false ? t('wx_show') : t('wx_hide')}
@@ -1274,7 +1291,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                 borderRadius: 999,
                 border: 0,
                 background: 'transparent',
-                color: 'rgba(255,248,240,.75)',
+                color: 'rgb(var(--t) / calc(.75 * var(--t-k)))',
                 font: 'inherit',
                 fontSize: 13,
                 cursor: 'pointer',
@@ -1339,7 +1356,10 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                       {t(`w_${w.type}`)}
                     </span>
                     {counts[w.type] !== undefined && (
-                      <span className="kh-mono" style={{ fontSize: 12, color: 'rgba(255,248,240,.62)' }}>
+                      <span
+                        className="kh-mono"
+                        style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.62 * var(--t-k)))' }}
+                      >
                         {counts[w.type]}
                       </span>
                     )}

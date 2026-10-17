@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
-import { tagStyle } from '@/lib/tags';
 import {
   CL_ADD,
   CL_FORMS,
@@ -32,7 +31,7 @@ import {
   type Row,
   type Val,
 } from '@/lib/codelib';
-import { Popover, useConfirm, usePersistentState, useToast, TagInput } from '@/components/ui';
+import { Popover, useConfirm, usePersistentState, useToast, TagInput, useTagStyle } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
@@ -145,6 +144,7 @@ function useDragWidth(key: string, lim: { def: number; min: number; max: number 
 }
 
 export function CodelibView() {
+  const tagStyle = useTagStyle();
   const { t } = useI18n();
   const when = useWhen();
   const toast = useToast();
@@ -1017,7 +1017,7 @@ function TreeNode({
       aria-current={on || undefined}
       onClick={onClick}
     >
-      <span className="kh-cl-nicon" style={on ? { background: tint(color), color: '#fbf8f5' } : undefined}>
+      <span className="kh-cl-nicon" style={on ? { background: tint(color), color: 'var(--ink)' } : undefined}>
         <Svg d={icon} size={13} />
       </span>
       <span className="kh-cl-grow">

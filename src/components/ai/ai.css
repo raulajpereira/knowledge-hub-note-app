@@ -12,14 +12,18 @@
   flex-direction: column;
   border-radius: 28px;
   /* Liquid Glass, as the app's modals and menus */
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.22 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--kh-blur-modal)) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgb(var(--w) / 0.28);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 40px 90px rgba(0, 0, 0, 0.35);
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.18);
-  color: #fbf8f5;
+    0 40px 90px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
+  text-shadow: 0 1px 10px rgb(0 0 0 / calc(0.18 * var(--sh-k)));
+  color: var(--ink);
   overflow: hidden;
   animation: kh-ai-in 0.18s ease-out;
 }
@@ -67,7 +71,7 @@
   content: '';
   position: absolute;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgb(var(--w) / 0.7);
   opacity: 0;
   transition: opacity 0.12s ease;
 }
@@ -91,8 +95,8 @@
   width: 9px;
   height: 9px;
   background: none;
-  border-top: 2px solid rgba(255, 255, 255, 0.75);
-  border-left: 2px solid rgba(255, 255, 255, 0.75);
+  border-top: 2px solid rgb(var(--w) / 0.75);
+  border-left: 2px solid rgb(var(--w) / 0.75);
   border-radius: 3px 0 0 0;
 }
 .kh-ai__rs:hover::after,
@@ -101,7 +105,7 @@
   opacity: 1;
 }
 .kh-ai__rs:focus-visible {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--w) / 0.08);
 }
 .kh-ai__head {
   flex: none;
@@ -109,7 +113,7 @@
   align-items: center;
   gap: 8px;
   padding: 14px 14px 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgb(var(--w) / 0.1);
 }
 .kh-ai__logo {
   width: 34px;
@@ -136,7 +140,7 @@
 .kh-ai__ttl span {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -146,9 +150,9 @@
   height: 32px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.07);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.07);
+  color: var(--ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,7 +161,7 @@
 }
 .kh-ai__ic:hover,
 .kh-ai__ic[aria-pressed='true'] {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgb(var(--w) / 0.18);
 }
 .kh-ai__msgs,
 .kh-ai__hist {
@@ -179,14 +183,14 @@
 }
 .kh-ai__msg[data-role='user'] {
   align-self: flex-end;
-  background: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  color: var(--ink-inv);
   border-bottom-right-radius: 6px;
 }
 .kh-ai__msg[data-role='assistant'] {
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgb(var(--w) / 0.08);
+  border: 1px solid rgb(var(--w) / 0.1);
   border-bottom-left-radius: 6px;
 }
 .kh-ai__msg[data-error] {
@@ -215,7 +219,7 @@
   font-size: 12.5px;
   padding: 1px 5px;
   border-radius: 5px;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgb(var(--d) / calc(0.25 * var(--d-k)));
 }
 .kh-ai-h {
   font-weight: 650;
@@ -224,7 +228,7 @@
   margin: 0 0 8px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(10, 7, 5, 0.45);
+  background: rgb(var(--d) / calc(0.45 * var(--d-k)));
   overflow: auto;
   font-size: 12.5px;
   line-height: 1.55;
@@ -244,7 +248,7 @@
   padding: 0 4px;
   border-radius: 6px;
   background: oklch(0.75 0.11 260 / 0.35);
-  color: #fff;
+  color: var(--ink-hi);
   font-size: 11px;
   font-weight: 700;
   text-decoration: none;
@@ -259,7 +263,7 @@ a.kh-ai-cite:hover {
   gap: 6px;
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgb(var(--w) / 0.1);
 }
 .kh-ai__srcs a {
   max-width: 100%;
@@ -269,9 +273,9 @@ a.kh-ai-cite:hover {
   height: 26px;
   padding: 0 10px 0 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 248, 240, 0.9);
+  background: rgb(var(--w) / 0.08);
+  border: 1px solid rgb(var(--w) / 0.12);
+  color: rgb(var(--t) / calc(0.9 * var(--t-k)));
   font-size: 12px;
   text-decoration: none;
   white-space: nowrap;
@@ -289,7 +293,7 @@ a.kh-ai-cite:hover {
   font-size: 10.5px;
 }
 .kh-ai__srcs a:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgb(var(--w) / 0.16);
 }
 .kh-ai__dots {
   display: inline-flex;
@@ -300,7 +304,7 @@ a.kh-ai-cite:hover {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 248, 240, 0.7);
+  background: rgb(var(--t) / calc(0.7 * var(--t-k)));
   animation: kh-ai-dot 1s infinite ease-in-out;
 }
 .kh-ai__dots i:nth-child(2) {
@@ -329,21 +333,21 @@ a.kh-ai-cite:hover {
   margin: 0 0 4px;
   font-size: 14px;
   line-height: 1.5;
-  color: rgba(255, 248, 240, 0.78);
+  color: rgb(var(--t) / calc(0.78 * var(--t-k)));
 }
 .kh-ai__hello button {
   text-align: left;
   padding: 10px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--w) / 0.06);
+  color: var(--ink);
   font: inherit;
   font-size: 13.5px;
   cursor: pointer;
 }
 .kh-ai__hello button:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--w) / 0.12);
 }
 .kh-ai__ask {
   flex: none;
@@ -353,11 +357,11 @@ a.kh-ai-cite:hover {
   margin: 8px 12px 0;
   padding: 8px 8px 8px 14px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgb(var(--w) / 0.08);
+  border: 1px solid rgb(var(--w) / 0.18);
 }
 .kh-ai__ask:focus-within {
-  border-color: rgba(255, 255, 255, 0.36);
+  border-color: rgb(var(--w) / 0.36);
 }
 .kh-ai__ask textarea {
   flex: 1;
@@ -366,7 +370,7 @@ a.kh-ai-cite:hover {
   resize: none;
   border: 0;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   font: inherit;
   font-size: 14px;
   line-height: 1.45;
@@ -375,7 +379,7 @@ a.kh-ai-cite:hover {
   field-sizing: content;
 }
 .kh-ai__ask textarea::placeholder {
-  color: rgba(255, 248, 240, 0.45);
+  color: rgb(var(--t) / calc(0.45 * var(--t-k)));
 }
 .kh-ai__ask button {
   width: 36px;
@@ -383,8 +387,8 @@ a.kh-ai-cite:hover {
   flex: none;
   border: 0;
   border-radius: 50%;
-  background: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  color: var(--ink-inv);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -398,7 +402,7 @@ a.kh-ai-cite:hover {
   flex: none;
   padding: 8px 18px 12px;
   font-size: 11px;
-  color: rgba(255, 248, 240, 0.5);
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
   text-align: center;
 }
 .kh-ai__empty {
@@ -410,7 +414,7 @@ a.kh-ai-cite:hover {
   gap: 12px;
   padding: 30px;
   text-align: center;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
 }
 .kh-ai__empty p {
   margin: 0;
@@ -424,8 +428,8 @@ a.kh-ai-cite:hover {
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  background: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  color: var(--ink-inv);
   font-size: 13.5px;
   font-weight: 600;
   text-decoration: none;
@@ -435,11 +439,11 @@ a.kh-ai-cite:hover {
   align-items: center;
   gap: 6px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgb(var(--w) / 0.05);
+  border: 1px solid rgb(var(--w) / 0.08);
 }
 .kh-ai__chat[data-on] {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgb(var(--w) / 0.14);
 }
 .kh-ai__chat > button:first-child {
   flex: 1;
@@ -450,7 +454,7 @@ a.kh-ai-cite:hover {
   padding: 9px 12px;
   border: 0;
   background: none;
-  color: #fbf8f5;
+  color: var(--ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -463,7 +467,7 @@ a.kh-ai-cite:hover {
 }
 .kh-ai__chat small {
   font-size: 11px;
-  color: rgba(255, 248, 240, 0.55);
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
 }
 .kh-ai__chat .kh-ai__ic {
   margin-right: 6px;
@@ -473,7 +477,7 @@ a.kh-ai-cite:hover {
 .kh-ai__none {
   text-align: center;
   font-size: 13.5px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
 }
 /* page actions */
 .kh-ai-btn {
@@ -485,7 +489,7 @@ a.kh-ai-cite:hover {
   border-radius: 999px;
   border: 1px solid oklch(0.78 0.11 280 / 0.55);
   background: linear-gradient(135deg, oklch(0.72 0.12 300 / 0.35), oklch(0.7 0.12 230 / 0.35));
-  color: #fbf8f5;
+  color: var(--ink);
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
@@ -518,7 +522,7 @@ a.kh-ai-cite:hover {
   border: 1px solid oklch(0.78 0.11 280 / 0.35);
   font-size: 14px;
   line-height: 1.55;
-  color: #fbf8f5;
+  color: var(--ink);
 }
 .kh-ai-out__h {
   display: flex;
@@ -528,7 +532,7 @@ a.kh-ai-cite:hover {
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: rgba(255, 248, 240, 0.72);
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
 }
 .kh-ai-out__h button {
   margin-left: auto;
@@ -547,7 +551,7 @@ a.kh-ai-cite:hover {
   font-size: 12.5px;
   padding: 1px 5px;
   border-radius: 5px;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgb(var(--d) / calc(0.25 * var(--d-k)));
 }
 .kh-ai-out__acts {
   display: flex;
@@ -558,16 +562,16 @@ a.kh-ai-cite:hover {
   height: 32px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.2);
+  background: rgb(var(--w) / 0.08);
+  color: var(--ink);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
 }
 .kh-ai-out__acts button[data-main] {
-  background: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  color: var(--ink-inv);
   border: 0;
   font-weight: 600;
 }
@@ -588,12 +592,12 @@ a.kh-ai-cite:hover {
   padding: 0;
   cursor: pointer;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid rgb(var(--w) / 0.45);
   background: linear-gradient(135deg, oklch(0.72 0.15 300), oklch(0.68 0.15 235));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.45),
     0 10px 28px oklch(0.6 0.16 270 / 0.5),
-    0 4px 10px rgba(0, 0, 0, 0.25);
+    0 4px 10px rgb(0 0 0 / calc(0.25 * var(--sh-k)));
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease,
@@ -604,10 +608,10 @@ a.kh-ai-cite:hover {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
     0 14px 34px oklch(0.6 0.16 270 / 0.6),
-    0 4px 10px rgba(0, 0, 0, 0.25);
+    0 4px 10px rgb(0 0 0 / calc(0.25 * var(--sh-k)));
 }
 .kh-ai-fab:focus-visible {
-  outline: 2px solid #fbf8f5;
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
 .kh-ai-fab[data-open] {
@@ -618,7 +622,7 @@ a.kh-ai-cite:hover {
   opacity: 0.7;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 6px 16px rgba(0, 0, 0, 0.25);
+    0 6px 16px rgb(0 0 0 / calc(0.25 * var(--sh-k)));
 }
 @media (prefers-reduced-motion: reduce) {
   .kh-ai-fab {

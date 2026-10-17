@@ -118,7 +118,9 @@ export function WeatherCard() {
       <div className="kh-wx__sky">
         <div style={{ position: 'absolute', inset: 0, background: wxBg(kind, isDay), opacity: 0.75 }} />
         <WxFx kind={kind} isDay={isDay} />
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.12)' }} />
+        <div
+          style={{ position: 'absolute', inset: 0, background: 'rgb(var(--d) / calc(.12 * var(--d-k)))' }}
+        />
       </div>
       <div className="kh-wx__grid">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
@@ -129,7 +131,7 @@ export function WeatherCard() {
               gap: 8,
               fontSize: 13,
               fontWeight: 500,
-              color: 'rgba(255,255,255,.9)',
+              color: 'rgb(var(--w) / .9)',
               minWidth: 0,
             }}
           >
@@ -186,15 +188,21 @@ export function WeatherCard() {
             </span>
             <div
               className="kh-mono"
-              style={{ fontSize: 56, fontWeight: 600, letterSpacing: '-.04em', lineHeight: 1, color: '#fff' }}
+              style={{
+                fontSize: 56,
+                fontWeight: 600,
+                letterSpacing: '-.04em',
+                lineHeight: 1,
+                color: 'var(--ink-hi)',
+              }}
             >
               {cur ? `${Math.round(cur.temperature_2m)}°` : '—'}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-              <span style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink-hi)' }}>
                 {cur ? t(wxLabelKey(code)) : status === 'err' ? t('wx_err') : t('wx_loading')}
               </span>
-              <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,.85)' }}>
+              <span style={{ fontSize: 12.5, color: 'rgb(var(--w) / .85)' }}>
                 {cur ? `${t('wx_feels')}${Math.round(cur.apparent_temperature)}°` : ''}
               </span>
             </div>
@@ -225,9 +233,9 @@ export function WeatherCard() {
                   className="kh-wx__chip"
                   style={{
                     fontWeight: 600,
-                    color: '#fff',
+                    color: 'var(--ink-hi)',
                     background: ALERT_BG[tone],
-                    borderColor: 'rgba(255,255,255,.35)',
+                    borderColor: 'rgb(var(--w) / .35)',
                   }}
                 >
                   {svg(
@@ -240,7 +248,7 @@ export function WeatherCard() {
               ))}
             </div>
           )}
-          {msg && <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.75)' }}>{msg}</div>}
+          {msg && <div style={{ fontSize: 11.5, color: 'rgb(var(--w) / .75)' }}>{msg}</div>}
         </div>
         <div className="kh-wx__days">
           {dl?.time.map((d, i) => {
@@ -254,7 +262,7 @@ export function WeatherCard() {
                     fontSize: 13,
                     fontWeight: 600,
                     textTransform: 'capitalize',
-                    color: '#fff',
+                    color: 'var(--ink-hi)',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -271,7 +279,7 @@ export function WeatherCard() {
                     position: 'relative',
                     height: 5,
                     borderRadius: 999,
-                    background: 'rgba(255,255,255,.18)',
+                    background: 'rgb(var(--w) / .18)',
                   }}
                 >
                   <span
@@ -288,13 +296,13 @@ export function WeatherCard() {
                 </span>
                 <span
                   className="kh-mono"
-                  style={{ fontSize: 12.5, textAlign: 'right', color: 'rgba(255,255,255,.75)' }}
+                  style={{ fontSize: 12.5, textAlign: 'right', color: 'rgb(var(--w) / .75)' }}
                 >
                   {Math.round(mn)}°
                 </span>
                 <span
                   className="kh-mono"
-                  style={{ fontSize: 13.5, fontWeight: 600, textAlign: 'right', color: '#fff' }}
+                  style={{ fontSize: 13.5, fontWeight: 600, textAlign: 'right', color: 'var(--ink-hi)' }}
                 >
                   {Math.round(mx)}°
                 </span>

@@ -361,14 +361,14 @@ export function TransportsView() {
       {stations(x).map((s, i) => (
         <div key={i} className="kh-ot-st" style={{ flex: s.first ? '0 0 auto' : '1 1 0' }}>
           {!s.first && (
-            <div className="kh-ot-line" style={{ background: s.done ? s.color : 'rgba(255,255,255,.3)' }} />
+            <div className="kh-ot-line" style={{ background: s.done ? s.color : 'rgb(var(--w) / .3)' }} />
           )}
           <span
             title={s.tip}
             className="kh-ot-pill"
             style={{
-              background: s.done ? tint(s.color) : 'rgba(255,255,255,.04)',
-              borderColor: s.done ? s.color : 'rgba(255,255,255,.22)',
+              background: s.done ? tint(s.color) : 'rgb(var(--w) / .04)',
+              borderColor: s.done ? s.color : 'rgb(var(--w) / .22)',
               boxShadow: `0 0 16px ${s.done ? s.color.replace(')', ' / .35)') : 'transparent'}`,
             }}
           >
@@ -489,9 +489,9 @@ export function TransportsView() {
                 at
                   ? { background: 'oklch(0.8 0.14 150 / .28)', borderColor: 'oklch(0.8 0.14 150 / .6)' }
                   : {
-                      background: 'rgba(255,255,255,.05)',
-                      borderColor: 'rgba(255,255,255,.14)',
-                      color: 'rgba(255,248,240,.55)',
+                      background: 'rgb(var(--w) / .05)',
+                      borderColor: 'rgb(var(--w) / .14)',
+                      color: 'rgb(var(--t) / calc(.55 * var(--t-k)))',
                     }
               }
             >
@@ -564,8 +564,8 @@ export function TransportsView() {
                 type="button"
                 aria-pressed={on}
                 style={{
-                  background: on ? tint(STAGE_C[k]) : 'rgba(255,255,255,.05)',
-                  borderColor: on ? STAGE_C[k] : 'rgba(255,255,255,.12)',
+                  background: on ? tint(STAGE_C[k]) : 'rgb(var(--w) / .05)',
+                  borderColor: on ? STAGE_C[k] : 'rgb(var(--w) / .12)',
                 }}
                 onClick={() => setStage(on ? 'all' : k)}
               >

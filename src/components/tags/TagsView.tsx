@@ -1,18 +1,101 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { useToast } from '@/components/ui';
-import { tagStyle } from '@/lib/tags';
+import { Popover, useTagColors, useTagStyle, useToast } from '@/components/ui';
+import { usePref } from '@/components/shell/PrefsProvider';
+import {
+  TAG_PALETTE,
+  autoTagIndex,
+  chosenTagIndex,
+  paletteStyle,
+  tagKey,
+  type TagColorMap,
+} from '@/lib/tags';
 import './tags.css';
 
 // Etiquetas: not designed in the prototype — built with the Lixo page's
-// look (user decision): the tags used in notes with their counts, rename only.
+// look (user decision): the tags used in notes with their counts, rename and
+// colour (prefs.tagColors: one of the 10 palette hues, or automatic).
 
 type Tag = { name: string; count: number };
 
-function Row({ tag, onRename }: { tag: Tag; onRename: (to: string) => Promise<void> }) {
+/** Swatch button + popover: the palette hues and "Automática". */
+function ColorPick({ name, onPick }: { name: string; onPick: (i: number | null) => void }) {
+  const { t } = useI18n();
+  const chosen = chosenTagIndex(name, useTagColors());
+  const tagStyle = useTagStyle();
+  const [open, setOpen] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const pick = (i: number | null) => {
+    onPick(i);
+    setOpen(false);
+  };
+  return (
+    <>
+      <button
+        ref={btn}
+        type="button"
+        className="kh-tg__btn kh-tg__colorBtn"
+        title={t('tg_color')}
+        aria-label={`${t('tg_color')} ${name}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="kh-tg__dot kh-tagc" style={tagStyle(name)} />
+      </button>
+      {open && (
+        <Popover
+          anchor={btn}
+          onClose={() => setOpen(false)}
+          className="kh-tg__pop"
+          width={244}
+          role="dialog"
+          aria-label={`${t('tg_color')} ${name}`}
+        >
+          <div className="kh-tg__swatches">
+            {TAG_PALETTE.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                className="kh-tg__sw kh-tagc"
+                style={paletteStyle(i)}
+                aria-pressed={chosen === i}
+                aria-label={`${t('tg_color')} ${i + 1}`}
+                data-sw={i}
+                onClick={() => pick(i)}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="kh-tg__auto"
+            aria-pressed={chosen === undefined}
+            data-sw="auto"
+            onClick={() => pick(null)}
+          >
+            <span className="kh-tg__sw kh-tagc" style={paletteStyle(autoTagIndex(name))} aria-hidden="true" />
+            {t('tg_colorAuto')}
+          </button>
+          <div className="kh-tg__popHint">{t('tg_colorHint')}</div>
+        </Popover>
+      )}
+    </>
+  );
+}
+
+function Row({
+  tag,
+  onRename,
+  onColor,
+}: {
+  tag: Tag;
+  onRename: (to: string) => Promise<void>;
+  onColor: (i: number | null) => void;
+}) {
+  const tagStyle = useTagStyle();
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(tag.name);
@@ -50,6 +133,7 @@ function Row({ tag, onRename }: { tag: Tag; onRename: (to: string) => Promise<vo
         {tag.count}
         {tag.count === 1 ? t('note1') : t('noteN')}
       </span>
+      <ColorPick name={tag.name} onPick={onColor} />
       <button
         type="button"
         className="kh-tg__btn"
@@ -83,6 +167,14 @@ export function TagsView() {
   const toast = useToast();
   const [tags, setTags] = useState<Tag[] | null>(null);
   const [q, setQ] = useState('');
+  const [colors, setColors] = usePref<TagColorMap>('tagColors', {});
+  const setColor = (name: string, i: number | null, from?: string) => {
+    const next: Record<string, number> = { ...colors };
+    if (from) delete next[tagKey(from)];
+    if (i === null) delete next[tagKey(name)];
+    else next[tagKey(name)] = i;
+    setColors(Object.keys(next).length ? next : null);
+  };
 
   const load = useCallback(
     () =>
@@ -103,6 +195,9 @@ export function TagsView() {
   const rename = async (from: string, to: string) => {
     try {
       const r = await api<{ renamed: number }>('/tags', { from, to }, 'PATCH');
+      // the chosen colour follows the tag to its new name
+      const i = chosenTagIndex(from, colors);
+      if (i !== undefined && tagKey(from) !== tagKey(to)) setColor(to, i, from);
       toast({ message: t('tg_saved').replace('{n}', String(r.renamed)), tone: 'success' });
     } catch {
       toast({ message: t('ne_saveFail'), tone: 'error' });
@@ -123,7 +218,7 @@ export function TagsView() {
             height="15"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="rgba(255,248,240,.6)"
+            stroke="rgb(var(--t) / calc(.6 * var(--t-k)))"
             strokeWidth="2"
             strokeLinecap="round"
             aria-hidden="true"
@@ -145,9 +240,15 @@ export function TagsView() {
             <span>{t('tg_name')}</span>
             <span>{t('tg_count')}</span>
             <span />
+            <span />
           </div>
           {list.map((x) => (
-            <Row key={x.name} tag={x} onRename={(to) => rename(x.name, to)} />
+            <Row
+              key={x.name}
+              tag={x}
+              onRename={(to) => rename(x.name, to)}
+              onColor={(i) => setColor(x.name, i)}
+            />
           ))}
           {tags && list.length === 0 && (
             <div className="kh-tg__none">

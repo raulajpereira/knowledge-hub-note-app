@@ -36,7 +36,7 @@ export const STATUS_TONES = {
   info: 'oklch(0.75 0.12 245 / .5)',
   warn: 'oklch(0.72 0.15 50 / .55)',
   danger: 'oklch(0.66 0.17 25 / .5)',
-  neutral: 'rgba(255,255,255,.14)',
+  neutral: 'rgb(var(--w) / .14)',
 } as const;
 
 type TagProps = React.HTMLAttributes<HTMLSpanElement> & {

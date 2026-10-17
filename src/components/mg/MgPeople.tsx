@@ -95,7 +95,9 @@ export function MgPeople({ mg }: { mg: Mg }) {
           <h1 style={css('margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em;margin-right:auto;')}>
             {tr('Recursos')}
           </h1>
-          <span style={css('font-size:12.5px;color:rgba(255,248,240,.65);white-space:nowrap;')}>
+          <span
+            style={css('font-size:12.5px;color:rgb(var(--t) / calc(.65 * var(--t-k)));white-space:nowrap;')}
+          >
             {tr(`${list.length} pessoas`)}
           </span>
           <button
@@ -134,7 +136,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
               select(id);
             }}
             style={css(
-              'width:32px;height:32px;border-radius:50%;border:0;background:#fbf8f5;color:#2a211c;cursor:pointer;font-size:18px;line-height:1;',
+              'width:32px;height:32px;border-radius:50%;border:0;background:var(--ink);color:var(--ink-inv);cursor:pointer;font-size:18px;line-height:1;',
             )}
           >
             +
@@ -146,7 +148,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
           aria-label={L(63)}
           onChange={(e) => setQ(e.target.value)}
           style={css(
-            'height:38px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;',
+            'height:38px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13.5px;outline:none;',
           )}
         />
         <div role="group" aria-label={tr('Senioridade')} style={css('display:flex;flex-wrap:wrap;gap:4px;')}>
@@ -162,7 +164,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
             opts={mg.teamOpts.map((o) => ({ ...o, l: o.v ? o.l : tr(o.l) }))}
             pos="right 10px center"
             size="10px"
-            s="height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;width:100%;"
+            s="height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background-color:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:12.5px;outline:none;width:100%;"
           />
           <Sel
             value={stF}
@@ -174,7 +176,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
             ]}
             pos="right 10px center"
             size="10px"
-            s="height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;width:100%;"
+            s="height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background-color:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:12.5px;outline:none;width:100%;"
           />
         </div>
       </div>
@@ -197,7 +199,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
               onClick={() => select(p.id)}
               onKeyDown={(e) => e.key === 'Enter' && select(p.id)}
               style={css(
-                `flex-shrink:0;display:flex;align-items:center;gap:10px;min-height:52px;padding:0 10px;border-radius:16px;cursor:pointer;background:${on ? 'rgba(255,255,255,.14)' : 'transparent'};border:1px solid ${on ? 'rgba(255,255,255,.2)' : 'transparent'};`,
+                `flex-shrink:0;display:flex;align-items:center;gap:10px;min-height:52px;padding:0 10px;border-radius:16px;cursor:pointer;background:${on ? 'rgb(var(--w) / .14)' : 'transparent'};border:1px solid ${on ? 'rgb(var(--w) / .2)' : 'transparent'};`,
               )}
             >
               <Av p={p} size={34} fs={12} tc={t.tc} />
@@ -211,7 +213,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                 </span>
                 <span
                   style={css(
-                    'font-size:12px;color:rgba(255,248,240,.64);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                    'font-size:12px;color:rgb(var(--t) / calc(.64 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
                   )}
                 >
                   {tr(p.role)}
@@ -276,10 +278,10 @@ export function MgPeople({ mg }: { mg: Mg }) {
               aria-label={tr('Nome')}
               onChange={(e) => set('name')(e.target.value)}
               style={css(
-                'width:100%;padding:0;border:0;background:transparent;color:#fbf8f5;font:inherit;font-size:26px;font-weight:600;letter-spacing:-.02em;outline:none;',
+                'width:100%;padding:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:26px;font-weight:600;letter-spacing:-.02em;outline:none;',
               )}
             />
-            <span style={css('font-size:13px;color:rgba(255,248,240,.7);')}>
+            <span style={css('font-size:13px;color:rgb(var(--t) / calc(.7 * var(--t-k)));')}>
               {tr(sel.role)}
               {t.tn && (
                 <>
@@ -302,7 +304,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
             className="mg-round"
             title={L(65)}
             aria-label={L(65)}
-            style={{ color: '#ffc9b8' }}
+            style={{ color: 'var(--kh-error-text)' }}
             onClick={() => {
               if (!mg.cf(`Remover ${sel.name} e as suas alocações?`)) return;
               mg.upd((d) => {
@@ -454,7 +456,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
         <div style={css('display:flex;flex-direction:column;gap:10px;')}>
           <div style={css('display:flex;align-items:center;gap:10px;')}>
             <span style={css('font-size:16px;font-weight:600;margin-right:auto;')}>{L(19)}</span>
-            <span style={css('font-size:12px;color:rgba(255,248,240,.6);')}>{L(20)}</span>
+            <span style={css('font-size:12px;color:rgb(var(--t) / calc(.6 * var(--t-k)));')}>{L(20)}</span>
           </div>
           <div style={css('display:flex;flex-wrap:wrap;gap:6px;align-items:center;')}>
             {Object.entries(sel.skills)
@@ -463,7 +465,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                 <span
                   key={k}
                   style={css(
-                    `display:flex;align-items:center;height:30px;border-radius:999px;background:${mg.LVC[l]};border:1px solid rgba(255,255,255,.16);overflow:hidden;`,
+                    `display:flex;align-items:center;height:30px;border-radius:999px;background:${mg.LVC[l]};border:1px solid rgb(var(--w) / .16);overflow:hidden;`,
                   )}
                 >
                   <button
@@ -475,7 +477,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                       })
                     }
                     style={css(
-                      'height:100%;padding:0 6px 0 12px;border:0;background:transparent;color:#fbf8f5;font:inherit;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:7px;',
+                      'height:100%;padding:0 6px 0 12px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:7px;',
                     )}
                   >
                     <span style={css('font-weight:600;')}>{tr(SKN[k] ?? k)}</span>
@@ -492,7 +494,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                       })
                     }
                     style={css(
-                      'height:100%;width:24px;border:0;background:transparent;color:rgba(255,248,240,.6);cursor:pointer;padding:0;font-size:13px;',
+                      'height:100%;width:24px;border:0;background:transparent;color:rgb(var(--t) / calc(.6 * var(--t-k)));cursor:pointer;padding:0;font-size:13px;',
                     )}
                   >
                     ×
@@ -508,7 +510,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
               }}
               style={{
                 ...css(
-                  'height:30px;padding:0 26px 0 12px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background-color:transparent;color:rgba(255,248,240,.85);font:inherit;font-size:12.5px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme:dark;',
+                  'height:30px;padding:0 26px 0 12px;border-radius:999px;border:1.5px dashed rgb(var(--w) / .28);background-color:transparent;color:rgb(var(--t) / calc(.85 * var(--t-k)));font:inherit;font-size:12.5px;cursor:pointer;appearance:none;-webkit-appearance:none;color-scheme: var(--scheme);',
                 ),
                 backgroundImage: CHEV,
                 backgroundRepeat: 'no-repeat',
@@ -548,7 +550,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                   </div>
                   <span
                     style={css(
-                      'font-size:10.5px;text-align:center;color:rgba(255,248,240,.55);white-space:nowrap;',
+                      'font-size:10.5px;text-align:center;color:rgb(var(--t) / calc(.55 * var(--t-k)));white-space:nowrap;',
                     )}
                   >
                     {wLbl(mg.wk(w))}
@@ -561,7 +563,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
         <div style={css('display:flex;flex-direction:column;gap:8px;')}>
           <div style={css('display:flex;align-items:center;gap:10px;')}>
             <span style={css('font-size:16px;font-weight:600;margin-right:auto;')}>{L(23)}</span>
-            <span style={css('font-size:12px;color:rgba(255,248,240,.62);')}>
+            <span style={css('font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
               {tr(`${tsh}h registadas nas últimas 4 semanas`)}
             </span>
           </div>
@@ -576,7 +578,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                 onClick={() => mg.nav('mg_projects', { pj: a.project })}
                 onKeyDown={(e) => e.key === 'Enter' && mg.nav('mg_projects', { pj: a.project })}
                 style={css(
-                  'display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;',
+                  'display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border-radius:16px;background:rgb(var(--w) / .05);border:1px solid rgb(var(--w) / .1);cursor:pointer;',
                 )}
               >
                 <span
@@ -592,7 +594,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                   >
                     <span style={css("font-family:'Geist Mono',monospace;")}>{pj?.code}</span> · {pj?.name}
                   </span>
-                  <span style={css('font-size:12px;color:rgba(255,248,240,.62);')}>
+                  <span style={css('font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
                     {wLblY(a.from)} → {wLblY(a.to)}
                   </span>
                 </span>
@@ -602,7 +604,9 @@ export function MgPeople({ mg }: { mg: Mg }) {
               </div>
             );
           })}
-          {!my.length && <div style={css('font-size:13px;color:rgba(255,248,240,.62);')}>{L(24)}</div>}
+          {!my.length && (
+            <div style={css('font-size:13px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>{L(24)}</div>
+          )}
         </div>
       </div>
     </Split>
@@ -610,7 +614,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
 }
 
 const ST_C: Record<string, string> = {
-  Inativo: 'rgba(255,255,255,.16)',
+  Inativo: 'rgb(var(--w) / .16)',
   Suspenso: 'oklch(0.7 0.15 50 / .35)',
 };
 /** "Inativo" / "Suspenso" next to a person (Ativo shows nothing). */
@@ -618,7 +622,7 @@ export function StatusBadge({ status, tr }: { status: string; tr: (s: string) =>
   return (
     <span
       style={css(
-        `flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:700;color:#fbf8f5;background:${ST_C[status] ?? 'rgba(255,255,255,.16)'};vertical-align:middle;`,
+        `flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:700;color:var(--ink);background:${ST_C[status] ?? 'rgb(var(--w) / .16)'};vertical-align:middle;`,
       )}
     >
       {tr(status)}
@@ -677,23 +681,23 @@ function ExpSplit({ mg, p }: { mg: Mg; p: MgPerson }) {
   const scale = Math.max(sum, total ?? 0) || 1;
   const left = total == null ? null : Math.round((total - sum) * 10) / 10;
   const inS =
-    'height:30px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(18,12,9,.2);color:#fbf8f5;font:inherit;font-size:12.5px;outline:none;box-sizing:border-box;';
+    'height:30px;padding:0 10px;border-radius:999px;border:1px solid rgb(var(--w) / .16);background:rgb(var(--d) / calc(.2 * var(--d-k)));color:var(--ink);font:inherit;font-size:12.5px;outline:none;box-sizing:border-box;';
   return (
     <div
       role="group"
       aria-label={tr('Repartição da experiência')}
       style={css(
-        'display:flex;flex-direction:column;gap:10px;padding:10px 14px 13px;border-top:1px solid rgba(255,255,255,.07);',
+        'display:flex;flex-direction:column;gap:10px;padding:10px 14px 13px;border-top:1px solid rgb(var(--w) / .07);',
       )}
     >
       <div style={css('display:flex;align-items:center;gap:10px;')}>
-        <span style={css('font-size:12.5px;color:rgba(255,248,240,.72);margin-right:auto;')}>
+        <span style={css('font-size:12.5px;color:rgb(var(--t) / calc(.72 * var(--t-k)));margin-right:auto;')}>
           {tr('Repartição da experiência')}
         </span>
         {parts.length > 0 && (
           <span
             style={css(
-              `font-size:12px;color:${left != null && left < 0 ? '#ffc9b8' : 'rgba(255,248,240,.6)'};`,
+              `font-size:12px;color:${left != null && left < 0 ? 'var(--kh-error-text)' : 'rgb(var(--t) / calc(.6 * var(--t-k)))'};`,
             )}
           >
             {left == null
@@ -710,7 +714,7 @@ function ExpSplit({ mg, p }: { mg: Mg; p: MgPerson }) {
         <div
           aria-hidden="true"
           style={css(
-            'display:flex;height:8px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.08);gap:2px;',
+            'display:flex;height:8px;border-radius:8px;overflow:hidden;background:rgb(var(--w) / .08);gap:2px;',
           )}
         >
           {parts.map((x, i) => (
@@ -729,7 +733,7 @@ function ExpSplit({ mg, p }: { mg: Mg; p: MgPerson }) {
           <span
             key={x.area}
             style={css(
-              'display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);font-size:12.5px;',
+              'display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 10px;border-radius:999px;border:1px solid rgb(var(--w) / .16);background:rgb(var(--w) / .06);font-size:12.5px;',
             )}
           >
             <span
@@ -753,17 +757,19 @@ function ExpSplit({ mg, p }: { mg: Mg; p: MgPerson }) {
                 )
               }
               style={css(
-                'width:44px;height:22px;padding:0 4px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:rgba(18,12,9,.2);color:#fbf8f5;font:inherit;font-size:12px;text-align:right;outline:none;',
+                'width:44px;height:22px;padding:0 4px;border-radius:7px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--d) / calc(.2 * var(--d-k)));color:var(--ink);font:inherit;font-size:12px;text-align:right;outline:none;',
               )}
             />
-            <span style={css('font-size:11.5px;color:rgba(255,248,240,.6);')}>{tr('anos')}</span>
+            <span style={css('font-size:11.5px;color:rgb(var(--t) / calc(.6 * var(--t-k)));')}>
+              {tr('anos')}
+            </span>
             <button
               type="button"
               className="mg-hx"
               aria-label={`${tr('Remover')} ${x.area}`}
               onClick={() => save(parts.filter((_, j) => j !== i))}
               style={css(
-                'width:22px;height:22px;border:0;border-radius:50%;background:transparent;color:rgba(255,248,240,.6);cursor:pointer;padding:0;font-size:13px;',
+                'width:22px;height:22px;border:0;border-radius:50%;background:transparent;color:rgb(var(--t) / calc(.6 * var(--t-k)));cursor:pointer;padding:0;font-size:13px;',
               )}
             >
               ×
@@ -810,7 +816,7 @@ function ExpSplit({ mg, p }: { mg: Mg; p: MgPerson }) {
               type="button"
               onClick={add}
               style={css(
-                'height:30px;padding:0 12px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
+                'height:30px;padding:0 12px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
               )}
             >
               {tr('Adicionar')}
@@ -819,7 +825,7 @@ function ExpSplit({ mg, p }: { mg: Mg; p: MgPerson }) {
               type="button"
               onClick={() => setAdding(false)}
               style={css(
-                'height:30px;padding:0 10px;border-radius:999px;border:0;background:transparent;color:rgba(255,248,240,.7);font:inherit;font-size:12.5px;cursor:pointer;',
+                'height:30px;padding:0 10px;border-radius:999px;border:0;background:transparent;color:rgb(var(--t) / calc(.7 * var(--t-k)));font:inherit;font-size:12.5px;cursor:pointer;',
               )}
             >
               {tr('Fechar')}
@@ -831,7 +837,7 @@ function ExpSplit({ mg, p }: { mg: Mg; p: MgPerson }) {
               type="button"
               onClick={() => setAdding(true)}
               style={css(
-                'height:30px;padding:0 12px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background:transparent;color:rgba(255,248,240,.85);font:inherit;font-size:12.5px;cursor:pointer;',
+                'height:30px;padding:0 12px;border-radius:999px;border:1.5px dashed rgb(var(--w) / .28);background:transparent;color:rgb(var(--t) / calc(.85 * var(--t-k)));font:inherit;font-size:12.5px;cursor:pointer;',
               )}
             >
               {parts.length ? tr('+ Área') : tr('+ Especificar por área')}

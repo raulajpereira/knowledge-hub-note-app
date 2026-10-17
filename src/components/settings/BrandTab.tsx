@@ -48,8 +48,9 @@ export function BrandTab() {
             minWidth: 220,
             padding: '0 22px',
             borderRadius: 999,
-            background: 'linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.07))',
-            border: '1px solid rgba(255,255,255,.2)',
+            background:
+              'linear-gradient(180deg,rgb(var(--sf) / calc(.16 * var(--sf-k))),rgb(var(--sf) / calc(.07 * var(--sf-k))))',
+            border: '1px solid rgb(var(--w) / .2)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,.3)',
           }}
         >
@@ -64,7 +65,7 @@ export function BrandTab() {
               <Logo size={45} showWordmark={false} />
               <div style={{ fontWeight: 600, fontSize: 20, letterSpacing: '-.02em', whiteSpace: 'nowrap' }}>
                 <span>Knowledge</span>
-                <span style={{ color: 'var(--accent)' }}>Hub</span>
+                <span style={{ color: 'var(--accent-text)' }}>Hub</span>
               </div>
             </>
           )}
@@ -85,7 +86,7 @@ export function BrandTab() {
             {t('resetLogo')}
           </button>
         )}
-        <span role="status" style={{ fontSize: 13, color: 'rgba(255,248,240,.6)' }}>
+        <span role="status" style={{ fontSize: 13, color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
           {msg}
         </span>
       </div>

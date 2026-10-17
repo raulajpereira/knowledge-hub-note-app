@@ -368,7 +368,7 @@ export function FunctionalView({ page }: { page: FnPage }) {
               height="14"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="rgba(255,248,240,.6)"
+              stroke="rgb(var(--t) / calc(.6 * var(--t-k)))"
               strokeWidth="2"
               strokeLinecap="round"
               aria-hidden="true"
@@ -414,8 +414,8 @@ export function FunctionalView({ page }: { page: FnPage }) {
                   type="button"
                   aria-pressed={on}
                   style={{
-                    background: on ? (k ? c : 'rgba(255,255,255,.18)') : 'rgba(255,255,255,.04)',
-                    borderColor: on ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.12)',
+                    background: on ? (k ? c : 'rgb(var(--w) / .18)') : 'rgb(var(--w) / .04)',
+                    borderColor: on ? 'rgb(var(--w) / .45)' : 'rgb(var(--w) / .12)',
                   }}
                   onClick={() => setFSt(k)}
                 >
@@ -443,7 +443,7 @@ export function FunctionalView({ page }: { page: FnPage }) {
                     height="11"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="rgba(255,248,240,.7)"
+                    stroke="rgb(var(--t) / calc(.7 * var(--t-k)))"
                     strokeWidth="2.8"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -725,7 +725,7 @@ export function FunctionalView({ page }: { page: FnPage }) {
                                 className="kh-fn-rst"
                                 value={v}
                                 aria-label={label}
-                                style={{ backgroundColor: FN_RBG[v] ?? 'rgba(255,255,255,.1)' }}
+                                style={{ backgroundColor: FN_RBG[v] ?? 'rgb(var(--w) / .1)' }}
                                 onChange={(e) => updRow(i, k, e.target.value)}
                               >
                                 {R.status!.map(([sk, sl]) => (

@@ -8,8 +8,7 @@ import { sharedConfirm, useSharedFolders, type SharedFolder } from '@/components
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
-import { tagStyle } from '@/lib/tags';
-import { Popover, useConfirm, usePersistentState, useToast, TagInput } from '@/components/ui';
+import { Popover, useConfirm, usePersistentState, useToast, TagInput, useTagStyle } from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
@@ -80,6 +79,7 @@ const I = {
 const SH = 'sh:';
 
 export function ArtifactsView() {
+  const tagStyle = useTagStyle();
   const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
@@ -461,7 +461,7 @@ export function ArtifactsView() {
                       type="button"
                       title={t('sh_fpTitle')}
                       aria-label={`${t('sh_fpTitle')} ${f.name}`}
-                      style={marked || shf ? { color: 'oklch(0.86 0.13 150)' } : undefined}
+                      style={marked || shf ? { color: 'oklch(calc(.86 * var(--lk)) .13 150)' } : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
                         setFs(shf ? { sharedId: shf.id } : { folderId: f.id, title: f.name });
@@ -532,7 +532,7 @@ export function ArtifactsView() {
                 onKeyDown={(e) => e.key === 'Enter' && open(a.id)}
               >
                 <div className="kh-ar-item__top">
-                  {a.pinned && <Svg d={I.pin} s={12} fill="#fbf8f5" />}
+                  {a.pinned && <Svg d={I.pin} s={12} fill="var(--ink)" />}
                   <span>{a.title}</span>
                   {isShared(a) && (
                     <span className="kh-sh-mark" title={t('sh_shared')}>

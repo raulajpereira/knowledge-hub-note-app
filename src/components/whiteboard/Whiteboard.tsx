@@ -127,6 +127,10 @@ const DASH_IC: Record<Dash, string> = {
   dashed: '<line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="4 3.5"></line>',
   dotted: '<line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="0.1 4"></line>',
 };
+/** Board colours as drawn: the light and the dark ink swap in the light theme, so the default ink always shows. */
+// theme-keep (board data: stored hex colours)
+const ink = (c: string) => (c === '#fbf8f5' ? 'var(--ink)' : c === '#2a211c' ? 'var(--ink-inv)' : c);
+
 export const LINK_DOT: Record<LinkType, string> = {
   note: 'oklch(0.86 0.1 85)',
   voice: 'oklch(0.76 0.12 300)',
@@ -241,6 +245,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
     tool: 'select',
     sel: [],
     editId: null,
+    // theme-keep (board data: the server takes #rrggbb)
     style: { stroke: '#fbf8f5', fill: 'none', paper: '#f5d36b', sw: 4, dash: 'solid', fs: 22 },
     lock: false,
     showBoards: false,
@@ -1411,7 +1416,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
           <path
             d={d}
             fill="none"
-            stroke={el.stroke}
+            stroke={ink(el.stroke)}
             strokeWidth={el.sw}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -1442,7 +1447,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
         <g {...k}>
           <foreignObject x={el.x} y={el.y} width={el.w} height={el.h} style={{ overflow: 'visible' }}>
             <div className="kh-wb-card">
-              <span style={{ background: it ? LINK_DOT[type] : 'rgba(255,255,255,.3)' }} />
+              <span style={{ background: it ? LINK_DOT[type] : 'rgb(var(--w) / .3)' }} />
               <div>
                 <span>{it ? this.T(LINK_KIND[type]) : this.T('wb_missing')}</span>
                 <span>{it ? it.title : '—'}</span>
@@ -1486,7 +1491,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
             el,
             ed,
             {
-              color: el.stroke,
+              color: ink(el.stroke),
               fontSize: el.fs,
               fontWeight: 500,
               lineHeight: 1.3,
@@ -1509,12 +1514,13 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
               boxSizing: 'border-box',
               padding: '18px 18px',
               background: el.fill,
-              color: '#2a211c',
+              color: 'var(--ink-inv)',
               fontSize: el.fs || 18,
               lineHeight: 1.32,
               fontWeight: 500,
               borderRadius: '6px',
-              boxShadow: '0 12px 26px rgba(0,0,0,.24), inset 0 -2px 0 rgba(0,0,0,.06)',
+              boxShadow:
+                '0 12px 26px rgb(0 0 0 / calc(.24 * var(--sh-k))), inset 0 -2px 0 rgb(0 0 0 / calc(.06 * var(--sh-k)))',
               overflow: 'hidden',
             },
             false,
@@ -1528,7 +1534,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
           ? `0.01 ${el.sw * 2.2}`
           : undefined;
     const sp = {
-      stroke: el.stroke,
+      stroke: ink(el.stroke),
       strokeWidth: el.sw,
       strokeDasharray: dash,
       strokeLinecap: 'round' as const,
@@ -1554,8 +1560,8 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
           {arrow ? (
             <polygon
               points={`${q[0]},${q[1]} ${q[0] - Math.cos(ang - 0.42) * hs},${q[1] - Math.sin(ang - 0.42) * hs} ${q[0] - Math.cos(ang + 0.42) * hs},${q[1] - Math.sin(ang + 0.42) * hs}`}
-              fill={el.stroke}
-              stroke={el.stroke}
+              fill={ink(el.stroke)}
+              stroke={ink(el.stroke)}
               strokeWidth={Math.max(1, el.sw * 0.5)}
               strokeLinejoin="round"
               style={{ pointerEvents: 'none' }}
@@ -1579,7 +1585,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
               height: '100%',
               boxSizing: 'border-box',
               padding: '10px 16px',
-              color: el.stroke,
+              color: ink(el.stroke),
               fontSize: el.fs || 18,
               fontWeight: 500,
               lineHeight: 1.25,
@@ -1673,7 +1679,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
               cx={c[0]}
               cy={c[1]}
               r={6.5 / z}
-              fill="#fbf8f5"
+              fill="var(--ink)"
               stroke={WB_ACC}
               strokeWidth={2 / z}
               style={{ cursor: 'move' }}
@@ -1754,7 +1760,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
               width={hs}
               height={hs}
               rx={3 / z}
-              fill="#fbf8f5"
+              fill="var(--ink)"
               stroke={WB_ACC}
               strokeWidth={sw}
               style={{ cursor: cur[h] }}
@@ -1837,7 +1843,14 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
     bg.setAttribute('fill', '#2b231e');
     c.insertBefore(bg, c.firstChild);
     c.setAttribute('font-family', getComputedStyle(this.cv).fontFamily);
-    const blob = new Blob([new XMLSerializer().serializeToString(c)], { type: 'image/svg+xml' }),
+    // the file has no theme: the inks as on the dark board
+    const svgText = new XMLSerializer()
+      .serializeToString(c)
+      // theme-keep
+      .replaceAll('var(--ink-inv)', '#2a211c')
+      // theme-keep
+      .replaceAll('var(--ink)', '#fbf8f5');
+    const blob = new Blob([svgText], { type: 'image/svg+xml' }),
       a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = ((b.name || 'whiteboard').replace(/[^\w\- ]+/g, '').trim() || 'whiteboard') + '.svg';
@@ -1964,7 +1977,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
                 height="34"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="rgba(255,248,240,.55)"
+                stroke="rgb(var(--t) / calc(.55 * var(--t-k)))"
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -2085,7 +2098,10 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
                       className="kh-wb-sw"
                       aria-label={c}
                       aria-pressed={cur.stroke === c}
-                      style={{ background: c, borderColor: cur.stroke === c ? '#fbf8f5' : 'transparent' }}
+                      style={{
+                        background: ink(c),
+                        borderColor: cur.stroke === c ? 'var(--ink)' : 'transparent',
+                      }}
                       onClick={() => this.applyStyle('stroke', c)}
                     />
                   ))}
@@ -2100,7 +2116,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
                       height="15"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="rgba(255,248,240,.7)"
+                      stroke="rgb(var(--t) / calc(.7 * var(--t-k)))"
                       strokeWidth="1.9"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -2120,9 +2136,9 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
                         style={{
                           background:
                             c === 'none'
-                              ? 'linear-gradient(135deg,transparent 45%,#ef6a5a 45%,#ef6a5a 55%,transparent 55%),rgba(255,255,255,.08)'
+                              ? 'linear-gradient(135deg,transparent 45%,#ef6a5a 45%,#ef6a5a 55%,transparent 55%),rgb(var(--w) / .08)'
                               : c,
-                          borderColor: cur.fill === c ? '#fbf8f5' : 'transparent',
+                          borderColor: cur.fill === c ? 'var(--ink)' : 'transparent',
                         }}
                         onClick={() => this.applyStyle('fill', c)}
                       />
@@ -2139,7 +2155,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
                       className="kh-wb-sw kh-wb-sw--paper"
                       aria-label={c}
                       aria-pressed={cur.paper === c}
-                      style={{ background: c, borderColor: cur.paper === c ? '#fbf8f5' : 'transparent' }}
+                      style={{ background: c, borderColor: cur.paper === c ? 'var(--ink)' : 'transparent' }}
                       onClick={() => this.applyStyle('paper', c)}
                     />
                   ))}
@@ -2539,7 +2555,7 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
               />
               <div className="kh-wb-chips">
                 {[
-                  ['all', T('wb_all'), 'rgba(255,255,255,.5)'] as const,
+                  ['all', T('wb_all'), 'rgb(var(--w) / .5)'] as const,
                   ...S.linkTypes.map((ty) => [ty, T(LINK_KIND[ty]), LINK_DOT[ty]] as const),
                 ].map(([id, label, dot]) => (
                   <button

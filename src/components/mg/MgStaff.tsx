@@ -10,11 +10,16 @@ import { Av, Chip, PersonPop, Sel, Split, Trash, uid } from './ui';
 import type { Mg } from './store';
 
 const SEL =
-  'height:38px;padding:0 30px 0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;';
+  'height:38px;padding:0 30px 0 12px;border-radius:12px;border:1px solid rgb(var(--w) / .14);background-color:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;';
 const INP =
-  "height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background-color:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;font-family:'Geist Mono',monospace;";
-const LBL = 'font-size:12px;color:rgba(255,248,240,.72);';
-const OCC = ['rgba(255,248,240,.6)', 'oklch(0.86 0.12 85)', 'oklch(0.86 0.12 150)', 'oklch(0.82 0.14 30)'];
+  "height:38px;padding:0 12px;border-radius:12px;border:1px solid rgb(var(--w) / .14);background-color:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13.5px;outline:none;box-sizing:border-box;width:100%;min-width:0;font-family:'Geist Mono',monospace;";
+const LBL = 'font-size:12px;color:rgb(var(--t) / calc(.72 * var(--t-k)));';
+const OCC = [
+  'rgb(var(--t) / calc(.6 * var(--t-k)))',
+  'oklch(calc(.86 * var(--lk)) .12 85)',
+  'oklch(calc(.86 * var(--lk)) .12 150)',
+  'oklch(calc(.82 * var(--lk)) .14 30)',
+];
 
 // Pesquisar Recursos (prototype isStaff): resource requests (skills + level,
 // project, period, hours, max cost) and the people who match, by availability.
@@ -66,7 +71,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
             mg.nav('mg_staff', { r: id, rf: 'all' });
           }}
           style={css(
-            'height:40px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;',
+            'height:40px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;',
           )}
         >
           <svg
@@ -114,7 +119,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
               onClick={() => mg.nav('mg_staff', { rf, r: r.id })}
               onKeyDown={(e) => e.key === 'Enter' && mg.nav('mg_staff', { rf, r: r.id })}
               style={css(
-                `flex-shrink:0;display:flex;flex-direction:column;gap:7px;padding:12px 14px;border-radius:18px;cursor:pointer;background:${on ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.03)'};border:1px solid ${on ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.08)'};`,
+                `flex-shrink:0;display:flex;flex-direction:column;gap:7px;padding:12px 14px;border-radius:18px;cursor:pointer;background:${on ? 'rgb(var(--w) / .14)' : 'rgb(var(--w) / .03)'};border:1px solid ${on ? 'rgb(var(--w) / .22)' : 'rgb(var(--w) / .08)'};`,
               )}
             >
               <div style={css('display:flex;align-items:center;gap:8px;')}>
@@ -135,12 +140,12 @@ export function MgStaff({ mg }: { mg: Mg }) {
               </div>
               <div
                 style={css(
-                  'display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,248,240,.66);',
+                  'display:flex;align-items:center;gap:8px;font-size:12px;color:rgb(var(--t) / calc(.66 * var(--t-k)));',
                 )}
               >
                 <span
                   style={css(
-                    `width:7px;height:7px;flex:none;border-radius:50%;background:${pj?.color ?? 'rgba(255,255,255,.3)'};`,
+                    `width:7px;height:7px;flex:none;border-radius:50%;background:${pj?.color ?? 'rgb(var(--w) / .3)'};`,
                   )}
                 />
                 <span style={css("font-family:'Geist Mono',monospace;white-space:nowrap;")}>
@@ -203,7 +208,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
         <div style={css('display:flex;align-items:center;gap:12px;')}>
           <div style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;')}>
             <span style={css('font-size:24px;font-weight:600;letter-spacing:-.02em;')}>{title(sel)}</span>
-            <span style={css('font-size:13px;color:rgba(255,248,240,.7);')}>
+            <span style={css('font-size:13px;color:rgb(var(--t) / calc(.7 * var(--t-k)));')}>
               {pj ? `${pj.code} · ${pj.name} · ` : ''}
               {wLblY(wk(f))} → {wLblY(wk(t))} · {tr(`${nW} semanas`)}
             </span>
@@ -226,7 +231,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
             className="mg-round"
             title={L(72)}
             aria-label={L(72)}
-            style={{ color: '#ffc9b8' }}
+            style={{ color: 'var(--kh-error-text)' }}
             onClick={() => {
               mg.upd((d) => void (d.reqs = d.reqs.filter((x) => x.id !== sel.id)));
               mg.nav('mg_staff', { rf });
@@ -237,7 +242,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
         </div>
         <div
           style={css(
-            'display:flex;flex-direction:column;gap:16px;padding:18px;border-radius:22px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);',
+            'display:flex;flex-direction:column;gap:16px;padding:18px;border-radius:22px;background:rgb(var(--w) / .05);border:1px solid rgb(var(--w) / .12);',
           )}
         >
           <span style={css('font-size:15px;font-weight:600;')}>{tr('Perfil Necessário')}</span>
@@ -274,7 +279,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
                     aria-label={`${L(38)}: ${SKN[s.k] ?? s.k}`}
                     onClick={() => upd((r) => void r.skills.splice(i, 1))}
                     style={css(
-                      'width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:rgba(255,248,240,.6);cursor:pointer;padding:0;font-size:16px;',
+                      'width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:rgb(var(--t) / calc(.6 * var(--t-k)));cursor:pointer;padding:0;font-size:16px;',
                     )}
                   >
                     ×
@@ -294,7 +299,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
                 })
               }
               style={css(
-                'align-self:flex-start;height:32px;padding:0 14px;border-radius:999px;border:1.5px dashed rgba(255,255,255,.28);background:transparent;color:rgba(255,248,240,.85);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
+                'align-self:flex-start;height:32px;padding:0 14px;border-radius:999px;border:1.5px dashed rgb(var(--w) / .28);background:transparent;color:rgb(var(--t) / calc(.85 * var(--t-k)));font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
               )}
             >
               {tr('+ Competência')}
@@ -367,7 +372,9 @@ export function MgStaff({ mg }: { mg: Mg }) {
         <div style={css('display:flex;flex-direction:column;gap:10px;')}>
           <div style={css('display:flex;flex-wrap:wrap;align-items:center;gap:10px;')}>
             <span style={css('font-size:16px;font-weight:600;')}>{tr('Resultados')}</span>
-            <span style={css('font-size:12.5px;color:rgba(255,248,240,.65);margin-right:auto;')}>
+            <span
+              style={css('font-size:12.5px;color:rgb(var(--t) / calc(.65 * var(--t-k)));margin-right:auto;')}
+            >
               {tr(`${res.length} correspondem · ${nAv} disponíveis`)}
             </span>
             <Sel
@@ -393,11 +400,11 @@ export function MgStaff({ mg }: { mg: Mg }) {
               <div
                 key={p.id}
                 style={css(
-                  `display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:20px;background:${r.isAvail ? 'oklch(0.8 0.12 150 / .09)' : 'rgba(255,255,255,.04)'};border:1px solid ${r.isAvail ? 'oklch(0.82 0.13 150 / .45)' : 'rgba(255,255,255,.1)'};`,
+                  `display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:20px;background:${r.isAvail ? 'oklch(0.8 0.12 150 / .09)' : 'rgb(var(--w) / .04)'};border:1px solid ${r.isAvail ? 'oklch(0.82 0.13 150 / .45)' : 'rgb(var(--w) / .1)'};`,
                 )}
               >
                 <div style={css('display:flex;align-items:center;gap:12px;min-width:0;')}>
-                  <Av p={p} size={42} fs={14} tc={tm.tc} s="box-shadow:0 0 0 2px rgba(255,255,255,.12);" />
+                  <Av p={p} size={42} fs={14} tc={tm.tc} s="box-shadow:0 0 0 2px rgb(var(--w) / .12);" />
                   <span style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;')}>
                     <span style={css('display:flex;align-items:center;gap:8px;min-width:0;')}>
                       <span
@@ -419,7 +426,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
                     </span>
                     <span
                       style={css(
-                        'font-size:12.5px;color:rgba(255,248,240,.64);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                        'font-size:12.5px;color:rgb(var(--t) / calc(.64 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
                       )}
                     >
                       {tr(p.role)}
@@ -440,7 +447,11 @@ export function MgStaff({ mg }: { mg: Mg }) {
                     >
                       {occ}%
                     </span>
-                    <span style={css('font-size:11px;color:rgba(255,248,240,.58);white-space:nowrap;')}>
+                    <span
+                      style={css(
+                        'font-size:11px;color:rgb(var(--t) / calc(.58 * var(--t-k)));white-space:nowrap;',
+                      )}
+                    >
                       {tr('ocupação no período')}
                     </span>
                   </span>
@@ -450,7 +461,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
                     <span
                       key={i}
                       style={css(
-                        'height:24px;padding:0 10px;border-radius:999px;display:flex;align-items:center;gap:6px;font-size:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);',
+                        'height:24px;padding:0 10px;border-radius:999px;display:flex;align-items:center;gap:6px;font-size:12px;background:rgb(var(--w) / .08);border:1px solid rgb(var(--w) / .12);',
                       )}
                     >
                       <span style={css('font-weight:600;')}>{SKN[s.k] ?? s.k}</span>
@@ -472,13 +483,13 @@ export function MgStaff({ mg }: { mg: Mg }) {
                       >
                         {tr(`${Math.round(r.minFree)}h livres / semana`)}
                       </span>
-                      <span style={css('font-size:11.5px;color:oklch(0.84 0.13 30);')}>
+                      <span style={css('font-size:11.5px;color:oklch(calc(.84 * var(--lk)) .13 30);')}>
                         {short ? tr(`faltam ${Math.round(short)}h`) : ''}
                       </span>
                     </div>
                     <div
                       style={css(
-                        'height:7px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;',
+                        'height:7px;border-radius:999px;background:rgb(var(--w) / .1);overflow:hidden;',
                       )}
                     >
                       <div
@@ -498,7 +509,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
                         key={i}
                         title={`${wLbl(wk(f + i))} · ${hh}h / ${r.cap}h`}
                         style={css(
-                          `height:14px;border-radius:4px;background:${hh ? mg.heat(hh, r.cap).bg : 'rgba(255,255,255,.08)'};`,
+                          `height:14px;border-radius:4px;background:${hh ? mg.heat(hh, r.cap).bg : 'rgb(var(--w) / .08)'};`,
                         )}
                       />
                     ))}
@@ -509,7 +520,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
                     type="button"
                     onClick={() => setPop(p.id)}
                     style={css(
-                      'height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fbf8f5;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
+                      'height:34px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .18);background:rgb(var(--w) / .08);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
                     )}
                   >
                     {tr('Ver Alocação')}
@@ -534,7 +545,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
                         })
                       }
                       style={css(
-                        'height:34px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
+                        'height:34px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
                       )}
                     >
                       {tr('Alocar')}
@@ -543,7 +554,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
                   {r.assigned && (
                     <span
                       style={css(
-                        'height:34px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:oklch(0.86 0.13 150);background:oklch(0.8 0.13 150 / .14);',
+                        'height:34px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:oklch(calc(.86 * var(--lk)) .13 150);background:oklch(0.8 0.13 150 / .14);',
                       )}
                     >
                       ✓ {tr('Alocado')}
@@ -555,7 +566,9 @@ export function MgStaff({ mg }: { mg: Mg }) {
           })}
           {!res.length && (
             <div
-              style={css('padding:24px 0;text-align:center;font-size:13.5px;color:rgba(255,248,240,.62);')}
+              style={css(
+                'padding:24px 0;text-align:center;font-size:13.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));',
+              )}
             >
               {tr('Ninguém com este perfil.')}
             </div>

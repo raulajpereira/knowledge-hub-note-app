@@ -7,9 +7,9 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(20, 14, 10, 0.18);
+  background: rgb(var(--d) / calc(0.18 * var(--d-k)));
   backdrop-filter: blur(var(--glass-blur-user, 8px));
-  color: #fbf8f5;
+  color: var(--ink);
 }
 .kh-pr-dim--top {
   z-index: 75;
@@ -21,18 +21,26 @@
   flex-direction: column;
   border-radius: 32px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.2 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.08 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--glass-blur-user, 40px)) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.26);
+  border: 1px solid rgb(var(--w) / 0.26);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 40px 90px rgba(0, 0, 0, 0.35);
+    0 40px 90px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
 }
 .kh-pr--custom {
   width: min(860px, 100%);
   border-radius: 30px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.1));
-  border-color: rgba(255, 255, 255, 0.28);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.24 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
+  border-color: rgb(var(--w) / 0.28);
 }
 .kh-pr button {
   font: inherit;
@@ -59,7 +67,7 @@
 }
 .kh-pr__sub {
   font-size: 14.5px;
-  color: rgba(255, 248, 240, 0.78);
+  color: rgb(var(--t) / calc(0.78 * var(--t-k)));
   text-wrap: pretty;
 }
 .kh-pr-cycles {
@@ -68,8 +76,8 @@
   gap: 2px;
   padding: 4px;
   border-radius: 999px;
-  background: rgba(18, 12, 9, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.14);
 }
 .kh-pr-cycles button {
   height: 34px;
@@ -77,7 +85,7 @@
   border-radius: 999px;
   border: 0;
   background: transparent;
-  color: rgba(255, 248, 240, 0.85);
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -88,13 +96,13 @@
   white-space: nowrap;
 }
 .kh-pr-cycles button[aria-pressed='true'] {
-  background: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  color: var(--ink-inv);
 }
 .kh-pr-cycles--full {
   padding: 3px;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--w) / 0.06);
+  border-color: rgb(var(--w) / 0.12);
 }
 .kh-pr-cycles--full button {
   flex: 1;
@@ -120,8 +128,8 @@
   height: 38px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(var(--w) / 0.2);
+  background: rgb(var(--w) / 0.08);
   cursor: pointer;
   padding: 0;
   display: flex;
@@ -129,7 +137,7 @@
   justify-content: center;
 }
 .kh-pr-x:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgb(var(--w) / 0.16);
 }
 .kh-pr__scroll {
   flex: 1;
@@ -158,7 +166,7 @@
   height: 28px;
   border-radius: 50%;
   border: 0;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--w) / 0.12);
   cursor: pointer;
   padding: 0;
 }
@@ -178,17 +186,21 @@
   gap: 16px;
   padding: 22px 20px 20px;
   border-radius: 26px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: rgb(var(--w) / 0.06);
+  border: 1.5px solid rgb(var(--w) / 0.12);
   min-width: 0;
 }
 .kh-pr-card[data-ultra] {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.14 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.06 * var(--sf-k)))
+  );
   border-color: var(--c);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 20px 50px rgb(0 0 0 / calc(0.25 * var(--sh-k)));
 }
 .kh-pr-card[data-cur] {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgb(var(--w) / 0.14);
   border-color: var(--c);
 }
 .kh-pr-ribbon {
@@ -207,7 +219,7 @@
   white-space: nowrap;
   color: #16131f;
   background: var(--c);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 18px rgb(0 0 0 / calc(0.25 * var(--sh-k)));
 }
 .kh-pr-chip {
   align-self: flex-start;
@@ -220,7 +232,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   color: #16131f;
-  background: var(--c, #fbf8f5);
+  background: var(--c, var(--ink));
 }
 .kh-pr-chip--sm {
   align-self: auto;
@@ -232,7 +244,7 @@
 .kh-pr-tag {
   font-size: 13px;
   line-height: 1.45;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
   height: 38px;
   overflow: hidden;
   display: -webkit-box;
@@ -252,7 +264,7 @@
 }
 .kh-pr-per {
   font-size: 12.5px;
-  color: rgba(255, 248, 240, 0.72);
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
   white-space: nowrap;
 }
 .kh-pr-note {
@@ -260,15 +272,15 @@
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 0;
-  color: rgba(255, 248, 240, 0.68);
+  color: rgb(var(--t) / calc(0.68 * var(--t-k)));
   min-height: 16px;
 }
 .kh-pr-cta {
   height: 50px;
   border-radius: 16px;
   border: 0;
-  background: #fbf8f5;
-  color: #16131f !important;
+  background: var(--ink);
+  color: var(--ink-inv) !important;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -300,8 +312,8 @@
 }
 .kh-pr-cta[data-cur] {
   background: transparent !important;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: rgba(255, 248, 240, 0.7) !important;
+  border: 1px solid rgb(var(--w) / 0.22);
+  color: rgb(var(--t) / calc(0.7 * var(--t-k))) !important;
   opacity: 1;
 }
 .kh-pr-feats {
@@ -309,7 +321,7 @@
   flex-direction: column;
   gap: 8px;
   padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgb(var(--w) / 0.1);
 }
 .kh-pr-feat {
   display: flex;
@@ -317,10 +329,10 @@
   gap: 9px;
   font-size: 13px;
   line-height: 1.35;
-  color: #fbf8f5;
+  color: var(--ink);
 }
 .kh-pr-feat[data-off] {
-  color: rgba(255, 248, 240, 0.42);
+  color: rgb(var(--t) / calc(0.42 * var(--t-k)));
 }
 .kh-pr-feat__i {
   width: 18px;
@@ -337,12 +349,12 @@
   font-weight: 700;
 }
 .kh-pr-feat[data-off] .kh-pr-feat__i {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 248, 240, 0.5);
+  background: rgb(var(--w) / 0.08);
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
 }
 .kh-pr-feat__s {
   font-size: 12px;
-  color: rgba(255, 248, 240, 0.7);
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
 }
 
 /* why KnowledgeHub */
@@ -357,11 +369,11 @@
   background: linear-gradient(
     135deg,
     color-mix(in oklab, var(--accent) 20%, transparent),
-    rgba(255, 255, 255, 0.04) 60%
+    rgb(var(--sf) / calc(0.04 * var(--sf-k))) 60%
   );
   border: 1.5px solid color-mix(in oklab, var(--accent) 55%, transparent);
   box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.22),
+    0 20px 50px rgb(0 0 0 / calc(0.22 * var(--sh-k))),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .kh-pr-why__blob {
@@ -394,8 +406,8 @@
   gap: 10px;
   padding: 16px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.12);
   min-width: 0;
 }
 .kh-pr-why__ico {
@@ -414,7 +426,7 @@
 .kh-pr-why__d {
   font-size: 12.5px;
   line-height: 1.5;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
   text-wrap: pretty;
 }
 
@@ -427,15 +439,15 @@
   gap: 14px;
   padding: 6px 0;
   font-size: 14px;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
 }
 .kh-pr-needcustom button {
   height: 44px;
   padding: 0 22px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.28);
+  background: rgb(var(--w) / 0.1);
+  color: var(--ink);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -444,7 +456,7 @@
   gap: 10px;
 }
 .kh-pr-needcustom button:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgb(var(--w) / 0.18);
 }
 .kh-pr-custchip {
   height: 20px;
@@ -469,29 +481,33 @@
 /* comparison */
 .kh-pr-cmp {
   border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(18, 12, 9, 0.16);
+  border: 1px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--d) / calc(0.16 * var(--d-k)));
   overflow: auto;
 }
 .kh-pr-cmp__row {
   display: grid;
   align-items: center;
   min-height: 38px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgb(var(--w) / 0.05);
 }
 .kh-pr-cmp__head {
   position: sticky;
   top: 0;
   height: 48px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.16 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.08 * var(--sf-k)))
+  );
+  border-bottom: 1px solid rgb(var(--w) / 0.12);
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
 }
 .kh-pr-cmp__group {
   min-height: 46px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgb(var(--w) / 0.04);
 }
 .kh-pr-cmp__group button {
   display: flex;
@@ -511,7 +527,7 @@
 }
 .kh-pr-cmp__mod {
   font-size: 13px;
-  color: rgba(255, 248, 240, 0.85);
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
 }
 .kh-pr-cmp__cell {
   display: flex;
@@ -519,16 +535,16 @@
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
-  color: oklch(0.86 0.13 150);
+  color: oklch(calc(0.86 * var(--lk)) 0.13 150);
 }
 .kh-pr-cmp__cell[data-v='some'] {
-  color: oklch(0.86 0.12 85);
+  color: oklch(calc(0.86 * var(--lk)) 0.12 85);
 }
 .kh-pr-cmp__cell[data-v='none'] {
-  color: rgba(255, 248, 240, 0.35);
+  color: rgb(var(--t) / calc(0.35 * var(--t-k)));
 }
 .kh-pr-cmp__cell[data-v='off'] {
-  color: rgba(255, 248, 240, 0.3);
+  color: rgb(var(--t) / calc(0.3 * var(--t-k)));
 }
 
 /* custom modal body */
@@ -548,18 +564,18 @@
   gap: 14px;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--w) / 0.04);
   text-align: left;
   cursor: pointer;
   min-width: 0;
 }
 .kh-pr-grp:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgb(var(--w) / 0.4);
 }
 .kh-pr-grp[data-on] {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.12);
+  border-color: rgb(var(--w) / 0.4);
+  background: rgb(var(--w) / 0.12);
 }
 .kh-pr-grp:disabled {
   cursor: default;
@@ -573,12 +589,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border: 1.5px solid rgb(var(--w) / 0.35);
   color: #16131f;
 }
 .kh-pr-grp[data-on] .kh-pr-grp__ck {
-  border-color: #fbf8f5;
-  background: #fbf8f5;
+  border-color: var(--ink);
+  background: var(--ink);
 }
 .kh-pr-inc {
   height: 18px;
@@ -588,7 +604,7 @@
   align-items: center;
   font-size: 10px;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgb(var(--w) / 0.16);
 }
 .kh-pr-sum {
   position: sticky;
@@ -598,15 +614,15 @@
   gap: 14px;
   padding: 20px;
   border-radius: 22px;
-  background: rgba(18, 12, 9, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.16);
 }
 .kh-pr-step {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(var(--w) / 0.2);
+  background: rgb(var(--w) / 0.06);
   cursor: pointer;
   padding: 0;
   font-size: 16px !important;
@@ -615,8 +631,8 @@
   height: 46px;
   border-radius: 999px;
   border: 0;
-  background: #fbf8f5;
-  color: #2a211c !important;
+  background: var(--ink);
+  color: var(--ink-inv) !important;
   font-size: 14px !important;
   font-weight: 700;
   cursor: pointer;

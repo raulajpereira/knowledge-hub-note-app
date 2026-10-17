@@ -9,11 +9,15 @@
   grid-template-rows: minmax(0, 1fr);
   border-radius: 30px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.12 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.04 * var(--sf-k)))
+  );
   backdrop-filter: blur(var(--glass-blur-user, 34px)) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgb(var(--w) / 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  color: #fbf8f5;
+  color: var(--ink);
   line-height: normal;
 }
 :where(.kh-fn) button,
@@ -28,16 +32,16 @@
 .kh-fn select {
   appearance: none;
   -webkit-appearance: none;
-  color-scheme: dark;
+  color-scheme: var(--scheme);
   cursor: pointer;
   outline: none;
-  color: #fbf8f5;
+  color: var(--ink);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fbf8f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
 }
 .kh-fn select option {
   background: var(--kh-option-bg, #2b2622);
-  color: var(--kh-option-fg, #fbf8f5);
+  color: var(--kh-option-fg, var(--ink));
 }
 .kh-fn-handle {
   position: absolute;
@@ -55,11 +59,11 @@
   width: 4px;
   height: 48px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: rgb(var(--w) / 0.22);
+  box-shadow: 0 0 0 1px rgb(var(--w) / 0.08);
 }
 .kh-fn-handle[data-drag] > div {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgb(var(--w) / 0.75);
 }
 
 /* ── list ── */
@@ -68,7 +72,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--kh-divider, rgba(255, 255, 255, 0.1));
+  border-right: 1px solid var(--kh-divider, rgb(var(--w) / 0.1));
 }
 .kh-fn-head {
   flex-shrink: 0;
@@ -98,7 +102,7 @@
 .kh-fn-titlerow span {
   font-size: 12.5px;
   line-height: 1.4;
-  color: rgba(255, 248, 240, 0.65);
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
   text-wrap: pretty;
 }
 .kh-fn-new {
@@ -107,8 +111,8 @@
   flex: none;
   border-radius: 50%;
   border: 0;
-  background: #fbf8f5;
-  color: #2a211c;
+  background: var(--ink);
+  color: var(--ink-inv);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -121,8 +125,8 @@
   height: 38px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.06);
 }
 .kh-fn-search input {
   flex: 1;
@@ -130,7 +134,7 @@
   border: 0;
   outline: none;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   font-size: 13.5px;
 }
 .kh-fn-filters {
@@ -143,15 +147,15 @@
   height: 32px;
   padding: 0 24px 0 11px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(var(--w) / 0.14);
+  background-color: rgb(var(--w) / 0.06);
   font-size: 12px;
   background-position: right 9px center;
   background-size: 10px;
   text-overflow: ellipsis;
 }
 .kh-fn-fsel[data-on] {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgb(var(--w) / 0.4);
 }
 .kh-fn-chips {
   display: flex;
@@ -162,8 +166,8 @@
   height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.12);
+  color: var(--ink);
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
@@ -201,13 +205,13 @@
   border-radius: 10px;
   border: 0;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   cursor: pointer;
   user-select: none;
   text-align: left;
 }
 .kh-fn-ghead:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(var(--w) / 0.06);
 }
 .kh-fn-ghead svg {
   transition: transform 0.15s;
@@ -217,12 +221,12 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 248, 240, 0.75);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
 }
 .kh-fn-ghead > span:nth-child(3) {
   font-family: 'Geist Mono', monospace;
   font-size: 11px;
-  color: rgba(255, 248, 240, 0.5);
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
 }
 .kh-fn-item {
   flex-shrink: 0;
@@ -232,11 +236,11 @@
   padding: 11px 12px;
   border-radius: 16px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgb(var(--w) / 0.03);
+  border: 1px solid rgb(var(--w) / 0.07);
 }
 .kh-fn-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--w) / 0.08);
 }
 .kh-fn-irow {
   display: flex;
@@ -266,7 +270,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11.5px;
-  color: rgba(255, 248, 240, 0.62);
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -282,7 +286,7 @@
 .kh-fn-ibar {
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--w) / 0.1);
   overflow: hidden;
 }
 .kh-fn-ibar > div {
@@ -294,7 +298,7 @@
   padding: 30px 10px;
   text-align: center;
   font-size: 13px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
 }
 
 /* ── detail ── */
@@ -309,7 +313,7 @@
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
 }
 .kh-fn-detail {
   display: flex;
@@ -337,16 +341,16 @@
   outline: none;
 }
 .kh-fn-code {
-  color: rgba(255, 248, 240, 0.75);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
   font-family: 'Geist Mono', monospace !important;
   font-size: 12.5px;
   font-weight: 600;
 }
 .kh-fn-code::placeholder {
-  color: rgba(255, 248, 240, 0.45);
+  color: rgb(var(--t) / calc(0.45 * var(--t-k)));
 }
 .kh-fn-title {
-  color: #fbf8f5;
+  color: var(--ink);
   font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -355,7 +359,7 @@
   height: 34px;
   padding: 0 28px 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgb(var(--w) / 0.2);
   font-size: 12.5px;
   font-weight: 600;
   background-position: right 10px center;
@@ -366,9 +370,9 @@
   height: 34px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffc9b8;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.08);
+  color: var(--kh-error-text);
   cursor: pointer;
   padding: 0;
   display: flex;
@@ -394,9 +398,9 @@
   height: 30px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.3);
+  background: rgb(var(--w) / 0.12);
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
@@ -407,8 +411,8 @@
   gap: 8px;
   padding: 14px 16px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgb(var(--w) / 0.05);
+  border: 1px solid rgb(var(--w) / 0.1);
 }
 .kh-fn-prog > div:first-child {
   display: flex;
@@ -426,7 +430,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12.5px;
-  color: rgba(255, 248, 240, 0.8);
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
 }
 .kh-fn-prog span i {
   width: 9px;
@@ -441,7 +445,7 @@
   height: 8px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--w) / 0.08);
 }
 .kh-fn-fields {
   display: grid;
@@ -459,25 +463,25 @@
 }
 .kh-fn-field > span {
   font-size: 12px;
-  color: rgba(255, 248, 240, 0.72);
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
 }
 .kh-fn-in {
   height: 38px;
   padding: 0 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fbf8f5;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.06);
+  color: var(--ink);
   font-size: 13.5px;
   outline: none;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  color-scheme: dark;
+  color-scheme: var(--scheme);
 }
 .kh-fn-sel {
   padding: 0 30px 0 12px;
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgb(var(--w) / 0.06);
   background-position: right 12px center;
   background-size: 11px;
 }
@@ -508,28 +512,32 @@
   height: 30px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1.5px dashed rgba(255, 255, 255, 0.28);
+  border: 1.5px dashed rgb(var(--w) / 0.28);
   background: transparent;
-  color: rgba(255, 248, 240, 0.88);
+  color: rgb(var(--t) / calc(0.88 * var(--t-k)));
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
 .kh-fn-table {
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--w) / 0.03);
   overflow: auto;
 }
 .kh-fn-thead {
   display: grid;
   align-items: center;
   height: 38px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.16 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.08 * var(--sf-k)))
+  );
+  border-bottom: 1px solid rgb(var(--w) / 0.12);
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 248, 240, 0.85);
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
 }
 .kh-fn-thead > span {
   padding: 0 10px;
@@ -538,22 +546,22 @@
   padding: 0;
   text-align: center;
   font-family: 'Geist Mono', monospace;
-  color: rgba(255, 248, 240, 0.55);
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
 }
 .kh-fn-trow {
   display: grid;
   align-items: center;
   min-height: 44px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgb(var(--w) / 0.06);
 }
 .kh-fn-trow:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgb(var(--w) / 0.03);
 }
 .kh-fn-rn {
   text-align: center;
   font-family: 'Geist Mono', monospace;
   font-size: 12px;
-  color: rgba(255, 248, 240, 0.5);
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
 }
 .kh-fn-cell {
   padding: 4px 6px;
@@ -566,14 +574,14 @@
   border-radius: 9px;
   border: 1px solid transparent;
   background: transparent;
-  color: #fbf8f5;
+  color: var(--ink);
   font-size: 13px;
   outline: none;
   box-sizing: border-box;
 }
 .kh-fn-cin:focus {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: rgb(var(--w) / 0.3);
+  background: rgb(var(--w) / 0.06);
 }
 .kh-fn-rst {
   width: 100%;
@@ -593,23 +601,23 @@
   border-radius: 50%;
   border: 0;
   background: transparent;
-  color: rgba(255, 248, 240, 0.5);
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
   cursor: pointer;
   padding: 0;
   font-size: 15px;
 }
 .kh-fn-rdel:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffc9b8;
+  background: rgb(var(--w) / 0.08);
+  color: var(--kh-error-text);
 }
 .kh-fn-norows {
   padding: 16px;
   font-size: 13px;
-  color: rgba(255, 248, 240, 0.6);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
 }
 .kh-fn-meta {
   font-size: 11.5px;
-  color: rgba(255, 248, 240, 0.5);
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
 }
 
 @media (max-width: 900px) {
@@ -624,7 +632,7 @@
   .kh-fn-side {
     max-height: 45vh;
     border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgb(var(--w) / 0.1);
   }
   .kh-fn-fields {
     grid-template-columns: minmax(0, 1fr);

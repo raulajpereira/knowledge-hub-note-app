@@ -3,7 +3,10 @@
 /* eslint-disable @next/next/no-img-element -- the user's own images, streamed by our API */
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { AMBIENTS } from '@/components/ui';
+import { AMBIENTS, Select } from '@/components/ui';
+import { NAV_DEFAULT } from '@/components/shell/navData';
+import { canStartAt } from '@/lib/startPage';
+import { DENSITIES, THEMES, type Density, type ThemePref } from '@/lib/theme';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { assetUrl } from '@/components/shell/assetUrl';
@@ -63,7 +66,19 @@ export function LookTab() {
   const [uiScale, setUiScale] = usePref<number>('uiScale', 1);
   const [glass, setGlass] = usePref<number | undefined>('glassBlur', undefined);
   const [accent, setAccent] = usePref<string>('accent', DEFAULT_ACCENT);
+  const [theme, setTheme] = usePref<ThemePref>('theme', 'dark');
+  const [density, setDensity] = usePref<Density>('density', 'comfortable');
+  const [start, setStart] = usePref<string>('startPage', 'home');
   const [hover, setHover] = useState<FontName | null>(null);
+  const startOptions = [
+    { value: 'home', label: t('set_startHome') },
+    { value: 'last', label: t('set_startLast') },
+    ...NAV_DEFAULT.flatMap((e) =>
+      e.type === 'item' && canStartAt(e.id, modules) ? [{ value: e.id, label: t(`nav_${e.id}`) }] : [],
+    ),
+  ];
+  const THEME_LABEL = { dark: 'set_themeDark', light: 'set_themeLight', system: 'set_themeSystem' } as const;
+  const DENS_LABEL = { comfortable: 'set_densComfy', compact: 'set_densCompact' } as const;
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -101,6 +116,25 @@ export function LookTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <Card
+        title={t('set_themeTitle')}
+        desc={t('set_themeDesc')}
+        action={
+          <div className="kh-set__seg" role="group" aria-label={t('set_themeTitle')}>
+            {THEMES.map((id) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={theme === id}
+                data-theme-opt={id}
+                onClick={() => setTheme(id === 'dark' ? null : id)}
+              >
+                <span style={{ fontWeight: 500 }}>{t(THEME_LABEL[id])}</span>
+              </button>
+            ))}
+          </div>
+        }
+      />
       <Card title={t('bgTitle')} desc={t('bgDesc')}>
         <div className="kh-set__tiles">
           {AMBIENT_NAMES.map((name) => {
@@ -209,7 +243,7 @@ export function LookTab() {
                 {t('removePhoto')}
               </button>
             )}
-            <span role="status" style={{ fontSize: 13, color: 'rgba(255,248,240,.6)' }}>
+            <span role="status" style={{ fontSize: 13, color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
               {msg}
             </span>
           </div>
@@ -220,7 +254,7 @@ export function LookTab() {
             <div className="kh-set__range">
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                 <span>{t('blur')}</span>
-                <span className="kh-mono" style={{ color: 'rgba(255,248,240,.75)' }}>
+                <span className="kh-mono" style={{ color: 'rgb(var(--t) / calc(.75 * var(--t-k)))' }}>
                   {bg.blur}px
                 </span>
               </div>
@@ -237,7 +271,7 @@ export function LookTab() {
             <div className="kh-set__range">
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                 <span>{t('dim')}</span>
-                <span className="kh-mono" style={{ color: 'rgba(255,248,240,.75)' }}>
+                <span className="kh-mono" style={{ color: 'rgb(var(--t) / calc(.75 * var(--t-k)))' }}>
                   {bg.dim}%
                 </span>
               </div>
@@ -287,7 +321,7 @@ export function LookTab() {
                 fontSize: 12,
                 letterSpacing: '.06em',
                 textTransform: 'uppercase',
-                color: 'rgba(255,248,240,.55)',
+                color: 'rgb(var(--t) / calc(.55 * var(--t-k)))',
               }}
             >
               {t('preview')} · {hover ?? font}
@@ -296,7 +330,12 @@ export function LookTab() {
               {t('previewTitle')}
             </div>
             <div
-              style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(255,248,240,.85)', textWrap: 'pretty' }}
+              style={{
+                fontSize: 15,
+                lineHeight: 1.6,
+                color: 'rgb(var(--t) / calc(.85 * var(--t-k)))',
+                textWrap: 'pretty',
+              }}
             >
               {t('previewBody')}
             </div>
@@ -305,8 +344,8 @@ export function LookTab() {
                 style={{
                   padding: '6px 14px',
                   borderRadius: 999,
-                  background: '#fbf8f5',
-                  color: '#2a211c',
+                  background: 'var(--ink)',
+                  color: 'var(--ink-inv)',
                   fontSize: 13,
                   fontWeight: 600,
                 }}
@@ -317,7 +356,7 @@ export function LookTab() {
                 style={{
                   padding: '6px 12px',
                   borderRadius: 999,
-                  background: 'rgba(255,255,255,.12)',
+                  background: 'rgb(var(--w) / .12)',
                   fontSize: 13,
                 }}
               >
@@ -348,7 +387,7 @@ export function LookTab() {
           <div className="kh-set__row">
             <span style={{ fontSize: 14 }}>{t('sizeFont')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 12, color: 'rgba(255,248,240,.6)' }}>A</span>
+              <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>A</span>
               <input
                 type="range"
                 min={0.85}
@@ -359,7 +398,7 @@ export function LookTab() {
                 onChange={(e) => setFontScale(+(+e.target.value).toFixed(2))}
                 style={{ flex: 1 }}
               />
-              <span style={{ fontSize: 18, color: 'rgba(255,248,240,.8)' }}>A</span>
+              <span style={{ fontSize: 18, color: 'rgb(var(--t) / calc(.8 * var(--t-k)))' }}>A</span>
             </div>
             <span>{Math.round(fontScale * 100)}%</span>
           </div>
@@ -367,7 +406,12 @@ export function LookTab() {
             <span style={{ fontSize: 14 }}>{t('sizeUi')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
-                style={{ width: 10, height: 10, borderRadius: 3, border: '1.5px solid rgba(255,248,240,.6)' }}
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 3,
+                  border: '1.5px solid rgb(var(--t) / calc(.6 * var(--t-k)))',
+                }}
               />
               <input
                 type="range"
@@ -380,13 +424,55 @@ export function LookTab() {
                 style={{ flex: 1 }}
               />
               <span
-                style={{ width: 16, height: 16, borderRadius: 4, border: '1.5px solid rgba(255,248,240,.8)' }}
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: 4,
+                  border: '1.5px solid rgb(var(--t) / calc(.8 * var(--t-k)))',
+                }}
               />
             </div>
             <span>{Math.round(uiScale * 100)}%</span>
           </div>
         </div>
       </Card>
+
+      <Card
+        title={t('set_densTitle')}
+        desc={t('set_densDesc')}
+        action={
+          <div className="kh-set__seg" role="group" aria-label={t('set_densTitle')}>
+            {DENSITIES.map((id) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={density === id}
+                data-density-opt={id}
+                onClick={() => setDensity(id === 'comfortable' ? null : id)}
+              >
+                <span style={{ fontWeight: 500 }}>{t(DENS_LABEL[id])}</span>
+              </button>
+            ))}
+          </div>
+        }
+      />
+
+      <Card
+        title={t('set_startTitle')}
+        desc={t('set_startDesc')}
+        action={
+          <div style={{ width: 240, flex: 'none' }}>
+            <Select
+              value={startOptions.some((o) => o.value === start) ? start : 'home'}
+              options={startOptions}
+              onChange={(v) => setStart(v === 'home' ? null : v)}
+              searchPlaceholder={t('set_startSearch')}
+              size="md"
+              aria-label={t('set_startTitle')}
+            />
+          </div>
+        }
+      />
 
       {modules.has('glass') && (
         <Card
@@ -402,7 +488,9 @@ export function LookTab() {
             <div className="kh-set__row">
               <span style={{ fontSize: 14 }}>{t('glassBlur')}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 12, color: 'rgba(255,248,240,.6)' }}>{t('glassLess')}</span>
+                <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
+                  {t('glassLess')}
+                </span>
                 <input
                   type="range"
                   min={0}
@@ -413,7 +501,9 @@ export function LookTab() {
                   onChange={(e) => setGlass(+e.target.value)}
                   style={{ flex: 1 }}
                 />
-                <span style={{ fontSize: 12, color: 'rgba(255,248,240,.8)' }}>{t('glassMore')}</span>
+                <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.8 * var(--t-k)))' }}>
+                  {t('glassMore')}
+                </span>
               </div>
               <span>{glass === undefined ? t('set_glassOriginal') : `${glass}px`}</span>
             </div>
@@ -430,7 +520,7 @@ export function LookTab() {
             </div>
             <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em', whiteSpace: 'nowrap' }}>
               <span>Knowledge</span>
-              <span style={{ color: 'var(--accent)' }}>Hub</span>
+              <span style={{ color: 'var(--accent-text)' }}>Hub</span>
             </span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
@@ -452,8 +542,8 @@ export function LookTab() {
                   background: c,
                   boxShadow:
                     c === accent
-                      ? '0 0 0 2px rgba(30,24,20,.9),0 0 0 4px #fbf8f5'
-                      : '0 0 0 1px rgba(255,255,255,.2)',
+                      ? '0 0 0 2px rgb(0 0 0 / calc(.9 * var(--sh-k))),0 0 0 4px var(--ink)'
+                      : '0 0 0 1px rgb(var(--w) / .2)',
                 }}
               />
             ))}
@@ -467,8 +557,8 @@ export function LookTab() {
                 cursor: 'pointer',
                 background: 'conic-gradient(from 0deg,#f55,#fd5,#5f8,#5df,#58f,#c5f,#f55)',
                 boxShadow: accent.startsWith('#')
-                  ? '0 0 0 2px rgba(30,24,20,.9),0 0 0 4px #fbf8f5'
-                  : '0 0 0 1px rgba(255,255,255,.25)',
+                  ? '0 0 0 2px rgb(0 0 0 / calc(.9 * var(--sh-k))),0 0 0 4px var(--ink)'
+                  : '0 0 0 1px rgb(var(--w) / .25)',
                 overflow: 'hidden',
               }}
             >

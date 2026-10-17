@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AuthCard, AuthHeading } from '@/components/auth/AuthLayout';
 import { authErrorMessage } from '@/components/auth/authErrors';
@@ -13,6 +12,8 @@ import { Turnstile } from '@/components/auth/Turnstile';
 
 const EMAIL_KEY = 'kh.authEmail';
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 /** Only same-app relative paths are allowed as post-login targets. */
 function safeNext(next?: string) {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : '/app';
@@ -20,7 +21,6 @@ function safeNext(next?: string) {
 
 export function LoginForm({ next, focusForgot }: { next?: string; focusForgot?: boolean }) {
   const { t, lang } = useI18n();
-  const router = useRouter();
   const emailRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,8 +54,9 @@ export function LoginForm({ next, focusForgot }: { next?: string; focusForgot?: 
     }
     setMsg({ text: t('login_ok'), ok: true });
     setTimeout(() => {
-      router.replace(safeNext(next));
-      router.refresh();
+      // a full load of the signed-in app (fresh server state; /app then opens
+      // the start page chosen in Definições)
+      window.location.replace(`${BASE}${safeNext(next)}`);
     }, 700);
   };
 
@@ -211,7 +212,7 @@ export function LoginForm({ next, focusForgot }: { next?: string; focusForgot?: 
         <a
           href="#"
           onClick={onForgot}
-          style={{ marginLeft: 'auto', fontSize: 13, color: 'rgba(255,248,240,.82)' }}
+          style={{ marginLeft: 'auto', fontSize: 13, color: 'rgb(var(--t) / calc(.82 * var(--t-k)))' }}
         >
           {t('login_forgot')}
         </a>

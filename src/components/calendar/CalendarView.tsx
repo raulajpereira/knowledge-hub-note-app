@@ -395,14 +395,20 @@ export function CalendarView() {
             aria-pressed={showDone}
             onClick={() => setShowDone(!showDone)}
           >
-            <span style={{ background: 'rgba(255,248,240,.5)' }} />
+            <span style={{ background: 'rgb(var(--t) / calc(.5 * var(--t-k)))' }} />
             {t('c_done')}
           </button>
           <span className="kh-cal__hint">{t('c_hint')}</span>
         </div>
         <div className="kh-cal__dow">
           {dow.map((d, i) => (
-            <div key={d} style={{ color: i > 4 ? 'rgba(255,248,240,.5)' : 'rgba(255,248,240,.72)' }}>
+            <div
+              key={d}
+              style={{
+                color:
+                  i > 4 ? 'rgb(var(--t) / calc(.5 * var(--t-k)))' : 'rgb(var(--t) / calc(.72 * var(--t-k)))',
+              }}
+            >
               {d}
             </div>
           ))}
@@ -670,7 +676,9 @@ export function CalendarView() {
               </div>
             )}
             <div>
-              <span style={{ color: 'oklch(0.75 0.17 28)' }}>{inRange.filter(late).length}</span>
+              <span style={{ color: 'oklch(calc(.75 * var(--lk)) .17 28)' }}>
+                {inRange.filter(late).length}
+              </span>
               <span>{t('c_sumLate')}</span>
             </div>
           </div>

@@ -277,8 +277,9 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
               flex: 'none',
               borderRadius: '50%',
               cursor: 'pointer',
-              background: 'linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.06))',
-              border: me.assets.avatar ? '0' : '1.5px dashed rgba(255,255,255,.4)',
+              background:
+                'linear-gradient(135deg,rgb(var(--sf) / calc(.2 * var(--sf-k))),rgb(var(--sf) / calc(.06 * var(--sf-k))))',
+              border: me.assets.avatar ? '0' : '1.5px dashed rgb(var(--w) / .4)',
               boxSizing: 'border-box',
             }}
           >
@@ -302,7 +303,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                   justifyContent: 'center',
                   gap: 4,
                   fontSize: 11,
-                  color: 'rgba(255,248,240,.8)',
+                  color: 'rgb(var(--t) / calc(.8 * var(--t-k)))',
                   textAlign: 'center',
                 }}
               >
@@ -321,9 +322,9 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: '#fbf8f5',
-                color: '#2a211c',
-                boxShadow: '0 4px 12px rgba(0,0,0,.25)',
+                background: 'var(--ink)',
+                color: 'var(--ink-inv)',
+                boxShadow: '0 4px 12px rgb(0 0 0 / calc(.25 * var(--sh-k)))',
               }}
             >
               <Icon name="pencil" size={13} sw={2.2} />
@@ -350,11 +351,11 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 {nameOk ? `✓ ${t('acc_saved')}` : t('acc_save')}
               </button>
             </div>
-            <span style={{ fontSize: 13.5, color: 'rgba(255,248,240,.8)', paddingLeft: 2 }}>
+            <span style={{ fontSize: 13.5, color: 'rgb(var(--t) / calc(.8 * var(--t-k)))', paddingLeft: 2 }}>
               {me.user.email}
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12, color: 'rgba(255,248,240,.65)' }}>
+              <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.65 * var(--t-k)))' }}>
                 {t('acc_since')} {fmtDate(me.user.createdAt)}
               </span>
               {me.assets.avatar && (
@@ -367,7 +368,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                     borderRadius: 999,
                     border: 0,
                     background: 'transparent',
-                    color: 'rgba(255,248,240,.75)',
+                    color: 'rgb(var(--t) / calc(.75 * var(--t-k)))',
                     font: 'inherit',
                     fontSize: 12,
                     cursor: 'pointer',
@@ -377,7 +378,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                   {t('acc_removePhoto')}
                 </button>
               )}
-              {photoMsg && <span style={{ fontSize: 12, color: '#ffc9b8' }}>{photoMsg}</span>}
+              {photoMsg && <span style={{ fontSize: 12, color: 'var(--kh-error-text)' }}>{photoMsg}</span>}
             </div>
           </div>
         </div>
@@ -391,7 +392,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             padding: 18,
             borderRadius: 22,
             background: 'linear-gradient(135deg,oklch(0.78 0.14 300 / .16),oklch(0.76 0.14 245 / .12))',
-            border: '1px solid rgba(255,255,255,.18)',
+            border: '1px solid rgb(var(--w) / .18)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -407,7 +408,8 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 letterSpacing: '.12em',
                 color: '#1a1530',
                 background: tierGradient(tier),
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,.45),0 6px 18px rgba(0,0,0,.18)',
+                boxShadow:
+                  'inset 0 1px 0 rgba(255,255,255,.45),0 6px 18px rgb(0 0 0 / calc(.18 * var(--sh-k)))',
               }}
             >
               {tier}
@@ -416,7 +418,11 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
               <span style={{ fontSize: 15, fontWeight: 600 }}>
                 {t('lic_title').replace('{tier}', tier.charAt(0) + tier.slice(1).toLowerCase())}
               </span>
-              {licValid && <span style={{ fontSize: 12.5, color: 'rgba(255,248,240,.7)' }}>{licValid}</span>}
+              {licValid && (
+                <span style={{ fontSize: 12.5, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
+                  {licValid}
+                </span>
+              )}
             </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 8 }}>
@@ -431,8 +437,8 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                     gap: 10,
                     padding: '10px 12px',
                     borderRadius: 14,
-                    background: 'rgba(18,12,9,.16)',
-                    border: '1px solid rgba(255,255,255,.08)',
+                    background: 'rgb(var(--d) / calc(.16 * var(--d-k)))',
+                    border: '1px solid rgb(var(--w) / .08)',
                     opacity: ok ? 1 : 0.5,
                   }}
                 >
@@ -446,15 +452,21 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginTop: 1,
-                      background: ok ? 'oklch(0.8 0.14 150)' : 'rgba(255,255,255,.12)',
-                      color: ok ? '#0f2418' : 'rgba(255,248,240,.6)',
+                      background: ok ? 'oklch(0.8 0.14 150)' : 'rgb(var(--w) / .12)',
+                      color: ok ? '#0f2418' : 'rgb(var(--t) / calc(.6 * var(--t-k)))',
                     }}
                   >
                     <Icon name={ok ? 'check' : 'dash'} size={11} sw={3} />
                   </span>
                   <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '.1em' }}>{fam}</span>
-                    <span style={{ fontSize: 12, lineHeight: 1.4, color: 'rgba(255,248,240,.7)' }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        lineHeight: 1.4,
+                        color: 'rgb(var(--t) / calc(.7 * var(--t-k)))',
+                      }}
+                    >
                       {t(`lic_${fam}`)}
                     </span>
                   </span>
@@ -471,15 +483,17 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             gap: 12,
             padding: '12px 14px 12px 16px',
             borderRadius: 18,
-            background: 'rgba(255,255,255,.06)',
-            border: '1px solid rgba(255,255,255,.14)',
+            background: 'rgb(var(--w) / .06)',
+            border: '1px solid rgb(var(--w) / .14)',
           }}
         >
           <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 14.5, fontWeight: 600 }}>
               {t('acc_plan')} · {me.tenant.planCode ?? tier}
             </span>
-            <span style={{ fontSize: 12.5, color: 'rgba(255,248,240,.7)' }}>{t('acc_planSub')}</span>
+            <span style={{ fontSize: 12.5, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
+              {t('acc_planSub')}
+            </span>
           </span>
           <Link
             scroll={false}
@@ -503,8 +517,9 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
               borderRadius: 18,
               textDecoration: 'none',
               color: 'var(--text)',
-              background: 'linear-gradient(135deg,rgba(120,170,255,.22),rgba(255,255,255,.06))',
-              border: '1px solid rgba(255,255,255,.2)',
+              background:
+                'linear-gradient(135deg,rgba(120,170,255,.22),rgb(var(--sf) / calc(.06 * var(--sf-k))))',
+              border: '1px solid rgb(var(--w) / .2)',
             }}
           >
             <span
@@ -516,14 +531,16 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'rgba(255,255,255,.14)',
+                background: 'rgb(var(--w) / .14)',
               }}
             >
               <Icon name="shield" size={18} sw={1.9} />
             </span>
             <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 14.5, fontWeight: 600 }}>{t('shell_adminLbl')}</span>
-              <span style={{ fontSize: 12.5, color: 'rgba(255,248,240,.78)' }}>{t('shell_adminSub')}</span>
+              <span style={{ fontSize: 12.5, color: 'rgb(var(--t) / calc(.78 * var(--t-k)))' }}>
+                {t('shell_adminSub')}
+              </span>
             </span>
             <span style={{ fontSize: 18 }}>→</span>
           </Link>
@@ -566,7 +583,10 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
           {t('acc_delete')}
         </button>
         {delErr && (
-          <span role="alert" style={{ fontSize: 12.5, color: 'oklch(0.8 0.14 25)', textAlign: 'center' }}>
+          <span
+            role="alert"
+            style={{ fontSize: 12.5, color: 'oklch(calc(.8 * var(--lk)) .14 25)', textAlign: 'center' }}
+          >
             {delErr}
           </span>
         )}
@@ -628,8 +648,8 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 ...(pwReady
                   ? null
                   : {
-                      background: 'rgba(255,255,255,.14)',
-                      color: 'rgba(255,248,240,.6)',
+                      background: 'rgb(var(--w) / .14)',
+                      color: 'rgb(var(--t) / calc(.6 * var(--t-k)))',
                       cursor: 'default',
                     }),
               }}
@@ -641,7 +661,10 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             {(pwMsg || mismatch) && (
               <span
                 role="status"
-                style={{ fontSize: 12.5, color: pwMsg?.ok ? 'oklch(0.88 0.1 155)' : '#ffc9b8' }}
+                style={{
+                  fontSize: 12.5,
+                  color: pwMsg?.ok ? 'oklch(calc(.88 * var(--lk)) .1 155)' : 'var(--kh-error-text)',
+                }}
               >
                 {pwMsg?.text ?? t('acc_pwMismatch')}
               </span>
@@ -675,8 +698,8 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 alignItems: 'flex-start',
                 padding: 14,
                 borderRadius: 16,
-                background: 'rgba(18,12,9,.22)',
-                border: '1px solid rgba(255,255,255,.12)',
+                background: 'rgb(var(--d) / calc(.22 * var(--d-k)))',
+                border: '1px solid rgb(var(--w) / .12)',
               }}
             >
               <div
@@ -688,7 +711,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                   flex: 'none',
                   borderRadius: 14,
                   overflow: 'hidden',
-                  background: '#fff',
+                  background: 'var(--ink-hi)',
                   padding: 4,
                   boxSizing: 'border-box',
                 }}
@@ -696,7 +719,13 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 dangerouslySetInnerHTML={{ __html: setup.qrSvg }}
               />
               <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,248,240,.85)' }}>
+                <span
+                  style={{
+                    fontSize: 12.5,
+                    lineHeight: 1.45,
+                    color: 'rgb(var(--t) / calc(.85 * var(--t-k)))',
+                  }}
+                >
                   {t('acc_2faHelp')}
                 </span>
                 <span
@@ -707,7 +736,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                     letterSpacing: '.08em',
                     padding: '8px 10px',
                     borderRadius: 10,
-                    background: 'rgba(255,255,255,.1)',
+                    background: 'rgb(var(--w) / .1)',
                     overflowWrap: 'anywhere',
                   }}
                 >
@@ -743,7 +772,9 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                     {t('acc_verify')}
                   </button>
                 </div>
-                {codeErr && <span style={{ fontSize: 12.5, color: '#ffc9b8' }}>{t('acc_2faBad')}</span>}
+                {codeErr && (
+                  <span style={{ fontSize: 12.5, color: 'var(--kh-error-text)' }}>{t('acc_2faBad')}</span>
+                )}
               </div>
             </div>
           )}
@@ -754,7 +785,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 alignItems: 'center',
                 gap: 8,
                 fontSize: 13,
-                color: 'oklch(0.88 0.1 155)',
+                color: 'oklch(calc(.88 * var(--lk)) .1 155)',
               }}
             >
               <Icon name="check" size={14} sw={2.4} />
@@ -763,7 +794,9 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
           )}
           {recovery && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgba(255,248,240,.85)' }}>
+              <span
+                style={{ fontSize: 12.5, lineHeight: 1.45, color: 'rgb(var(--t) / calc(.85 * var(--t-k)))' }}
+              >
                 {t('acc_2faCodes')}
               </span>
               <div
@@ -779,7 +812,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                 {recovery.map((c) => (
                   <span
                     key={c}
-                    style={{ padding: '6px 10px', borderRadius: 10, background: 'rgba(255,255,255,.1)' }}
+                    style={{ padding: '6px 10px', borderRadius: 10, background: 'rgb(var(--w) / .1)' }}
                   >
                     {c}
                   </span>
@@ -843,7 +876,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                           fontSize: 10.5,
                           fontWeight: 700,
                           background: 'oklch(0.8 0.12 155 / .25)',
-                          color: 'oklch(0.92 0.08 155)',
+                          color: 'oklch(calc(.92 * var(--lk)) .08 155)',
                         }}
                       >
                         {t('acc_thisSess')}
@@ -853,7 +886,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
                   <span
                     style={{
                       fontSize: 12,
-                      color: 'rgba(255,248,240,.68)',
+                      color: 'rgb(var(--t) / calc(.68 * var(--t-k)))',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -908,7 +941,7 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
             inputMode="numeric"
             style={{ fontFamily: 'var(--font-mono)', letterSpacing: '.2em' }}
           />
-          {offErr && <span style={{ fontSize: 12.5, color: '#ffc9b8' }}>{offErr}</span>}
+          {offErr && <span style={{ fontSize: 12.5, color: 'var(--kh-error-text)' }}>{offErr}</span>}
           <div className="kh-modal__foot">
             <button
               type="button"

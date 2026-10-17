@@ -39,7 +39,7 @@ const CATS: Record<Item['cat'], [string, string]> = {
   requests: ['Pedidos de plano', 'oklch(0.72 0.17 25)'],
   trial: ['Trials a terminar', 'oklch(0.76 0.13 245)'],
   seats: ['Lugares esgotados', 'oklch(0.78 0.14 150)'],
-  renew: ['Renovações próximas', 'rgba(255,248,240,.7)'],
+  renew: ['Renovações próximas', 'rgb(var(--t) / calc(.7 * var(--t-k)))'],
 };
 
 /** Visão Geral (D44: MRR and ARR as they are today, no invented history). */

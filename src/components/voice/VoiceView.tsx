@@ -387,7 +387,7 @@ function Detail({
           title={v.pinned ? t('v_unpin') : t('v_pin')}
           aria-label={v.pinned ? t('v_unpin') : t('v_pin')}
           aria-pressed={v.pinned}
-          style={{ background: v.pinned ? 'rgba(255,255,255,.24)' : undefined }}
+          style={{ background: v.pinned ? 'rgb(var(--w) / .24)' : undefined }}
           onClick={() => onPatch({ pinned: !v.pinned })}
         >
           <PinIcon size={16} sw={1.8} fill={v.pinned ? 'currentColor' : 'none'} />
@@ -395,7 +395,7 @@ function Detail({
         <button
           type="button"
           className="kh-vc-round"
-          style={{ color: '#ffc9b8' }}
+          style={{ color: 'var(--kh-error-text)' }}
           title={t('del')}
           aria-label={t('del')}
           onClick={onDelete}
@@ -455,7 +455,8 @@ function Detail({
               key={i}
               style={{
                 height: pct(x),
-                background: (i + 0.5) / bars.length <= frac ? '#fbf8f5' : 'rgba(255,248,240,.28)',
+                background:
+                  (i + 0.5) / bars.length <= frac ? 'var(--ink)' : 'rgb(var(--t) / calc(.28 * var(--t-k)))',
               }}
             />
           ))}
@@ -726,7 +727,7 @@ export function VoiceView() {
               height="16"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="rgba(255,248,240,.6)"
+              stroke="rgb(var(--t) / calc(.6 * var(--t-k)))"
               strokeWidth="2"
               strokeLinecap="round"
               aria-hidden="true"

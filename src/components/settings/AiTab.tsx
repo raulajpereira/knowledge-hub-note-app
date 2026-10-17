@@ -97,7 +97,9 @@ export function AiTab() {
         </div>
         {ai?.configured && (
           <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, flex: 'none' }}>
-            <span style={{ color: 'rgba(255,248,240,.75)' }}>{ai.enabled ? t('ai_on') : t('ai_off')}</span>
+            <span style={{ color: 'rgb(var(--t) / calc(.75 * var(--t-k)))' }}>
+              {ai.enabled ? t('ai_on') : t('ai_off')}
+            </span>
             <button
               type="button"
               role="switch"
@@ -176,7 +178,7 @@ export function AiTab() {
               ))}
             </select>
           ) : (
-            <span style={{ fontSize: 13.5, color: 'rgba(255,248,240,.65)' }}>
+            <span style={{ fontSize: 13.5, color: 'rgb(var(--t) / calc(.65 * var(--t-k)))' }}>
               {sameProv ? ai!.model : t('ai_modelHint')}
             </span>
           )}
@@ -202,7 +204,7 @@ export function AiTab() {
           </button>
         )}
         {ai?.configured && (
-          <span style={{ fontSize: 13, color: 'rgba(255,248,240,.7)' }}>
+          <span style={{ fontSize: 13, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
             {t('ai_current')
               .replace('{p}', aiProvider(ai.provider!)?.name ?? '')
               .replace('{m}', ai.model)}

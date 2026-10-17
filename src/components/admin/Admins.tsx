@@ -109,7 +109,7 @@ export function Admins() {
                     className="kh-ad-st"
                     style={{
                       background:
-                        r.status === 'active' ? 'oklch(0.75 0.13 150 / .45)' : 'rgba(255,255,255,.14)',
+                        r.status === 'active' ? 'oklch(0.75 0.13 150 / .45)' : 'rgb(var(--w) / .14)',
                     }}
                   >
                     {r.status === 'active' ? A('Ativo') : A('Pausado')}

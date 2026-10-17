@@ -10,13 +10,13 @@ import { MgProvider, useMg } from './store';
 import './mg.css';
 
 const IN =
-  'height:34px;padding:0 10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(18,12,9,.16);color:#fbf8f5;font:inherit;font-size:13px;outline:none;min-width:0;box-sizing:border-box;';
+  'height:34px;padding:0 10px;border-radius:10px;border:1px solid rgb(var(--w) / .1);background:rgb(var(--d) / calc(.16 * var(--d-k)));color:var(--ink);font:inherit;font-size:13px;outline:none;min-width:0;box-sizing:border-box;';
 const BOX =
-  'display:flex;flex-direction:column;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);';
+  'display:flex;flex-direction:column;border-radius:16px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--w) / .04);';
 const DEL =
-  'width:28px;height:28px;flex:none;border-radius:50%;border:0;background:transparent;color:rgba(255,248,240,.55);cursor:pointer;padding:0;font-size:15px;';
+  'width:28px;height:28px;flex:none;border-radius:50%;border:0;background:transparent;color:rgb(var(--t) / calc(.55 * var(--t-k)));cursor:pointer;padding:0;font-size:15px;';
 const ADD =
-  'height:34px;padding:0 14px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;';
+  'height:34px;padding:0 14px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;';
 
 /** Definições › Management (prototype page mg_settings). */
 export function MgSettingsTab() {
@@ -125,13 +125,13 @@ function MgSettings() {
     <div style={css('display:flex;flex-direction:column;gap:18px;')}>
       <div style={css('display:flex;flex-direction:column;gap:8px;')}>
         <div style={css('font-size:14px;font-weight:600;')}>{L(0)}</div>
-        <div style={css('font-size:12.5px;color:rgba(255,248,240,.65);')}>{L(1)}</div>
+        <div style={css('font-size:12.5px;color:rgb(var(--t) / calc(.65 * var(--t-k)));')}>{L(1)}</div>
         <div style={css(BOX)}>
           {areas.map((a, i) => (
             <div
               key={a.k}
               style={css(
-                `display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) 80px 28px;align-items:center;gap:8px;min-height:44px;padding:5px 8px 5px 10px;border-top:1px solid ${i ? 'rgba(255,255,255,.07)' : 'transparent'};`,
+                `display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) 80px 28px;align-items:center;gap:8px;min-height:44px;padding:5px 8px 5px 10px;border-top:1px solid ${i ? 'rgb(var(--w) / .07)' : 'transparent'};`,
               )}
             >
               <input
@@ -153,7 +153,7 @@ function MgSettings() {
               />
               <span
                 style={css(
-                  'font-size:11.5px;color:rgba(255,248,240,.6);text-align:right;white-space:nowrap;',
+                  'font-size:11.5px;color:rgb(var(--t) / calc(.6 * var(--t-k)));text-align:right;white-space:nowrap;',
                 )}
               >
                 {tr(`${used(a.k)} pessoas`)}
@@ -203,17 +203,19 @@ function MgSettings() {
       </div>
       <div style={css('display:flex;flex-direction:column;gap:8px;')}>
         <div style={css('font-size:14px;font-weight:600;')}>{L(3)}</div>
-        <div style={css('font-size:12.5px;color:rgba(255,248,240,.65);')}>{L(4)}</div>
+        <div style={css('font-size:12.5px;color:rgb(var(--t) / calc(.65 * var(--t-k)));')}>{L(4)}</div>
         <div style={css(BOX)}>
           {lvIdx.map((l, i) => (
             <div
               key={l}
               style={css(
-                `display:grid;grid-template-columns:28px minmax(0,1fr) 80px 28px;align-items:center;gap:8px;min-height:44px;padding:5px 8px 5px 10px;border-top:1px solid ${i ? 'rgba(255,255,255,.07)' : 'transparent'};`,
+                `display:grid;grid-template-columns:28px minmax(0,1fr) 80px 28px;align-items:center;gap:8px;min-height:44px;padding:5px 8px 5px 10px;border-top:1px solid ${i ? 'rgb(var(--w) / .07)' : 'transparent'};`,
               )}
             >
               <span
-                style={css("font-family:'Geist Mono',monospace;font-size:12px;color:rgba(255,248,240,.6);")}
+                style={css(
+                  "font-family:'Geist Mono',monospace;font-size:12px;color:rgb(var(--t) / calc(.6 * var(--t-k)));",
+                )}
               >
                 {l}
               </span>
@@ -234,7 +236,7 @@ function MgSettings() {
               />
               <span
                 style={css(
-                  'font-size:11.5px;color:rgba(255,248,240,.6);text-align:right;white-space:nowrap;',
+                  'font-size:11.5px;color:rgb(var(--t) / calc(.6 * var(--t-k)));text-align:right;white-space:nowrap;',
                 )}
               >
                 {tr(`${P.filter((p) => p.level === l).length} pessoas`)}
@@ -273,12 +275,14 @@ function MgSettings() {
         </div>
       </div>
       <div style={css('display:flex;align-items:center;gap:12px;padding-top:4px;')}>
-        <span style={css('flex:1;font-size:12.5px;color:rgba(255,248,240,.65);')}>{L(5)}</span>
+        <span style={css('flex:1;font-size:12.5px;color:rgb(var(--t) / calc(.65 * var(--t-k)));')}>
+          {L(5)}
+        </span>
         <button
           type="button"
           onClick={() => void reset()}
           style={css(
-            'height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,200,180,.35);background:transparent;color:#ffc9b8;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
+            'height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,200,180,.35);background:transparent;color:var(--kh-error-text);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
           )}
         >
           {L(6)}

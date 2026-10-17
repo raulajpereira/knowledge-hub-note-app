@@ -122,12 +122,12 @@ function Toggle({
         border: 0,
         padding: 3,
         cursor: disabled ? 'default' : 'pointer',
-        background: on ? 'oklch(0.78 0.14 150)' : 'rgba(255,255,255,.2)',
+        background: on ? 'oklch(0.78 0.14 150)' : 'rgb(var(--w) / .2)',
         display: 'flex',
         justifyContent: on ? 'flex-end' : 'flex-start',
       }}
     >
-      <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#fbf8f5' }} />
+      <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--ink)' }} />
     </button>
   );
 }
@@ -180,14 +180,14 @@ export function Plans() {
                 className="kh-ad-card"
                 style={{
                   borderRadius: 26,
-                  borderTop: `5px solid ${p.color ?? '#fff'}`,
+                  borderTop: `5px solid ${p.color ?? 'var(--ink-hi)'}`,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 16,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span className="kh-ad-plan" style={{ background: p.color ?? '#fff' }}>
+                  <span className="kh-ad-plan" style={{ background: p.color ?? 'var(--ink-hi)' }}>
                     {p.code}
                   </span>
                   <span className="kh-ad-td__sub" style={{ marginLeft: 'auto' }}>
@@ -211,8 +211,8 @@ export function Plans() {
                       gap: 10,
                       padding: '10px 14px',
                       borderRadius: 14,
-                      background: 'rgba(255,255,255,.05)',
-                      border: '1px solid rgba(255,255,255,.1)',
+                      background: 'rgb(var(--w) / .05)',
+                      border: '1px solid rgb(var(--w) / .1)',
                     }}
                   >
                     <span style={{ flex: 1, fontSize: 13 }}>{A('Plano anual')}</span>
@@ -320,8 +320,8 @@ export function Plans() {
                         key={g.grp}
                         style={{
                           borderRadius: 14,
-                          background: 'rgba(255,255,255,.04)',
-                          border: '1px solid rgba(255,255,255,.08)',
+                          background: 'rgb(var(--w) / .04)',
+                          border: '1px solid rgb(var(--w) / .08)',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px' }}>
@@ -345,8 +345,8 @@ export function Plans() {
                               height: 20,
                               flex: 'none',
                               borderRadius: 6,
-                              border: `1.5px solid ${n ? (p.color ?? '#fff') : 'rgba(255,255,255,.35)'}`,
-                              background: n ? (p.color ?? '#fff') : 'transparent',
+                              border: `1.5px solid ${n ? (p.color ?? 'var(--ink-hi)') : 'rgb(var(--w) / .35)'}`,
+                              background: n ? (p.color ?? 'var(--ink-hi)') : 'transparent',
                               color: '#16131f',
                               fontSize: 12,
                               fontWeight: 800,
@@ -368,7 +368,7 @@ export function Plans() {
                               gap: 8,
                               background: 'transparent',
                               border: 0,
-                              color: '#fbf8f5',
+                              color: 'var(--ink)',
                               cursor: 'pointer',
                               padding: 0,
                               fontSize: 13.5,
@@ -449,7 +449,7 @@ export function Plans() {
                   >
                     {label(g)}
                     {g.grp === 'base' && (
-                      <span className="kh-ad-st" style={{ background: 'rgba(255,255,255,.16)' }}>
+                      <span className="kh-ad-st" style={{ background: 'rgb(var(--w) / .16)' }}>
                         {A('incluído')}
                       </span>
                     )}

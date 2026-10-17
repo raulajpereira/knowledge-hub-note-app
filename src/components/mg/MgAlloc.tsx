@@ -17,21 +17,34 @@ const GRID = '260px repeat(20,minmax(54px,1fr)) 104px';
 const GRID_CELLS = '260px repeat(20,minmax(108px,1fr)) 104px';
 const CHIP_H = 19;
 const STICKY =
-  'background:linear-gradient(90deg,rgba(255,255,255,.09),rgba(255,255,255,.05));backdrop-filter:blur(var(--glass-blur-user, 28px)) saturate(150%);border-right:1px solid rgba(255,255,255,.1);';
+  'background:linear-gradient(90deg,rgb(var(--sf) / calc(.09 * var(--sf-k))),rgb(var(--sf) / calc(.05 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 28px)) saturate(150%);border-right:1px solid rgb(var(--w) / .1);';
 const CELL = [
-  ['rgba(255,255,255,.05)', 'rgba(255,248,240,.35)', 'none'],
-  ['oklch(0.85 0.14 85)', '#2a1f0e', 'inset 0 1px 0 rgba(255,255,255,.4),0 2px 8px rgba(0,0,0,.15)'],
-  ['oklch(0.8 0.15 152)', '#0f2418', 'inset 0 1px 0 rgba(255,255,255,.4),0 2px 8px rgba(0,0,0,.15)'],
-  ['oklch(0.7 0.18 27)', '#fff', 'inset 0 1px 0 rgba(255,255,255,.3),0 2px 8px rgba(0,0,0,.18)'],
+  ['rgb(var(--w) / .05)', 'rgb(var(--t) / calc(.35 * var(--t-k)))', 'none'],
+  [
+    'oklch(0.85 0.14 85)',
+    '#2a1f0e',
+    'inset 0 1px 0 rgba(255,255,255,.4),0 2px 8px rgb(0 0 0 / calc(.15 * var(--sh-k)))',
+  ],
+  [
+    'oklch(0.8 0.15 152)',
+    '#0f2418',
+    'inset 0 1px 0 rgba(255,255,255,.4),0 2px 8px rgb(0 0 0 / calc(.15 * var(--sh-k)))',
+  ],
+  [
+    'oklch(0.7 0.18 27)',
+    // theme-keep (white text on the red cell)
+    '#fff',
+    'inset 0 1px 0 rgba(255,255,255,.3),0 2px 8px rgb(0 0 0 / calc(.18 * var(--sh-k)))',
+  ],
 ] as const;
 const AVG_BG = [
-  'rgba(255,255,255,.06)',
+  'rgb(var(--w) / .06)',
   'oklch(0.86 0.12 85 / .14)',
   'oklch(0.86 0.12 150 / .16)',
   'oklch(0.82 0.14 30 / .18)',
 ];
 const SEL_PILL =
-  'height:36px;padding:0 30px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background-color:rgba(255,255,255,.06);color:#fbf8f5;font:inherit;font-size:13px;outline:none;';
+  'height:36px;padding:0 30px 0 12px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background-color:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:13px;outline:none;';
 
 type Modal = {
   id: string | null;
@@ -155,7 +168,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
         k: iso,
         lbl: `${wd} ${iso.slice(8, 10)}`,
         mon: di === 0 ? wLbl(wk(w)) : '',
-        bl: di === 0 && i ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.05)',
+        bl: di === 0 && i ? 'rgb(var(--w) / .16)' : 'rgb(var(--w) / .05)',
         on: td,
       };
     }
@@ -168,7 +181,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
       mon: newM
         ? new Date(`${iso}T00:00:00`).toLocaleDateString(loc, { month: 'short' }).replace('.', '')
         : '',
-      bl: newM && i ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.05)',
+      bl: newM && i ? 'rgb(var(--w) / .16)' : 'rgb(var(--w) / .05)',
       on: w === 0,
     };
   });
@@ -208,7 +221,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
         >
           <div style={css('display:flex;flex-direction:column;gap:4px;margin-right:auto;')}>
             <h1 style={css('margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em;')}>{L(23)}</h1>
-            <span style={css('font-size:13.5px;color:rgba(255,248,240,.72);')}>{L(35)}</span>
+            <span style={css('font-size:13.5px;color:rgb(var(--t) / calc(.72 * var(--t-k)));')}>{L(35)}</span>
           </div>
           <input
             value={q}
@@ -216,7 +229,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
             placeholder={L(66)}
             aria-label={L(66)}
             style={css(
-              'width:180px;height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13px;outline:none;',
+              'width:180px;height:36px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .14);background:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13px;outline:none;',
             )}
           />
           <Sel
@@ -238,7 +251,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
           <div
             role="tablist"
             style={css(
-              'display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(18,12,9,.22);border:1px solid rgba(255,255,255,.12);',
+              'display:flex;gap:2px;padding:3px;border-radius:999px;background:rgb(var(--d) / calc(.22 * var(--d-k)));border:1px solid rgb(var(--w) / .12);',
             )}
           >
             {(
@@ -255,7 +268,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                 aria-selected={mode === m}
                 onClick={() => setMode(m)}
                 style={css(
-                  `height:28px;padding:0 12px;border-radius:999px;border:0;font:inherit;font-size:12px;font-weight:600;cursor:pointer;background:${mode === m ? '#fbf8f5' : 'transparent'};color:${mode === m ? '#2a211c' : 'rgba(255,248,240,.8)'};`,
+                  `height:28px;padding:0 12px;border-radius:999px;border:0;font:inherit;font-size:12px;font-weight:600;cursor:pointer;background:${mode === m ? 'var(--ink)' : 'transparent'};color:${mode === m ? 'var(--ink-inv)' : 'rgb(var(--t) / calc(.8 * var(--t-k)))'};`,
                 )}
               >
                 {tr(l)}
@@ -276,7 +289,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
               })
             }
             style={css(
-              'white-space:nowrap;height:36px;padding:0 16px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
+              'white-space:nowrap;height:36px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
             )}
           >
             {L(36)}
@@ -284,18 +297,18 @@ export function MgAlloc({ mg }: { mg: Mg }) {
         </div>
         <div
           style={css(
-            'flex:1;min-height:0;overflow:auto;margin:0 12px 12px;border-radius:22px;background:rgba(18,12,9,.16);border:1px solid rgba(255,255,255,.1);',
+            'flex:1;min-height:0;overflow:auto;margin:0 12px 12px;border-radius:22px;background:rgb(var(--d) / calc(.16 * var(--d-k)));border:1px solid rgb(var(--w) / .1);',
           )}
         >
           <div style={css(`min-width:${mode === 'timeline' ? 1400 : 2524}px;`)}>
             <div
               style={css(
-                `position:sticky;top:0;z-index:4;display:grid;grid-template-columns:${grid};height:58px;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.1));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgba(255,255,255,.14);`,
+                `position:sticky;top:0;z-index:4;display:grid;grid-template-columns:${grid};height:58px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.18 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgb(var(--w) / .14);`,
               )}
             >
               <span
                 style={css(
-                  `position:sticky;left:0;z-index:2;display:flex;align-items:center;padding:0 20px;font-size:12.5px;font-weight:600;color:rgba(255,248,240,.85);${STICKY}`,
+                  `position:sticky;left:0;z-index:2;display:flex;align-items:center;padding:0 20px;font-size:12.5px;font-weight:600;color:rgb(var(--t) / calc(.85 * var(--t-k)));${STICKY}`,
                 )}
               >
                 {L(26)}
@@ -309,14 +322,14 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                 >
                   <span
                     style={css(
-                      'height:13px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,248,240,.55);',
+                      'height:13px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgb(var(--t) / calc(.55 * var(--t-k)));',
                     )}
                   >
                     {w.mon}
                   </span>
                   <span
                     style={css(
-                      `height:22px;min-width:46px;padding:0 8px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:${w.on ? 700 : 500};color:${w.on ? '#2a211c' : 'rgba(255,248,240,.78)'};background:${w.on ? '#fbf8f5' : 'transparent'};`,
+                      `height:22px;min-width:46px;padding:0 8px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:${w.on ? 700 : 500};color:${w.on ? 'var(--ink-inv)' : 'rgb(var(--t) / calc(.78 * var(--t-k)))'};background:${w.on ? 'var(--ink)' : 'transparent'};`,
                     )}
                   >
                     {w.lbl}
@@ -325,7 +338,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
               ))}
               <span
                 style={css(
-                  'display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:rgba(255,248,240,.85);border-left:1px solid rgba(255,255,255,.1);',
+                  'display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:rgb(var(--t) / calc(.85 * var(--t-k)));border-left:1px solid rgb(var(--w) / .1);',
                 )}
               >
                 {L(37)}
@@ -388,7 +401,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                   key={p.id}
                   className="mg-alrow"
                   style={css(
-                    `display:grid;grid-template-columns:${grid};min-height:${h}px;border-bottom:1px solid rgba(255,255,255,.06);background:${ri % 2 ? 'rgba(255,255,255,.018)' : 'transparent'};`,
+                    `display:grid;grid-template-columns:${grid};min-height:${h}px;border-bottom:1px solid rgb(var(--w) / .06);background:${ri % 2 ? 'rgb(var(--w) / .018)' : 'transparent'};`,
                   )}
                 >
                   <span
@@ -401,7 +414,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                       `position:sticky;left:0;z-index:3;display:flex;align-items:center;gap:12px;padding:0 20px;min-width:0;cursor:pointer;${STICKY}`,
                     )}
                   >
-                    <Av p={p} size={34} fs={12} tc={tm.tc} s="box-shadow:0 0 0 2px rgba(255,255,255,.12);" />
+                    <Av p={p} size={34} fs={12} tc={tm.tc} s="box-shadow:0 0 0 2px rgb(var(--w) / .12);" />
                     <span style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;')}>
                       <span
                         style={css(
@@ -412,7 +425,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                       </span>
                       <span
                         style={css(
-                          'font-size:12px;color:rgba(255,248,240,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                          'font-size:12px;color:rgb(var(--t) / calc(.6 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
                         )}
                       >
                         {tr(p.role)}
@@ -429,12 +442,12 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                     <div
                       data-al-track="1"
                       style={css(
-                        'grid-column:2 / span 20;position:relative;min-width:0;background-image:linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:5% 100%;',
+                        'grid-column:2 / span 20;position:relative;min-width:0;background-image:linear-gradient(90deg,rgb(var(--sf) / calc(.045 * var(--sf-k))) 1px,transparent 1px);background-size:5% 100%;',
                       )}
                     >
                       <div
                         style={css(
-                          `position:absolute;top:0;bottom:0;left:${((0 - W0) / N) * 100}%;width:${100 / N}%;background:rgba(255,255,255,.06);box-shadow:inset 1px 0 0 rgba(255,255,255,.18),inset -1px 0 0 rgba(255,255,255,.18);`,
+                          `position:absolute;top:0;bottom:0;left:${((0 - W0) / N) * 100}%;width:${100 / N}%;background:rgb(var(--w) / .06);box-shadow:inset 1px 0 0 rgba(255,255,255,.18),inset -1px 0 0 rgba(255,255,255,.18);`,
                         )}
                       />
                       {bars.map(({ a, f, t, ln, pj }) => (
@@ -445,21 +458,21 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                           title={`${pj?.code} ${pj?.name}${a.fn ? ` · ${a.fn}` : ''} · ${tr(`${a.hours}h/sem`)} · ${wLblY(a.from)} → ${wLblY(a.to)}`}
                           onClick={() => !moved && openM({ ...a })}
                           style={css(
-                            `position:absolute;top:${12 + ln * 36}px;height:28px;left:calc(${((f - W0) / N) * 100}% + 4px);width:calc(${((t - f + 1) / N) * 100}% - 8px);border-radius:9px;border:0;background:${pj?.color ?? 'rgba(255,255,255,.3)'};box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 8px rgba(0,0,0,.18);color:#1f1a16;font:inherit;padding:0 10px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;cursor:pointer;box-sizing:border-box;`,
+                            `position:absolute;top:${12 + ln * 36}px;height:28px;left:calc(${((f - W0) / N) * 100}% + 4px);width:calc(${((t - f + 1) / N) * 100}% - 8px);border-radius:9px;border:0;background:${pj?.color ?? 'rgb(var(--w) / .3)'};box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 8px rgb(0 0 0 / calc(.18 * var(--sh-k)));color:#1f1a16;font:inherit;padding:0 10px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;cursor:pointer;box-sizing:border-box;`,
                           )}
                         >
                           <span
                             onPointerDown={dragEdge(a, 'from')}
                             title="⇠"
                             style={css(
-                              'position:absolute;left:0;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:9px 0 0 9px;background:rgba(0,0,0,.12);touch-action:none;',
+                              'position:absolute;left:0;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:9px 0 0 9px;background:rgb(var(--d) / calc(.12 * var(--d-k)));touch-action:none;',
                             )}
                           />
                           <span
                             onPointerDown={dragEdge(a, 'to')}
                             title="⇢"
                             style={css(
-                              'position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:0 9px 9px 0;background:rgba(0,0,0,.12);touch-action:none;',
+                              'position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:0 9px 9px 0;background:rgb(var(--d) / calc(.12 * var(--d-k)));touch-action:none;',
                             )}
                           />
                           <span
@@ -509,7 +522,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                         <span
                           key={i}
                           style={css(
-                            `display:flex;align-items:stretch;justify-content:center;padding:9px 4px;border-left:1px solid ${d <= 7 && i ? 'rgba(255,255,255,.12)' : 'rgba(255,255,255,.04)'};`,
+                            `display:flex;align-items:stretch;justify-content:center;padding:9px 4px;border-left:1px solid ${d <= 7 && i ? 'rgb(var(--w) / .12)' : 'rgb(var(--w) / .04)'};`,
                           )}
                         >
                           <button
@@ -538,7 +551,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                                 key={pj?.id ?? '?'}
                                 className="mg-alchip"
                                 style={css(
-                                  `height:${CHIP_H}px;background:${pj?.color ?? 'rgba(255,255,255,.4)'};`,
+                                  `height:${CHIP_H}px;background:${pj?.color ?? 'rgb(var(--w) / .4)'};`,
                                 )}
                               >
                                 <span>{pj?.code ?? '—'}</span>
@@ -552,7 +565,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                   )}
                   <span
                     style={css(
-                      'display:flex;align-items:center;justify-content:center;border-left:1px solid rgba(255,255,255,.08);',
+                      'display:flex;align-items:center;justify-content:center;border-left:1px solid rgb(var(--w) / .08);',
                     )}
                   >
                     <span
@@ -601,12 +614,12 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
         aria-label={p.name}
         onKeyDown={(e) => e.key === 'Escape' && onClose()}
         style={css(
-          `position:fixed;left:${Math.min(window.innerWidth - 300, Math.max(10, c.x - 140))}px;top:${Math.min(window.innerHeight - 280, c.y)}px;z-index:201;width:280px;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.12)),rgba(34,27,23,.4);backdrop-filter:blur(var(--glass-blur-user, 36px)) saturate(170%);border:1px solid rgba(255,255,255,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 18px 50px rgba(0,0,0,.35);color:#fbf8f5;line-height:normal;`,
+          `position:fixed;left:${Math.min(window.innerWidth - 300, Math.max(10, c.x - 140))}px;top:${Math.min(window.innerHeight - 280, c.y)}px;z-index:201;width:280px;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.22 * var(--sf-k))),rgb(var(--sf) / calc(.12 * var(--sf-k)))),rgba(34,27,23,.4);backdrop-filter:blur(var(--glass-blur-user, 36px)) saturate(170%);border:1px solid rgb(var(--w) / .26);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 18px 50px rgb(0 0 0 / calc(.35 * var(--sh-k)));color:var(--ink);line-height:normal;`,
         )}
       >
         <div style={css('display:flex;flex-direction:column;gap:2px;')}>
           <span style={css('font-size:14px;font-weight:600;')}>{p.name}</span>
-          <span style={css('font-size:12px;color:rgba(255,248,240,.8);')}>
+          <span style={css('font-size:12px;color:rgb(var(--t) / calc(.8 * var(--t-k)));')}>
             {isD ? key.split('-').reverse().join('/') : tr(`Semana de ${wLblY(key)}`)}
           </span>
         </div>
@@ -639,10 +652,10 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
                   });
                 }}
                 style={css(
-                  "width:70px;height:32px;padding:0 8px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(20,15,12,.3);color:#fbf8f5;font-family:'Geist Mono',monospace;font-size:13px;text-align:right;outline:none;",
+                  "width:70px;height:32px;padding:0 8px;border-radius:9px;border:1px solid rgb(var(--w) / .2);background:rgb(var(--d) / calc(.3 * var(--d-k)));color:var(--ink);font-family:'Geist Mono',monospace;font-size:13px;text-align:right;outline:none;",
                 )}
               />
-              <span style={css('font-size:11px;color:rgba(255,248,240,.7);width:34px;')}>
+              <span style={css('font-size:11px;color:rgb(var(--t) / calc(.7 * var(--t-k)));width:34px;')}>
                 {tr(isD ? 'h/dia' : 'h/sem')}
               </span>
               {changed && (
@@ -657,7 +670,7 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
                     })
                   }
                   style={css(
-                    'width:24px;height:24px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fbf8f5;cursor:pointer;padding:0;font-size:12px;',
+                    'width:24px;height:24px;border-radius:50%;border:0;background:rgb(var(--w) / .1);color:var(--ink);cursor:pointer;padding:0;font-size:12px;',
                   )}
                 >
                   ↺
@@ -667,7 +680,7 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
           );
         })}
         {!cov.length && (
-          <span style={css('font-size:12.5px;color:rgba(255,248,240,.75);')}>
+          <span style={css('font-size:12.5px;color:rgb(var(--t) / calc(.75 * var(--t-k)));')}>
             {tr('Sem alocações neste período.')}
           </span>
         )}
@@ -677,13 +690,13 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
   );
 }
 
-const LBL = 'font-size:12px;color:rgba(255,248,240,.78);';
+const LBL = 'font-size:12px;color:rgb(var(--t) / calc(.78 * var(--t-k)));';
 const INP =
-  'height:40px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;color-scheme:dark;width:100%;box-sizing:border-box;';
+  'height:40px;padding:0 12px;border-radius:12px;border:1px solid rgb(var(--w) / .16);background:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13.5px;outline:none;color-scheme: var(--scheme);width:100%;box-sizing:border-box;';
 const SEL =
-  'height:40px;padding:0 34px 0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background-color:rgba(18,12,9,.22);color:#fbf8f5;font:inherit;font-size:13.5px;outline:none;width:100%;box-sizing:border-box;';
+  'height:40px;padding:0 34px 0 12px;border-radius:12px;border:1px solid rgb(var(--w) / .16);background-color:rgb(var(--d) / calc(.22 * var(--d-k)));color:var(--ink);font:inherit;font-size:13.5px;outline:none;width:100%;box-sizing:border-box;';
 const STEP =
-  'width:40px;height:40px;flex:none;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fbf8f5;cursor:pointer;font-size:16px;padding:0;';
+  'width:40px;height:40px;flex:none;border-radius:12px;border:1px solid rgb(var(--w) / .18);background:rgb(var(--w) / .06);color:var(--ink);cursor:pointer;font-size:16px;padding:0;';
 
 function AllocPanel({
   mg,
@@ -738,13 +751,17 @@ function AllocPanel({
   const fmtD = (s: string) => (s ? s.split('-').reverse().join('/') : '—');
   const hf = (n: number) => `${(Math.round(n * 10) / 10).toString().replace('.', en ? '.' : ',')}h`;
   const sum: Array<[string, string, string]> = [
-    [tr('Termina a'), fmtD(last), '#fbf8f5'],
-    ['Total', `${hf(total)} · ${tr('{n} dias').replace('{n}', String(dates.length))}`, '#fbf8f5'],
-    [tr('Por semana'), hf(perWeek), '#fbf8f5'],
+    [tr('Termina a'), fmtD(last), 'var(--ink)'],
+    ['Total', `${hf(total)} · ${tr('{n} dias').replace('{n}', String(dates.length))}`, 'var(--ink)'],
+    [tr('Por semana'), hf(perWeek), 'var(--ink)'],
     [
       tr('Carga semanal máxima'),
       `${hf(peak)} / ${cap}h`,
-      peak > cap ? 'oklch(0.84 0.14 30)' : peak >= cap * 0.9 ? 'oklch(0.86 0.13 150)' : 'oklch(0.86 0.12 85)',
+      peak > cap
+        ? 'oklch(calc(.84 * var(--lk)) .14 30)'
+        : peak >= cap * 0.9
+          ? 'oklch(calc(.86 * var(--lk)) .13 150)'
+          : 'oklch(calc(.86 * var(--lk)) .12 85)',
     ],
   ];
   const save = () => {
@@ -779,7 +796,7 @@ function AllocPanel({
     <aside
       aria-label={title}
       style={css(
-        `position:relative;isolation:isolate;flex:none;width:min(${width}px, 55%);min-height:0;display:flex;flex-direction:column;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);color:#fbf8f5;`,
+        `position:relative;isolation:isolate;flex:none;width:min(${width}px, 55%);min-height:0;display:flex;flex-direction:column;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgb(var(--sf) / calc(.14 * var(--sf-k))),rgb(var(--sf) / calc(.05 * var(--sf-k))));border:1px solid rgb(var(--w) / .16);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);color:var(--ink);`,
       )}
     >
       <div
@@ -798,7 +815,7 @@ function AllocPanel({
       >
         <div
           style={css(
-            `width:4px;height:44px;border-radius:4px;background:${drag ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.22)'};`,
+            `width:4px;height:44px;border-radius:4px;background:${drag ? 'rgb(var(--w) / .75)' : 'rgb(var(--w) / .22)'};`,
           )}
         />
       </div>
@@ -809,7 +826,7 @@ function AllocPanel({
           aria-label={tr('Fechar')}
           onClick={() => setM(null)}
           style={css(
-            'width:32px;height:32px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fbf8f5;cursor:pointer;padding:0;',
+            'width:32px;height:32px;flex:none;border-radius:50%;border:1px solid rgb(var(--w) / .2);background:rgb(var(--w) / .08);color:var(--ink);cursor:pointer;padding:0;',
           )}
         >
           ×
@@ -886,7 +903,7 @@ function AllocPanel({
                       aria-pressed={on}
                       onClick={() => set({ fn: name })}
                       style={css(
-                        `height:28px;padding:0 10px;border-radius:999px;border:1px solid ${on ? '#fbf8f5' : 'rgba(255,255,255,.16)'};background:${on ? '#fbf8f5' : 'rgba(255,255,255,.06)'};color:${on ? '#2a211c' : '#fbf8f5'};font:inherit;font-size:12px;font-weight:600;cursor:pointer;`,
+                        `height:28px;padding:0 10px;border-radius:999px;border:1px solid ${on ? 'var(--ink)' : 'rgb(var(--w) / .16)'};background:${on ? 'var(--ink)' : 'rgb(var(--w) / .06)'};color:${on ? 'var(--ink-inv)' : 'var(--ink)'};font:inherit;font-size:12px;font-weight:600;cursor:pointer;`,
                       )}
                     >
                       {name}
@@ -972,7 +989,7 @@ function AllocPanel({
                     set({ mask: nm });
                   }}
                   style={css(
-                    `height:36px;border-radius:10px;border:1px solid ${on ? '#fbf8f5' : 'rgba(255,255,255,.16)'};background:${on ? '#fbf8f5' : 'rgba(255,255,255,.05)'};color:${on ? '#2a211c' : 'rgba(255,248,240,.7)'};font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;`,
+                    `height:36px;border-radius:10px;border:1px solid ${on ? 'var(--ink)' : 'rgb(var(--w) / .16)'};background:${on ? 'var(--ink)' : 'rgb(var(--w) / .05)'};color:${on ? 'var(--ink-inv)' : 'rgb(var(--t) / calc(.7 * var(--t-k)))'};font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;`,
                   )}
                 >
                   {l}
@@ -983,12 +1000,12 @@ function AllocPanel({
         </div>
         <div
           style={css(
-            'display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:18px;background:rgba(18,12,9,.22);border:1px solid rgba(255,255,255,.12);',
+            'display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:18px;background:rgb(var(--d) / calc(.22 * var(--d-k)));border:1px solid rgb(var(--w) / .12);',
           )}
         >
           {sum.map(([l, v, c]) => (
             <span key={l} style={css('display:flex;align-items:baseline;gap:10px;font-size:13px;')}>
-              <span style={css('flex:1;color:rgba(255,248,240,.75);')}>{l}</span>
+              <span style={css('flex:1;color:rgb(var(--t) / calc(.75 * var(--t-k)));')}>{l}</span>
               <span
                 style={css(
                   `font-family:'Geist Mono',monospace;font-weight:600;white-space:nowrap;color:${c};`,
@@ -1016,7 +1033,7 @@ function AllocPanel({
       </div>
       <div
         style={css(
-          'flex-shrink:0;display:flex;align-items:center;gap:8px;padding:14px 20px 20px;border-top:1px solid rgba(255,255,255,.1);',
+          'flex-shrink:0;display:flex;align-items:center;gap:8px;padding:14px 20px 20px;border-top:1px solid rgb(var(--w) / .1);',
         )}
       >
         {m.id && (
@@ -1027,7 +1044,7 @@ function AllocPanel({
               setM(null);
             }}
             style={css(
-              'height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,170,150,.4);background:transparent;color:#ffc9b8;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;',
+              'height:40px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--err) / .4);background:transparent;color:var(--kh-error-text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;',
             )}
           >
             {tr('Remover')}
@@ -1038,7 +1055,7 @@ function AllocPanel({
           type="button"
           onClick={() => setM(null)}
           style={css(
-            'height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fbf8f5;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;',
+            'height:40px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .2);background:transparent;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;',
           )}
         >
           {tr('Cancelar')}
@@ -1048,7 +1065,7 @@ function AllocPanel({
           onClick={save}
           disabled={!dates.length || tooLong}
           style={css(
-            'height:40px;padding:0 18px;border-radius:999px;border:0;background:#fbf8f5;color:#2a211c;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;',
+            'height:40px;padding:0 18px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;',
           )}
         >
           {tr('Guardar')}
