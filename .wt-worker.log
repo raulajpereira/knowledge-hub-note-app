@@ -1,0 +1,98 @@
+[search] embedding endpoint on 127.0.0.1:3214
+[worker] started
+[mail] SMTP not configured — verify for ai-1792269858173@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3104/v2/verify-email?token=uzq-iHCME89TKjaQrM7t54oQhFlBJOsN3xNVy3gKEyU
+
+Se não criou esta conta, ignore este email.
+
+[mail] SMTP not configured — verify for files-1792269858243@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3104/v2/verify-email?token=Xc_-wx66InqgceHIEVCK7AaP1I1v3IBhGA1gO02ckug
+
+Se não criou esta conta, ignore este email.
+
+[search] model kh/e5-proxy loaded in 1348 ms
+[mail] SMTP not configured — verify for console-1792269885544@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3103/v2/verify-email?token=5Hijcla19j0L1QPteElGSSEDTa4pXkSK5o2m3KzWZ-w
+
+Se não criou esta conta, ignore este email.
+
+[search] ocr file 01a14b9c-6385-7f85-833f-711f71332ff4: done, 23 chars, 3880 ms
+[mail] SMTP not configured — changed for e2e-1792269885517@example.com:
+Password alterada
+
+A password da sua conta KnowledgeHub foi alterada e todas as sessões abertas foram terminadas. A palavra-passe mestra do cofre de Passwords não mudou.
+
+
+Se não foi você, recupere já a password no ecrã de início de sessão e contacte o suporte.
+
+[search] backfill queued 47 jobs
+[mail] SMTP not configured — verify for emails-1792269923744@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3103/v2/verify-email?token=Z7J3L3cWiEGUeiM1hmjEolr7eeWE5dYWcCur4nMZ3-s
+
+Se não criou esta conta, ignore este email.
+
+[mail] SMTP not configured — verify for look-1792269924998@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3103/v2/verify-email?token=anUePR4ZAi8CRcb5ZndJYRkmN6WvDEOHCpy7OWRWqfM
+
+Se não criou esta conta, ignore este email.
+
+[search] ocr email_att 01a14b9d-051f-785b-81de-1570604cb9c8 failed (giving up): InvalidPDFException: Invalid PDF structure.
+[search] ocr email_att 01a14b9d-058b-732a-b9b8-651c2af06a40 failed (giving up): InvalidPDFException: Invalid PDF structure.
+[mail] SMTP not configured — verify for console-1792270007516@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3103/v2/verify-email?token=4ohMlKl0SgHIcIsXOKq2-Lni4cNwMrLZzeiJICkZ6Ic
+
+Se não criou esta conta, ignore este email.
+
+[search] ocr email_att 01a14b9e-5498-7ffc-ad01-2b86a68cf211 failed (giving up): InvalidPDFException: Invalid PDF structure.
+[search] ocr email_att 01a14b9e-5548-7e10-9a32-c94691eb1a01 failed (giving up): InvalidPDFException: Invalid PDF structure.
+[mail] SMTP not configured — verify for console-1792270058327@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3103/v2/verify-email?token=Elyp5W3fXNTe8qe6wzONQqsjIpda3s7jqIQR5gb0OTg
+
+Se não criou esta conta, ignore este email.
+
+[mail] SMTP not configured — verify for look-1792270102017@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3103/v2/verify-email?token=BFX1AbWfrbdikN8g4fnjFyveOiwVfMnn6alZTlZqZjI
+
+Se não criou esta conta, ignore este email.
+
+[mail] SMTP not configured — verify for look-1792270142210@example.com:
+Confirme o seu email
+
+Obrigado por se registar no KnowledgeHub. Confirme o seu endereço para ativar a conta. O link é válido durante 24 horas.
+
+Confirmar email: http://127.0.0.1:3103/v2/verify-email?token=f7pp8VdZTPn1mTyXirXOvfXsmPnMYhmaOML92XMZ3bk
+
+Se não criou esta conta, ignore este email.
+

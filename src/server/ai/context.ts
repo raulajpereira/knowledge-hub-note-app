@@ -1,27 +1,18 @@
 import 'server-only';
-import { and, asc, desc, gte, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import {
-  artifacts,
-  driveFiles,
-  emails,
-  issues,
-  meetings,
-  notes,
-  sapObjects,
-  sapTransports,
-  snippets,
-  tasks,
-  voiceNotes,
-  type AiSource,
-} from '@/db/schema';
+import { and, asc, desc, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { meetings, notes, tasks, type AiSource } from '@/db/schema';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser, type Tx } from '@/server/content/tenant';
+import { chunkText, rrf, semanticQuery } from '@/lib/search/text';
+import { embedQuery } from '@/server/search/embedClient';
+import { vectorItems, type VecHit } from '@/server/search/semantic';
+import { embedSelect, KINDS } from '@/server/search/sources';
 
 // What the assistant reads to answer: the person's own content (everything
-// but the password vault) found by the words of the question — a plain text
-// search, so it works with any provider (no embeddings needed). Every query
-// runs as the person under RLS, so only what they can see is ever sent.
+// but the password vault) found by the words of the question AND by meaning
+// (local embeddings computed by the worker — no provider involved, so it works
+// with any of them; keyword-only when semantic search is unavailable). Every
+// query runs as the person under RLS, so only what they can see is ever sent.
 
 const STOP = new Set(
   (
@@ -48,105 +39,15 @@ export function keywords(q: string): string[] {
   return out;
 }
 
-type Hit = AiSource & { text: string; at: Date; score: number };
+type Hit = AiSource & { text: string; at: Date; score: number; chunk?: number };
 const esc = (w: string) => `%${w.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 async function search(tx: Tx, words: string[]): Promise<Hit[]> {
-  const kinds: Array<{ type: string; table: unknown; title: SQL; body: SQL; at: AnyPgColumn; alive: SQL }> = [
-    {
-      type: 'note',
-      table: notes,
-      title: sql`${notes.title}`,
-      body: sql`${notes.title} || ' ' || ${notes.contentText}`,
-      at: notes.updatedAt,
-      alive: isNull(notes.deletedAt)!,
-    },
-    {
-      type: 'meeting',
-      table: meetings,
-      title: sql`${meetings.title} || ' (' || ${meetings.heldOn} || ')'`,
-      body: sql`${meetings.title} || ' ' || ${meetings.heldOn} || ' ' || array_to_string(${meetings.participants}, ', ') || ' ' || ${meetings.topics} || ' ' || ${meetings.review}::text || ' ' || ${meetings.todos}::text`,
-      at: meetings.updatedAt,
-      alive: isNull(meetings.deletedAt)!,
-    },
-    {
-      type: 'task',
-      table: tasks,
-      title: sql`${tasks.title}`,
-      body: sql`${tasks.title} || ' ' || ${tasks.notes} || ' ' || coalesce(${tasks.dueOn}::text, '') || case when ${tasks.doneAt} is null then ' (aberta)' else ' (concluída)' end`,
-      at: tasks.updatedAt,
-      alive: isNull(tasks.deletedAt)!,
-    },
-    {
-      type: 'issue',
-      table: issues,
-      title: sql`${issues.title}`,
-      body: sql`${issues.title} || ' [' || ${issues.status} || '] ' || ${issues.description} || ' ' || ${issues.notes}`,
-      at: issues.updatedAt,
-      alive: isNull(issues.deletedAt)!,
-    },
-    {
-      type: 'voice',
-      table: voiceNotes,
-      title: sql`${voiceNotes.title}`,
-      body: sql`${voiceNotes.title} || ' ' || coalesce(${voiceNotes.transcript}, '') || ' ' || ${voiceNotes.notes}`,
-      at: voiceNotes.updatedAt,
-      alive: isNull(voiceNotes.deletedAt)!,
-    },
-    {
-      type: 'artifact',
-      table: artifacts,
-      title: sql`${artifacts.title}`,
-      body: sql`${artifacts.title} || ' ' || ${artifacts.description}`,
-      at: artifacts.updatedAt,
-      alive: isNull(artifacts.deletedAt)!,
-    },
-    {
-      type: 'email',
-      table: emails,
-      title: sql`${emails.subject}`,
-      body: sql`${emails.subject} || ' — ' || ${emails.fromName} || ' ' || ${emails.bodyText} || ' ' || ${emails.notes}`,
-      at: emails.updatedAt,
-      alive: isNull(emails.deletedAt)!,
-    },
-    {
-      type: 'snippet',
-      table: snippets,
-      title: sql`${snippets.title}`,
-      body: sql`${snippets.title} || ' ' || ${snippets.description} || ' ' || ${snippets.files}::text`,
-      at: snippets.updatedAt,
-      alive: isNull(snippets.deletedAt)!,
-    },
-    {
-      type: 'code',
-      table: sapObjects,
-      title: sql`${sapObjects.type} || ' ' || ${sapObjects.name}`,
-      body: sql`${sapObjects.type} || ' ' || ${sapObjects.name} || ' ' || ${sapObjects.description} || ' ' || ${sapObjects.nodes}::text`,
-      at: sapObjects.updatedAt,
-      alive: isNull(sapObjects.deletedAt)!,
-    },
-    {
-      type: 'transport',
-      table: sapTransports,
-      title: sql`${sapTransports.trkorr} || ' ' || ${sapTransports.description}`,
-      body: sql`${sapTransports.trkorr} || ' ' || ${sapTransports.description} || ' ' || ${sapTransports.owner} || ' ' || ${sapTransports.notes}`,
-      at: sapTransports.updatedAt,
-      alive: isNull(sapTransports.deletedAt)!,
-    },
-    {
-      type: 'file',
-      table: driveFiles,
-      title: sql`${driveFiles.name}`,
-      body: sql`${driveFiles.name}`,
-      at: driveFiles.updatedAt,
-      alive: isNull(driveFiles.deletedAt)!,
-    },
-  ];
   const hits: Hit[] = [];
-  for (const k of kinds) {
+  for (const k of KINDS) {
     const t = k.table as typeof notes;
     const rows = (await tx
-      .select({ id: t.id, title: k.title, body: k.body, at: k.at })
+      .select({ id: k.id, title: k.title, body: k.body, at: k.at })
       .from(t)
       .where(and(k.alive, or(...words.map((w) => sql`(${k.body}) ilike ${esc(w)}`))))
       .orderBy(desc(k.at))
@@ -165,9 +66,70 @@ async function search(tx: Tx, words: string[]): Promise<Hit[]> {
   return hits.sort((a, b) => b.score - a.score || b.at.getTime() - a.at.getTime());
 }
 
-/** A window of the text around the first search word (or its start). */
-function excerpt(text: string, words: string[], max = 1400) {
-  const clean = text.replace(/\s+/g, ' ').trim();
+/** Items found by meaning only: their title and the text that was embedded (chunk → excerpt). */
+async function loadHits(tx: Tx, vs: VecHit[]): Promise<Hit[]> {
+  const out: Hit[] = [];
+  for (const k of KINDS) {
+    const mine = vs.filter((v) => v.type === k.type);
+    if (!mine.length) continue;
+    const rows = (await tx
+      .select({ id: k.id, title: k.title, body: embedSelect(k), at: k.at })
+      .from(k.table as typeof notes)
+      .where(
+        and(
+          k.alive,
+          inArray(
+            k.id,
+            mine.map((v) => v.id),
+          ),
+        ),
+      )) as Array<{
+      id: string;
+      title: string;
+      body: string;
+      at: Date;
+    }>;
+    for (const r of rows) {
+      const v = mine.find((x) => x.id === r.id)!;
+      out.push({
+        type: k.type,
+        id: r.id,
+        title: r.title || '—',
+        text: r.body ?? '',
+        at: r.at,
+        score: 0,
+        chunk: v.chunk,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Keyword and meaning together (reciprocal rank fusion): exact words still
+ * rank first, and things that say the same in other words come in too.
+ * Without a query vector (semantic search off, worker slow or down) this is
+ * the keyword search alone.
+ */
+async function hybrid(tx: Tx, words: string[], vec: number[] | null, limit: number): Promise<Hit[]> {
+  const kw = words.length ? await search(tx, words) : [];
+  if (!vec) return kw.slice(0, limit);
+  const vs = await vectorItems(tx, vec, { limit: 20 }).catch(() => [] as VecHit[]);
+  if (!vs.length) return kw.slice(0, limit);
+  const key = (h: { type: string; id: string }) => `${h.type}:${h.id}`;
+  const merged = rrf([kw.map((h) => ({ key: key(h) })), vs.map((v) => ({ key: key(v) }))]).slice(0, limit);
+  const byKey = new Map(kw.map((h) => [key(h), h]));
+  const need = vs.filter((v) => merged.some((m) => m.key === key(v)) && !byKey.has(key(v)));
+  for (const h of await loadHits(tx, need)) byKey.set(key(h), h);
+  return merged.map((m) => byKey.get(m.key)).filter((h): h is Hit => !!h);
+}
+
+/** A window of the text around the first search word (or its start; for a meaning match, its chunk). */
+function excerpt(text: string, words: string[], max = 1400, chunk?: number) {
+  const clean =
+    chunk !== undefined
+      ? (chunkText(text)[chunk] ?? text).replace(/\s+/g, ' ').trim()
+      : text.replace(/\s+/g, ' ').trim();
   if (clean.length <= max) return clean;
   const low = clean.toLowerCase();
   const at = Math.min(...words.map((w) => low.indexOf(w)).filter((i) => i >= 0), clean.length);
@@ -202,10 +164,15 @@ async function agenda(tx: Tx, today: string) {
 /** The numbered sources for a question, plus the agenda. */
 export async function buildContext(auth: AuthContext, question: string, today: string, limit = 8) {
   const words = keywords(question);
+  // the query vector is fetched before the transaction (never hold one open on the network)
+  const sq = semanticQuery(question);
+  const vec = sq ? await embedQuery(sq, 1500) : null;
   return asUser(auth, async (tx) => {
-    const hits = words.length ? (await search(tx, words)).slice(0, limit) : [];
+    const hits = await hybrid(tx, words, vec, limit);
     const sources: AiSource[] = hits.map(({ type, id, title }) => ({ type, id, title }));
-    const blocks = hits.map((h, i) => `[${i + 1}] (${h.type}) ${h.title}\n${excerpt(h.text, words)}`);
+    const blocks = hits.map(
+      (h, i) => `[${i + 1}] (${h.type}) ${h.title}\n${excerpt(h.text, words, 1400, h.chunk)}`,
+    );
     return { sources, blocks, agenda: await agenda(tx, today) };
   });
 }

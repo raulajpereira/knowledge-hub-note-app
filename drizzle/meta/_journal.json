@@ -288,6 +288,13 @@
       "when": 1792185130053,
       "tag": "0040_api_folder_tree",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792227789983,
+      "tag": "0043_semantic_search",
+      "breakpoints": true
     }
   ]
 }

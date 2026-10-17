@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: kh_owner
           POSTGRES_PASSWORD: owner
@@ -168,7 +168,9 @@ jobs:
             git reset --hard origin/v2
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             export KH_IMAGE_TAG
-            docker compose pull web worker migrate
+            docker compose pull web worker migrate postgres
+            # postgres first (a new image, e.g. pgvector, is applied before the migrations need it)
+            docker compose up -d --wait postgres
             docker compose run --rm migrate
             docker compose run --rm migrate node dist/seed.mjs
             docker compose up -d --remove-orphans

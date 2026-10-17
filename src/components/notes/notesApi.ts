@@ -19,8 +19,10 @@ export type NoteItem = {
   favorite: boolean;
   createdAt: string;
   updatedAt: string;
+  /** found by meaning (semantic search) rather than by the words typed */
+  semantic?: true;
 };
-export type Note = Omit<NoteItem, 'summary'> & { content: unknown };
+export type Note = Omit<NoteItem, 'summary' | 'semantic'> & { content: unknown };
 export type LinkItem = {
   type: 'note' | 'task' | 'voice' | 'issue' | 'meeting' | 'artifact';
   id: string;

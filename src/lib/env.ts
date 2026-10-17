@@ -7,6 +7,12 @@ const bool = z
   .optional()
   .transform((v) => v === 'true' || v === '1');
 
+// switches that may also be written on/off
+const onOff = z
+  .enum(['true', 'false', '1', '0', 'on', 'off'])
+  .optional()
+  .transform((v) => (v === undefined ? undefined : v === 'true' || v === '1' || v === 'on'));
+
 export function isLoopback(url: string) {
   try {
     const h = new URL(url).hostname.replace(/^\[|\]$/g, '');
@@ -81,6 +87,27 @@ export const serverEnvSchema = z.object({
 
   // Storage sweep only reports what it would delete (first days after a move).
   STORAGE_SWEEP_DRY_RUN: bool.default(false),
+
+  // Semantic search (docs/DEPLOY.md §6c): a small multilingual model runs
+  // in the WORKER only (never in web). Web asks the worker for query vectors at
+  // EMBED_URL and falls back to keyword search when it is off, slow or down.
+  SEMANTIC_SEARCH: onOff.transform((v) => v ?? true),
+  // worker's internal endpoint for query vectors (not published outside Docker)
+  EMBED_URL: z.url().default('http://127.0.0.1:3210'),
+  EMBED_HOST: z.string().default('127.0.0.1'),
+  EMBED_PORT: z.coerce.number().int().min(1).max(65535).default(3210),
+  EMBED_MODEL: z
+    .string()
+    .regex(/^[\w.-]+\/[\w.-]+$/, 'must be a Hugging Face model id like "Xenova/multilingual-e5-small"')
+    .default('Xenova/multilingual-e5-small'),
+  // model files and OCR languages (downloaded once; a Docker volume in production)
+  MODEL_CACHE_DIR: z.string().default('.cache/models'),
+  // free the model's memory after this many idle minutes (0 = keep it loaded)
+  EMBED_IDLE_MIN: z.coerce.number().int().min(0).default(60),
+  // OCR of images and scanned PDFs (tesseract.js, por+eng) in the worker
+  OCR: onOff.transform((v) => v ?? true),
+  OCR_MAX_MB: z.coerce.number().min(1).max(200).default(15),
+  OCR_MAX_PAGES: z.coerce.number().int().min(1).max(200).default(20),
 
   // Tests only: every OpenAI-compatible AI call goes to this local fake.
   // Never set in production — and only a loopback address is accepted, so a

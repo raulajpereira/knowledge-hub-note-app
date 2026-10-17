@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import {
   apiRequests,
@@ -22,7 +22,10 @@ import {
   tasks,
   vaultItems,
   voiceNotes,
+  embeddings,
 } from '@/db/schema';
+import { vecLiteral } from '@/server/search/embedClient';
+import { SEM_MAX_DIST } from '@/server/search/semantic';
 import { purgeEmailsTx } from './emails';
 import { purgeArtifactsTx } from './artifacts';
 import { purgeSnippetsTx } from './snippets';
@@ -79,6 +82,8 @@ export type NoteListItem = {
   favorite: boolean;
   createdAt: string;
   updatedAt: string;
+  /** found by meaning (semantic search), not by the words typed */
+  semantic?: true;
 };
 
 const listCols = {
@@ -241,6 +246,8 @@ export async function listNotes(
     /** the next page starts after this note (cursor "updatedAt|id" from the previous page) */
     after?: string;
     limit?: number;
+    /** vector of `search` (semantic search): notes close in meaning come after the word matches */
+    vector?: number[] | null;
   },
 ) {
   // a shared folder's list runs with the share scope (the notes of every member)
@@ -254,6 +261,7 @@ export async function listNotes(
           : eq(notes.sharedFolderId, q.shared.id),
       );
     if (q.fav) conds.push(eq(notes.favorite, true));
+    const scope = [...conds];
     if (q.search) {
       const like = `%${q.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
       conds.push(
@@ -261,6 +269,8 @@ export async function listNotes(
           ilike(notes.title, like),
           ilike(notes.contentText, like),
           sql`array_to_string(${notes.tags}, ' ') ilike ${like}`,
+          // text recognised in the note's images (OCR)
+          sql`exists (select 1 from ocr_texts o where o.parent_type = 'note' and o.parent_id = ${notes.id} and o.text ilike ${like})`,
         )!,
       );
     }
@@ -279,7 +289,37 @@ export async function listNotes(
       .where(and(...conds))
       .orderBy(desc(sql`date_trunc('milliseconds', ${notes.updatedAt})`), desc(notes.id))
       .limit(Math.min(q.limit ?? 500, 500));
-    return rows.map((r) => toItem(r as ListRow, auth.user.id));
+    const items = rows.map((r) => toItem(r as ListRow, auth.user.id));
+    if (!q.vector || q.after) return items;
+    // "Semântica": up to 10 more notes of the same list that match by meaning, after the word matches
+    const have = items.map((n) => n.id);
+    const dist = sql<number>`min(${embeddings.embedding} <=> ${vecLiteral(q.vector)}::vector)`;
+    // in a savepoint: a failure here leaves the word matches (and the transaction) intact
+    const near = await tx
+      .transaction((sp) =>
+        sp
+          .select({ ...listCols, dist })
+          .from(notes)
+          .innerJoin(
+            embeddings,
+            and(
+              eq(embeddings.itemType, 'note'),
+              eq(embeddings.itemId, notes.id),
+              // vectors of another model (being replaced) don't compare with this query's
+              eq(embeddings.model, env().EMBED_MODEL),
+            ),
+          )
+          .where(and(...scope, have.length ? notInArray(notes.id, have) : undefined))
+          .groupBy(notes.id)
+          .having(sql`${dist} <= ${SEM_MAX_DIST}`)
+          .orderBy(dist)
+          .limit(10),
+      )
+      .catch(() => []);
+    return [
+      ...items,
+      ...near.map((r) => ({ ...toItem(r as ListRow, auth.user.id), semantic: true as const })),
+    ];
   });
 }
 

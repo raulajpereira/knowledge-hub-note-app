@@ -11,8 +11,8 @@ A v2 corre **ao lado** da v1 na mesma VPS, sem lhe tocar:
 | URL até ao corte | `https://knowledge-hub.cloud/` | `https://knowledge-hub.cloud/v2/` |
 | URL depois do corte | `https://knowledge-hub.cloud/v1/` | `https://knowledge-hub.cloud/` |
 
-Memória (KVM 1 = 4 GB): limites no `docker-compose.yml` somam ≈ 2,4 GB para a
-v2; a v1 (Node + MySQL) fica com o resto, mais 2 GB de swap criados pelo
+Memória (KVM 1 = 4 GB): limites no `docker-compose.yml` somam ≈ 3,0 GB para a
+v2 (o worker tem 1 GB por causa da pesquisa semântica/OCR, §6c); a v1 (Node + MySQL) fica com o resto, mais 2 GB de swap criados pelo
 `setup.sh`. A v1 é temporária (só para passares os teus dados à mão).
 
 ## 1. Preparar a VPS (uma vez)
@@ -51,6 +51,9 @@ Valores a preencher no `.env`:
 - `SMTP_USER` / `SMTP_PASS`: a caixa de email Hostinger que envia (ex. `no-reply@knowledge-hub.cloud`).
 - `SUPERADMIN_EMAIL=raul.a.j.pereira@gmail.com`
 - `SUPERADMIN_NAME`
+- Pesquisa semântica / OCR (opcional, §6c): `SEMANTIC_SEARCH=on|off`, `OCR=on|off`, `EMBED_MODEL`,
+  `EMBED_IDLE_MIN`, `OCR_MAX_MB`, `OCR_MAX_PAGES` (os valores por omissão servem; `EMBED_URL`,
+  `EMBED_HOST` e `MODEL_CACHE_DIR` são definidos pelo `docker-compose.yml`).
 
 ## 3. GitHub (Settings → Secrets and variables → Actions)
 
@@ -129,6 +132,77 @@ crontab -e
 - O **worker** verifica a cada 5 minutos a base de dados, o Redis, o MinIO, o endereço público (`APP_URL/api/health`), a fila de emails e os erros do servidor da última hora. Quando algo falha, envia email ao Manager e aos Administradores da consola (de novo a cada 6 h enquanto durar) e outro quando volta ao normal. Precisa do SMTP configurado (§5c).
 - Se o próprio worker parar, quem avisa é um monitor externo. Sugestão grátis: **UptimeRobot** (ou BetterStack) → novo monitor HTTP(s) para `https://knowledge-hub.cloud/v2/api/health?strict=1` (depois do corte, sem `/v2`), intervalo 5 min, alerta por email. Com `strict=1` a resposta é 503 também quando o worker não dá sinal há mais de 3 minutos.
 - Logs: `docker compose logs -f web` (pedidos com erro aparecem como `[api] unhandled MÉTODO /caminho`) e `docker compose logs -f worker` (`[monitor] problems: …`).
+
+## 6c. Pesquisa por significado (semântica) e OCR
+
+Grátis e local, sem chaves nem custos por uso:
+- **Embeddings**: `@huggingface/transformers` (Apache-2.0) + `onnxruntime-node` (MIT) com o modelo
+  `Xenova/multilingual-e5-small` (MIT; PT + EN; 384 dimensões; quantizado q8, ~118 MB). Corre **só
+  no worker**; a imagem `web` nunca carrega o modelo — pede o vetor da pesquisa ao worker por HTTP
+  interno (`EMBED_URL=http://worker:3210`, não publicado no host, com token derivado de
+  `ENCRYPTION_KEY`). Se o worker estiver desligado, lento (>300 ms nas Notas, >1,5 s no assistente) ou
+  a carregar o modelo, a pesquisa usa só palavras — sem erros para o utilizador.
+- **OCR**: `tesseract.js` (Apache-2.0, WebAssembly) com por+eng (os dados de treino vêm nos pacotes npm
+  `@tesseract.js-data/por|eng`, MIT — nada é descarregado); PDFs: primeiro a camada de texto
+  (`pdfjs-dist`, Apache-2.0), OCR só das páginas sem texto (renderizadas com `@napi-rs/canvas`, MIT),
+  no máximo `OCR_MAX_PAGES` páginas e ficheiros até `OCR_MAX_MB`. Lê imagens das Notas e Registos
+  Reuniões, imagens/PDFs dos Ficheiros e anexos de email guardados.
+- **Armazenamento**: pgvector (tabela `embeddings`, índice HNSW cosseno), `ocr_texts` e a fila
+  `search_jobs` (migração 0043). A fila é preenchida por triggers em cada criação/alteração (com 30 s
+  de espera após a última alteração) e esvaziada pelo worker **um trabalho de cada vez**; ao arrancar,
+  o worker põe em fila (prioridade baixa, retomável) o que ainda não tem vetores/OCR. Falhas: 3
+  tentativas (1, 4 min) e desiste. Vetores e textos seguem o RLS do item de origem (dono, biblioteca
+  SAP do tenant, pastas partilhadas).
+- **Modelo**: descarregado **uma vez** do CDN do Hugging Face (`huggingface.co`, precisa de saída
+  HTTPS na VPS) na primeira utilização, para o volume Docker `models` (`MODEL_CACHE_DIR=/models`), que
+  sobrevive às atualizações. Escolhido em vez de o meter na imagem: a imagem do worker fica ~120 MB
+  mais pequena e cada deploy puxa menos. Sem acesso ao Hugging Face: copiar a pasta do modelo para
+  `/models/local/Xenova/multilingual-e5-small/` (ficheiros `config.json`, `tokenizer.json`,
+  `tokenizer_config.json`, `onnx/model_quantized.onnx`).
+- **Imagem do worker**: passa de Alpine para `node:22-bookworm-slim` (o onnxruntime-node só tem binários
+  glibc); binários de outras plataformas são removidos no build. `.npmrc` impede o download dos
+  binários CUDA do onnxruntime (`onnxruntime-node-install=skip`). A imagem `web` não muda.
+
+**Memória/CPU (KVM 1: 1 vCPU, 4 GB)**: worker `mem_limit` 384 MB → **1 GB** e `cpus: 0.6` (indexação
+inicial e OCR nunca tiram mais de 60% do vCPU à web/Postgres). Com o modelo carregado o worker ocupa ~400–450 MB; o tesseract
+mais ~170 MB enquanto há imagens para ler (libertado 2 min depois). O modelo é libertado após
+`EMBED_IDLE_MIN` minutos sem uso (60 por omissão; a primeira pesquisa a seguir usa só palavras e
+volta a carregá-lo, ~1–2 s). Soma dos limites da v2: ≈ 3,0 GB (web 640 + worker 1024 + postgres 640 +
+redis 192 + minio 384 + caddy 128). Se a memória apertar: `EMBED_IDLE_MIN=10`, ou `OCR=off` /
+`SEMANTIC_SEARCH=off` no `.env` e `docker compose up -d`.
+
+Tempos medidos na máquina de desenvolvimento, **limitados a 1 núcleo** (mesmo modelo/arquitetura,
+q8, 1 thread):
+| | medido (1 núcleo) | esperado na VPS (1 vCPU partilhado, ~1,5–2×) |
+|---|---|---|
+| vetor de uma pesquisa (no worker) | 6–12 ms | 15–25 ms |
+| pedido web → worker (HTTP, p50/p95) | 8 / 13 ms | 15–30 ms (limite 300 ms) |
+| um bloco de texto (~1 600 car., ~450 tokens) | 200–240 ms | 350–500 ms |
+| carregar o modelo (já descarregado) | 0,5–1 s | 1–2 s |
+| OCR de uma imagem pequena (1 linha–4 linhas) | 180–300 ms (+0,6 s a 1.ª vez) | 0,4–0,8 s |
+| PDF: 1 página com texto + 1 digitalizada | ~1,0 s | ~2 s (≈1–2 s por página digitalizada) |
+
+Uma nota típica (1–3 blocos) indexa-se em < 1,5 s; a indexação inicial de N blocos leva ≈ N × 0,4 s
+(1 000 notas médias ≈ 15–25 min com o limite de 60% de CPU, em segundo plano).
+
+**Atualização do Postgres para pgvector (uma vez, é feita pelo deploy)**: `docker-compose.yml` passa de
+`postgres:16-alpine` para `pgvector/pgvector:pg16` — mesma versão major, o volume `pgdata` é
+compatível. O workflow faz `docker compose pull … postgres` e `docker compose up -d --wait postgres`
+**antes** das migrações; a migração 0043 corre como o superutilizador da imagem e faz
+`CREATE EXTENSION vector`. Como a imagem nova é Debian (glibc) e a antiga Alpine (musl), a ordenação de
+texto do locale muda: a migração deteta-o (base sem versão de collation + glibc) e reconstrói os
+índices da app uma vez (`REINDEX`, segundos numa base pequena). À mão, se necessário:
+```bash
+cd /opt/knowledgehub-v2
+docker compose pull postgres && docker compose up -d --wait postgres
+docker compose run --rm migrate
+docker compose exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "select extversion from pg_extension where extname='vector'"
+```
+(Fazer a cópia `pg_dump` do §7.1 antes, por precaução.)
+
+Estado e "Reindexar": Definições › Assistente IA › *Pesquisa por significado e OCR* (itens indexados,
+em fila, ficheiros com texto reconhecido; Reindexar no máximo 2× por hora). Logs: `docker compose logs
+worker | grep '\[search\]'`.
 
 ## 7. Corte final (v2 na raiz, v1 em `/v1`) — fazer em conjunto
 

@@ -315,6 +315,18 @@
 .kh-nt-card__star {
   color: oklch(0.85 0.13 85);
 }
+/* found by meaning (semantic search), not by the typed words: a quiet pill */
+.kh-nt-card__sem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+}
 .kh-nt-card__title {
   font-size: 15px;
   font-weight: 600;

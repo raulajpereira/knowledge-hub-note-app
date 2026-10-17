@@ -12,3 +12,4 @@ coverage/
 infra/backup/.env.backup
 *.tmp.mjs
 *.tmp.mts
+.cache/
