@@ -23,6 +23,7 @@ import './tasks.css';
 type Type = 'tech' | 'mgmt';
 type Prio = 'low' | 'medium' | 'high';
 type Repeat = 'none' | 'daily' | 'weekly' | 'monthly';
+type Remind = 'none' | 'due' | 'day_before' | 'custom';
 type TaskItem = {
   id: string;
   title: string;
@@ -30,6 +31,9 @@ type TaskItem = {
   priority: Prio;
   dueOn: string | null;
   repeat: Repeat;
+  /** "Lembrar-me" (only the owner's own tasks carry one) */
+  remind: Remind;
+  remindAt: string | null;
   projectId: string | null;
   notes: string;
   pinned: boolean;
@@ -45,7 +49,17 @@ type Task = TaskItem & { subtasks: Array<{ id: string; title: string; done: bool
 type Patch = Partial<
   Pick<
     Task,
-    'title' | 'type' | 'priority' | 'dueOn' | 'repeat' | 'projectId' | 'notes' | 'pinned' | 'sharedFolderId'
+    | 'title'
+    | 'type'
+    | 'priority'
+    | 'dueOn'
+    | 'repeat'
+    | 'remind'
+    | 'remindAt'
+    | 'projectId'
+    | 'notes'
+    | 'pinned'
+    | 'sharedFolderId'
   >
 > & {
   done?: boolean;
@@ -57,6 +71,12 @@ const PRI: Record<Prio, [string, string, string]> = {
   high: ['t_high', 'oklch(0.82 0.1 35)', '#3a1d12'],
   medium: ['t_med', 'oklch(0.88 0.09 85)', '#3a2a0e'],
   low: ['t_low', 'rgba(255,255,255,.16)', '#fbf8f5'],
+};
+/** ISO instant → the value of a datetime-local input (local time). */
+const toLocalInput = (iso: string) => {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 const PR_ORDER: Record<Prio, number> = { high: 0, medium: 1, low: 2 };
 const toItem = (t: Task): TaskItem => {
@@ -432,6 +452,51 @@ function Detail({
             ))}
           </select>
         </label>
+        {task.mine && (
+          <label>
+            <span className="kh-tk-lbl">{t('t_remind')}</span>
+            <select
+              value={task.remind}
+              data-testid="task-remind"
+              onChange={(e) => {
+                const remind = e.target.value as Remind;
+                if (remind !== 'custom') return onPatch({ remind });
+                // custom: start from the due day at 09:00 (or an hour from now)
+                const at = task.remindAt
+                  ? new Date(task.remindAt)
+                  : task.dueOn
+                    ? new Date(`${task.dueOn}T09:00`)
+                    : new Date(Date.now() + 3_600_000);
+                onPatch({ remind, remindAt: at.toISOString() });
+              }}
+            >
+              {(
+                [
+                  ['none', 't_remNone'],
+                  ['due', 't_remDue'],
+                  ['day_before', 't_remDayBefore'],
+                  ['custom', 't_remCustom'],
+                ] as const
+              ).map(([id, k]) => (
+                <option key={id} value={id} disabled={(id === 'due' || id === 'day_before') && !task.dueOn}>
+                  {t(k)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {task.mine && task.remind === 'custom' && (
+          <label>
+            <span className="kh-tk-lbl">{t('t_remAt')}</span>
+            <input
+              type="datetime-local"
+              value={task.remindAt ? toLocalInput(task.remindAt) : ''}
+              onChange={(e) =>
+                e.target.value && onPatch({ remindAt: new Date(e.target.value).toISOString() })
+              }
+            />
+          </label>
+        )}
       </div>
 
       <div className="kh-tk-field">

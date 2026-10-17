@@ -9,6 +9,8 @@
 //   tenants:module --email <owner@…> --add|--remove <module>   (add-ons: passwords, emails, issues…)
 //   admins:grant --email <…> --role admin|billing|support|readonly   (console access; 2FA required)
 //   superadmin:resend-setup
+//   notify:run [--email <…>]   (the notification job once now; only that person with --email)
+//   inbound:run                (read the inbound mailbox once now)
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db, sqlClient } from '@/db/client';
 import { admins, codes, modules, plans, tenantModules, tenants, users } from '@/db/schema';
@@ -161,9 +163,20 @@ async function main() {
       console.log(`Setup link sent to ${u.email} (see worker logs while SMTP isn't configured).`);
       break;
     }
+    case 'notify:run': {
+      // loaded here: these modules are server-only (with tsx: --conditions=react-server)
+      const { runNotify } = await import('@/server/notify/generate');
+      console.log(JSON.stringify(await runNotify(new Date(), { email: str(f.email) })));
+      break;
+    }
+    case 'inbound:run': {
+      const { runInbound } = await import('@/server/inbound/imap');
+      console.log(JSON.stringify(await runInbound()));
+      break;
+    }
     default:
       console.log(
-        'Commands: codes:create, codes:list, codes:pause, codes:resume, codes:revoke, codes:restore, users:list, superadmin:resend-setup',
+        'Commands: codes:create, codes:list, codes:pause, codes:resume, codes:revoke, codes:restore, users:list, superadmin:resend-setup, notify:run, inbound:run',
       );
   }
 }

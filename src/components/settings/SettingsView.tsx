@@ -10,6 +10,7 @@ import { NavTab } from './NavTab';
 import { NewsTab } from './NewsTab';
 import { SapTab } from './SapTab';
 import { AiTab } from './AiTab';
+import { NotifyTab } from './NotifyTab';
 import { MgSettingsTab } from '@/components/mg/MgSettings';
 import { SharingTab } from '@/components/share/SharingTab';
 import './settings.css';
@@ -41,6 +42,12 @@ const TABS = [
     label: 'set_tab_ai',
     module: 'ai',
     icon: '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path>',
+  },
+  {
+    id: 'notify',
+    label: 'set_tab_notify',
+    module: null,
+    icon: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 0 0 4 0"></path>',
   },
   {
     id: 'share',
@@ -78,6 +85,13 @@ export function SettingsView() {
   useEffect(() => {
     const want = new URLSearchParams(window.location.search).get('tab');
     if (want && TABS.some((x) => x.id === want)) setTab(want as TabId);
+    // …also while Definições is already open (the bell's "Definições de notificações")
+    const onTab = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (TABS.some((x) => x.id === id)) setTab(id as TabId);
+    };
+    window.addEventListener('kh:settings-tab', onTab);
+    return () => window.removeEventListener('kh:settings-tab', onTab);
   }, [setTab]);
   const tab = tabs.some((x) => x.id === saved) ? saved : 'look';
   const current = tabs.find((x) => x.id === tab)!;
@@ -174,6 +188,7 @@ export function SettingsView() {
             {tab === 'news' && <NewsTab />}
             {tab === 'sap' && <SapTab />}
             {tab === 'ai' && <AiTab />}
+            {tab === 'notify' && <NotifyTab />}
             {tab === 'share' && <SharingTab />}
             {tab === 'nav' && <NavTab />}
             {tab === 'mgmt' && <MgSettingsTab />}

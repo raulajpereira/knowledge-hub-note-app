@@ -1,0 +1,147 @@
+/* Header bell popover (NotificationBell.tsx) */
+.kh-nt {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  /* a long list over busy pages: darker glass than a short menu, so the
+     cards underneath don't show through the text (as .kh-taglist) */
+  background: linear-gradient(180deg, rgba(56, 50, 48, 0.82), rgba(40, 36, 36, 0.86));
+}
+.kh-nt__head,
+.kh-nt__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 10px;
+}
+.kh-nt__foot {
+  padding: 10px 16px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  justify-content: center;
+}
+.kh-nt__title {
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.kh-nt__link {
+  border: 0;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 8px;
+  color: rgba(255, 248, 240, 0.85);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+.kh-nt__link:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.kh-nt__link:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.kh-nt__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 8px 8px;
+}
+.kh-nt__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kh-nt__item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.kh-nt__item[data-unread] {
+  background: rgba(255, 255, 255, 0.08);
+}
+.kh-nt__item[data-unread]:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.kh-nt__ic {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+}
+.kh-nt__txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kh-nt__kind {
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.72);
+}
+.kh-nt__name {
+  font-size: 13.5px;
+  font-weight: 550;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.kh-nt__item:not([data-unread]) .kh-nt__name {
+  font-weight: 450;
+  color: rgba(255, 248, 240, 0.85);
+}
+.kh-nt__when {
+  font-size: 11.5px;
+  color: rgba(255, 248, 240, 0.55);
+}
+.kh-nt__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: oklch(0.76 0.17 245);
+}
+.kh-nt__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 34px 16px 40px;
+  color: rgba(255, 248, 240, 0.65);
+  font-size: 13.5px;
+}
+.kh-nt__more {
+  margin: 4px auto 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}

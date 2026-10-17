@@ -460,9 +460,14 @@ export async function listInvites(auth: AuthContext): Promise<ShareInvite[]> {
 
 /** Accept (the folder appears) or decline (the invitation goes away) an invitation. */
 export async function answerInvite(auth: AuthContext, memberId: string, accept: boolean) {
-  const [r] = await asUser(auth, (tx) =>
-    tx.execute<{ ok: boolean }>(sql`select kh_share_answer(${memberId}::uuid, ${accept}) as ok`),
-  );
+  const [r] = await asUser(auth, async (tx) => {
+    const res = await tx.execute<{ ok: boolean }>(
+      sql`select kh_share_answer(${memberId}::uuid, ${accept}) as ok`,
+    );
+    // the folder's owner sees "X aceitou o seu convite" in the bell (0041)
+    if (accept && res[0]?.ok) await tx.execute(sql`select kh_notify_share_accepted(${memberId}::uuid)`);
+    return res;
+  });
   if (!r?.ok) throw new ApiError(404, 'not_found');
   await audit({
     action: accept ? 'share.invite.accept' : 'share.invite.decline',

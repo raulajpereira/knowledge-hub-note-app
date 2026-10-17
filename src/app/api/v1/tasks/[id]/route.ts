@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { body, handler, json } from '@/server/http';
 import { idParam, requireContent, type IdCtx } from '@/server/content/guard';
 import { getTask, trashTask, updateTask } from '@/server/content/tasks';
-import { TASK_PRIORITIES, TASK_REPEATS, TASK_TYPES } from '@/db/schema';
+import { TASK_PRIORITIES, TASK_REMINDS, TASK_REPEATS, TASK_TYPES } from '@/db/schema';
 
 export const GET = handler(async (_req, ctx: IdCtx) => {
   const auth = await requireContent('tasks');
@@ -22,6 +22,8 @@ export const PATCH = handler(async (req, ctx: IdCtx) => {
       priority: z.enum(TASK_PRIORITIES).optional(),
       dueOn: day.nullable().optional(),
       repeat: z.enum(TASK_REPEATS).optional(),
+      remind: z.enum(TASK_REMINDS).optional(),
+      remindAt: z.iso.datetime({ offset: true }).nullable().optional(),
       projectId: z.uuid().nullable().optional(),
       sharedFolderId: z.uuid().nullable().optional(),
       notes: z.string().max(20_000).optional(),

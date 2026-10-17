@@ -7,6 +7,39 @@ export type MailMessage = { to: string; subject: string; text: string; html: str
 type Copy = { subject: string; title: string; body: string; cta?: string; foot: string };
 
 const COPY: Record<string, Record<Lang, Copy>> = {
+  // a reminder or a meeting about to start (Definições › Notificações › email)
+  notify: {
+    pt: {
+      subject: '{subject} · KnowledgeHub',
+      title: '{heading}',
+      body: '{text}',
+      cta: 'Abrir no KnowledgeHub',
+      foot: 'Recebe este email porque ativou as notificações por email em Definições › Notificações.',
+    },
+    en: {
+      subject: '{subject} · KnowledgeHub',
+      title: '{heading}',
+      body: '{text}',
+      cta: 'Open in KnowledgeHub',
+      foot: 'You receive this email because you turned on email notifications in Settings › Notifications.',
+    },
+  },
+  dailySummary: {
+    pt: {
+      subject: 'O seu dia · {date} · KnowledgeHub',
+      title: 'Resumo do dia',
+      body: '{list}',
+      cta: 'Abrir o KnowledgeHub',
+      foot: 'Recebe este resumo porque o ativou em Definições › Notificações. Pode desligá-lo ou mudar a hora aí.',
+    },
+    en: {
+      subject: 'Your day · {date} · KnowledgeHub',
+      title: 'Daily summary',
+      body: '{list}',
+      cta: 'Open KnowledgeHub',
+      foot: 'You receive this summary because you turned it on in Settings › Notifications. You can turn it off or change its time there.',
+    },
+  },
   shared: {
     pt: {
       subject: '{who} quer partilhar "{folder}" consigo · KnowledgeHub',

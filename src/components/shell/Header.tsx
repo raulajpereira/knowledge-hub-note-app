@@ -10,6 +10,7 @@ import { Icon } from './icons';
 import { useShell } from './ShellContext';
 import { useCounts } from './counts';
 import { TcodesPopup } from '@/components/sap/TcodesPopup';
+import { NotificationBell } from './NotificationBell';
 
 function useClock(lang: string) {
   // Client-only (server and browser clocks differ → no hydration mismatch).
@@ -138,14 +139,7 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
       >
         <Icon name="focus" />
       </button>
-      <button
-        type="button"
-        title={t('shell_notifications')}
-        aria-label={t('shell_notifications')}
-        className="kh-hdr__btn kh-hdr__glass"
-      >
-        <Icon name="bell" />
-      </button>
+      <NotificationBell />
 
       <span className="kh-hdr__sep" />
       {isOwner && (

@@ -137,6 +137,8 @@ export const itemLinks = pgTable(
 export const TASK_TYPES = ['tech', 'mgmt'] as const;
 export const TASK_PRIORITIES = ['low', 'medium', 'high'] as const;
 export const TASK_REPEATS = ['none', 'daily', 'weekly', 'monthly'] as const;
+/** "Lembrar-me": on the due day at 09:00, the day before at 09:00, or at remind_at */
+export const TASK_REMINDS = ['none', 'due', 'day_before', 'custom'] as const;
 
 /** Tasks (prototype isTasks). project_id: a Management project (mg_projects). */
 export const tasks = pgTable(
@@ -151,6 +153,9 @@ export const tasks = pgTable(
     // A day, not an instant (prototype date picker): no time-zone surprises.
     dueOn: date('due_on'),
     repeat: text('repeat', { enum: TASK_REPEATS }).notNull().default('none'),
+    // reminder (0041): due/day_before follow the due date (09:00 in the owner's time zone)
+    remind: text('remind', { enum: TASK_REMINDS }).notNull().default('none'),
+    remindAt: ts('remind_at'),
     sharedFolderId: uuid('shared_folder_id').references(() => sharedFolders.id, { onDelete: 'set null' }),
     projectId: uuid('project_id').references(() => mgProjects.id, { onDelete: 'set null' }),
     notes: text('notes').notNull().default(''),
@@ -168,6 +173,7 @@ export const tasks = pgTable(
     check('tasks_type_chk', sql`${t.type} in ('tech','mgmt')`),
     check('tasks_priority_chk', sql`${t.priority} in ('low','medium','high')`),
     check('tasks_repeat_chk', sql`${t.repeat} in ('none','daily','weekly','monthly')`),
+    check('tasks_remind_chk', sql`${t.remind} in ('none','due','day_before','custom')`),
   ],
 );
 

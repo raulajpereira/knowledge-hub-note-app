@@ -49,6 +49,8 @@ Valores a preencher no `.env`:
 - `APP_URL=https://knowledge-hub.cloud/v2`
 - `NEXT_PUBLIC_BASE_PATH=/v2`
 - `SMTP_USER` / `SMTP_PASS`: a caixa de email Hostinger que envia (ex. `no-reply@knowledge-hub.cloud`).
+- Opcional, "Email para a app" (§5d): `INBOUND_IMAP_HOST`, `INBOUND_IMAP_PORT` (993),
+  `INBOUND_IMAP_USER`, `INBOUND_IMAP_PASSWORD`, `INBOUND_ADDRESS`. Vazios = a funcionalidade fica escondida.
 - `SUPERADMIN_EMAIL=raul.a.j.pereira@gmail.com`
 - `SUPERADMIN_NAME`
 
@@ -114,6 +116,38 @@ kh users:list
 2. No `.env`: `SMTP_USER=no-reply@knowledge-hub.cloud`, `SMTP_PASS=<password da caixa>`
    (`SMTP_HOST=smtp.hostinger.com`, `SMTP_PORT=465` já vêm preenchidos).
 3. `docker compose up -d` (recria web e worker com a nova configuração).
+
+## 5d. Email para a app (IMAP Hostinger, opcional)
+
+Cada pessoa recebe em Definições › Notificações um endereço pessoal
+`entrada+<código>@knowledge-hub.cloud`; o que lá chega vira nota (num caderno à
+escolha) ou tarefa. O worker lê a caixa por IMAP a cada 2 minutos, apaga cada
+mensagem depois de a tratar e descarta códigos desconhecidos, remetentes fora da
+lista da pessoa (por omissão, o email da conta) e mensagens que o servidor de email
+marcou como falhadas (DMARC fail, ou SPF fail/softfail sem DKIM válido, no
+cabeçalho `Authentication-Results` de topo). Máximo de 50 por pessoa e por dia.
+
+1. hPanel → Emails → criar a caixa `entrada@knowledge-hub.cloud` (password forte,
+   só para esta caixa — não a usar para mais nada).
+2. Sub-endereços: o Hostinger entrega `entrada+qualquercoisa@…` na caixa `entrada@`
+   quando suporta *plus addressing*. Testar: enviar um email para
+   `entrada+teste@knowledge-hub.cloud` e ver se chega à caixa (webmail).
+   **Se não chegar**, ativar em hPanel → Emails → o domínio → *Catch-all* (ou
+   "Reencaminhamento" de todos os endereços desconhecidos) para `entrada@`; a app
+   encontra o código também nos cabeçalhos `Delivered-To` / `X-Original-To`. Em
+   alternativa, um alias por pessoa não é necessário: basta o catch-all.
+3. No `.env`:
+   ```
+   INBOUND_IMAP_HOST=imap.hostinger.com
+   INBOUND_IMAP_PORT=993
+   INBOUND_IMAP_USER=entrada@knowledge-hub.cloud
+   INBOUND_IMAP_PASSWORD=<password da caixa>
+   INBOUND_ADDRESS=entrada@knowledge-hub.cloud
+   ```
+4. Deploy normal (o worker passa a agendar o job `inbound`). Se o IMAP falhar
+   (password errada, servidor em baixo) o worker não para: regista o erro em
+   `docker compose logs worker | grep inbound` e tenta de novo com espera crescente
+   (2, 4, 8 … até 30 min).
 
 ## 6. Backups
 

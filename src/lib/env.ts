@@ -54,6 +54,18 @@ export const serverEnvSchema = z.object({
   // Send in the request instead of via the worker queue (tests).
   MAIL_DIRECT: bool.default(false),
 
+  // "Email para a app": a mailbox the worker reads by IMAP; mail sent to
+  // <local>+<token>@<domain> becomes a note or task of the person with that
+  // token. All optional: without them the feature is hidden.
+  INBOUND_IMAP_HOST: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+  INBOUND_IMAP_PORT: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.coerce.number().int().min(1).max(65535).default(993),
+  ),
+  INBOUND_IMAP_USER: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+  INBOUND_IMAP_PASSWORD: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+  INBOUND_ADDRESS: z.preprocess((v) => (v === '' ? undefined : v), z.email().optional()),
+
   // Have I Been Pwned check on new passwords (k-anonymity; off in tests).
   HIBP_CHECK: bool.default(true),
 

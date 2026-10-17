@@ -11,6 +11,9 @@ import { runLicenseJob } from '@/server/jobs/licenses';
 import { sweepStorage } from '@/server/jobs/storage';
 import { runMonitor } from '@/server/jobs/monitor';
 import { expireTrash, pruneNoteImages, pruneOtherImages } from '@/server/jobs/trash';
+import { pruneNotifications, runNotify } from '@/server/notify/generate';
+import { runInbound } from '@/server/inbound/imap';
+import { inboundConfigured } from '@/server/notify/service';
 
 type JobHandler = () => Promise<unknown>;
 
@@ -20,6 +23,10 @@ const handlers: Record<string, JobHandler> = {
   },
   // services, public address, email queue and server errors → email the console admins
   monitor: async () => runMonitor(),
+  // the header bell: due / overdue tasks, reminders, meetings, invitations (+ emails, daily summary)
+  notify: async () => runNotify(),
+  // "Email para a app": the inbound mailbox (only scheduled when configured)
+  inbound: async () => runInbound(),
   // trials and renewals → suspended, reminders, expired codes, purge of revoked data (30 days),
   // then files nothing points to any more
   licenses: async () => {
@@ -30,7 +37,8 @@ const handlers: Record<string, JobHandler> = {
     const noteImages = await step(pruneNoteImages);
     const otherImages = await step(pruneOtherImages);
     const files = await step(() => sweepStorage());
-    const out = { licenses: r, trash, noteImages, otherImages, files };
+    const notifications = await step(pruneNotifications);
+    const out = { licenses: r, trash, noteImages, otherImages, files, notifications };
     console.log('[worker] licenses', JSON.stringify(out));
     return out;
   },
@@ -51,6 +59,20 @@ async function main() {
     { name: 'monitor', opts: { removeOnComplete: 50, removeOnFail: 200 } },
   );
 
+  await queue(QUEUES.system).upsertJobScheduler(
+    'notify',
+    { every: 60_000 },
+    { name: 'notify', opts: { removeOnComplete: 50, removeOnFail: 200 } },
+  );
+
+  if (inboundConfigured())
+    await queue(QUEUES.system).upsertJobScheduler(
+      'inbound',
+      { every: 2 * 60_000 },
+      { name: 'inbound', opts: { removeOnComplete: 50, removeOnFail: 200 } },
+    );
+  else await queue(QUEUES.system).removeJobScheduler('inbound');
+
   // every day at 03:17 (server time)
   await queue(QUEUES.system).upsertJobScheduler(
     'licenses',
@@ -65,7 +87,7 @@ async function main() {
       if (!handler) throw new Error(`No handler for job "${job.name}"`);
       return handler();
     },
-    { connection: createQueueConnection(), concurrency: 2 },
+    { connection: createQueueConnection(), concurrency: 3 },
   );
   worker.on('failed', (job, err) => console.error(`[worker] ${job?.name} failed:`, err));
 

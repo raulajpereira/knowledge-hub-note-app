@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { tasks, taskSubtasks, TASK_PRIORITIES, TASK_REPEATS, TASK_TYPES } from '@/db/schema';
+import { tasks, taskSubtasks, TASK_PRIORITIES, TASK_REMINDS, TASK_REPEATS, TASK_TYPES } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import { assertWithinLimit } from '@/server/licensing/entitlements';
 import type { AuthContext } from '@/server/auth/session';
@@ -16,6 +16,7 @@ type Tx = Parameters<Parameters<typeof asUser>[1]>[0];
 export type TaskType = (typeof TASK_TYPES)[number];
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 export type TaskRepeat = (typeof TASK_REPEATS)[number];
+export type TaskRemind = (typeof TASK_REMINDS)[number];
 
 export type TaskItem = {
   id: string;
@@ -24,6 +25,9 @@ export type TaskItem = {
   priority: TaskPriority;
   dueOn: string | null;
   repeat: TaskRepeat;
+  /** "Lembrar-me" (the owner's: a member of a shared folder doesn't see or set it) */
+  remind: TaskRemind;
+  remindAt: string | null;
   projectId: string | null;
   notes: string;
   pinned: boolean;
@@ -45,6 +49,8 @@ const cols = {
   priority: tasks.priority,
   dueOn: tasks.dueOn,
   repeat: tasks.repeat,
+  remind: tasks.remind,
+  remindAt: tasks.remindAt,
   projectId: tasks.projectId,
   notes: tasks.notes,
   pinned: tasks.pinned,
@@ -60,6 +66,8 @@ type Row = {
   priority: TaskPriority;
   dueOn: string | null;
   repeat: TaskRepeat;
+  remind: TaskRemind;
+  remindAt: Date | null;
   projectId: string | null;
   notes: string;
   pinned: boolean;
@@ -70,6 +78,8 @@ type Row = {
 };
 const toItem = ({ ownerId, ...r }: Row, subs: { done: number; total: number }, me: string): TaskItem => ({
   ...r,
+  remind: ownerId === me ? r.remind : 'none',
+  remindAt: ownerId === me ? (r.remindAt?.toISOString() ?? null) : null,
   doneAt: r.doneAt?.toISOString() ?? null,
   createdAt: r.createdAt.toISOString(),
   subs,
@@ -164,6 +174,8 @@ export type TaskPatch = Partial<{
   priority: TaskPriority;
   dueOn: string | null;
   repeat: TaskRepeat;
+  remind: TaskRemind;
+  remindAt: string | null;
   sharedFolderId: string | null;
   projectId: string | null;
   notes: string;
@@ -187,11 +199,20 @@ export async function updateTask(auth: AuthContext, id: string, patch: TaskPatch
     // a member edits the task itself; its project, shared folder and pin stay the owner's
     if (
       !cur.mine &&
-      (fields.projectId !== undefined || fields.sharedFolderId !== undefined || fields.pinned !== undefined)
+      (fields.projectId !== undefined ||
+        fields.sharedFolderId !== undefined ||
+        fields.pinned !== undefined ||
+        fields.remind !== undefined ||
+        fields.remindAt !== undefined)
     )
       throw new ApiError(403, 'forbidden');
     if (fields.projectId !== undefined) fields.projectId = await checkProject(tx, fields.projectId);
-    const set: Partial<typeof tasks.$inferInsert> = { ...fields, updatedAt: new Date() };
+    const { remindAt, ...rest } = fields;
+    const set: Partial<typeof tasks.$inferInsert> = { ...rest, updatedAt: new Date() };
+    if (remindAt !== undefined) set.remindAt = remindAt ? new Date(remindAt) : null;
+    // a custom reminder needs its date and time
+    if ((fields.remind ?? cur.remind) === 'custom' && !(remindAt !== undefined ? remindAt : cur.remindAt))
+      throw new ApiError(400, 'remind_at_required');
     let next: Task | null = null;
     if (done !== undefined && done !== !!cur.doneAt) {
       set.doneAt = done ? new Date() : null;
@@ -209,6 +230,8 @@ export async function updateTask(auth: AuthContext, id: string, patch: TaskPatch
             priority: fields.priority ?? cur.priority,
             dueOn: nextDue(due, repeat, new Date()),
             repeat,
+            // a reminder tied to the due date follows it; a fixed date-time doesn't repeat
+            remind: (fields.remind ?? cur.remind) === 'custom' ? 'none' : (fields.remind ?? cur.remind),
             projectId: fields.projectId !== undefined ? fields.projectId : cur.projectId,
             notes: fields.notes ?? cur.notes,
             pinned: fields.pinned ?? cur.pinned,
