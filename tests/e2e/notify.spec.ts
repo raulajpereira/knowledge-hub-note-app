@@ -121,7 +121,7 @@ test('bell: counter, popup, open marks read, mark all as read', async ({ page })
   await expect(pop.getByRole('listitem')).toHaveCount(3);
   await pop.getByRole('button', { name: 'Marcar todas como lidas' }).click();
   await expect(page.getByTestId('notify-count')).toHaveCount(0);
-  await expect(pop.locator('.kh-nt__dot')).toHaveCount(0);
+  await expect(pop.locator('.kh-ntf__dot')).toHaveCount(0);
 
   // the job again: nothing new (one per task per day)
   notifyRun();

@@ -220,26 +220,26 @@ export function NotificationBell() {
           onClose={() => setOpen(false)}
           width={380}
           maxHeight={560}
-          className="kh-nt"
+          className="kh-ntf"
           role="dialog"
           aria-label={t('shell_notifications')}
         >
-          <div className="kh-nt__head">
-            <span className="kh-nt__title">{t('shell_notifications')}</span>
+          <div className="kh-ntf__head">
+            <span className="kh-ntf__title">{t('shell_notifications')}</span>
             <button
               type="button"
-              className="kh-nt__link"
+              className="kh-ntf__link"
               disabled={!unread}
               onClick={() => void markRead({ all: true })}
             >
               {t('nt_markAll')}
             </button>
           </div>
-          <div className="kh-nt__list" role="list">
+          <div className="kh-ntf__list" role="list">
             {items === null ? (
-              <div className="kh-nt__empty">…</div>
+              <div className="kh-ntf__empty">…</div>
             ) : items.length === 0 ? (
-              <div className="kh-nt__empty">
+              <div className="kh-ntf__empty">
                 <Icon name="bell" size={26} />
                 <span>{t('nt_empty')}</span>
               </div>
@@ -251,11 +251,11 @@ export function NotificationBell() {
                     key={n.id}
                     type="button"
                     role="listitem"
-                    className="kh-nt__item"
+                    className="kh-ntf__item"
                     data-unread={!n.readAt || undefined}
                     onClick={() => openItem(n)}
                   >
-                    <span className="kh-nt__ic" style={{ color }}>
+                    <span className="kh-ntf__ic" style={{ color }}>
                       <svg
                         width="17"
                         height="17"
@@ -269,26 +269,26 @@ export function NotificationBell() {
                         dangerouslySetInnerHTML={{ __html: KIND_ICON[ic]! }}
                       />
                     </span>
-                    <span className="kh-nt__txt">
-                      <span className="kh-nt__kind">{label(n)}</span>
-                      <span className="kh-nt__name">{n.title}</span>
-                      <span className="kh-nt__when">{ago(n.createdAt)}</span>
+                    <span className="kh-ntf__txt">
+                      <span className="kh-ntf__kind">{label(n)}</span>
+                      <span className="kh-ntf__name">{n.title}</span>
+                      <span className="kh-ntf__when">{ago(n.createdAt)}</span>
                     </span>
-                    {!n.readAt && <span className="kh-nt__dot" aria-label={t('nt_unread')} />}
+                    {!n.readAt && <span className="kh-ntf__dot" aria-label={t('nt_unread')} />}
                   </button>
                 );
               })
             )}
             {hasMore && items && items.length > 0 && (
-              <button type="button" className="kh-nt__more" onClick={() => void more()}>
+              <button type="button" className="kh-ntf__more" onClick={() => void more()}>
                 {t('nt_showMore')}
               </button>
             )}
           </div>
-          <div className="kh-nt__foot">
+          <div className="kh-ntf__foot">
             <Link
               href="/app/settings?tab=notify"
-              className="kh-nt__link"
+              className="kh-ntf__link"
               onClick={() => {
                 setOpen(false);
                 window.dispatchEvent(new CustomEvent('kh:settings-tab', { detail: 'notify' }));
