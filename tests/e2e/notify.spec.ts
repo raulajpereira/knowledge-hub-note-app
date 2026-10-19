@@ -151,8 +151,15 @@ test('Definições › Notificações and the task reminder', async ({ page }) =
   // "Lembrar-me" in the task detail
   await page.goto('app/tasks');
   await page.getByText('Rever proposta').click();
+  // the detail switches once the URL points at the task
+  await expect(page.locator('.kh-tk-title')).toHaveValue('Rever proposta');
   const rem = page.getByTestId('task-remind');
-  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && /\/tasks\//.test(r.url()));
+  const saved = page.waitForResponse(
+    (r) =>
+      r.request().method() === 'PATCH' &&
+      /\/tasks\//.test(r.url()) &&
+      (r.request().postData() ?? '').includes('day_before'),
+  );
   await rem.selectOption('day_before');
   await saved;
   await page.reload();
