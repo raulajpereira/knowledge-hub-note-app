@@ -15,7 +15,9 @@ const MAX_PER_RUN = 100;
 function imapSource(client: ImapFlow): MailboxSource {
   return {
     async *messages() {
-      const uids = (await client.search({ seen: false }, { uid: true })) || [];
+      // every message, read or not: opening one in the mailbox's webmail (Gmail)
+      // marks it read, and handled ones are removed anyway
+      const uids = (await client.search({ all: true }, { uid: true })) || [];
       for (const uid of uids.slice(0, MAX_PER_RUN)) {
         const meta = await client.fetchOne(String(uid), { size: true }, { uid: true });
         if (!meta) continue;
@@ -65,7 +67,10 @@ export async function runInbound(now = new Date()) {
   try {
     const lock = await client.getMailboxLock('INBOX');
     try {
-      return await pollMailbox(imapSource(client), e.INBOUND_ADDRESS!, now);
+      const out = await pollMailbox(imapSource(client), e.INBOUND_ADDRESS!, now);
+      // counts only (created / unknown / sender / spoof …): why a message didn't become a note
+      if (Object.keys(out).length) console.log('[inbound]', JSON.stringify(out));
+      return out;
     } finally {
       lock.release();
     }

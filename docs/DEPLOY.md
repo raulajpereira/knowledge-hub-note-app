@@ -150,7 +150,25 @@ cabeçalho `Authentication-Results` de topo). Máximo de 50 por pessoa e por dia
 4. Deploy normal (o worker passa a agendar o job `inbound`). Se o IMAP falhar
    (password errada, servidor em baixo) o worker não para: regista o erro em
    `docker compose logs worker | grep inbound` e tenta de novo com espera crescente
-   (2, 4, 8 … até 30 min).
+   (2, 4, 8 … até 30 min). Cada passagem com mensagens deixa uma linha com as
+   contagens, ex. `[inbound] {"created":1}` ou `{"sender":1}` (remetente fora da
+   lista), `{"unknown":1}` (sem código válido), `{"disabled":1}` (interruptor
+   desligado), `{"spoof":1}` (SPF/DKIM/DMARC falhados).
+
+**Alternativa grátis — Gmail** (a VPS não inclui caixas de email): uma conta Gmail
+só para isto (ex. `kh.entrada@gmail.com`), com verificação em 2 passos e uma
+*palavra-passe de aplicação* (Conta Google → Segurança). O Gmail entrega
+`kh.entrada+código@gmail.com` na mesma caixa e acrescenta o `Authentication-Results`.
+```
+INBOUND_IMAP_HOST=imap.gmail.com
+INBOUND_IMAP_PORT=993
+INBOUND_IMAP_USER=kh.entrada@gmail.com
+INBOUND_IMAP_PASSWORD=<palavra-passe de aplicação>
+INBOUND_ADDRESS=kh.entrada@gmail.com
+```
+O worker trata **todas** as mensagens da Caixa de entrada (lidas ou não) e tira-as
+de lá depois (no Gmail ficam arquivadas em "Todo o correio"); por isso a conta não
+deve ser usada para mais nada.
 
 ## 6. Backups
 

@@ -36,7 +36,7 @@ export type InboundResult =
 export type InboundMessage = { id: string | number; size?: number; raw: Buffer };
 
 export interface MailboxSource {
-  /** unread messages, oldest first */
+  /** the mailbox's messages, oldest first */
   messages(): AsyncIterable<InboundMessage>;
   /** handled (created or discarded): mark seen and remove from the mailbox */
   remove(id: string | number): Promise<void>;
@@ -166,7 +166,7 @@ async function create(
 }
 
 /**
- * Handles every unread message of the mailbox. A message is removed once
+ * Handles every message of the mailbox. A message is removed once
  * handled or discarded (unknown token, sender not allowed, spoofed, over the
  * daily limit…); one that fails for another reason (database down) stays for
  * the next run, up to 3 attempts.
