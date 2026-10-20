@@ -61,7 +61,12 @@ export async function runInbound(now = new Date()) {
     const n = await r.incr(`${BACKOFF_KEY}:n`).catch(() => 1);
     const wait = Math.min(30, 2 ** n) * 60_000;
     await r.set(`${BACKOFF_KEY}:until`, String(now.getTime() + wait), 'PX', wait).catch(() => {});
-    console.error(`[inbound] IMAP unreachable (attempt ${n}, next in ${wait / 60_000} min):`, String(err));
+    // imapflow's message is just "Command failed": the server's own words say why
+    const x = err as { responseText?: string; authenticationFailed?: boolean };
+    const why = x.authenticationFailed
+      ? `login refused (${x.responseText ?? 'check INBOUND_IMAP_USER / INBOUND_IMAP_PASSWORD'})`
+      : (x.responseText ?? String(err));
+    console.error(`[inbound] IMAP unreachable (attempt ${n}, next in ${wait / 60_000} min): ${why}`);
     return { error: 'unreachable' };
   }
   await r.del(`${BACKOFF_KEY}:n`, `${BACKOFF_KEY}:until`).catch(() => {});
