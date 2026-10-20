@@ -50,6 +50,9 @@ export function PrefsProvider({ initial, children }: { initial: Prefs; children:
   const setPref = useCallback(
     (key: string, value: unknown) => {
       setPrefs((p) => {
+        // the same value again keeps the same object: no re-render, so an effect
+        // that sets a pref (and depends on the setter) can't loop
+        if (Object.is(p[key], value ?? undefined)) return p;
         const next = { ...p };
         if (value === null || value === undefined) delete next[key];
         else next[key] = value;

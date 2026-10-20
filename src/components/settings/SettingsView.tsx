@@ -81,10 +81,14 @@ export function SettingsView() {
       (x.module === 'mg_*' ? [...modules].some((m) => m.startsWith('mg_')) : modules.has(x.module)),
   );
   const [saved, setTab] = usePersistentState<TabId>('setTab', 'look');
-  // a link may open a given tab (e.g. ?tab=ai from the assistant)
+  // a link may open a given tab (e.g. ?tab=ai from the assistant) — read once:
+  // setTab changes with every pref write, and re-reading the URL each time
+  // would set the tab again and again (the page froze on ?tab=…)
+  const fromUrl = useRef(false);
   useEffect(() => {
     const want = new URLSearchParams(window.location.search).get('tab');
-    if (want && TABS.some((x) => x.id === want)) setTab(want as TabId);
+    if (!fromUrl.current && want && TABS.some((x) => x.id === want)) setTab(want as TabId);
+    fromUrl.current = true;
     // …also while Definições is already open (the bell's "Definições de notificações")
     const onTab = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;

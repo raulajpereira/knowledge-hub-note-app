@@ -147,6 +147,14 @@ test('Definições › Notificações and the task reminder', async ({ page }) =
     'true',
   );
   await expect(page.getByText('Europe/Lisbon')).toBeVisible();
+  // ?tab=… in the URL is read once: the page settles instead of re-rendering forever
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Performance.enable');
+  const busy = async () =>
+    (await cdp.send('Performance.getMetrics')).metrics.find((m) => m.name === 'TaskDuration')!.value;
+  const before = await busy();
+  await page.waitForTimeout(2000);
+  expect((await busy()) - before).toBeLessThan(0.8);
 
   // "Lembrar-me" in the task detail
   await page.goto('app/tasks');

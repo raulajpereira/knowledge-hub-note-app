@@ -416,6 +416,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
   - Correção: o painel das Tarefas só mostra a tarefa selecionada (antes, uma alteração rápida podia ir para a tarefa anterior enquanto a nova carregava).
   - Screenshots `correcoes/48–62`.
 - **Notificações sem repetidos + vidro**: uma notificação por item — uma tarefa que continua em atraso já não cria uma nova por dia; a mesma passa a ter a data de hoje e volta a não lida (um lembrete do dia tem prioridade sobre prazo/atraso). Migração 0045 junta as repetidas que já existiam (fica a mais recente). O popup do sino passa a vidro liquid glass como os modais. Screenshots `correcoes/63`.
+- **Definições a encravar**: abrir Definições com `?tab=…` no endereço (o link "Definições de notificações" do sino, Partilhas a partir de uma notificação, o assistente IA) punha a página num ciclo de renderização infinito (CPU a 100%): o separador era aplicado de novo a cada gravação de preferência. Agora o endereço é lido uma vez e gravar a mesma preferência não re-renderiza; teste E2E mede que a página fica parada.
 
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
