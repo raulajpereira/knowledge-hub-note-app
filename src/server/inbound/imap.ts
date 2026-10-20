@@ -11,6 +11,7 @@ import { pollMailbox, type MailboxSource } from './process';
 
 const BACKOFF_KEY = 'kh:inbound:backoff';
 const MAX_PER_RUN = 100;
+let announced = false;
 
 function imapSource(client: ImapFlow): MailboxSource {
   return {
@@ -67,6 +68,14 @@ export async function runInbound(now = new Date()) {
   try {
     const lock = await client.getMailboxLock('INBOX');
     try {
+      // once per worker start: proof the mailbox is reachable (and what it holds)
+      if (!announced) {
+        announced = true;
+        const box = client.mailbox;
+        console.log(
+          `[inbound] connected to ${e.INBOUND_IMAP_HOST}; ${box ? box.exists : '?'} message(s) in the Inbox`,
+        );
+      }
       const out = await pollMailbox(imapSource(client), e.INBOUND_ADDRESS!, now);
       // counts only (created / unknown / sender / spoof …): why a message didn't become a note
       if (Object.keys(out).length) console.log('[inbound]', JSON.stringify(out));

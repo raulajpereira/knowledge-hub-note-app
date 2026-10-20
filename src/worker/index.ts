@@ -72,13 +72,17 @@ async function main() {
     { name: 'notify', opts: { removeOnComplete: 50, removeOnFail: 200 } },
   );
 
-  if (inboundConfigured())
+  if (inboundConfigured()) {
     await queue(QUEUES.system).upsertJobScheduler(
       'inbound',
       { every: 2 * 60_000 },
       { name: 'inbound', opts: { removeOnComplete: 50, removeOnFail: 200 } },
     );
-  else await queue(QUEUES.system).removeJobScheduler('inbound');
+    console.log('[inbound] on: mailbox checked every 2 minutes');
+  } else {
+    await queue(QUEUES.system).removeJobScheduler('inbound');
+    console.log('[inbound] off: INBOUND_IMAP_HOST / _USER / _PASSWORD / INBOUND_ADDRESS not all set');
+  }
 
   // every day at 03:17 (server time)
   await queue(QUEUES.system).upsertJobScheduler(
