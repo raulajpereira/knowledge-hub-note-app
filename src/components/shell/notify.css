@@ -3,9 +3,19 @@
   padding: 0;
   gap: 0;
   overflow: hidden;
-  /* a long list over busy pages: darker glass than a short menu, so the
-     cards underneath don't show through the text (as .kh-taglist) */
-  background: linear-gradient(180deg, rgba(56, 50, 48, 0.82), rgba(40, 36, 36, 0.86));
+  /* liquid glass like the modals: the modal's stronger blur keeps the list
+     readable over busy pages without darkening the panel */
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.22 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
+  backdrop-filter: blur(var(--kh-blur-modal)) saturate(170%);
+  border: 1px solid rgb(var(--w) / 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 30px 70px rgb(0 0 0 / calc(0.3 * var(--sh-k)));
+  text-shadow: 0 1px 10px rgb(0 0 0 / calc(0.18 * var(--sh-k)));
 }
 .kh-ntf__head,
 .kh-ntf__foot {

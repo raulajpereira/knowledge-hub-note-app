@@ -33,26 +33,48 @@ export type Notification = {
 
 export const PAGE = 30;
 
-/** Adds one notification for the transaction's user; a repeated key is a no-op. True when it was new. */
+/**
+ * Adds one notification for the transaction's user; a repeated key is a no-op.
+ * With a stamp, the key names the item and the stamp its occasion (the day, a
+ * reminder's instant): a new stamp refreshes that same notification (kind,
+ * title, date, unread again) instead of adding a second one. True when it was
+ * written or refreshed.
+ */
 export async function addNotification(
   tx: Tx,
   auth: { tenantId: string; userId: string },
-  n: { kind: NotifyKind; itemType: string; itemId: string | null; title: string; meta?: object; key: string },
+  n: {
+    kind: NotifyKind;
+    itemType: string;
+    itemId: string | null;
+    title: string;
+    meta?: object;
+    key: string;
+    stamp?: string;
+  },
 ): Promise<boolean> {
-  const r = await tx
-    .insert(notifications)
-    .values({
-      tenantId: auth.tenantId,
-      userId: auth.userId,
-      kind: n.kind,
-      itemType: n.itemType,
-      itemId: n.itemId,
-      title: n.title.slice(0, 300) || '—',
-      meta: n.meta ?? {},
-      dedupeKey: n.key.slice(0, 200),
-    })
-    .onConflictDoNothing({ target: [notifications.userId, notifications.dedupeKey] })
-    .returning({ id: notifications.id });
+  const meta = n.stamp ? { ...n.meta, stamp: n.stamp } : (n.meta ?? {});
+  const row = {
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    kind: n.kind,
+    itemType: n.itemType,
+    itemId: n.itemId,
+    title: n.title.slice(0, 300) || '—',
+    meta,
+    dedupeKey: n.key.slice(0, 200),
+  };
+  const target = [notifications.userId, notifications.dedupeKey];
+  const q = tx.insert(notifications).values(row);
+  const r = await (
+    n.stamp
+      ? q.onConflictDoUpdate({
+          target,
+          set: { kind: row.kind, title: row.title, meta, createdAt: sql`now()`, readAt: null },
+          setWhere: sql`${notifications.meta}->>'stamp' is distinct from ${n.stamp}`,
+        })
+      : q.onConflictDoNothing({ target })
+  ).returning({ id: notifications.id });
   return r.length > 0;
 }
 

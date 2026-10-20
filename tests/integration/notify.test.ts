@@ -206,11 +206,17 @@ describe.skipIf(!enabled)('notifications', () => {
     expect(await ns.markRead(ana, { ids: [list.items[0]!.id] })).toBe(4);
     expect(await ns.markRead(ana, { all: true })).toBe(0);
 
-    // the next day: the overdue ones again (once a day), the due one is now overdue
+    // the next day: the overdue ones come back unread with the new date, the due
+    // one is now overdue; still one notification per item
     const tomorrow = lib.zonedInstant(shift(day, 1), '10:00', tz);
     await gen.runNotify(tomorrow);
-    const next = (await ns.listNotifications(ana)).items.filter((n) => !n.readAt).map((n) => n.title);
-    expect(next.sort()).toEqual(['Fechar SM37', 'Relatório']);
+    await gen.runNotify(new Date(tomorrow.getTime() + 60_000));
+    const after = (await ns.listNotifications(ana)).items;
+    expect(after).toHaveLength(5);
+    const next = after.filter((n) => !n.readAt);
+    expect(next.map((n) => n.title).sort()).toEqual(['Fechar SM37', 'Relatório']);
+    expect(next.map((n) => n.kind)).toEqual(['task_overdue', 'task_overdue']);
+    for (const n of next) expect(Date.parse(n.createdAt)).toBeGreaterThan(Date.now() - 60_000);
 
     // retention: read ones after 30 days, all after 90
     await admin.unsafe(

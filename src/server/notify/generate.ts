@@ -15,10 +15,12 @@ import { addNotification, type NotifyKind } from './service';
 // The notification job (worker, every minute). For each active person, as
 // that person under RLS: tasks and project issues due today / overdue, task
 // reminders, today's meeting records and pending shared-folder invitations
-// become notifications. Each has a dedupe key (item + kind + day, or the
-// reminder's instant), unique per person in the database, so a restart or two
-// workers running at once never write one twice. Then the optional emails
-// (reminders and meetings) and the daily summary.
+// become notifications. One per item: its key names the item (unique per
+// person in the database, so a restart or two workers running at once never
+// write one twice) and its stamp the occasion (the day, or the reminder's
+// instant). A new day or a reminder refreshes that same notification instead
+// of adding another. Then the optional emails (reminders and meetings) and the
+// daily summary.
 
 const LIVE_TENANTS = ['trial', 'active', 'past_due'] as const;
 const PER_KIND = 50;
@@ -54,9 +56,11 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
     const { prefs, tz } = await settingsOf(tx, p.id);
     const { day, minutes } = localParts(now, tz);
     const mailable: Made[] = [];
-    const add = async (m: Made, key: string, mail = false) => {
-      const isNew = await addNotification(tx, auth, { ...m, key });
-      if (isNew && mail) mailable.push(m);
+    // per item, the one that matters most now (a reminder of today beats due/overdue)
+    const pick = new Map<string, { m: Made; stamp: string; rank: number; mail: boolean }>();
+    const add = (m: Made, stamp: string, mail = false, rank = 1) => {
+      const key = `${m.itemType}:${m.itemId}`;
+      if ((pick.get(key)?.rank ?? 0) < rank) pick.set(key, { m, stamp, rank, mail });
     };
 
     if (modules.has('tasks')) {
@@ -67,10 +71,7 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
           .from(tasks)
           .where(and(open, eq(tasks.dueOn, day)))
           .limit(PER_KIND))
-          await add(
-            { kind: 'task_due', itemType: 'task', itemId: t.id, title: t.title, meta: { due: day } },
-            `task_due:${t.id}:${day}`,
-          );
+          add({ kind: 'task_due', itemType: 'task', itemId: t.id, title: t.title, meta: { due: day } }, day);
       if (prefs.taskOverdue)
         for (const t of await tx
           .select({ id: tasks.id, title: tasks.title, due: tasks.dueOn })
@@ -78,9 +79,9 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
           .where(and(open, lt(tasks.dueOn, day)))
           .orderBy(sql`${tasks.dueOn} desc`)
           .limit(PER_KIND))
-          await add(
+          add(
             { kind: 'task_overdue', itemType: 'task', itemId: t.id, title: t.title, meta: { due: t.due! } },
-            `task_overdue:${t.id}:${day}`,
+            day,
           );
       if (prefs.reminders)
         for (const t of await tx
@@ -97,7 +98,7 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
           const at = reminderAt({ ...t, remind: t.remind as RemindMode }, tz);
           // due now, and not a stale one from long ago (a reminder set in the past)
           if (!at || at > now || now.getTime() - at.getTime() > 86_400_000) continue;
-          await add(
+          add(
             {
               kind: 'task_reminder',
               itemType: 'task',
@@ -105,8 +106,9 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
               title: t.title,
               meta: { at: at.toISOString(), ...(t.dueOn ? { due: t.dueOn } : {}) },
             },
-            `task_reminder:${t.id}:${at.toISOString()}`,
+            at.toISOString(),
             true,
+            localParts(at, tz).day === day ? 2 : 0.5,
           );
         }
     }
@@ -123,10 +125,7 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
         .where(and(open, or(...cond)))
         .limit(PER_KIND * 2)) {
         const kind = t.due === day ? 'issue_due' : 'issue_overdue';
-        await add(
-          { kind, itemType: 'issue', itemId: t.id, title: t.title, meta: { due: t.due! } },
-          `${kind}:${t.id}:${day}`,
-        );
+        add({ kind, itemType: 'issue', itemId: t.id, title: t.title, meta: { due: t.due! } }, day);
       }
     }
 
@@ -141,7 +140,7 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
           const s = hm(m.start);
           if (minutes < s - prefs.meetingLead || minutes > s) continue;
         }
-        await add(
+        add(
           {
             kind: 'meeting',
             itemType: 'meeting',
@@ -149,7 +148,7 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
             title: m.title,
             meta: { day, start: m.start, end: m.end },
           },
-          `meeting:${m.id}:${day}`,
+          day,
           !!m.start,
         );
       }
@@ -163,17 +162,17 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
         owner_name: string;
       }>(sql`select id, folder_id, folder_name, kind, owner_name from kh_share_invites()`);
       for (const i of inv)
-        await add(
-          {
-            kind: 'share_invite',
-            itemType: 'share',
-            itemId: i.folder_id,
-            title: i.folder_name,
-            meta: { who: i.owner_name, kind: i.kind },
-          },
-          `share_invite:${i.id}`,
-        );
+        await addNotification(tx, auth, {
+          kind: 'share_invite',
+          itemType: 'share',
+          itemId: i.folder_id,
+          title: i.folder_name,
+          meta: { who: i.owner_name, kind: i.kind },
+          key: `share_invite:${i.id}`,
+        });
     }
+    for (const [key, p] of pick)
+      if ((await addNotification(tx, auth, { ...p.m, key, stamp: p.stamp })) && p.mail) mailable.push(p.m);
     return { mailable, prefs, tz, day, minutes };
   });
 }

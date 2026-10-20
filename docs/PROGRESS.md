@@ -415,6 +415,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
   - *SAP*: módulo **Notas SAP** (número, versão, componente, categoria, prioridade, validade, tipo de implementação, pré-requisitos, estado por sistema com data e ordem, matriz nota × sistema, importar números, CSV); **evidências** por passo nos testes (colar/arrastar, lightbox) e **relatório de testes** imprimível para PDF; **mapa da paisagem** (DEV → QAS → PRD com ordens à espera, exporta SVG/PNG); **cutover com dependências**, bloqueios, caminho crítico e cronograma.
   - Correção: o painel das Tarefas só mostra a tarefa selecionada (antes, uma alteração rápida podia ir para a tarefa anterior enquanto a nova carregava).
   - Screenshots `correcoes/48–62`.
+- **Notificações sem repetidos + vidro**: uma notificação por item — uma tarefa que continua em atraso já não cria uma nova por dia; a mesma passa a ter a data de hoje e volta a não lida (um lembrete do dia tem prioridade sobre prazo/atraso). Migração 0045 junta as repetidas que já existiam (fica a mais recente). O popup do sino passa a vidro liquid glass como os modais. Screenshots `correcoes/63`.
 
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
