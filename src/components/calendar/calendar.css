@@ -483,19 +483,98 @@
   text-overflow: ellipsis;
 }
 
-@media (max-width: 900px) {
+/* phones and tablets (D68): the day panel goes under the calendar */
+@media (max-width: 1099.98px) {
   .kh-cal {
     flex-direction: column;
     overflow: auto;
+  }
+  .kh-cal__main {
+    flex: none;
   }
   .kh-cal__resize {
     display: none;
   }
   .kh-cal__panel {
+    flex: none;
     width: auto !important;
     max-width: none;
+    overflow: visible;
     border-left: 0;
     border-top: 1px solid rgb(var(--w) / 0.12);
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-cal {
+    border-radius: 24px;
+  }
+  .kh-cal__head {
+    padding: 14px 14px 8px;
+    gap: 8px;
+  }
+  .kh-cal__sub,
+  .kh-cal__hint {
+    display: none;
+  }
+  .kh-cal__title {
+    font-size: 22px;
+  }
+  .kh-cal__nav {
+    width: 100%;
+  }
+  .kh-cal__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 15px;
+    text-align: center;
+  }
+  .kh-cal__arrow,
+  .kh-cal__today,
+  .kh-cal__modes button {
+    min-height: 40px;
+  }
+  .kh-cal__arrow {
+    min-width: 40px;
+  }
+  /* the filters scroll sideways in one line */
+  .kh-cal__filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .kh-cal__filters::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-cal__chip {
+    flex: none;
+    min-height: 36px;
+  }
+  .kh-cal__dow,
+  .kh-cal__grid {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .kh-cal__day {
+    padding: 5px 4px 4px;
+    border-radius: 12px;
+  }
+  .kh-cal__panel {
+    position: relative;
+    padding: 18px 14px 22px;
+  }
+  .kh-cal__dayswitch {
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    display: flex;
+    gap: 6px;
+  }
+  .kh-cal__sel {
+    min-height: 52px;
   }
 }
 .kh-cal__issue {

@@ -155,3 +155,38 @@
   font-size: 12.5px;
   cursor: pointer;
 }
+
+/* phones: a full-height sheet from the bottom (Popover `sheet`, D68) */
+.kh-ntf.kh-popover--sheet {
+  position: fixed;
+}
+.kh-ntf.kh-popover--sheet::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 40px;
+  height: 5px;
+  margin-left: -20px;
+  border-radius: 999px;
+  background: rgb(var(--w) / 0.35);
+}
+.kh-ntf.kh-popover--sheet .kh-ntf__head {
+  padding: 24px 16px 10px;
+}
+.kh-ntf.kh-popover--sheet .kh-ntf__title {
+  flex: 1;
+  font-size: 19px;
+}
+.kh-ntf.kh-popover--sheet .kh-ntf__link {
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+.kh-ntf.kh-popover--sheet .kh-ntf__item {
+  flex-shrink: 0;
+  min-height: 60px;
+}
+.kh-ntf.kh-popover--sheet .kh-ntf__head .kh-ntf__link {
+  white-space: nowrap;
+}

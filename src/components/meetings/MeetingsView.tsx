@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Sheet, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
+import { BackBar, FoldersButton, useListDetail } from '@/components/content/MobilePane';
 import { AiButton } from '@/components/ai/AiButton';
 import { AiText } from '@/components/ai/AiText';
 import { aiError, useAi } from '@/components/ai/useAi';
@@ -217,6 +218,9 @@ export function MeetingsView() {
   const urlId = sp.get('m');
   const [activeId, setActiveId] = useState<string | null>(urlId);
   useEffect(() => setActiveId(urlId), [urlId]);
+  const md = useListDetail('m');
+  const mdGo = md.go;
+  const [foldersOpen, setFoldersOpen] = useState(false);
   const loc = t('locale');
 
   const open = useCallback(
@@ -225,9 +229,9 @@ export function MeetingsView() {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('m', id);
       else next.delete('m');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, sp, mdGo],
   );
 
   useEffect(() => {
@@ -372,7 +376,8 @@ export function MeetingsView() {
     const idx = list.findIndex((x) => x.id === act.id);
     const rest = list.filter((x) => x.id !== act.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== act.id));
-    open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
   };
   const addFolder = async () => {
@@ -575,12 +580,84 @@ export function MeetingsView() {
     window.addEventListener('pointerup', up);
   };
   const colCss = `min(${cw}px, calc(100% - ${COL.read + COL.gap}px))`;
+  const pickFolder = (id: string) => {
+    setFolder(id);
+    setFoldersOpen(false);
+  };
+  const folders$ = (
+    <div className="kh-em-folders kh-ar-folders">
+      {[{ id: 'all', name: t('mt_all'), top: true }, ...folders].map((f) => {
+        const top = 'top' in f;
+        const n = top ? all.length : all.filter((m) => m.folderId === f.id).length;
+        return (
+          <div
+            key={f.id}
+            className="kh-em-folder"
+            data-on={folder === f.id || undefined}
+            data-top={top || undefined}
+            onClick={() => pickFolder(f.id)}
+            onDragOver={(e) => dragId && e.preventDefault()}
+            onDrop={(e) => {
+              if (!dragId) return;
+              e.preventDefault();
+              dropOn(dragId, f.id);
+              setDragId(null);
+            }}
+          >
+            <Svg d={I.folder} s={17} />
+            <button
+              type="button"
+              className="kh-rowbtn kh-em-folder__name"
+              aria-current={folder === f.id || undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                pickFolder(f.id);
+              }}
+            >
+              {f.name}
+            </button>
+            {!top && (
+              <button
+                type="button"
+                title={t('del')}
+                aria-label={`${t('del')} ${f.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void removeFolder(f as Folder);
+                }}
+              >
+                <Svg d={I.x} s={14} />
+              </button>
+            )}
+            <span className="kh-em-count">{n}</span>
+          </div>
+        );
+      })}
+      <div className="kh-em-newfolder">
+        <input
+          value={newFolder}
+          maxLength={80}
+          placeholder={t('a_folderPh')}
+          aria-label={t('a_folderPh')}
+          onChange={(e) => setNewFolder(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
+        />
+        <button type="button" onClick={() => void addFolder()}>
+          + {t('newFolder')}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div
       ref={rootRef}
       className="kh-em kh-mt kh-page-card"
-      style={{ gridTemplateColumns: `${colCss} minmax(0, 1fr)` }}
+      data-pane={md.pane}
+      style={{
+        gridTemplateColumns:
+          md.vp === 'tablet' ? `min(${cw}px, 300px) minmax(0, 1fr)` : `${colCss} minmax(0, 1fr)`,
+      }}
     >
       <div
         className="kh-mt-handle"
@@ -630,68 +707,16 @@ export function MeetingsView() {
             <Svg d={I.plus} s={16} />
           </button>
         </div>
-        <div className="kh-em-folders kh-ar-folders">
-          {[{ id: 'all', name: t('mt_all'), top: true }, ...folders].map((f) => {
-            const top = 'top' in f;
-            const n = top ? all.length : all.filter((m) => m.folderId === f.id).length;
-            return (
-              <div
-                key={f.id}
-                className="kh-em-folder"
-                data-on={folder === f.id || undefined}
-                data-top={top || undefined}
-                onClick={() => setFolder(f.id)}
-                onDragOver={(e) => dragId && e.preventDefault()}
-                onDrop={(e) => {
-                  if (!dragId) return;
-                  e.preventDefault();
-                  dropOn(dragId, f.id);
-                  setDragId(null);
-                }}
-              >
-                <Svg d={I.folder} s={17} />
-                <button
-                  type="button"
-                  className="kh-rowbtn kh-em-folder__name"
-                  aria-current={folder === f.id || undefined}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFolder(f.id);
-                  }}
-                >
-                  {f.name}
-                </button>
-                {!top && (
-                  <button
-                    type="button"
-                    title={t('del')}
-                    aria-label={`${t('del')} ${f.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void removeFolder(f as Folder);
-                    }}
-                  >
-                    <Svg d={I.x} s={14} />
-                  </button>
-                )}
-                <span className="kh-em-count">{n}</span>
-              </div>
-            );
-          })}
-          <div className="kh-em-newfolder">
-            <input
-              value={newFolder}
-              maxLength={80}
-              placeholder={t('a_folderPh')}
-              aria-label={t('a_folderPh')}
-              onChange={(e) => setNewFolder(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
+        {md.compact ? (
+          <div className="kh-mt-mfolders">
+            <FoldersButton
+              label={folder === 'all' ? t('mt_all') : (folders.find((f) => f.id === folder)?.name ?? '')}
+              onClick={() => setFoldersOpen(true)}
             />
-            <button type="button" onClick={() => void addFolder()}>
-              + {t('newFolder')}
-            </button>
           </div>
-        </div>
+        ) : (
+          folders$
+        )}
         <section className="kh-em-list kh-mt-items" aria-label={t('nav_meetings')}>
           {groups.map((g) => (
             <div key={g.key} className="kh-mt-group">
@@ -745,6 +770,7 @@ export function MeetingsView() {
       </div>
 
       <section className="kh-em-read kh-mt-read">
+        {md.phone && urlId && <BackBar onBack={() => void guard(md.back)} title={act?.title ?? ''} />}
         {act ? (
           <div className="kh-mt-main">
             <div className="kh-mt-head">
@@ -1039,6 +1065,17 @@ export function MeetingsView() {
           onSkip={() => void answer(false)([], 'tech')}
           onStay={() => setLeave(null)}
         />
+      )}
+      {md.compact && (
+        <Sheet
+          open={foldersOpen}
+          onClose={() => setFoldersOpen(false)}
+          title={t('mob_folders')}
+          closeLabel={t('i_close')}
+          className="kh-mt-fsheet"
+        >
+          {folders$}
+        </Sheet>
       )}
     </div>
   );

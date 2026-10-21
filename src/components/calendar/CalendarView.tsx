@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { isoD, ptHolidays } from '@/lib/calendar';
-import { usePersistentState, useToast } from '@/components/ui';
+import { usePersistentState, useToast, useViewport } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import './calendar.css';
@@ -283,6 +283,16 @@ export function CalendarView() {
   const late = (x: Item) => x.kind !== 'meeting' && !x.done && x.due < today;
   const colorOf = (x: Item) => (late(x) ? LATE : x.c);
   const pw = livePanel ?? panelW;
+  // phones: the selected day's agenda under a compact month, with a day switcher / swipe
+  const phone = useViewport() === 'phone';
+  const swipe = useRef<number | null>(null);
+  const stepDay = (n: number) => {
+    const d = at12(sel);
+    d.setDate(d.getDate() + n);
+    const k = isoD(d);
+    setSel(k);
+    if (wk ? k < isoD(start) || k > isoD(end) : d.getMonth() !== A.getMonth()) setAnchor(k);
+  };
 
   const onPanelDown = (e: React.PointerEvent) => {
     e.preventDefault();
@@ -519,7 +529,49 @@ export function CalendarView() {
       >
         <div data-drag={livePanel !== null || undefined} />
       </div>
-      <aside className="kh-cal__panel" style={{ width: pw }}>
+      <aside
+        className="kh-cal__panel"
+        style={{ width: pw }}
+        onTouchStart={
+          phone
+            ? (e) => {
+                swipe.current = e.touches[0]?.clientX ?? null;
+              }
+            : undefined
+        }
+        onTouchEnd={
+          phone
+            ? (e) => {
+                const x = e.changedTouches[0]?.clientX;
+                if (swipe.current !== null && x !== undefined && Math.abs(x - swipe.current) > 60)
+                  stepDay(x < swipe.current ? 1 : -1);
+                swipe.current = null;
+              }
+            : undefined
+        }
+      >
+        {phone && (
+          <div className="kh-cal__dayswitch">
+            <button
+              type="button"
+              className="kh-cal__arrow"
+              aria-label={t('mob_prevDay')}
+              title={t('mob_prevDay')}
+              onClick={() => stepDay(-1)}
+            >
+              <Chevron dir="l" />
+            </button>
+            <button
+              type="button"
+              className="kh-cal__arrow"
+              aria-label={t('mob_nextDay')}
+              title={t('mob_nextDay')}
+              onClick={() => stepDay(1)}
+            >
+              <Chevron dir="r" />
+            </button>
+          </div>
+        )}
         <div className="kh-cal__selhead">
           <span className="kh-cal__rel">
             {dd === 0

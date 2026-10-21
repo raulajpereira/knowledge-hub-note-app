@@ -575,22 +575,6 @@
   outline: none;
 }
 
-@media (max-width: 900px) {
-  .kh-tk {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
-  }
-  .kh-tk > .kh-handle {
-    display: none;
-  }
-  .kh-tk-list {
-    border-right: 0;
-    border-bottom: 1px solid var(--kh-divider);
-  }
-  .kh-tk-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 /* the detail is a fieldset: disabled as a whole for a read-only shared task */
 fieldset.kh-tk-detail {
   border: 0;
@@ -643,4 +627,58 @@ fieldset.kh-tk-detail:disabled .kh-tk-donebtn {
   border-radius: 999px;
   background: var(--c);
   color: #16131f;
+}
+
+/* ── Phones and tablets (D68) ─────────────────────────────────────────── */
+@media (max-width: 1099.98px) {
+  .kh-tk-detail {
+    padding: 22px 22px 32px;
+  }
+  .kh-tk-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-tk.kh-page-card {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* one pane at a time (data-pane from the URL's ?t=); before hydration: the list */
+  .kh-tk:not([data-pane='detail']) > .kh-tk-pane,
+  .kh-tk[data-pane='detail'] > .kh-tk-list {
+    display: none;
+  }
+  .kh-tk-list {
+    border-right: 0;
+    padding: 12px 10px 10px;
+  }
+  .kh-tk-item {
+    min-height: 56px;
+  }
+  .kh-tk-ck {
+    position: relative;
+  }
+  /* a 44 px touch target around the round checkbox */
+  .kh-tk-ck::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+  .kh-tk-detail {
+    padding: 18px 16px 28px;
+    gap: 20px;
+  }
+  .kh-tk-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kh-tk-round {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-tk-title {
+    font-size: 22px;
+  }
+  .kh-tk-seg button {
+    height: 36px;
+    white-space: nowrap;
+  }
 }

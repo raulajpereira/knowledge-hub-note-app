@@ -12,6 +12,7 @@ import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
+import { BackBar, useListDetail } from '@/components/content/MobilePane';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
 import { useDraft } from '@/components/content/useDraft';
@@ -580,6 +581,8 @@ export function TasksView() {
   const [items, setItems] = useState<TaskItem[] | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const activeId = sp.get('t');
+  const md = useListDetail('t');
+  const mdGo = md.go;
   // prototype tShF: the tasks of one shared folder (every member's)
   const sh = useSharedFolders('tasks');
   const [savedShF, setSavedShF] = usePersistentState<string>('tasks.shf', '');
@@ -631,9 +634,9 @@ export function TasksView() {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('t', id);
       else next.delete('t');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, sp, mdGo],
   );
 
   useEffect(() => {
@@ -688,10 +691,10 @@ export function TasksView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- extra is rebuilt from urlKey each render
   }, [all, filter, typeF, sort, q, urlKey, today]);
 
-  // Open the first task when none is selected (prototype tActive).
+  // Open the first task when none is selected (prototype tActive); phones show the list instead.
   useEffect(() => {
-    if (!activeId && items && list[0]) open(list[0].id);
-  }, [activeId, items, list, open]);
+    if (!md.phone && !activeId && items && list[0]) open(list[0].id);
+  }, [md.phone, activeId, items, list, open]);
 
   const upsert = (x: TaskItem) =>
     setItems((cur) =>
@@ -773,7 +776,8 @@ export function TasksView() {
     const rest = list.filter((x) => x.id !== task.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== task.id));
     setTask(null);
-    open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
   };
 
@@ -787,9 +791,15 @@ export function TasksView() {
   return (
     <div
       className="kh-tk kh-page-card"
-      style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
+      data-pane={md.pane}
+      style={{
+        gridTemplateColumns:
+          focus && !md.compact
+            ? 'minmax(0,1fr)'
+            : `${md.vp === 'tablet' ? Math.min(listW, 320) : listW}px minmax(0,1fr)`,
+      }}
     >
-      {!focus && (
+      {(!focus || md.compact) && (
         <ColHandle
           style={{ left: listW }}
           value={listW}
@@ -800,7 +810,7 @@ export function TasksView() {
           onReset={() => setCols({ ...cols, list: COL_DEFAULTS.list })}
         />
       )}
-      {!focus && (
+      {(!focus || md.compact) && (
         <section className="kh-tk-list">
           <div className="kh-tk-list__top">
             <label className="kh-tk-search">
@@ -1059,6 +1069,7 @@ export function TasksView() {
         </section>
       )}
       <section className="kh-tk-pane">
+        {md.phone && activeId && <BackBar onBack={md.back} title={task?.title ?? ''} />}
         {/* only the task the URL points at: while another one loads, edits must not land on the previous one */}
         {task && task.id === activeId ? (
           <Detail

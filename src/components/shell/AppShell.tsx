@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AmbientBackground, TagColorsProvider } from '@/components/ui';
+import { AmbientBackground, TagColorsProvider, useViewport } from '@/components/ui';
 import type { TagColorMap } from '@/lib/tags';
 import { useI18n } from '@/i18n/client';
 import { COL_DEFAULTS, COL_LIMITS, effectivePrefs, type Prefs } from '@/lib/prefs';
@@ -15,6 +15,7 @@ import { AiPanel } from '@/components/ai/AiPanel';
 import { AiFab } from '@/components/ai/AiFab';
 import { Header } from './Header';
 import { LockScreen } from './LockScreen';
+import { BottomNav, MobileHeader, NavDrawer } from './MobileShell';
 import { PrefsProvider, usePref, usePrefsContext } from './PrefsProvider';
 import { ShellContext, type ShellApi } from './ShellContext';
 import { Sidebar } from './Sidebar';
@@ -23,6 +24,7 @@ import { ThemeSync } from './ThemeSync';
 import { Ticker } from './Ticker';
 import type { ShellMe } from './types';
 import './shell.css';
+import './mobile.css';
 
 // ZNotes root: 64px header · content · 36px ticker; sidebar + content
 // columns with a drag handle (double-click resets). Pages that need the
@@ -54,6 +56,11 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const toggleAi = useCallback(() => setAiOpen((o) => !o), []);
   const closeAi = useCallback(() => setAiOpen(false), []);
   const [query, setQuery] = useState('');
+  // phones/tablets (D68): compact header + drawer; phones also the bottom bar
+  const vp = useViewport();
+  const compact = vp !== 'desktop';
+  const [navOpen, setNavOpen] = useState(false);
+  const closeNav = useCallback(() => setNavOpen(false), []);
 
   // Locked state survives a reload in this tab (prototype kv.locked in sessionStorage).
   useEffect(() => {
@@ -163,12 +170,16 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
           inert={locked || undefined}
         >
           <div className="kh-shell__grid">
-            <Header onActivity={() => setActOpen((o) => !o)} activityOpen={actOpen} />
+            {compact ? (
+              <MobileHeader onMenu={() => setNavOpen(true)} menuOpen={navOpen} />
+            ) : (
+              <Header onActivity={() => setActOpen((o) => !o)} activityOpen={actOpen} />
+            )}
             <div
               className="kh-main"
-              style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${width}px minmax(0,1fr)` }}
+              style={{ gridTemplateColumns: focus || compact ? 'minmax(0,1fr)' : `${width}px minmax(0,1fr)` }}
             >
-              {!focus && (
+              {!focus && !compact && (
                 <div
                   className="kh-handle"
                   style={{ left: width }}
@@ -185,10 +196,10 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
                   <div className="kh-handle__bar" />
                 </div>
               )}
-              {!focus && <Sidebar />}
+              {!focus && !compact && <Sidebar />}
               <main className="kh-content">{children}</main>
             </div>
-            <Ticker />
+            {vp !== 'phone' && <Ticker />}
           </div>
         </div>
         {me.tenant.status === 'suspended' && (
@@ -201,6 +212,10 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
         <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />
         <AiPanel open={aiOpen} onClose={closeAi} />
         {!locked && !focus && <AiFab open={aiOpen} onToggle={toggleAi} />}
+        {compact && !locked && (
+          <NavDrawer open={navOpen} onClose={closeNav} onActivity={() => setActOpen(true)} />
+        )}
+        {vp === 'phone' && !locked && <BottomNav />}
         {locked && (
           <LockScreen name={me.user.name} email={me.user.email} photoV={me.assets.avatar} onUnlock={unlock} />
         )}

@@ -1207,3 +1207,150 @@ button.kh-table__th {
   font-size: 12px;
   font-weight: 500;
 }
+
+/* ── Bottom sheet (Sheet; phones and tablets) ──────────────────────────── */
+.kh-overlay--sheet {
+  align-items: flex-end;
+  padding: 0;
+}
+.kh-modal.kh-sheet-panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - env(safe-area-inset-top) - 24px);
+  gap: 12px;
+  padding: 26px max(18px, env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+  border-radius: 28px 28px 0 0;
+  border-bottom: 0;
+  animation: kh-sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* the grab bar */
+.kh-modal.kh-sheet-panel::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 40px;
+  height: 5px;
+  margin-left: -20px;
+  border-radius: 999px;
+  background: rgb(var(--w) / 0.35);
+}
+.kh-sheet-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+@keyframes kh-sheet-up {
+  from {
+    transform: translateY(40%);
+    opacity: 0.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kh-modal.kh-sheet-panel,
+  .kh-popover--sheet {
+    animation: none;
+  }
+}
+
+/* Popover shown as a sheet on phones (e.g. Notificações) */
+.kh-popover-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 8999;
+  background: rgb(var(--d) / calc(0.18 * var(--d-k)));
+  animation: kh-fade 0.15s ease-out;
+}
+.kh-popover.kh-popover--sheet {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: 100%;
+  max-width: none;
+  height: calc(100dvh - env(safe-area-inset-top) - 16px);
+  max-height: none;
+  border-radius: 28px 28px 0 0;
+  border-bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.3 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.2 * var(--sf-k)))
+  );
+  animation: kh-sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ── Phones: modals are full-screen sheets, confirmations dock at the bottom ── */
+@media (max-width: 767.98px) {
+  .kh-overlay:not(.kh-overlay--sheet) {
+    padding: 0;
+  }
+  .kh-overlay:not(.kh-overlay--sheet):not(.kh-overlay--confirm) > .kh-modal {
+    width: 100% !important;
+    max-width: none !important;
+    height: 100dvh;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: 0;
+    padding: calc(14px + env(safe-area-inset-top)) max(18px, env(safe-area-inset-right))
+      calc(18px + env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+    animation: kh-sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  /* the title and close button stay reachable while the content scrolls */
+  .kh-overlay:not(.kh-overlay--sheet):not(.kh-overlay--confirm) > .kh-modal > .kh-modal__head {
+    position: sticky;
+    top: calc(-14px - env(safe-area-inset-top));
+    z-index: 3;
+    margin: calc(-14px - env(safe-area-inset-top)) calc(-1 * max(18px, env(safe-area-inset-right))) 0
+      calc(-1 * max(18px, env(safe-area-inset-left)));
+    padding: calc(14px + env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 10px
+      max(18px, env(safe-area-inset-left));
+    align-items: center;
+    background: linear-gradient(
+      180deg,
+      rgb(var(--sf) / calc(0.3 * var(--sf-k))),
+      rgb(var(--sf) / calc(0.18 * var(--sf-k)))
+    );
+    backdrop-filter: blur(var(--kh-blur-modal));
+  }
+  .kh-modal__title {
+    font-size: 19px;
+  }
+  .kh-overlay--confirm {
+    align-items: flex-end;
+  }
+  .kh-overlay--confirm > .kh-modal {
+    width: 100% !important;
+    border-radius: 28px 28px 0 0 !important;
+    border-bottom: 0;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+    animation: kh-sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .kh-modal__foot {
+    flex-wrap: wrap;
+  }
+  .kh-modal__foot > * {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+  .kh-modal.kh-sheet-panel {
+    width: 100%;
+  }
+  .kh-popover {
+    max-width: calc(100vw - 16px);
+  }
+  /* no zoom-in on focus in iOS Safari: fields at 16 px (big title fields keep their size) */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([class*='title']),
+  select:not([class*='title']),
+  textarea:not([class*='title']) {
+    font-size: 16px !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kh-overlay > .kh-modal {
+      animation: none !important;
+    }
+  }
+}

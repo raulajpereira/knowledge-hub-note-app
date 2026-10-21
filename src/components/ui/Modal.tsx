@@ -30,6 +30,8 @@ type ModalProps = {
   /** Accessible name / description when there is no `title` (confirmations). */
   labelledBy?: string;
   describedBy?: string;
+  /** extra class on the dimmed overlay (e.g. the phone bottom sheet) */
+  overlayClassName?: string;
 };
 
 /** Glass modal with layered blur (overlay blur + panel blur), README §6. */
@@ -48,6 +50,7 @@ export function Modal({
   hideClose,
   labelledBy,
   describedBy,
+  overlayClassName,
 }: ModalProps) {
   const id = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -105,7 +108,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className={cx('kh-overlay', layer === 'confirm' && 'kh-overlay--confirm')}
+      className={cx('kh-overlay', layer === 'confirm' && 'kh-overlay--confirm', overlayClassName)}
       style={{ zIndex: 200 + depth * 10 }}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget && dismissible) onClose();

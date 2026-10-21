@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { JSONContent } from '@tiptap/react';
 import { useI18n } from '@/i18n/client';
-import { useConfirm, usePersistentState, useToast, TagInput, useTagStyle } from '@/components/ui';
+import { Sheet, useConfirm, usePersistentState, useToast, TagInput, useTagStyle } from '@/components/ui';
 import { isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { usePref } from '@/components/shell/PrefsProvider';
@@ -16,6 +16,7 @@ import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
 import { ColHandle } from '@/components/content/ColHandle';
+import { BackButton, FoldersButton, useListDetail } from '@/components/content/MobilePane';
 import { ChecklistBar, EditorContent, EditorToolbar, InsertBar, useNoteEditor } from './NoteEditor';
 import { NoteHistory } from './NoteHistory';
 import { NoteFiltersActive, NoteFiltersButton, type NoteExtra } from './NoteFilters';
@@ -79,7 +80,10 @@ function FoldersPanel({
   canShare,
   onShare,
   onNewShared,
+  touch,
 }: {
+  /** phones/tablets: a row's actions sit behind its ⋯ button */
+  touch?: boolean;
   shared: SharedFolder[];
   canShare: boolean;
   onShare: (target: { folder?: Folder; shared?: SharedFolder }) => void;
@@ -101,6 +105,7 @@ function FoldersPanel({
   const [editing, setEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [over, setOver] = useState<string | null>(null);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
 
   const create = async () => {
     const n = name.trim();
@@ -161,6 +166,7 @@ function FoldersPanel({
             data-on={on || undefined}
             data-over={over === r.id || undefined}
             data-top={r.top || undefined}
+            data-menu={(touch && menuFor === r.id) || undefined}
             onClick={() => setFilter(r.id)}
             onDragOver={(e) => {
               if (!dropOk || !e.dataTransfer.types.includes('application/x-kh-note')) return;
@@ -294,6 +300,21 @@ function FoldersPanel({
                 </button>
               </div>
             )}
+            {touch && (r.f || (r.sh?.mine && canShare)) && editing !== r.id && (
+              <button
+                type="button"
+                className="kh-nt-folder__more"
+                aria-label={t('mob_more')}
+                title={t('mob_more')}
+                aria-expanded={menuFor === r.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuFor((m) => (m === r.id ? null : r.id));
+                }}
+              >
+                {menuFor === r.id ? '×' : '⋯'}
+              </button>
+            )}
             <span className="kh-nt-folder__n">{r.count ?? ''}</span>
           </div>
         );
@@ -356,8 +377,11 @@ function NoteList({
   onMore,
   tools,
   below,
+  onFolders,
 }: {
   title: string;
+  /** phones/tablets: the title is the "Pastas" toggle */
+  onFolders?: () => void;
   items: NoteItem[];
   /** filters button (next to "Nova nota") and the active filters (under the title) */
   tools?: React.ReactNode;
@@ -380,7 +404,7 @@ function NoteList({
     <section className="kh-nt-list">
       <div className="kh-nt-list__head">
         <div className="kh-nt-list__title">
-          <div>{title}</div>
+          {onFolders ? <FoldersButton label={title} onClick={onFolders} /> : <div>{title}</div>}
           <div className="kh-nt-list__count">
             {items.length}
             {onMore ? '+' : ''}
@@ -516,7 +540,10 @@ function EditorCard({
   onHistory,
   readOnly,
   sharedBy,
+  onBack,
 }: {
+  /** phones: ← back to the list */
+  onBack?: () => void;
   note: Note;
   /** opens "Histórico" (versions) */
   onHistory: () => void;
@@ -555,6 +582,7 @@ function EditorCard({
   return (
     <article className="kh-nt-editor">
       <div className="kh-nt-editor__bar">
+        {onBack && <BackButton onBack={onBack} />}
         <div className="kh-nt-crumb">
           <span className="kh-nt-card__dot" style={{ background: folder.color }} />
           <span>
@@ -795,6 +823,9 @@ export function NotesView() {
   // bumped by a restore: the editor is rebuilt with the restored document
   const [rev, setRev] = useState(0);
   const activeId = sp.get('n');
+  const md = useListDetail('n');
+  const mdGo = md.go;
+  const [foldersOpen, setFoldersOpen] = useState(false);
 
   const sh = useSharedFolders('notes');
   const [fs, setFs] = useState<{ folderId?: string; sharedId?: string; title?: string } | null>(null);
@@ -844,9 +875,9 @@ export function NotesView() {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('n', id);
       else next.delete('n');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, sp, mdGo],
   );
 
   const loadFolders = useCallback(() => {
@@ -890,10 +921,10 @@ export function NotesView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- listKey covers filter + query + view filters
   }, [listKey]);
 
-  // Open the first note when none is selected (prototype: NOTES[0]).
+  // Open the first note when none is selected (prototype: NOTES[0]); phones show the list instead.
   useEffect(() => {
-    if (!activeId && !loading && items[0]) open(items[0].id);
-  }, [activeId, loading, items, open]);
+    if (!md.phone && !activeId && !loading && items[0]) open(items[0].id);
+  }, [md.phone, activeId, loading, items, open]);
 
   // Load the open note.
   useEffect(() => {
@@ -1025,7 +1056,8 @@ export function NotesView() {
     const rest = items.filter((x) => x.id !== note.id);
     setItems(rest);
     setNote(null);
-    open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     void loadFolders();
   };
 
@@ -1086,10 +1118,69 @@ export function NotesView() {
       : undefined;
   const readOnly = !!note && !note.mine && noteShared?.perm === 'read';
 
+  // phones: one pane (CSS); tablets: a narrower list next to the editor
+  const listCol = md.vp === 'tablet' ? Math.min(listW, 300) : listW;
+  const pickFolder = (f: string) => {
+    setFilter(f);
+    setFoldersOpen(false);
+  };
+  const folders$ = (
+    <FoldersPanel
+      touch={md.compact}
+      data={folders}
+      filter={validFilter}
+      setFilter={md.compact ? pickFolder : setFilter}
+      onCreated={(f) => {
+        setFolders((d) => (d ? { ...d, folders: [...d.folders, f] } : d));
+        setFilter(f.id);
+      }}
+      onRename={async (f, name) => {
+        setFolders((d) => d && { ...d, folders: d.folders.map((x) => (x.id === f.id ? { ...x, name } : x)) });
+        await notesApi.renameFolder(f.id, name).catch(failed);
+      }}
+      onNewNote={(f) => {
+        setFilter(f.id);
+        setFoldersOpen(false);
+        void newNote(f.id);
+      }}
+      onDuplicate={async (f) => {
+        try {
+          const { folder } = await notesApi.duplicateFolder(f.id, t('ne_copy'));
+          await loadFolders();
+          setFilter(folder.id);
+        } catch (e) {
+          failed(e);
+        }
+      }}
+      onDelete={async (f) => {
+        const ok = await confirm({
+          title: t('ne_delFolderT'),
+          body: t('ne_delFolderB').replace('{x}', f.name).replace('{n}', String(f.count)),
+          confirmLabel: t('tr_move'),
+          cancelLabel: t('tr_cancel'),
+          danger: true,
+        });
+        if (!ok) return;
+        await notesApi.deleteFolder(f.id).catch(failed);
+        if (validFilter === f.id) setFilter('all');
+        if (note?.folderId === f.id) open(null);
+        await loadFolders();
+      }}
+      onDropNote={(id, target) => void dropNote(id, target)}
+      shared={sh.folders}
+      canShare={sh.canShare}
+      onShare={({ folder, shared }) =>
+        setFs(folder ? { folderId: folder.id, title: folder.name } : { sharedId: shared!.id })
+      }
+      onNewShared={() => setFs({})}
+    />
+  );
+
   return (
     <div
       className="kh-nt kh-page-card"
-      style={{ gridTemplateColumns: `${listW}px minmax(360px,1fr)${showInsp ? ` ${inspW}px` : ''}` }}
+      data-pane={md.pane}
+      style={{ gridTemplateColumns: `${listCol}px minmax(360px,1fr)${showInsp ? ` ${inspW}px` : ''}` }}
     >
       <ColHandle
         style={{ left: listW }}
@@ -1101,55 +1192,7 @@ export function NotesView() {
         onReset={() => setCols({ ...cols, list: COL_DEFAULTS.list })}
       />
       <div className="kh-nt-col">
-        <FoldersPanel
-          data={folders}
-          filter={validFilter}
-          setFilter={setFilter}
-          onCreated={(f) => {
-            setFolders((d) => (d ? { ...d, folders: [...d.folders, f] } : d));
-            setFilter(f.id);
-          }}
-          onRename={async (f, name) => {
-            setFolders(
-              (d) => d && { ...d, folders: d.folders.map((x) => (x.id === f.id ? { ...x, name } : x)) },
-            );
-            await notesApi.renameFolder(f.id, name).catch(failed);
-          }}
-          onNewNote={(f) => {
-            setFilter(f.id);
-            void newNote(f.id);
-          }}
-          onDuplicate={async (f) => {
-            try {
-              const { folder } = await notesApi.duplicateFolder(f.id, t('ne_copy'));
-              await loadFolders();
-              setFilter(folder.id);
-            } catch (e) {
-              failed(e);
-            }
-          }}
-          onDelete={async (f) => {
-            const ok = await confirm({
-              title: t('ne_delFolderT'),
-              body: t('ne_delFolderB').replace('{x}', f.name).replace('{n}', String(f.count)),
-              confirmLabel: t('tr_move'),
-              cancelLabel: t('tr_cancel'),
-              danger: true,
-            });
-            if (!ok) return;
-            await notesApi.deleteFolder(f.id).catch(failed);
-            if (validFilter === f.id) setFilter('all');
-            if (note?.folderId === f.id) open(null);
-            await loadFolders();
-          }}
-          onDropNote={(id, target) => void dropNote(id, target)}
-          shared={sh.folders}
-          canShare={sh.canShare}
-          onShare={({ folder, shared }) =>
-            setFs(folder ? { folderId: folder.id, title: folder.name } : { sharedId: shared!.id })
-          }
-          onNewShared={() => setFs({})}
-        />
+        {!md.compact && folders$}
         <NoteList
           title={listTitle}
           items={items}
@@ -1160,6 +1203,7 @@ export function NotesView() {
           onOpen={open}
           onNew={() => void newNote(validFilter !== 'all' && validFilter !== 'fav' ? validFilter : null)}
           onMore={next ? () => void loadMore() : undefined}
+          onFolders={md.compact ? () => setFoldersOpen(true) : undefined}
           tools={<NoteFiltersButton value={extra} onChange={setExtra} onSave={() => setSaveOpen(true)} />}
           below={<NoteFiltersActive value={extra} onChange={setExtra} />}
         />
@@ -1205,6 +1249,7 @@ export function NotesView() {
           }}
           readOnly={readOnly}
           sharedBy={note.mine ? null : (noteShared?.owner?.name ?? '')}
+          onBack={md.phone ? md.back : undefined}
         />
       ) : (
         <article className="kh-nt-editor kh-nt-editor--empty">
@@ -1278,6 +1323,17 @@ export function NotesView() {
             );
           }}
         />
+      )}
+      {md.compact && (
+        <Sheet
+          open={foldersOpen}
+          onClose={() => setFoldersOpen(false)}
+          title={t('mob_folders')}
+          closeLabel={t('i_close')}
+          className="kh-nt-fsheet"
+        >
+          {folders$}
+        </Sheet>
       )}
       {fs && (
         <FolderShareDialog

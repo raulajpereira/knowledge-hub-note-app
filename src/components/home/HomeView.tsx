@@ -8,7 +8,7 @@ import { useWhen } from '@/components/content/useWhen';
 import { envColor, modColor, sapShortcut } from '@/lib/sap';
 import { downloadShortcut } from '@/components/sap/SidePanel';
 import { copyTcode } from '@/components/sap/TcodesView';
-import { usePersistentState, useToast } from '@/components/ui';
+import { usePersistentState, useToast, useViewport } from '@/components/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePref, usePrefsContext } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
@@ -171,6 +171,8 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
   latest.current = home;
 
   const [editing, setEditing] = useState(false);
+  // phones stack the cards one per line (CSS) and leave the layout to bigger screens
+  const phone = useViewport() === 'phone';
   const [drag, setDrag] = useState<string | null>(null);
   const [drop, setDrop] = useState<DropTarget | null>(null);
   const rowsEl = useRef<HTMLDivElement>(null);
@@ -1275,6 +1277,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
     <section className="kh-home" data-zs="">
       {home.showWx !== false && <WeatherCard />}
       <div
+        className="kh-home__top"
         style={{
           flexShrink: 0,
           display: 'flex',
@@ -1323,6 +1326,11 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
       </div>
       {editing && (
         <div className="kh-home__edit">
+          {phone && (
+            <div className="kh-home__mhint" role="note">
+              {t('mob_homeHint')}
+            </div>
+          )}
           <div
             style={{
               display: 'flex',
@@ -1334,7 +1342,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           >
             <span style={{ fontSize: 14, fontWeight: 600 }}>{t('h_addCard')}</span>
             <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.65 * var(--t-k)))' }}>
-              {t('h_editHint')}
+              {phone ? null : t('h_editHint')}
             </span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

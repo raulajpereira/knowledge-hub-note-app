@@ -1149,5 +1149,21 @@
   "nf_reservedD": "Já não recebem emails e ninguém os pode usar até à data indicada; pode voltar a qualquer um deles.",
   "nf_reservedUntil": "reservado até {d}",
   "nf_back": "Voltar a este",
-  "nf_backT": "Voltar a este endereço?"
+  "nf_backT": "Voltar a este endereço?",
+  "mob_menu": "Menu",
+  "mob_closeMenu": "Fechar menu",
+  "mob_search": "Pesquisar",
+  "mob_searchClose": "Fechar pesquisa",
+  "mob_tabs": "Navegação principal",
+  "mob_capture": "Criar",
+  "mob_newNote": "Nova nota",
+  "mob_newTask": "Nova tarefa",
+  "mob_newVoice": "Nota de voz",
+  "mob_newMeeting": "Registo de reunião",
+  "mob_back": "Voltar",
+  "mob_folders": "Pastas",
+  "mob_more": "Mais ações",
+  "mob_prevDay": "Dia anterior",
+  "mob_nextDay": "Dia seguinte",
+  "mob_homeHint": "No telemóvel os cartões ficam um por linha. Pode adicionar, remover e reordenar aqui (← →); para mudar larguras e linhas use um ecrã maior."
 }

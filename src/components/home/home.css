@@ -951,3 +951,55 @@
   border-radius: 7px;
   white-space: nowrap;
 }
+
+/* ── Phones and tablets (D68): the saved row layout is kept, only drawn
+   differently — tablets at most two cards per line, phones one ── */
+@media (max-width: 1099.98px) {
+  .kh-home__row:not([data-n='1']):not([data-n='2']) > .kh-card {
+    flex: 1 1 calc(50% - 8px) !important;
+  }
+  .kh-card__grip {
+    display: none;
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-home {
+    border-radius: 24px;
+  }
+  .kh-home__top {
+    padding: 18px 16px 12px !important;
+  }
+  .kh-home__top h1 {
+    font-size: 26px !important;
+  }
+  .kh-home__rows {
+    gap: 12px;
+    padding: 0 12px 20px;
+  }
+  .kh-home__row {
+    gap: 12px;
+  }
+  .kh-home__row > .kh-card {
+    flex: 1 1 100% !important;
+  }
+  .kh-home__edit {
+    margin: 0 12px 12px;
+  }
+  .kh-card__handle,
+  .kh-card__size,
+  .kh-home__rowdrop,
+  .kh-card__drop {
+    display: none;
+  }
+  .kh-card__x {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+.kh-home__mhint {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgb(var(--w) / 0.1);
+  font-size: 13px;
+  line-height: 1.45;
+}

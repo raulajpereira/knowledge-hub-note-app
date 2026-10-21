@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cx } from './cx';
+import { useViewport } from './useViewport';
 
 /**
  * A dropdown panel drawn at the page level (portal, position: fixed) under
@@ -18,6 +19,7 @@ export function Popover({
   width,
   maxHeight,
   children,
+  sheet,
   ...aria
 }: {
   anchor: React.RefObject<HTMLElement | null>;
@@ -28,6 +30,8 @@ export function Popover({
   /** cap on the height (it never goes past the bottom of the window) */
   maxHeight?: number;
   children: React.ReactNode;
+  /** on phones: a full-height sheet from the bottom instead of a dropdown */
+  sheet?: boolean;
   id?: string;
   role?: string;
   'aria-label'?: string;
@@ -37,25 +41,32 @@ export function Popover({
   const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
   const close = useRef(onClose);
   close.current = onClose;
+  const asSheet = useViewport() === 'phone' && !!sheet;
 
   useLayoutEffect(() => {
     const place = () => {
       const r = anchor.current?.getBoundingClientRect();
       if (!r) return;
+      const vw = window.innerWidth;
+      // never past the window's edges (narrow screens): slide it back inside
+      const w = Math.min(width ?? ref.current?.offsetWidth ?? 0, vw - 16);
       setPos(
         align === 'right'
-          ? { top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) }
-          : { top: r.bottom + 6, left: Math.max(8, r.left) },
+          ? { top: r.bottom + 6, right: Math.min(Math.max(8, vw - r.right), Math.max(8, vw - 8 - w)) }
+          : { top: r.bottom + 6, left: Math.min(Math.max(8, r.left), Math.max(8, vw - 8 - w)) },
       );
     };
     place();
+    // again once drawn: a popover without a set width is measured then
+    const raf = requestAnimationFrame(place);
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [anchor, align]);
+  }, [anchor, align, width]);
 
   useEffect(() => {
     const down = (e: PointerEvent) => {
@@ -78,6 +89,16 @@ export function Popover({
   }, [anchor]);
 
   if (!pos || typeof document === 'undefined') return null;
+  if (asSheet)
+    return createPortal(
+      <>
+        <div className="kh-popover-dim" aria-hidden="true" />
+        <div ref={ref} {...aria} className={cx('kh-popover', 'kh-popover--sheet', className)}>
+          {children}
+        </div>
+      </>,
+      document.body,
+    );
   return createPortal(
     <div
       ref={ref}
@@ -87,7 +108,7 @@ export function Popover({
         top: pos.top,
         left: pos.left,
         right: pos.right,
-        width,
+        width: width === undefined ? undefined : `min(${width}px, calc(100vw - 16px))`,
         maxHeight: `min(${maxHeight ? `${maxHeight}px` : '100vh'}, calc(100vh - ${Math.round(pos.top) + 16}px))`,
       }}
     >

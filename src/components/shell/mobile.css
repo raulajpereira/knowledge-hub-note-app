@@ -1,0 +1,439 @@
+/* Phones and tablets (D68). Breakpoints: phone < 768 px, tablet 768–1099 px;
+   desktop (≥ 1100 px) is untouched — every rule here sits in one of the two
+   media queries below, or styles elements only phones/tablets render
+   (compact header, drawer, bottom bar, quick capture). */
+
+/* ── Tablets and phones ─────────────────────────────────────────────────── */
+@media (max-width: 1099.98px) {
+  .kh-shell {
+    min-width: 0;
+    height: calc(100dvh / var(--ui-scale, 1));
+  }
+  .kh-shell__grid {
+    grid-template-rows: 52px minmax(0, 1fr) 36px;
+    gap: 12px;
+    padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  }
+  /* until hydration the desktop header and sidebar are still in the page */
+  .kh-hdr:not(.kh-hdr--m),
+  .kh-main > .kh-aside,
+  .kh-main > .kh-handle {
+    display: none;
+  }
+  .kh-main {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* column resize handles inside pages are a desktop thing */
+  .kh-nt-handle,
+  .kh-mt-handle,
+  .kh-cal__resize {
+    display: none !important;
+  }
+}
+
+/* ── Compact header ─────────────────────────────────────────────────────── */
+.kh-hdr--m {
+  gap: 8px;
+}
+.kh-hdr--m .kh-hdr__btn {
+  width: 44px;
+  height: 44px;
+}
+.kh-hdr__mtitle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.kh-hdr__mtitle > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-hdr__macct {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.kh-hdr__msearch {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  max-width: none;
+  height: 46px;
+  margin: auto 0;
+  padding-right: 4px;
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.32 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.22 * var(--sf-k)))
+  );
+  backdrop-filter: blur(var(--kh-blur-header)) saturate(160%);
+  animation: kh-fade 0.15s ease-out;
+}
+/* the open search covers the header row */
+.kh-hdr--m[data-searching] > :not(.kh-hdr__msearch) {
+  visibility: hidden;
+}
+.kh-hdr__mclose {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(var(--w) / 0.12);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* ── Navigation drawer ──────────────────────────────────────────────────── */
+.kh-navdrawer {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  pointer-events: none;
+  color: var(--text);
+}
+.kh-navdrawer[data-open] {
+  pointer-events: auto;
+}
+.kh-navdrawer__dim {
+  position: absolute;
+  inset: 0;
+  background: rgb(var(--d) / calc(0.32 * var(--d-k)));
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.kh-navdrawer[data-open] .kh-navdrawer__dim {
+  opacity: 1;
+}
+.kh-navdrawer__panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(340px, 86vw);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  border-radius: 0 28px 28px 0;
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.3 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.18 * var(--sf-k)))
+  );
+  backdrop-filter: blur(var(--kh-blur-modal)) saturate(160%);
+  border: 1px solid rgb(var(--w) / 0.2);
+  border-left: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 30px 70px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
+  transform: translateX(-104%);
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+}
+.kh-navdrawer[data-open] .kh-navdrawer__panel {
+  transform: none;
+}
+.kh-navdrawer__top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kh-navdrawer__top .kh-hdr__brand {
+  height: 44px;
+}
+.kh-navdrawer__top .kh-hdr__word {
+  display: block;
+}
+.kh-navdrawer__acts {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+.kh-navdrawer__acts .kh-hdr__btn {
+  width: 44px;
+  height: 44px;
+}
+/* the sidebar inside: the panel already is the glass */
+.kh-navdrawer .kh-aside {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kh-navdrawer__panel,
+  .kh-navdrawer__dim {
+    transition: none;
+  }
+}
+
+/* ── Bottom bar (phones) ────────────────────────────────────────────────── */
+.kh-bnav {
+  position: fixed;
+  z-index: 60;
+  left: max(10px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  height: var(--kh-bnav-h, 64px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 2px;
+  padding: 0 6px;
+  border-radius: 26px;
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.26 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.14 * var(--sf-k)))
+  );
+  backdrop-filter: blur(var(--kh-blur-footer)) saturate(160%);
+  border: 1px solid rgb(var(--w) / 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 14px 40px rgb(0 0 0 / calc(0.3 * var(--sh-k)));
+  color: var(--text);
+}
+.kh-bnav__item {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 18px;
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
+  text-decoration: none;
+  font-size: 10.5px;
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+}
+.kh-bnav__item > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-bnav__item[aria-current='page'] {
+  color: var(--text);
+  background: rgb(var(--w) / 0.16);
+  font-weight: 600;
+}
+.kh-bnav__plus {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  margin: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--ink-inv);
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 8px 22px rgb(0 0 0 / calc(0.3 * var(--sh-k)));
+  -webkit-tap-highlight-color: transparent;
+}
+.kh-bnav__plus:active {
+  transform: scale(0.95);
+}
+
+/* Quick capture sheet */
+.kh-qc {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.kh-qc__item {
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.1);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.kh-qc__item:active {
+  background: rgb(var(--w) / 0.18);
+}
+.kh-qc__icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgb(var(--w) / 0.14);
+}
+
+/* Back bar of a detail pane on phones (list → detail) */
+.kh-mback {
+  flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--kh-divider);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.22 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.12 * var(--sf-k)))
+  );
+  backdrop-filter: blur(var(--kh-blur-header)) saturate(150%);
+}
+.kh-mback__btn {
+  height: 44px;
+  min-width: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(var(--w) / 0.12);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kh-mback__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+/* "Pastas" toggle of a list column (phones/tablets) */
+.kh-mfolders {
+  flex: none;
+  max-width: 100%;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.1);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kh-mfolders > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Phones ─────────────────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+  :root {
+    --kh-bnav-h: 64px;
+  }
+  /* lighter glass: smaller blur radii (the user's own value is a ceiling) */
+  html:root {
+    --kh-blur-btn: min(var(--glass-blur-user, 12px), 12px);
+    --kh-blur-aside: min(var(--glass-blur-user, 18px), 18px);
+    --kh-blur-footer: min(var(--glass-blur-user, 18px), 18px);
+    --kh-blur-panel: min(var(--glass-blur-user, 18px), 18px);
+    --kh-blur-menu: min(var(--glass-blur-user, 20px), 20px);
+    --kh-blur-modal: min(var(--glass-blur-user, 22px), 22px);
+    --kh-blur-header: min(var(--glass-blur-user, 18px), 18px);
+  }
+  .kh-page-card::before {
+    backdrop-filter: blur(min(var(--glass-blur-user, 16px), 16px)) saturate(140%);
+  }
+  .kh-shell__grid {
+    grid-template-rows: 52px minmax(0, 1fr);
+    gap: 10px;
+    padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+      calc(var(--kh-bnav-h) + max(8px, env(safe-area-inset-bottom)) + 10px)
+      max(10px, env(safe-area-inset-left));
+  }
+  .kh-ticker {
+    display: none;
+  }
+  /* the AI button floats above the bottom bar */
+  .kh-ai-fab {
+    right: max(14px, env(safe-area-inset-right));
+    bottom: calc(var(--kh-bnav-h) + max(8px, env(safe-area-inset-bottom)) + 14px);
+  }
+  .kh-page-card {
+    border-radius: 24px;
+  }
+  /* the AI button steps aside while a sheet, dialog or the menu is open */
+  body:has(.kh-overlay, .kh-popover--sheet, .kh-navdrawer[data-open]) .kh-ai-fab {
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* the assistant panel: full width between the header and the AI button */
+  .kh-ai {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: calc(var(--kh-bnav-h) + max(8px, env(safe-area-inset-bottom)) + 70px);
+    width: auto !important;
+    height: auto !important;
+  }
+  .kh-ai__rs {
+    display: none;
+  }
+}

@@ -1211,22 +1211,6 @@
   white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .kh-nt {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
-  }
-  .kh-nt-col {
-    border-right: 0;
-    border-bottom: 1px solid var(--kh-divider);
-  }
-  .kh-nt-handle {
-    display: none;
-  }
-  .kh-nt-editor__body {
-    padding: 24px 20px 40px;
-  }
-}
 /* "Nova pasta" + the round "Nova pasta partilhada" next to it (prototype nbNewShared) */
 .kh-nt-newrow {
   flex-shrink: 0;
@@ -1463,5 +1447,168 @@
   }
   .kh-hist__list {
     max-height: 30vh;
+  }
+}
+
+/* ── Phones and tablets (D68) ─────────────────────────────────────────── */
+@media (max-width: 1099.98px) {
+  /* the folders open from the list's "Pastas" toggle (a sheet) */
+  .kh-nt-col > .kh-nt-folders {
+    display: none;
+  }
+  .kh-nt-list__title {
+    min-width: 0;
+  }
+  /* the count is in the folders sheet */
+  .kh-nt-list__title:has(.kh-mfolders) .kh-nt-list__count {
+    display: none;
+  }
+  /* room for the inspector toggle at the bar's right end */
+  .kh-nt:has(> .kh-nt-insp-btn) .kh-nt-editor__bar {
+    padding-right: 60px;
+  }
+  .kh-nt-fsheet .kh-nt-folders {
+    max-height: none;
+    padding: 0;
+    border: 0;
+  }
+  .kh-nt-fsheet .kh-nt-folder {
+    height: 50px;
+  }
+  .kh-nt-fsheet .kh-nt-folder:not([data-menu]) .kh-nt-folder__acts,
+  .kh-nt-folder[data-menu] .kh-nt-folder__name,
+  .kh-nt-folder[data-menu] .kh-nt-folder__n,
+  .kh-nt-folder[data-menu] .kh-sh-mark {
+    display: none;
+  }
+  .kh-nt-folder[data-menu] .kh-nt-folder__acts {
+    flex: 1;
+    justify-content: flex-end;
+  }
+  .kh-nt-fsheet .kh-nt-folder__acts button {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-nt-folder__more {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(var(--w) / 0.1);
+    color: var(--ink);
+    font: inherit;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .kh-nt-fsheet .kh-nt-newfolder,
+  .kh-nt-fsheet .kh-nt-newshared {
+    height: 46px;
+  }
+  .kh-nt-fsheet .kh-nt-newshared {
+    width: 46px;
+  }
+  /* editor: the toolbar scrolls sideways instead of wrapping */
+  .kh-ne-tools {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .kh-ne-tools::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-ne-tools button {
+    flex: none;
+  }
+  .kh-nt-doc img,
+  .kh-nt-doc video {
+    max-width: 100%;
+    height: auto;
+  }
+  .kh-nt-editor__body {
+    padding: 26px 24px 48px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .kh-nt.kh-page-card {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* one pane at a time (data-pane from the URL's ?n=); before hydration: the list */
+  .kh-nt:not([data-pane='detail']) > :is(.kh-nt-editor, .kh-nt-insp, .kh-nt-insp-btn),
+  .kh-nt[data-pane='detail'] > .kh-nt-col {
+    display: none;
+  }
+  .kh-nt-col {
+    border-right: 0;
+  }
+  .kh-nt-list__head {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .kh-nt-list__items {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .kh-nt-list__new,
+  .kh-nt-list__head button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* the detail's top bar: ← + actions, then the toolbar on its own row */
+  .kh-nt-editor__bar {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .kh-nt-editor__bar > .kh-nt-crumb {
+    display: none;
+  }
+  .kh-nt-editor__bar > .kh-ne-tools,
+  .kh-nt-editor__bar > .kh-nt-ro {
+    order: 5;
+    flex: 1 1 100%;
+  }
+  .kh-nt-editor__bar .kh-nt-round {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-ne-tools button {
+    min-width: 40px;
+    height: 38px;
+  }
+  .kh-nt-editor__body {
+    padding: 20px 16px 40px;
+    gap: 16px;
+  }
+  .kh-nt-title {
+    font-size: 28px;
+  }
+  /* the inspector toggle sits at the end of the toolbar row */
+  .kh-nt-insp-btn {
+    top: 60px;
+    right: 10px;
+    width: 42px;
+    height: 42px;
+  }
+  .kh-nt:has(> .kh-nt-insp-btn) .kh-nt-editor__bar {
+    padding-right: 10px;
+  }
+  .kh-nt:has(> .kh-nt-insp-btn) .kh-nt-editor__bar > :is(.kh-ne-tools, .kh-nt-ro) {
+    margin-right: 50px;
+  }
+  .kh-nt-insp--float {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    overflow: auto;
   }
 }

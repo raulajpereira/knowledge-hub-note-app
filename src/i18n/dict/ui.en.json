@@ -1149,5 +1149,21 @@
   "nf_reservedD": "They no longer receive email and nobody else can take them until the date shown; you can go back to any of them.",
   "nf_reservedUntil": "reserved until {d}",
   "nf_back": "Go back to this one",
-  "nf_backT": "Go back to this address?"
+  "nf_backT": "Go back to this address?",
+  "mob_menu": "Menu",
+  "mob_closeMenu": "Close menu",
+  "mob_search": "Search",
+  "mob_searchClose": "Close search",
+  "mob_tabs": "Main navigation",
+  "mob_capture": "Create",
+  "mob_newNote": "New note",
+  "mob_newTask": "New task",
+  "mob_newVoice": "Voice note",
+  "mob_newMeeting": "Meeting record",
+  "mob_back": "Back",
+  "mob_folders": "Folders",
+  "mob_more": "More actions",
+  "mob_prevDay": "Previous day",
+  "mob_nextDay": "Next day",
+  "mob_homeHint": "On a phone the cards stack one per line. You can add, remove and reorder them here (← →); use a larger screen to change widths and rows."
 }

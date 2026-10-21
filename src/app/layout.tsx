@@ -14,7 +14,9 @@ export const metadata: Metadata = {
 
 export async function generateViewport(): Promise<Viewport> {
   const light = (await cookies()).get(THEME_COOKIE)?.value === 'light';
-  return { themeColor: light ? '#ece7e1' : '#121315' };
+  // viewport-fit=cover: phones draw under the notch / home bar; the shell pads
+  // with env(safe-area-inset-*) (D68)
+  return { themeColor: light ? '#ece7e1' : '#121315', viewportFit: 'cover' };
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

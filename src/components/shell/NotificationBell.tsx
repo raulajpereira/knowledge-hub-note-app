@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Popover } from '@/components/ui';
+import { Popover, useViewport } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { fmtDue } from '@/lib/tasks';
@@ -92,6 +92,7 @@ export function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const paged = useRef(false);
+  const phone = useViewport() === 'phone';
 
   const load = useCallback(async () => {
     try {
@@ -225,6 +226,7 @@ export function NotificationBell() {
           width={380}
           maxHeight={560}
           className="kh-ntf"
+          sheet
           role="dialog"
           aria-label={t('shell_notifications')}
         >
@@ -238,6 +240,17 @@ export function NotificationBell() {
             >
               {t('nt_markAll')}
             </button>
+            {phone && (
+              <button
+                type="button"
+                className="kh-x"
+                aria-label={t('i_close')}
+                title={t('i_close')}
+                onClick={() => setOpen(false)}
+              >
+                <Icon name="close" size={15} sw={2.2} />
+              </button>
+            )}
           </div>
           <div className="kh-ntf__list" role="list">
             {items === null ? (
