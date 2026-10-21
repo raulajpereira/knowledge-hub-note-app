@@ -435,9 +435,9 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
 - Opcional: chaves Cloudflare Turnstile e `ADMIN_IP_ALLOWLIST` no `.env`.
-- Corte final (v2 na raiz, v1 em `/v1`, `DEPLOY.md §7`) — quando quiser, em conjunto.
+- Passagem para a v2 na raiz e fim da v1 (`DEPLOY.md §7`, scripts em `infra/cutover/`) — em conjunto.
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
-- Backups adiados por decisão do utilizador (D17).
+- Backups semanais para o PC (`DEPLOY.md §6`): palavra-passe em `/root/.kh-backup-pass`, cron de domingo e tarefa no PC.
 - Caixa SMTP da Hostinger para envio (`no-reply@knowledge-hub.cloud`).
 - Caixa `entrada@knowledge-hub.cloud` na Hostinger + `INBOUND_IMAP_*` no `.env` para o Email para a app (DEPLOY §5d); confirmar se `entrada+x@` chega (senão, apanha-tudo).
 - Monitor externo grátis para `/api/health?strict=1` (UptimeRobot ou semelhante) — `DEPLOY.md §6b`.
@@ -490,6 +490,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 | D45 | Revogar código só impede novos registos com ele; quem já entrou mantém o acesso e nada é apagado (revisto no lote B; antes cortava o acesso e apagava aos 30 dias) | utilizador |
 | D61 | Pastas partilhadas: convite a quem já tem conta tem de ser aceite; o dono distingue membros (com conta) de externos (convite por email) | utilizador |
 | D66 | Email para a app: código do endereço escolhido pela pessoa (3–30, `[a-z0-9._-]`, começa por letra, palavras reservadas bloqueadas), único na BD; código antigo reservado 30 dias para o mesmo dono (pode voltar), depois livre; terceiro destino "Email" (importa para Emails como `.eml`, pasta própria em `inbound_email_folder_id`) | utilizador + Claude |
+| D67 | Fim da v1: a v2 passa à raiz com o Caddy; Nginx/CloudPanel, PHP, MySQL e PM2 desligados (apagados só depois, `v1-purge.sh`). Backups semanais (domingo) cifrados com 7-Zip AES-256 na VPS (últimos 4), copiados para o PC do utilizador por `pull-to-pc.ps1`; backup final da v1 guardado no PC | utilizador + Claude |
 | D65 | Biblioteca de Código SAP: Módulos de Função como objetos próprios (`FUNC`) ligados ao grupo pelo nome (texto livre com sugestões, não por id — um grupo pode nem estar na biblioteca); a migração só move os de grupos não apagados; "Implementado @" é texto livre (não ligado aos Clientes do Management); o nome do módulo acompanha sempre o nome do objeto e não se edita no nó; os rótulos dos formulários continuam em inglês como no SAP ("Function group") | utilizador + Claude |
 | D64 | Lote C: notificações em tabela própria (worker precisa do fuso e hora do resumo); email de entrada por IMAP numa caixa Hostinger com endereço por pessoa; exportação sem Lixo nem cofre; vistas com prazo relativo; tema/densidade/página inicial/cores de etiquetas em user_prefs; pesquisa semântica com modelo local + pgvector; OCR com tesseract.js | utilizador + Claude |
 | D63 | Registos Reuniões: a pergunta para criar tarefas das coisas a fazer aparece ao sair do registo; API Playground: pastas com subpastas e ordem | utilizador |

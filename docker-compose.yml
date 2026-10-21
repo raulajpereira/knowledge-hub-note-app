@@ -166,8 +166,6 @@ services:
     environment:
       ACME_EMAIL: ${ACME_EMAIL:-}
       KH_DOMAIN: ${KH_DOMAIN:-knowledge-hub.cloud}
-      KH_V1_UPSTREAM: ${KH_V1_UPSTREAM:-host.docker.internal:4000}
-    extra_hosts: ['host.docker.internal:host-gateway']
     volumes:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddydata:/data

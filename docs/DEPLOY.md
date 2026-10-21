@@ -186,15 +186,45 @@ O worker trata **todas** as mensagens da Caixa de entrada (lidas ou não) e tira
 de lá depois (no Gmail ficam arquivadas em "Todo o correio"); por isso a conta não
 deve ser usada para mais nada.
 
-## 6. Backups
+## 6. Backups (semanais, para o PC — D67)
 
+Todos os domingos às 03:15 a VPS faz um arquivo **cifrado** (7-Zip AES-256, nomes
+dos ficheiros também escondidos) com a base de dados, os ficheiros (MinIO) e o
+`.env`, em `/var/backups/knowledgehub/kh-v2-AAAA-MM-DD.7z` (+ `.sha256`); ficam os
+últimos 4. O PC vai buscá-los (`pull-to-pc.ps1`). O `.env` vai junto porque sem a
+`ENCRYPTION_KEY` o cofre e as chaves de IA não se leem depois de repor.
+
+**Na VPS (uma vez, como root):**
 ```bash
-cp infra/backup/.env.backup.example infra/backup/.env.backup && chmod 600 infra/backup/.env.backup
-nano infra/backup/.env.backup     # destino restic fora da VPS (ex. Backblaze B2)
+# palavra-passe dos backups — guardar no gestor de palavras-passe: sem ela não se abrem
+read -rsp 'Palavra-passe dos backups: ' P && printf %s "$P" > /root/.kh-backup-pass && chmod 600 /root/.kh-backup-pass; unset P
+bash /opt/knowledgehub-v2/infra/backup/local-backup.sh        # primeiro backup (testa tudo)
 crontab -e
-# 15 3 * * *  /opt/knowledgehub-v2/infra/backup/backup.sh       >> /var/log/kh-backup.log 2>&1
-# 30 4 1 * *  /opt/knowledgehub-v2/infra/backup/restore-test.sh >> /var/log/kh-backup.log 2>&1
+# 15 3 * * 0  /opt/knowledgehub-v2/infra/backup/local-backup.sh >> /var/log/kh-backup.log 2>&1
 ```
+
+**No PC (Windows 10/11, uma vez):**
+1. PowerShell: `ssh-keygen -t ed25519` (Enter em tudo) e depois
+   `type $HOME\.ssh\id_ed25519.pub | ssh root@<IP-da-VPS> "cat >> ~/.ssh/authorized_keys"`
+   (pede a palavra-passe de root desta vez; a partir daí entra com a chave).
+2. Guardar `infra/backup/pull-to-pc.ps1` numa pasta (ex. `Documentos\KnowledgeHub-backups`).
+3. Testar: `powershell -ExecutionPolicy Bypass -File pull-to-pc.ps1 -Vps root@<IP-da-VPS>`
+   → copia os `.7z` novos e confere o sha256 (registo em `copias.log`).
+4. Agendador de Tarefas → Criar tarefa básica → semanal, domingo 10:00 → Iniciar um programa:
+   `powershell` com argumentos `-ExecutionPolicy Bypass -File "C:\...\pull-to-pc.ps1" -Vps root@<IP-da-VPS>`;
+   nas propriedades marcar "Executar a tarefa assim que possível após falhar um início agendado"
+   (se o PC estiver desligado ao domingo, copia quando ligar).
+
+**Abrir um backup**: 7-Zip no PC → pede a palavra-passe. **Repor** (VPS nova ou desastre),
+com o arquivo extraído em `~/repor`:
+```bash
+cd /opt/knowledgehub-v2 && cp ~/repor/env.txt .env && docker compose up -d --wait postgres minio
+docker compose exec -T postgres pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner < ~/repor/knowledgehub.dump
+docker compose run --rm -v ~/repor/files:/mirror --entrypoint sh minio-init -c \
+  'mc alias set kh http://minio:9000 "$S3_ACCESS_KEY" "$S3_SECRET_KEY" && mc mirror --overwrite /mirror "kh/$S3_BUCKET"'
+docker compose up -d
+```
+(Alternativa automática fora da VPS, diária: `infra/backup/backup.sh` com restic + Backblaze B2.)
 
 ## 6b. Monitorização (leve, sem serviços extra)
 - O **worker** verifica a cada 5 minutos a base de dados, o Redis, o MinIO, o endereço público (`APP_URL/api/health`), a fila de emails e os erros do servidor da última hora. Quando algo falha, envia email ao Manager e aos Administradores da consola (de novo a cada 6 h enquanto durar) e outro quando volta ao normal. Precisa do SMTP configurado (§5c).
@@ -272,67 +302,60 @@ Estado e "Reindexar": Definições › Assistente IA › *Pesquisa por significa
 em fila, ficheiros com texto reconhecido; Reindexar no máximo 2× por hora). Logs: `docker compose logs
 worker | grep '\[search\]'`.
 
-## 7. Corte final (v2 na raiz, v1 em `/v1`) — fazer em conjunto
+## 7. Passagem para a v2 na raiz e fim da v1 — fazer em conjunto
 
-Janela de manutenção de ~30 min: entre o passo 4 e o passo 6 a v1 e a v2
-ficam indisponíveis (a v1 já está em `/v1` e a v2 já foi construída para a
-raiz, mas o Nginx ainda encaminha à moda antiga). Fazer os passos 4 → 6 seguidos.
-Todos os utilizadores terão de voltar a entrar (os cookies eram de `/v2`) e
-quem instalou a app (PWA) deve reinstalá-la.
+A v1 deixa de existir (os dados já foram passados à mão, D4) e a v2 passa a
+`https://knowledge-hub.cloud`. O Nginx/CloudPanel, o PHP, o MySQL e o PM2 da v1
+desligam-se (libertam memória); o Caddy da v2 serve 80/443 com HTTPS automático.
+Todos voltam a entrar (os cookies eram de `/v2`); quem instalou a app (PWA)
+reinstala. Endereços antigos `/v2/...` e `/v1` redirecionam para a raiz.
 
-**0. Antes do dia**
-- DNS: `knowledge-hub.cloud` e `www.knowledge-hub.cloud` (A e, se existir, AAAA)
-  apontam para a VPS (`dig +short knowledge-hub.cloud`).
-- Desligar o Nginx também desliga o CloudPanel (`:8443`) e quaisquer outros
-  sites dele — confirmar que nada mais depende dele.
-- Anotar o tag da imagem atual (para reverter): `grep KH_IMAGE_TAG .env`.
-- Confirmar as migrações aplicadas:
-  `docker compose exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c 'select count(*) from drizzle.__drizzle_migrations'`
-  (deve ser igual ao número de ficheiros `drizzle/*.sql`).
-
-**1. Cópias (obrigatório — os backups automáticos ainda estão adiados, D17)**
+**1. Backups finais (obrigatório, antes de tudo)** — como root na VPS:
 ```bash
-mkdir -p ~/corte-$(date +%F) && cd ~/corte-$(date +%F)
-set -a; . /opt/knowledgehub-v2/.env; set +a
-# v2: base de dados e ficheiros
-docker compose -f /opt/knowledgehub-v2/docker-compose.yml exec -T postgres \
-  pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB" > v2.dump
-docker run --rm --network knowledgehub_default -e S3_ACCESS_KEY -e S3_SECRET_KEY -e S3_BUCKET \
-  -v "$PWD/minio:/out" --entrypoint sh minio/mc -c \
-  'mc alias set kh http://minio:9000 "$S3_ACCESS_KEY" "$S3_SECRET_KEY" && mc mirror kh/"$S3_BUCKET" /out'
-# v1: mysqldump + server/uploads/
+cd /opt/knowledgehub-v2
+# (uma vez) palavra-passe dos backups, ver §6
+bash infra/backup/local-backup.sh          # v2 → /var/backups/knowledgehub/kh-v2-<data>.7z
+bash infra/cutover/v1-backup.sh            # v1 → kh-v1-final-<data>.7z (MySQL + ficheiros + .env)
+ls -lh /var/backups/knowledgehub
 ```
-Copiar a pasta para fora da VPS (`scp -r`) antes de continuar. Durante os
-primeiros dias pôr `STORAGE_SWEEP_DRY_RUN=true` no `.env` (a limpeza diária só
-reporta o que apagaria).
+Copiar os dois `.7z` para o PC (`pull-to-pc.ps1`, ou WinSCP) e **abrir no 7-Zip para
+confirmar** antes de continuar. Anotar o tag atual (para reverter):
+`grep -E '^KH_IMAGE_TAG|^APP_URL' .env` e `docker compose images web`.
 
-**2. GitHub**: variable `KH_BASE_PATH` = `/`.
+**2. GitHub**: Settings → Secrets and variables → Actions → *Variables* →
+`KH_BASE_PATH` = `/`. E desligar o deploy da v1: Actions → *Deploy to VPS* → ⋯ →
+*Disable workflow*.
 
-**3. `.env` da v2** (na VPS): `APP_URL=https://knowledge-hub.cloud`,
-`NEXT_PUBLIC_BASE_PATH=` (vazio), `ACME_EMAIL=...`, `COMPOSE_PROFILES=edge`.
-(Se o caminho de `APP_URL` não coincidir com o base path, os logs da app mostram um aviso `[env] WARNING`.)
+**3. `.env` da v2**: `APP_URL=https://knowledge-hub.cloud`, `NEXT_PUBLIC_BASE_PATH=`
+(vazio), `ACME_EMAIL=<o teu email>`; `COMPOSE_PROFILES` fica vazio por agora.
 
-**4. v1**: na pasta da v1, `git fetch origin v1 && git checkout v1`, acrescentar
-`BASE_PATH=/v1` ao `server/.env` e `bash deploy.sh`.
+**4. Deploy da v2 para a raiz**: um push para `v2` (ou Actions → v2 → Run workflow).
+Durante o deploy a v1 continua a funcionar; a v2 em `/v2` fica indisponível
+uns minutos (já foi construída para a raiz, o Nginx ainda a serve em `/v2`).
 
-**5. v2**: correr o workflow (Actions › v2 › Run workflow) — constrói a imagem sem
-`/v2` e faz o deploy; com `COMPOSE_PROFILES=edge` o `docker compose up` passa a
-incluir o Caddy.
+**5. Trocar para o Caddy (alguns minutos sem site)** — logo a seguir ao deploy ficar verde:
+```bash
+cd /opt/knowledgehub-v2
+bash infra/cutover/v1-stop.sh               # desliga v1 (PM2), Nginx, PHP-FPM, MySQL, FTP — nada é apagado
+sed -i 's/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=edge/' .env
+docker compose up -d --no-deps caddy       # só o Caddy, em 80/443 (o web/worker do deploy ficam como estão)
+docker compose logs caddy | grep -iE 'certificate obtained|error'
+curl -sI https://knowledge-hub.cloud | head -1              # 200
+curl -sI https://knowledge-hub.cloud/v2/app | grep -i location   # → /app
+```
+A firewall do hPanel tem de deixar entrar 80 e 443 (TCP; 443/UDP opcional).
 
-**6. Trocar o proxy**: `sudo systemctl disable --now nginx` e
-`docker compose up -d caddy`. Verificar: `docker compose logs caddy | grep -i certificate`,
-`curl -I https://knowledge-hub.cloud` (200), `curl -I https://knowledge-hub.cloud/v2/app`
-(308 → `/app`), `curl -I https://knowledge-hub.cloud/v1/` (v1).
+**6. Depois**: monitor externo (§6b) para `https://knowledge-hub.cloud/api/health?strict=1`;
+entrar, abrir notas e ficheiros; o Email para a app e os emails continuam iguais.
+Ativar os backups semanais (§6, cron + PC).
 
-**7. Depois**: atualizar o monitor externo (§6b) para
-`https://knowledge-hub.cloud/api/health?strict=1`; entrar, abrir algumas notas e
-ficheiros; ver `docker compose logs worker` na manhã seguinte (limpeza em modo de ensaio).
+**7. Apagar a v1 de vez** (passados uns dias, com o backup final no PC):
+`bash infra/cutover/v1-purge.sh` — apaga o processo PM2, a pasta e a base MySQL
+da v1 (pede para escrever APAGAR). Os serviços do CloudPanel ficam desligados.
 
-**Reverter** (se algo correr mal):
-1. `docker compose stop caddy && sudo systemctl enable --now nginx`.
-2. v1: tirar `BASE_PATH` do `server/.env` e `bash deploy.sh`.
-3. v2: `.env` de volta a `APP_URL=https://knowledge-hub.cloud/v2`,
-   `NEXT_PUBLIC_BASE_PATH=/v2`, `COMPOSE_PROFILES=` e `KH_IMAGE_TAG=<tag anotado>`;
-   `docker compose up -d` (a imagem `/v2` continua no GHCR, não é preciso reconstruir).
-4. GitHub: `KH_BASE_PATH` de volta a `/v2`.
-5. Se houve perda de dados: `pg_restore -c` do `v2.dump` e `mc mirror` de volta.
+**Reverter** (antes do passo 7):
+1. `docker compose stop caddy` e `bash infra/cutover/v1-stop.sh --undo` (Nginx, MySQL, v1 de volta).
+2. `.env` da v2: `APP_URL=https://knowledge-hub.cloud/v2`, `NEXT_PUBLIC_BASE_PATH=/v2`,
+   `COMPOSE_PROFILES=`, `KH_IMAGE_TAG=<tag anotado>`; `docker compose up -d`.
+3. GitHub: `KH_BASE_PATH` de volta a `/v2`; voltar a ligar o workflow da v1.
+4. Perda de dados: repor o backup do passo 1 (§6).

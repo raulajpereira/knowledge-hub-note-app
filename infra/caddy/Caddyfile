@@ -1,8 +1,6 @@
-# Used only after the cut-over (`docker compose --profile edge up -d`), when
-# Caddy replaces the host Nginx on 80/443:
-#   https://knowledge-hub.cloud/      → v2 (web container)
-#   https://knowledge-hub.cloud/v1/   → v1 (still running on the host via PM2,
-#                                       with BASE_PATH=/v1 in its server/.env)
+# Used after the cut-over (COMPOSE_PROFILES=edge), when Caddy replaces the
+# host Nginx on 80/443 and the v1 is gone (docs/DEPLOY.md §7):
+#   https://knowledge-hub.cloud/  → the app (web container)
 {
 	email {$ACME_EMAIL}
 }
@@ -22,12 +20,9 @@
 		max_size 50MB
 	}
 
-	redir /v1 /v1/ permanent
-	handle /v1/* {
-		reverse_proxy {$KH_V1_UPSTREAM}
-	}
-
-	# Old bookmarks of the pre-cut-over address.
+	# Old bookmarks: the v1 is gone, the v2 left /v2.
+	redir /v1 / permanent
+	redir /v1/* / permanent
 	redir /v2 / permanent
 	@v2 path_regexp v2 ^/v2(/.*)$
 	redir @v2 {re.v2.1}{?query} permanent
