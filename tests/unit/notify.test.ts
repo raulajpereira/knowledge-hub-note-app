@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   inboundAddress,
+  inboundCodeProblem,
   inboundToken,
+  isInboundCode,
   localParts,
   notifyPrefs,
   NOTIFY_DEFAULTS,
@@ -90,13 +92,88 @@ describe('inbound address token', () => {
     expect(findToken(H('To: entrada@knowledge-hub.cloud'), BASE)).toBeNull();
     expect(findToken(H(`To: xentrada+${TOKEN}@knowledge-hub.cloud`), BASE)).toBeNull();
     expect(findToken(H(`To: entrada+${TOKEN}@knowledge-hub.cloud.evil.pt`), BASE)).toBeNull();
-    expect(findToken(H(`To: entrada+${TOKEN.slice(0, 10)}@knowledge-hub.cloud`), BASE)).toBeNull();
+    // too short / too long / a "+" or ".." inside / bad first or last character
+    expect(findToken(H('To: entrada+ab@knowledge-hub.cloud'), BASE)).toBeNull();
+    expect(findToken(H(`To: entrada+${'a'.repeat(31)}@knowledge-hub.cloud`), BASE)).toBeNull();
+    expect(findToken(H('To: entrada+a+bcd@knowledge-hub.cloud'), BASE)).toBeNull();
+    expect(findToken(H('To: entrada+raul..p@knowledge-hub.cloud'), BASE)).toBeNull();
+    expect(findToken(H('To: entrada+.raul@knowledge-hub.cloud'), BASE)).toBeNull();
+    expect(findToken(H('To: entrada+raul.@knowledge-hub.cloud'), BASE)).toBeNull();
     expect(findToken(H(`Subject: entrada+${TOKEN}@knowledge-hub.cloud`), BASE)).toBeNull();
     expect(findToken(H(`To: entrada+${TOKEN}@knowledge-hubXcloud`), BASE)).toBeNull();
   });
 
+  it('finds chosen codes with dots, dashes and underscores', () => {
+    const G = 'kh.entrada@gmail.com';
+    expect(findToken(H('To: Raul <kh.entrada+raulpereira@gmail.com>'), G)).toBe('raulpereira');
+    expect(findToken(H('To: KH.Entrada+Raul.Pereira_2-x@GMAIL.com'), G)).toBe('raul.pereira_2-x');
+    expect(findToken(H('To: a@b.pt, kh.entrada+raul-p@gmail.com, c@d.pt'), G)).toBe('raul-p');
+    expect(findToken(H('Delivered-To: kh.entrada+r.p@gmail.com'), G)).toBe('r.p');
+    expect(findToken(H(`To: "kh.entrada+${'b'.repeat(30)}@gmail.com"`), G)).toBe('b'.repeat(30));
+    // the dot of the base local part is literal, not "any character"
+    expect(findToken(H('To: khxentrada+raulpereira@gmail.com'), G)).toBeNull();
+    expect(findToken(H('To: kh.entrada+raulpereira@gmail.com.evil.pt'), G)).toBeNull();
+    // the first valid one wins when an earlier one in the same header is malformed
+    expect(findToken(H('To: kh.entrada+a..b@gmail.com, kh.entrada+ana@gmail.com'), G)).toBe('ana');
+  });
+
   it('reads unfolded header values in order', () => {
     expect(headerValues(H('Received: a\r\n\tb', 'Received: c'), 'received')).toEqual(['a b', 'c']);
+  });
+});
+
+describe('inbound chosen codes', () => {
+  it('accepts lower-case letters, digits and . - _, 3 to 30 characters, starting with a letter', () => {
+    for (const ok of [
+      'raulpereira',
+      'raul.pereira',
+      'raul_p-2',
+      'abc',
+      'a'.repeat(30),
+      'RaulPereira',
+      ' ana ',
+    ])
+      expect(inboundCodeProblem(ok), ok).toBeNull();
+    for (const bad of [
+      'ab',
+      'a'.repeat(31),
+      '1raul',
+      '.raul',
+      '_raul',
+      'raul.',
+      'raul-',
+      'raul_',
+      'raul..p',
+      'raul+p',
+      'raul p',
+      'raúl',
+      'raul@p',
+      '',
+    ])
+      expect(inboundCodeProblem(bad), bad).toBe('invalid');
+  });
+
+  it('blocks reserved names, also written with separators or in capitals', () => {
+    for (const r of [
+      'admin',
+      'Postmaster',
+      'no-reply',
+      'no.reply',
+      'noreply',
+      'mailer-daemon',
+      'suporte',
+      'teste',
+      'entrada',
+    ])
+      expect(inboundCodeProblem(r), r).toBe('reserved');
+    expect(inboundCodeProblem('admin.raul')).toBeNull();
+  });
+
+  it('random tokens are valid address codes (old addresses keep working)', () => {
+    expect(isInboundCode(TOKEN)).toBe(true);
+    expect(isInboundCode('2bcdefghijklmnopqr27')).toBe(true);
+    expect(isInboundCode('raul..p')).toBe(false);
+    expect(isInboundCode('ab')).toBe(false);
   });
 });
 

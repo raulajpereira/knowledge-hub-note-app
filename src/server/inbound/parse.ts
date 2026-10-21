@@ -1,6 +1,6 @@
 // "Email para a app": the pure checks on an incoming message, kept apart from
 // IMAP and the database so they are unit-tested on their own.
-import { INBOUND_TOKEN_LEN } from '@/lib/notify';
+import { INBOUND_CODE_CHARS } from '@/lib/notify';
 
 export type HeaderLine = { key: string; line: string };
 
@@ -30,21 +30,22 @@ export const RECIPIENT_HEADERS = [
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * The token of `<local>+<token>@<domain>` (base = `<local>@<domain>`) found in
- * the recipient headers, case-insensitive; null when there is none.
+ * The code of `<local>+<code>@<domain>` (base = `<local>@<domain>`) found in
+ * the recipient headers, case-insensitive; null when there is none. The code
+ * is a random token or one the person chose (letters, digits, . - _): it
+ * reaches us verbatim (Gmail ignores dots only in the local part before the
+ * "+"), and it can't contain "+" or "@", so the address boundaries are exact.
  */
 export function findToken(lines: HeaderLine[], base: string): string | null {
   const at = base.lastIndexOf('@');
   if (at < 1) return null;
   const re = new RegExp(
-    `(?:^|[^a-z0-9._%+-])${esc(base.slice(0, at))}\\+([a-z2-7]{${INBOUND_TOKEN_LEN}})@${esc(base.slice(at + 1))}(?![a-z0-9.-])`,
-    'i',
+    `(?:^|[^a-z0-9._%+-])${esc(base.slice(0, at))}\\+(${INBOUND_CODE_CHARS})@${esc(base.slice(at + 1))}(?![a-z0-9.-])`,
+    'gi',
   );
   for (const h of RECIPIENT_HEADERS)
-    for (const v of headerValues(lines, h)) {
-      const m = re.exec(v);
-      if (m) return m[1]!.toLowerCase();
-    }
+    for (const v of headerValues(lines, h))
+      for (const m of v.matchAll(re)) if (!m[1]!.includes('..')) return m[1]!.toLowerCase();
   return null;
 }
 

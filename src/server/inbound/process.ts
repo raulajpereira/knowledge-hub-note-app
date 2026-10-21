@@ -8,15 +8,18 @@ import { localParts } from '@/lib/notify';
 import { redis } from '@/lib/redis';
 import { allow } from '@/server/auth/rateLimit';
 import type { AuthContext } from '@/server/auth/session';
+import { importEmail } from '@/server/content/emails';
 import { addNoteImage, createNote, updateNote } from '@/server/content/notes';
 import { createTask, updateTask } from '@/server/content/tasks';
 import { asUser } from '@/server/content/tenant';
+import { ApiError } from '@/server/errors';
 import { getEntitlements } from '@/server/licensing/entitlements';
 import { addNotification } from '@/server/notify/service';
 import { authVerdict, findToken, senderAllowed, textToDoc, type HeaderLine } from './parse';
 
-// "Email para a app": one message from the inbound mailbox becomes a note or
-// a task of the person whose token is in its address. The mailbox itself is
+// "Email para a app": one message from the inbound mailbox becomes a note, a
+// task or an email in Emails (as if its .eml had been imported) of the person
+// whose code is in its address. The mailbox itself is
 // behind MailboxSource (IMAP in production, a fake in the tests).
 
 export const MAX_MESSAGE_BYTES = 25 * 1024 * 1024;
@@ -27,10 +30,22 @@ const IMAGE = /^image\/(png|jpe?g|gif|webp)$/i;
 const MAX_TEXT = 200_000;
 
 export type InboundResult =
-  | { status: 'created'; kind: 'note' | 'task'; id: string; userId: string }
+  | { status: 'created'; kind: Target; id: string; userId: string }
   | {
-      status: 'unknown' | 'disabled' | 'sender' | 'spoof' | 'rate' | 'module' | 'tenant' | 'duplicate';
+      status:
+        | 'unknown'
+        | 'disabled'
+        | 'sender'
+        | 'spoof'
+        | 'rate'
+        | 'module'
+        | 'tenant'
+        | 'duplicate'
+        | 'unreadable';
     };
+
+type Target = 'note' | 'task' | 'email';
+const MODULE_OF: Record<Target, string> = { note: 'notes', task: 'tasks', email: 'emails' };
 
 /** One message of the mailbox; `id` is whatever the source needs to remove it (the IMAP UID). */
 export type InboundMessage = { id: string | number; size?: number; raw: Buffer };
@@ -46,7 +61,8 @@ type Owner = {
   user_id: string;
   tenant_id: string;
   enabled: boolean;
-  target: 'note' | 'task';
+  target: Target;
+  /** the notebook (note) or the Emails folder (email) */
   folder_id: string | null;
   task_type: 'tech' | 'mgmt';
   senders: string[];
@@ -77,7 +93,7 @@ export async function processMessage(raw: Buffer, base: string, now = new Date()
     .where(eq(tenants.id, o.tenant_id));
   if (!t || t.deletedAt || !['trial', 'active', 'past_due'].includes(t.status)) return { status: 'tenant' };
   const { modules } = await getEntitlements(o.tenant_id);
-  if (!modules.includes(o.target === 'note' ? 'notes' : 'tasks')) return { status: 'module' };
+  if (!modules.includes(MODULE_OF[o.target])) return { status: 'module' };
 
   // the same message twice (a retry after a crash, two workers): handled once
   const msgKey = createHash('sha256')
@@ -89,7 +105,7 @@ export async function processMessage(raw: Buffer, base: string, now = new Date()
   if (!(await allow(`inbound:${o.user_id}:${localParts(now, 'UTC').day}`, PER_DAY, 2 * 86_400)))
     return { status: 'rate' };
   try {
-    return await create(m, o, msgKey);
+    return await create(m, raw, o, msgKey);
   } catch (e) {
     // not handled after all: the next run may try again
     await redis()
@@ -101,6 +117,7 @@ export async function processMessage(raw: Buffer, base: string, now = new Date()
 
 async function create(
   m: Awaited<ReturnType<typeof simpleParser>>,
+  raw: Buffer,
   o: Owner,
   msgKey: string,
 ): Promise<InboundResult> {
@@ -124,7 +141,33 @@ async function create(
     : '';
 
   let id: string;
-  if (o.target === 'note') {
+  if (o.target === 'email') {
+    // exactly what importing the .eml in Emails does (parse, sanitize, original + attachments stored)
+    const input = {
+      fileName: `${
+        title
+          .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ')
+          .trim()
+          .slice(0, 200) || 'email'
+      }.eml`,
+      data: new Uint8Array(raw),
+    };
+    try {
+      const e = await importEmail(auth, { ...input, folderId: o.folder_id }).catch(
+        (err: { code?: string }) => {
+          // the chosen folder was deleted: no folder
+          if (err?.code === 'folder_not_found') return importEmail(auth, input);
+          throw err;
+        },
+      );
+      id = e.id;
+    } catch (err) {
+      // nothing in it Emails can read (or over its size limit): discarded, not retried
+      if (err instanceof ApiError && (err.status === 413 || err.status === 422))
+        return { status: 'unreadable' };
+      throw err;
+    }
+  } else if (o.target === 'note') {
     const note = await createNote(auth, { folderId: o.folder_id, title }).catch(
       async (e: { code?: string }) => {
         // the chosen notebook was deleted: no notebook
@@ -153,7 +196,7 @@ async function create(
       tx,
       { tenantId: o.tenant_id, userId: o.user_id },
       {
-        kind: o.target === 'note' ? 'inbound_note' : 'inbound_task',
+        kind: o.target === 'note' ? 'inbound_note' : o.target === 'task' ? 'inbound_task' : 'inbound_email',
         itemType: o.target,
         itemId: id,
         title,

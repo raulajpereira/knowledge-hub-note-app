@@ -30,6 +30,7 @@ const HREF: Record<string, string> = {
   issue: '/app/issues?i=',
   meeting: '/app/meetings?m=',
   note: '/app/notes?n=',
+  email: '/app/emails?m=',
 };
 const hrefOf = (n: Item) =>
   n.itemType === 'share'
@@ -62,6 +63,7 @@ const ICON_OF: Record<string, [string, string]> = {
   share_accepted: ['share', 'oklch(0.8 0.14 150)'],
   inbound_note: ['mail', 'oklch(0.8 0.12 260)'],
   inbound_task: ['mail', 'oklch(0.8 0.12 260)'],
+  inbound_email: ['mail', 'oklch(0.8 0.12 260)'],
 };
 
 function useAgo() {
@@ -184,6 +186,8 @@ export function NotificationBell() {
         return t('nt_inboundNote');
       case 'inbound_task':
         return t('nt_inboundTask');
+      case 'inbound_email':
+        return t('nt_inboundEmail');
       default:
         return '';
     }

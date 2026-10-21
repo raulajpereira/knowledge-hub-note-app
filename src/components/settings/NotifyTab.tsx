@@ -2,8 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useI18n } from '@/i18n/client';
-import { api } from '@/lib/client/api';
-import { MEETING_LEADS, type NotifyPrefs } from '@/lib/notify';
+import { api, isApiFailure } from '@/lib/client/api';
+import {
+  inboundAddress,
+  inboundCodeProblem,
+  normalizeInboundCode,
+  INBOUND_CODE_MAX,
+  MEETING_LEADS,
+  type NotifyPrefs,
+} from '@/lib/notify';
 import { useConfirm, useToast } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
 import '@/components/sap/sap.css';
@@ -13,12 +20,28 @@ import '@/components/sap/sap.css';
 // server has the inbound mailbox configured.
 
 type Inbound = {
+  base: string;
+  code: string | null;
   address: string | null;
   enabled: boolean;
-  target: 'note' | 'task';
+  target: 'note' | 'task' | 'email';
   folderId: string | null;
+  emailFolderId: string | null;
   taskType: 'tech' | 'mgmt';
   senders: string[];
+  reserved: Array<{ code: string; address: string; until: string }>;
+};
+type Folder = { id: string; name: string };
+/** the availability of the code being typed (current = it is already the address) */
+type CodeState = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'reserved' | 'current' | 'rate';
+const CODE_MSG: Partial<Record<CodeState, string>> = {
+  checking: 'nf_codeChecking',
+  available: 'nf_codeAvail',
+  taken: 'nf_codeTaken',
+  invalid: 'nf_codeInvalid',
+  reserved: 'nf_codeReserved',
+  current: 'nf_codeCurrent',
+  rate: 'nf_codeRate',
 };
 type Settings = { prefs: NotifyPrefs; tz: string; inbound: Inbound | null };
 
@@ -48,26 +71,56 @@ function Row({ title, desc, children }: { title: string; desc?: string; children
 }
 
 export function NotifyTab() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const { modules } = useShell();
   const [s, setS] = useState<Settings | null>(null);
-  const [folders, setFolders] = useState<Array<{ id: string; name: string }>>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [emailFolders, setEmailFolders] = useState<Folder[]>([]);
   const [senders, setSenders] = useState('');
+  const [code, setCode] = useState('');
+  const [codeState, setCodeState] = useState<CodeState>('idle');
 
   useEffect(() => {
     api<{ settings: Settings }>('/notifications/settings')
       .then((r) => {
         setS(r.settings);
         setSenders(r.settings.inbound?.senders.join('\n') ?? '');
+        setCode(r.settings.inbound?.code ?? '');
       })
       .catch(() => {});
     if (modules.has('notes'))
-      api<{ folders: Array<{ id: string; name: string }> }>('/folders?kind=notes')
+      api<{ folders: Folder[] }>('/folders?kind=notes')
         .then((r) => setFolders(r.folders))
         .catch(() => {});
+    if (modules.has('emails'))
+      api<{ folders: Folder[] }>('/emails/folders')
+        .then((r) => setEmailFolders(r.folders))
+        .catch(() => {});
   }, [modules]);
+
+  // availability while typing: the rules here first, then the server (debounced)
+  const current = s?.inbound?.code ?? null;
+  const ownReserved = s?.inbound?.reserved.map((r) => r.code).join(' ') ?? '';
+  useEffect(() => {
+    const c = normalizeInboundCode(code);
+    if (!c) return setCodeState('idle');
+    if (c === current) return setCodeState('current');
+    const problem = inboundCodeProblem(c);
+    if (problem && !ownReserved.split(' ').includes(c)) return setCodeState(problem);
+    setCodeState('checking');
+    let live = true;
+    const h = setTimeout(() => {
+      api<{ status: CodeState }>(`/notifications/inbound/code?code=${encodeURIComponent(c)}`)
+        .then((r) => live && setCodeState(r.status))
+        .catch((e: unknown) => live && setCodeState(isApiFailure(e) && e.status === 429 ? 'rate' : 'idle'));
+    }, 350);
+    return () => {
+      live = false;
+      clearTimeout(h);
+    };
+  }, [code, current, ownReserved]);
 
   const save = useCallback(
     async (patch: { prefs?: Partial<NotifyPrefs>; inbound?: Partial<Inbound> }) => {
@@ -97,18 +150,44 @@ export function NotifyTab() {
   const setP = (k: keyof NotifyPrefs) => (v: boolean) => void save({ prefs: { [k]: v } });
   const hasTasks = modules.has('tasks') || modules.has('issues');
   const ib = s.inbound;
-  const ibModules = modules.has('notes') || modules.has('tasks');
+  const ibModules = modules.has('notes') || modules.has('tasks') || modules.has('emails');
+  const typed = normalizeInboundCode(code);
 
+  // the old address stops at once but stays theirs for 30 days: say so before any change
+  const confirmChange = (title: string, label: string) =>
+    !ib?.code || confirm({ title, body: t('nf_codeB'), confirmLabel: label, cancelLabel: t('tr_cancel') });
+  const applied = (st: Settings) => {
+    setS(st);
+    setCode(st.inbound?.code ?? '');
+  };
   const regenerate = async () => {
-    const ok = await confirm({
-      title: t('nf_regenT'),
-      body: t('nf_regenB'),
-      confirmLabel: t('nf_regen'),
-      cancelLabel: t('tr_cancel'),
-    });
-    if (!ok) return;
+    if (!(await confirmChange(t('nf_regenT'), t('nf_regen')))) return;
     const r = await api<{ settings: Settings }>('/notifications/inbound', {}).catch(() => null);
-    if (r) setS(r.settings);
+    if (r) applied(r.settings);
+  };
+  const saveCode = async (c: string, back = false) => {
+    if (!(await confirmChange(back ? t('nf_backT') : t('nf_codeT'), back ? t('nf_back') : t('nf_codeSave'))))
+      return;
+    try {
+      const r = await api<{ settings: Settings }>('/notifications/inbound/code', { code: c }, 'PUT');
+      applied(r.settings);
+      toast({ message: t('nf_codeSaved'), tone: 'success' });
+    } catch (e) {
+      const code = isApiFailure(e) ? e.code : '';
+      if (!back)
+        setCodeState(
+          code === 'code_taken'
+            ? 'taken'
+            : code === 'reserved_code'
+              ? 'reserved'
+              : code === 'invalid_code'
+                ? 'invalid'
+                : code === 'too_many_requests'
+                  ? 'rate'
+                  : codeState,
+        );
+      toast({ message: t(code === 'code_taken' ? 'nf_codeTaken' : 'ne_saveFail'), tone: 'error' });
+    }
   };
   const copy = async () => {
     if (!ib?.address) return;
@@ -231,12 +310,89 @@ export function NotifyTab() {
             </div>
           )}
           <div className="kh-set__rows">
+            <Row title={t('nf_code')} desc={t('nf_codeD')}>
+              <div className="kh-nf__code">
+                <div className="kh-nf__codeline">
+                  <input
+                    className="kh-sap-input"
+                    data-testid="inbound-code"
+                    value={code}
+                    maxLength={INBOUND_CODE_MAX}
+                    spellCheck={false}
+                    autoCapitalize="none"
+                    autoComplete="off"
+                    placeholder={t('nf_codePh')}
+                    aria-label={t('nf_code')}
+                    aria-describedby="kh-nf-code-state"
+                    aria-invalid={['taken', 'invalid', 'reserved'].includes(codeState)}
+                    onChange={(e) => setCode(e.target.value.toLowerCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && codeState === 'available') void saveCode(typed);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="kh-set__ghost"
+                    disabled={codeState !== 'available'}
+                    onClick={() => void saveCode(typed)}
+                  >
+                    {t('nf_codeSave')}
+                  </button>
+                </div>
+                <span
+                  id="kh-nf-code-state"
+                  className="kh-nf__state"
+                  data-state={codeState}
+                  data-testid="inbound-code-state"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {CODE_MSG[codeState] ? t(CODE_MSG[codeState]!) : ''}
+                </span>
+                {typed && codeState !== 'current' && (
+                  <span className="kh-nf__preview" data-testid="inbound-preview">
+                    {t('nf_codeNew')} <code>{inboundAddress(ib.base, typed)}</code>
+                  </span>
+                )}
+              </div>
+            </Row>
+            {ib.reserved.length > 0 && (
+              <div className="kh-nf__row kh-nf__resv" data-testid="inbound-reserved">
+                <div className="kh-nf__lbl">
+                  <span>{t('nf_reservedT')}</span>
+                  <span className="kh-nf__sub">{t('nf_reservedD')}</span>
+                </div>
+                <ul className="kh-nf__resvlist">
+                  {ib.reserved.map((r) => (
+                    <li key={r.code}>
+                      <code>{r.address}</code>
+                      <span className="kh-nf__sub">
+                        {t('nf_reservedUntil').replace(
+                          '{d}',
+                          new Date(r.until).toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-PT'),
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        className="kh-set__ghost"
+                        onClick={() => void saveCode(r.code, true)}
+                      >
+                        {t('nf_back')}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          <div className="kh-set__rows">
             <Row title={t('nf_inTarget')}>
               <div className="kh-set__seg">
                 {(
                   [
                     ['note', 'nf_inNote', 'notes'],
                     ['task', 'nf_inTask', 'tasks'],
+                    ['email', 'nf_inEmail', 'emails'],
                   ] as const
                 )
                   .filter(([, , m]) => modules.has(m))
@@ -263,6 +419,23 @@ export function NotifyTab() {
                 >
                   <option value="">{t('nf_inNoFolder')}</option>
                   {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </Row>
+            ) : ib.target === 'email' ? (
+              <Row title={t('nf_inEmailFolder')}>
+                <select
+                  className="kh-sap-select"
+                  style={{ width: 220, height: 34, fontSize: 13 }}
+                  value={ib.emailFolderId ?? ''}
+                  aria-label={t('nf_inEmailFolder')}
+                  onChange={(e) => void save({ inbound: { emailFolderId: e.target.value || null } })}
+                >
+                  <option value="">{t('nf_inNoEmailFolder')}</option>
+                  {emailFolders.map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.name}
                     </option>

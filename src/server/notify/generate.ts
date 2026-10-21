@@ -210,6 +210,7 @@ const HREF: Record<string, string> = {
   issue: '/app/issues?i=',
   meeting: '/app/meetings?m=',
   note: '/app/notes?n=',
+  email: '/app/emails?m=',
 };
 export const itemLink = (type: string, id: string | null) =>
   `${env().APP_URL.replace(/\/$/, '')}${type === 'share' ? '/app/settings?tab=share' : `${HREF[type] ?? '/app'}${HREF[type] && id ? id : ''}`}`;
