@@ -48,7 +48,7 @@ trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$OUT"; chmod 700 "$OUT" "$WORK"
 
 echo "==> MySQL dump ($DBN)"
-MYSQL_PWD="$DBP" mysqldump -h "$DBH" -P "$DBPORT" -u "$DBU" --single-transaction --routines --triggers \
+MYSQL_PWD="$DBP" mysqldump -h "$DBH" -P "$DBPORT" -u "$DBU" --single-transaction --no-tablespaces --routines --triggers \
   --default-character-set=utf8mb4 "$DBN" > "$WORK/v1-$DBN.sql"
 echo "    $(wc -l < "$WORK/v1-$DBN.sql") lines"
 

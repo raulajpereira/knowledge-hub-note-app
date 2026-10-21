@@ -13,16 +13,15 @@ cd "$APP_DIR"
 set -a
 # shellcheck disable=SC1091
 . "$APP_DIR/infra/backup/.env.backup"
-# shellcheck disable=SC1091
-. "$APP_DIR/.env"
 set +a
+# (the app .env is not sourced: compose allows unquoted values with spaces)
 
 STAGING="${KH_BACKUP_STAGING:-/var/backups/knowledgehub}"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$STAGING/db" "$STAGING/files"
 
 echo "==> [$TS] PostgreSQL dump"
-docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner \
+docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner' \
   > "$STAGING/db/knowledgehub-$TS.dump"
 # Keep only the last 3 local dumps; history lives in restic.
 ls -1t "$STAGING"/db/knowledgehub-*.dump | tail -n +4 | xargs -r rm -f

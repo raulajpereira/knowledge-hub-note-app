@@ -24,10 +24,9 @@ if [ ! -s "$PASS_FILE" ]; then
 fi
 command -v 7z >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq 7zip >/dev/null 2>&1 || apt-get install -y -qq p7zip-full >/dev/null; }
 
-set -a
-# shellcheck disable=SC1091
-. "$APP_DIR/.env"
-set +a
+# The .env is NOT sourced: docker compose accepts unquoted values with spaces
+# (e.g. a name) that bash would run as commands. What the dump needs is read
+# inside the containers, which get it from the .env through compose.
 
 DAY="$(date +%F)"
 WORK="$(mktemp -d /var/tmp/kh-backup.XXXXXX)"
@@ -44,7 +43,8 @@ if [ "$free_kb" -lt "$need_kb" ]; then
 fi
 
 echo "==> [$(date -Is)] PostgreSQL dump"
-docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner > "$WORK/knowledgehub.dump"
+docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner' > "$WORK/knowledgehub.dump"
+[ -s "$WORK/knowledgehub.dump" ] || { echo "ERROR: empty database dump" >&2; exit 1; }
 
 echo "==> MinIO files"
 docker compose run --rm -T -v "$WORK/files:/mirror" --entrypoint sh minio-init -c \
@@ -55,7 +55,7 @@ git -C "$APP_DIR" rev-parse HEAD > "$WORK/commit.txt"
 cat > "$WORK/LEIA-ME.txt" <<EOF
 KnowledgeHub v2 — backup de $DAY (commit $(cat "$WORK/commit.txt"))
 knowledgehub.dump  base de dados (pg_restore)
-files/             ficheiros (MinIO, bucket $S3_BUCKET)
+files/             ficheiros (MinIO)
 env.txt            o .env da VPS (contém as chaves — guardar com cuidado)
 Repor: docs/DEPLOY.md §6.
 EOF

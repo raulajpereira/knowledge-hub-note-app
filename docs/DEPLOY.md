@@ -219,7 +219,7 @@ crontab -e
 com o arquivo extraído em `~/repor`:
 ```bash
 cd /opt/knowledgehub-v2 && cp ~/repor/env.txt .env && docker compose up -d --wait postgres minio
-docker compose exec -T postgres pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner < ~/repor/knowledgehub.dump
+docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner' < ~/repor/knowledgehub.dump
 docker compose run --rm -v ~/repor/files:/mirror --entrypoint sh minio-init -c \
   'mc alias set kh http://minio:9000 "$S3_ACCESS_KEY" "$S3_SECRET_KEY" && mc mirror --overwrite /mirror "kh/$S3_BUCKET"'
 docker compose up -d
