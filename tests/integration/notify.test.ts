@@ -519,7 +519,9 @@ describe.skipIf(!enabled)('notifications', () => {
     expect(r2.reserved.map((r) => r.code)).toEqual([r1.code, 'ana.silva', 'ana.nova']);
     expect(await ns.checkInboundCode(ana, r1.code!)).toBe('available');
     expect((await ns.setInboundCode(ana, r1.code!)).inbound!.code).toBe(r1.code);
-    expect(await ns.checkInboundCode(rui, r2.code!)).toBe('taken');
+    // someone else's random code: taken — or invalid when it starts with a digit,
+    // which no one may choose anyway (random tokens are base32, so ~1 in 4)
+    expect(await ns.checkInboundCode(rui, r2.code!)).toBe(/^[a-z]/.test(r2.code!) ? 'taken' : 'invalid');
 
     // 30 days later: free for anyone (the check is by date; the daily job deletes the rows)
     await admin`update inbound_released_codes set released_at = now() - interval '31 days' where code = 'ana.nova'`;
