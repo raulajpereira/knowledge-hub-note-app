@@ -14,7 +14,7 @@ import { runMonitor } from '@/server/jobs/monitor';
 import { expireTrash, pruneNoteImages, pruneOtherImages } from '@/server/jobs/trash';
 import { pruneNotifications, runNotify } from '@/server/notify/generate';
 import { runInbound } from '@/server/inbound/imap';
-import { inboundConfigured } from '@/server/notify/service';
+import { inboundConfigured, pruneReleasedInboundCodes } from '@/server/notify/service';
 import { expireExports, runExport } from '@/server/jobs/export';
 import { backfill, startIndexer } from './search/indexer';
 import { startEmbedServer } from './search/server';
@@ -45,7 +45,8 @@ const handlers: Record<string, JobHandler> = {
     const exports = await step(() => expireExports());
     const files = await step(() => sweepStorage());
     const notifications = await step(pruneNotifications);
-    const out = { licenses: r, trash, noteImages, otherImages, exports, files, notifications };
+    const inboundCodes = await step(pruneReleasedInboundCodes);
+    const out = { licenses: r, trash, noteImages, otherImages, exports, files, notifications, inboundCodes };
     console.log('[worker] licenses', JSON.stringify(out));
     return out;
   },

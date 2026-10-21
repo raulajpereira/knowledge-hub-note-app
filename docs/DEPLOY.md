@@ -124,7 +124,9 @@ kh users:list
 
 Cada pessoa recebe em Definições › Notificações um endereço pessoal
 `entrada+<código>@knowledge-hub.cloud`; o que lá chega vira nota (num caderno à
-escolha) ou tarefa. O worker lê a caixa por IMAP a cada 2 minutos, apaga cada
+escolha), tarefa ou **email** no módulo Emails (importado como um `.eml`:
+remetente, destinatários, data, corpo e anexos, numa pasta de Emails à escolha;
+só com o módulo Emails no plano). O worker lê a caixa por IMAP a cada 2 minutos, apaga cada
 mensagem depois de a tratar e descarta códigos desconhecidos, remetentes fora da
 lista da pessoa (por omissão, o email da conta) e mensagens que o servidor de email
 marcou como falhadas (DMARC fail, ou SPF fail/softfail sem DKIM válido, no
@@ -154,6 +156,20 @@ cabeçalho `Authentication-Results` de topo). Máximo de 50 por pessoa e por dia
    contagens, ex. `[inbound] {"created":1}` ou `{"sender":1}` (remetente fora da
    lista), `{"unknown":1}` (sem código válido), `{"disabled":1}` (interruptor
    desligado), `{"spoof":1}` (SPF/DKIM/DMARC falhados).
+
+**Código escolhido pela pessoa.** O código é aleatório por omissão, mas cada pessoa
+pode escolher o seu (ex. `kh.entrada+raulpereira@gmail.com`): 3–30 caracteres,
+minúsculas, números e `. - _`, a começar por uma letra, sem `..` e sem acabar em
+`. - _`; maiúsculas contam como minúsculas; nomes como `admin`, `postmaster`,
+`noreply`, `suporte`, `teste`, `entrada`… estão bloqueados. A verificação de
+disponibilidade enquanto se escreve está limitada a 30 por minuto por pessoa. A
+base de dados garante que nenhum código tem dois donos (índice único + função
+`kh_inbound_set_code`, migração 0047). Quando alguém muda de código (escolhido ou
+aleatório), o antigo deixa logo de receber mas fica **reservado 30 dias** para essa
+pessoa (pode voltar a ele; mais ninguém o pode usar); depois fica livre — o job
+diário `licenses` apaga as reservas expiradas (`kh_prune_inbound_codes`). Os
+endereços aleatórios antigos continuam a funcionar. Nota: o Gmail ignora pontos só
+na parte antes do `+`; o código depois do `+` chega tal como foi escrito.
 
 **Alternativa grátis — Gmail** (a VPS não inclui caixas de email): uma conta Gmail
 só para isto (ex. `kh.entrada@gmail.com`), com verificação em 2 passos e uma

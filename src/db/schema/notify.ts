@@ -29,6 +29,7 @@ export const NOTIFY_KINDS = [
   'share_accepted',
   'inbound_note',
   'inbound_task',
+  'inbound_email',
 ] as const;
 
 export const notifications = pgTable(
@@ -80,13 +81,18 @@ export const notifySettings = pgTable(
     tz: text('tz').notNull().default('Europe/Lisbon'),
     /** the last local day the daily summary went out */
     summarySentOn: date('summary_sent_on', { mode: 'string' }),
-    /** the secret part of <local>+<token>@<domain> */
+    /** the code of <local>+<code>@<domain>: a random token or one the person chose (lower case, 0047) */
     inboundToken: text('inbound_token'),
     inboundEnabled: boolean('inbound_enabled').notNull().default(false),
-    inboundTarget: text('inbound_target', { enum: ['note', 'task'] })
+    inboundTarget: text('inbound_target', { enum: ['note', 'task', 'email'] })
       .notNull()
       .default('note'),
+    /** the notebook (target note) */
     inboundFolderId: uuid('inbound_folder_id').references(() => folders.id, { onDelete: 'set null' }),
+    /** the Emails folder (target email) */
+    inboundEmailFolderId: uuid('inbound_email_folder_id').references(() => folders.id, {
+      onDelete: 'set null',
+    }),
     inboundTaskType: text('inbound_task_type', { enum: ['tech', 'mgmt'] })
       .notNull()
       .default('tech'),
@@ -99,11 +105,41 @@ export const notifySettings = pgTable(
   },
   (t) => [
     uniqueIndex('notify_settings_token').on(t.inboundToken),
-    check('notify_settings_target_chk', sql`${t.inboundTarget} in ('note','task')`),
+    check('notify_settings_target_chk', sql`${t.inboundTarget} in ('note','task','email')`),
+    check(
+      'notify_settings_token_chk',
+      sql`${t.inboundToken} is null or (${t.inboundToken} ~ '^[a-z0-9][a-z0-9._-]{1,28}[a-z0-9]$' and position('..' in ${t.inboundToken}) = 0)`,
+    ),
     check('notify_settings_type_chk', sql`${t.inboundTaskType} in ('tech','mgmt')`),
     check(
       'notify_settings_len',
       sql`char_length(${t.tz}) <= 64 and cardinality(${t.inboundSenders}) <= 20 and pg_column_size(${t.prefs}) <= 4096`,
+    ),
+  ],
+);
+
+/**
+ * Inbound codes a person moved away from (0047): reserved for them for 30
+ * days (nobody else can take it; they can go back to it), then free. Written
+ * only by kh_inbound_set_code; each person reads their own rows.
+ */
+export const inboundReleasedCodes = pgTable(
+  'inbound_released_codes',
+  {
+    code: text('code').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    releasedAt: timestamp('released_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('inbound_released_codes_user_idx').on(t.userId),
+    check(
+      'inbound_released_code_chk',
+      sql`${t.code} ~ '^[a-z0-9][a-z0-9._-]{1,28}[a-z0-9]$' and position('..' in ${t.code}) = 0`,
     ),
   ],
 );

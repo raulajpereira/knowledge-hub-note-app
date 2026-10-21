@@ -140,3 +140,81 @@ export function inboundAddress(base: string, token: string): string {
   const at = base.lastIndexOf('@');
   return `${base.slice(0, at)}+${token}@${base.slice(at + 1)}`;
 }
+
+// ── Inbound address codes ──────────────────────────────────────────────────
+// The part after the "+" is either a random token (above) or a code the
+// person chose (e.g. kh.entrada+raulpereira@gmail.com). Codes are stored in
+// lower case and unique in the database (migration 0047); a code someone
+// moved away from stays reserved for them for INBOUND_RELEASE_DAYS.
+export const INBOUND_CODE_MIN = 3;
+export const INBOUND_CODE_MAX = 30;
+export const INBOUND_RELEASE_DAYS = 30;
+/** Any code the address may carry (chosen or random): what the parser and the database accept. */
+export const INBOUND_CODE_CHARS = '[a-z0-9][a-z0-9._-]{1,28}[a-z0-9]';
+/** A code a person may choose: starts with a letter, no "..", doesn't end in . - _ */
+const CHOSEN = /^[a-z][a-z0-9._-]{1,28}[a-z0-9]$/;
+
+/** Names that look official or belong to the mailbox itself (also with . - _ removed: "no.reply"). */
+export const RESERVED_INBOUND_CODES: ReadonlySet<string> = new Set([
+  'admin',
+  'administrator',
+  'administrador',
+  'postmaster',
+  'hostmaster',
+  'webmaster',
+  'abuse',
+  'noreply',
+  'donotreply',
+  'root',
+  'support',
+  'suporte',
+  'help',
+  'ajuda',
+  'teste',
+  'test',
+  'info',
+  'entrada',
+  'inbox',
+  'mailerdaemon',
+  'mailer',
+  'daemon',
+  'security',
+  'seguranca',
+  'billing',
+  'faturacao',
+  'sales',
+  'vendas',
+  'contact',
+  'contacto',
+  'privacy',
+  'privacidade',
+  'legal',
+  'system',
+  'sistema',
+  'staff',
+  'owner',
+  'superadmin',
+  'knowledgehub',
+  'kh',
+  'null',
+  'undefined',
+]);
+
+/** Trimmed, lower case: the form codes are stored and compared in. */
+export const normalizeInboundCode = (s: string) => s.trim().toLowerCase();
+
+/**
+ * Why a code can't be chosen, or null when it may be: 'invalid' (length,
+ * characters, start/end, "..") or 'reserved'. Case-insensitive.
+ */
+export function inboundCodeProblem(raw: string): null | 'invalid' | 'reserved' {
+  const c = normalizeInboundCode(raw);
+  if (c.length < INBOUND_CODE_MIN || c.length > INBOUND_CODE_MAX || !CHOSEN.test(c) || c.includes('..'))
+    return 'invalid';
+  if (RESERVED_INBOUND_CODES.has(c) || RESERVED_INBOUND_CODES.has(c.replace(/[._-]/g, ''))) return 'reserved';
+  return null;
+}
+
+/** Any code an address may carry (a chosen one or an old random token). */
+export const isInboundCode = (s: string) =>
+  new RegExp(`^${INBOUND_CODE_CHARS}$`).test(s) && !s.includes('..');

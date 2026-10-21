@@ -20,8 +20,9 @@ export const PUT = handler(async (req) => {
       inbound: z
         .object({
           enabled: z.boolean(),
-          target: z.enum(['note', 'task']),
+          target: z.enum(['note', 'task', 'email']),
           folderId: z.uuid().nullable(),
+          emailFolderId: z.uuid().nullable(),
           taskType: z.enum(['tech', 'mgmt']),
           senders: z
             .array(

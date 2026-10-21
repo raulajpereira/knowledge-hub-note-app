@@ -82,6 +82,7 @@ describe.skipIf(!enabled)('notifications', () => {
   let ns: typeof import('@/server/notify/service');
   let gen: typeof import('@/server/notify/generate');
   let inbound: typeof import('@/server/inbound/process');
+  let mail: typeof import('@/server/content/emails');
   let lib: typeof import('@/lib/notify');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
@@ -92,7 +93,7 @@ describe.skipIf(!enabled)('notifications', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, tasksSvc, notesSvc, meet, sh, ns, gen, inbound, lib, dbm] =
+    [svc, codesSvc, session, seed, tasksSvc, notesSvc, meet, sh, ns, gen, inbound, lib, dbm, mail] =
       await Promise.all([
         import('@/server/auth/service'),
         import('@/server/licensing/codes'),
@@ -107,12 +108,13 @@ describe.skipIf(!enabled)('notifications', () => {
         import('@/server/inbound/process'),
         import('@/lib/notify'),
         import('@/db/client'),
+        import('@/server/content/emails'),
       ]);
   });
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE notifications, notify_settings, share_members, share_people, shared_folders, meetings, task_subtasks, tasks, note_attachments, notes, folders, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE notifications, inbound_released_codes, notify_settings, email_attachments, emails, share_members, share_people, shared_folders, meetings, task_subtasks, tasks, note_attachments, notes, folders, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -412,5 +414,214 @@ describe.skipIf(!enabled)('notifications', () => {
       );
     expect(st.filter((x) => x === 'created')).toHaveLength(50);
     expect(st.slice(-2)).toEqual(['rate', 'rate']);
+  });
+
+  const codeOf = (p: Promise<unknown>) =>
+    p.then(
+      () => 'ok',
+      (e: { code?: string; status?: number }) => `${e.status ?? ''} ${e.code ?? String(e)}`,
+    );
+
+  it('inbound codes: rules, one owner per code (also when saved at the same time), the DB enforces it', async () => {
+    const ana = await signedIn('ana@code.pt');
+    const rui = await signedIn('rui@code.pt');
+    const eva = await signedIn('eva@code.pt');
+    expect(await ns.checkInboundCode(ana, 'raulpereira')).toBe('available');
+    expect(await ns.checkInboundCode(ana, 'ab')).toBe('invalid');
+    expect(await ns.checkInboundCode(ana, '9lives')).toBe('invalid');
+    expect(await ns.checkInboundCode(ana, 'raul..p')).toBe('invalid');
+    expect(await ns.checkInboundCode(ana, 'raul-')).toBe('invalid');
+    expect(await ns.checkInboundCode(ana, 'Admin')).toBe('reserved');
+    expect(await ns.checkInboundCode(ana, 'no-reply')).toBe('reserved');
+    expect(await codeOf(ns.setInboundCode(ana, 'a b'))).toBe('400 invalid_code');
+    expect(await codeOf(ns.setInboundCode(ana, 'postmaster'))).toBe('400 reserved_code');
+
+    // chosen before the feature is even on: stored in lower case
+    const s1 = await ns.setInboundCode(ana, ' Raul.Pereira ');
+    expect(s1.inbound).toMatchObject({ code: 'raul.pereira', address: 'entrada+raul.pereira@kh.test' });
+    expect(await ns.checkInboundCode(ana, 'raul.pereira')).toBe('available'); // her own
+    expect(await ns.checkInboundCode(rui, 'RAUL.PEREIRA')).toBe('taken');
+    expect(await codeOf(ns.setInboundCode(rui, 'RAUL.PEREIRA'))).toBe('409 code_taken');
+    // switching it on keeps the chosen code
+    expect((await ns.updateNotifySettings(ana, { inbound: { enabled: true } })).inbound!.code).toBe(
+      'raul.pereira',
+    );
+
+    // two people saving the same free code at the same moment: exactly one gets it
+    for (const c of ['atlas', 'borealis', 'cosmos']) {
+      const r = await Promise.all([codeOf(ns.setInboundCode(rui, c)), codeOf(ns.setInboundCode(eva, c))]);
+      expect(r.sort()).toEqual(['409 code_taken', 'ok']);
+    }
+    // one person leaving a code while another grabs it: never both an address and someone else's reservation
+    for (const i of [1, 2, 3]) {
+      await ns.setInboundCode(eva, `old${i}`);
+      const [, grab] = await Promise.all([
+        codeOf(ns.setInboundCode(eva, `new${i}`)),
+        codeOf(ns.setInboundCode(rui, `old${i}`)),
+      ]);
+      expect(grab).toBe('409 code_taken');
+    }
+    const [{ both }] = (await admin<{ both: number }[]>`
+      select count(*)::int as both from notify_settings s join inbound_released_codes r
+        on r.code = s.inbound_token and r.user_id <> s.user_id`) as unknown as [{ both: number }];
+    expect(both).toBe(0);
+    const [{ n }] = (await admin<{ n: number }[]>`
+      select count(*)::int as n from (select inbound_token from notify_settings where inbound_token is not null
+        group by inbound_token having count(*) > 1) d`) as unknown as [{ n: number }];
+    expect(n).toBe(0);
+    // underneath, the database itself refuses a duplicate or a non-lower-case code
+    await expect(
+      admin`update notify_settings set inbound_token = 'raul.pereira' where user_id <> ${ana.user.id}`,
+    ).rejects.toMatchObject({ code: '23505' });
+    await expect(
+      admin`update notify_settings set inbound_token = 'Raul.X' where user_id = ${ana.user.id}`,
+    ).rejects.toMatchObject({ code: '23514' });
+  });
+
+  it('inbound codes: an old code stays reserved for its owner for 30 days, then is free', async () => {
+    const ana = await signedIn('ana@resv.pt');
+    const rui = await signedIn('rui@resv.pt');
+    await ns.setInboundCode(ana, 'ana.silva');
+    await ns.updateNotifySettings(ana, { inbound: { enabled: true, target: 'task' } });
+    const s2 = await ns.setInboundCode(ana, 'ana.nova');
+    expect(s2.inbound!.reserved.map((r) => r.code)).toEqual(['ana.silva']);
+    const until = Date.parse(s2.inbound!.reserved[0]!.until);
+    expect(Math.abs(until - (Date.now() + 30 * 86_400_000))).toBeLessThan(120_000);
+    expect(s2.inbound!.reserved[0]!.address).toBe('entrada+ana.silva@kh.test');
+    // the old address stops working at once…
+    const old = await inbound.processMessage(
+      eml({ to: 'entrada+ana.silva@kh.test', from: 'ana@resv.pt', subject: 'x', text: 'x', id: 'o1' }),
+      'entrada@kh.test',
+    );
+    expect(old.status).toBe('unknown');
+    // …nobody else can take it…
+    expect(await ns.checkInboundCode(rui, 'ana.silva')).toBe('taken');
+    expect(await codeOf(ns.setInboundCode(rui, 'ana.silva'))).toBe('409 code_taken');
+    // …and Rui doesn't see Ana's reservations (RLS)
+    expect((await ns.getNotifySettings(rui)).inbound!.reserved).toEqual([]);
+    const { asUser } = await import('@/server/content/tenant');
+    const { inboundReleasedCodes } = await import('@/db/schema');
+    expect(await asUser(rui, (tx) => tx.select().from(inboundReleasedCodes))).toEqual([]);
+    // Ana can go back to it; the code she leaves is now the reserved one
+    const back = await ns.setInboundCode(ana, 'ana.silva');
+    expect(back.inbound!.code).toBe('ana.silva');
+    expect(back.inbound!.reserved.map((r) => r.code)).toEqual(['ana.nova']);
+    const again = await inbound.processMessage(
+      eml({ to: 'entrada+ana.silva@kh.test', from: 'ana@resv.pt', subject: 'De volta', text: 'x', id: 'o2' }),
+      'entrada@kh.test',
+    );
+    expect(again).toMatchObject({ status: 'created', kind: 'task' });
+
+    // a random code reserves the old one too, and she can go back to the random one
+    const r1 = (await ns.regenerateInboundToken(ana)).inbound!;
+    expect(r1.code).toMatch(/^[a-z2-7]{20}$/);
+    const r2 = (await ns.regenerateInboundToken(ana)).inbound!;
+    expect(r2.reserved.map((r) => r.code)).toEqual([r1.code, 'ana.silva', 'ana.nova']);
+    expect(await ns.checkInboundCode(ana, r1.code!)).toBe('available');
+    expect((await ns.setInboundCode(ana, r1.code!)).inbound!.code).toBe(r1.code);
+    expect(await ns.checkInboundCode(rui, r2.code!)).toBe('taken');
+
+    // 30 days later: free for anyone (the check is by date; the daily job deletes the rows)
+    await admin`update inbound_released_codes set released_at = now() - interval '31 days' where code = 'ana.nova'`;
+    expect((await ns.getNotifySettings(ana)).inbound!.reserved.map((r) => r.code)).not.toContain('ana.nova');
+    expect(await ns.checkInboundCode(rui, 'ana.nova')).toBe('available');
+    expect((await ns.setInboundCode(rui, 'ana.nova')).inbound!.code).toBe('ana.nova');
+    await admin`update inbound_released_codes set released_at = now() - interval '31 days' where code = 'ana.silva'`;
+    expect(await ns.pruneReleasedInboundCodes()).toBe(1);
+    const [{ n }] = (await admin<
+      { n: number }[]
+    >`select count(*)::int as n from inbound_released_codes`) as unknown as [{ n: number }];
+    expect(n).toBe(1); // the second random one
+  });
+
+  it('inbound: a chosen code reaches the person; target Emails imports the message like an .eml', async () => {
+    const ana = await signedIn('ana@emails.pt');
+    const rui = await signedIn('rui@emails.pt');
+    // Emails is an add-on (no plan has it by default)
+    await admin`insert into tenant_modules (tenant_id, module_id) values (${ana.tenant.id}, 'emails')`;
+    const box = await mail.createEmailFolder(ana, 'Recebidos');
+    await ns.setInboundCode(ana, 'ana.caixa');
+    const sa = await ns.updateNotifySettings(ana, {
+      inbound: { enabled: true, target: 'email', emailFolderId: box.id },
+    });
+    expect(sa.inbound).toMatchObject({ target: 'email', emailFolderId: box.id, folderId: null });
+    // someone else's Emails folder can't be the target
+    await expect(ns.updateNotifySettings(rui, { inbound: { emailFolderId: box.id } })).rejects.toMatchObject({
+      code: 'folder_not_found',
+    });
+    await ns.setInboundCode(rui, 'rui_p-1');
+    await ns.updateNotifySettings(rui, { inbound: { enabled: true, target: 'note' } });
+
+    const r = await inbound.processMessage(
+      eml({
+        to: 'Caixa <ENTRADA+Ana.Caixa@kh.test>',
+        from: 'ana@emails.pt',
+        subject: 'Fatura de outubro',
+        text: 'Segue a fatura.',
+        id: 'e1',
+        image: true,
+      }),
+      'entrada@kh.test',
+    );
+    expect(r).toMatchObject({ status: 'created', kind: 'email', userId: ana.user.id });
+    const list = await mail.listEmails(ana);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      subject: 'Fatura de outubro',
+      fromEmail: 'ana@emails.pt',
+      fromName: 'Remetente',
+      folderId: box.id,
+      attachments: 2,
+    });
+    const full = await mail.getEmail(ana, list[0]!.id);
+    expect(full.text).toContain('Segue a fatura.');
+    expect(full.to).toContain('Ana.Caixa@kh.test');
+    expect(full.fileName).toBe('Fatura de outubro.eml');
+    expect(full.files.map((f) => f.name)).toEqual(['ecra.png', 'fatura.pdf']);
+    const pdf = await mail.readEmailAttachment(ana, full.id, full.files[1]!.id);
+    expect(new TextDecoder().decode(pdf!.body)).toBe('%PDF-1.4 x');
+    expect((await mail.readEmailOriginal(ana, full.id))!.body.length).toBeGreaterThan(100);
+    expect((await ns.listNotifications(ana)).items).toMatchObject([
+      { kind: 'inbound_email', itemType: 'email', itemId: full.id, title: 'Fatura de outubro' },
+    ]);
+    expect(gen.itemLink('email', full.id)).toMatch(new RegExp(`/app/emails\\?m=${full.id}$`));
+    // the same message again: not imported twice
+    const dup = await inbound.processMessage(
+      eml({ to: 'entrada+ana.caixa@kh.test', from: 'ana@emails.pt', subject: 'x', text: 'x', id: 'e1' }),
+      'entrada@kh.test',
+    );
+    expect(dup.status).toBe('duplicate');
+    // the folder deleted: into "Todos"
+    await mail.deleteEmailFolder(ana, box.id);
+    const r2 = await inbound.processMessage(
+      eml({
+        to: 'entrada+ana.caixa@kh.test',
+        from: 'ana@emails.pt',
+        subject: 'Sem pasta',
+        text: 'y',
+        id: 'e2',
+      }),
+      'entrada@kh.test',
+    );
+    expect(r2.status).toBe('created');
+    expect((await mail.listEmails(ana)).find((e) => e.subject === 'Sem pasta')?.folderId).toBeNull();
+
+    // a chosen code with . - _ → Rui's note; nothing of it in Ana's Emails
+    const r3 = await inbound.processMessage(
+      eml({ to: 'entrada+Rui_P-1@kh.test', from: 'rui@emails.pt', subject: 'Ideia', text: 'z', id: 'r1' }),
+      'entrada@kh.test',
+    );
+    expect(r3).toMatchObject({ status: 'created', kind: 'note', userId: rui.user.id });
+    expect((await notesSvc.listNotes(rui, {})).map((x) => x.title)).toEqual(['Ideia']);
+    expect(await mail.listEmails(rui)).toEqual([]);
+    expect(await mail.listEmails(ana)).toHaveLength(2);
+  });
+
+  it('inbound: target Emails needs the Emails module', async () => {
+    const ana = await signedIn('ana@nomod.pt');
+    // (PRO has no Emails)
+    expect(await codeOf(ns.updateNotifySettings(ana, { inbound: { target: 'email' } }))).toBe(
+      '403 module_not_included',
+    );
   });
 });

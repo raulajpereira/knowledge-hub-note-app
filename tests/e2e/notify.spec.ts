@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,8 +40,8 @@ const today = () =>
     day: '2-digit',
   }).format(new Date());
 
-async function verifyLink(): Promise<string> {
-  const safe = email.replace(/[^a-z0-9@.]/gi, '_');
+async function verifyLink(who = email): Promise<string> {
+  const safe = who.replace(/[^a-z0-9@.]/gi, '_');
   for (let i = 0; i < 40; i++) {
     const files = fs.existsSync(outbox!)
       ? fs.readdirSync(outbox!).filter((f) => f.includes('-verify-') && f.includes(safe))
@@ -59,9 +59,9 @@ async function verifyLink(): Promise<string> {
   throw new Error('no verify email');
 }
 
-async function login(page: Page) {
+async function login(page: Page, who = email) {
   await page.goto('login');
-  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Email').fill(who);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await page.waitForURL(/\/app$/);
@@ -72,19 +72,23 @@ async function newTask(page: Page, title: string) {
   expect(r.status()).toBe(201);
 }
 
-test.beforeAll(async ({ browser }) => {
+async function register(browser: Browser, who: string, name: string) {
   const code = /KH-LIC-\d{6}/.exec(cli('codes:create', '--type', 'license', '--plan', 'PRO'))![0];
   const page = await browser.newPage({ locale: 'pt-PT' });
   await page.goto('register');
-  await page.getByLabel('Nome').fill('Bell Tester');
-  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Nome').fill(name);
+  await page.getByLabel('Email').fill(who);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Licença').fill(code);
   await page.getByRole('button', { name: 'Criar conta' }).click();
   await expect(page.getByText('Conta criada')).toBeVisible();
-  await page.goto(await verifyLink());
+  await page.goto(await verifyLink(who));
   await expect(page.getByRole('heading', { name: 'Email confirmado' })).toBeVisible();
   await page.close();
+}
+
+test.beforeAll(async ({ browser }) => {
+  await register(browser, email, 'Bell Tester');
 });
 
 test('bell: counter, popup, open marks read, mark all as read', async ({ page }) => {
@@ -174,4 +178,96 @@ test('Definições › Notificações and the task reminder', async ({ page }) =
   await expect(page.getByTestId('task-remind')).toHaveValue('day_before');
   await page.getByTestId('task-remind').selectOption('custom');
   await expect(page.getByLabel('Lembrete em')).toBeVisible();
+});
+
+// "Email para a app" shows only when the server has the inbound mailbox
+// (INBOUND_* set on the server under test, e.g. INBOUND_ADDRESS=kh.entrada@gmail.com).
+test('Email para a app: own code with live availability, address preview, old code reserved', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(120_000); // two people (one registered here)
+  await login(page);
+  // the address base comes from the server (INBOUND_ADDRESS); null = not configured
+  const cfg = (await page.request.get('api/v1/notifications/settings').then((r) => r.json())) as {
+    settings: { inbound: { base: string } | null };
+  };
+  test.skip(!cfg.settings.inbound, 'inbound mailbox not configured on the server');
+  const [local, domain] = cfg.settings.inbound!.base.split('@') as [string, string];
+  await page.goto('app/settings?tab=notify');
+  const card = page.getByTestId('inbound-card');
+  await expect(card).toBeVisible();
+  const input = card.getByTestId('inbound-code');
+  const state = card.getByTestId('inbound-code-state');
+  const save = card.locator('.kh-nf__codeline').getByRole('button', { name: 'Guardar' });
+  const addr = (c: string) => `${local}+${c}@${domain}`;
+
+  await input.fill('ab');
+  await expect(state).toHaveText('Formato inválido');
+  await expect(save).toBeDisabled();
+  await input.fill('no-reply');
+  await expect(state).toHaveText('Palavra reservada, escolha outra');
+  const mine = `e2e${Date.now().toString(36)}`;
+  await input.fill(`${mine.toUpperCase()}`); // typed in capitals: lower case
+  await expect(input).toHaveValue(mine);
+  await expect(state).toHaveText('Disponível');
+  await expect(card.getByTestId('inbound-preview')).toHaveText(`Novo endereço: ${addr(mine)}`);
+  // first code: nothing to lose, no question
+  await save.click();
+  await expect(card.getByTestId('inbound-address')).toHaveText(addr(mine));
+  await expect(state).toHaveText('É o seu endereço atual');
+  await expect(card.getByTestId('inbound-preview')).toHaveCount(0);
+
+  // a second change asks first and keeps the old one reserved
+  await input.fill(`${mine}.b`);
+  await expect(state).toHaveText('Disponível');
+  await save.click();
+  const dlg = page.getByRole('dialog', { name: 'Mudar o endereço?' });
+  await expect(dlg).toContainText('fica reservado para si durante 30 dias');
+  await dlg.getByRole('button', { name: 'Guardar' }).click();
+  await expect(card.getByTestId('inbound-address')).toHaveText(addr(`${mine}.b`));
+  const resv = card.getByTestId('inbound-reserved');
+  await expect(resv).toContainText(addr(mine));
+  await expect(resv).toContainText('reservado até');
+  await expect(resv.getByRole('button', { name: 'Voltar a este' })).toBeVisible();
+  // PRO has no Emails module: no "Email" target
+  await expect(card.getByRole('button', { name: 'Email', exact: true })).toHaveCount(0);
+
+  // someone else: the reserved one and the current one are taken, a new one is free
+  const other = `bell2-${Date.now()}@example.com`;
+  await register(browser, other, 'Outra Pessoa');
+  const ctx = await browser.newContext({
+    locale: 'pt-PT',
+    baseURL: test.info().project.use.baseURL,
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.162' },
+  });
+  const p2 = await ctx.newPage();
+  await login(p2, other);
+  await p2.goto('app/settings?tab=notify');
+  const c2 = p2.getByTestId('inbound-card');
+  await c2.getByTestId('inbound-code').fill(mine);
+  await expect(c2.getByTestId('inbound-code-state')).toHaveText('Já está em uso');
+  await c2.getByTestId('inbound-code').fill(`${mine}.b`);
+  await expect(c2.getByTestId('inbound-code-state')).toHaveText('Já está em uso');
+  await expect(c2.locator('.kh-nf__codeline').getByRole('button', { name: 'Guardar' })).toBeDisabled();
+  await c2.getByTestId('inbound-code').fill(`${mine}-c`);
+  await expect(c2.getByTestId('inbound-code-state')).toHaveText('Disponível');
+  await ctx.close();
+
+  // back to the old one
+  await resv.getByRole('button', { name: 'Voltar a este' }).click();
+  await page
+    .getByRole('dialog', { name: 'Voltar a este endereço?' })
+    .getByRole('button', { name: 'Voltar a este' })
+    .click();
+  await expect(card.getByTestId('inbound-address')).toHaveText(addr(mine));
+  await expect(resv).toContainText(addr(`${mine}.b`));
+
+  // the check is rate-limited (30 a minute) and only says available / taken / invalid / reserved
+  const r = await page.request.get(`api/v1/notifications/inbound/code?code=${mine}`);
+  expect(await r.json()).toEqual({ status: 'available' });
+  let last = 200;
+  for (let i = 0; i < 32 && last !== 429; i++)
+    last = (await page.request.get(`api/v1/notifications/inbound/code?code=x${i}abc`)).status();
+  expect(last).toBe(429);
 });
