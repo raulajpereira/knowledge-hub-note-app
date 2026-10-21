@@ -2,7 +2,7 @@
 
 import { AiButton } from '@/components/ai/AiButton';
 import { useExplain } from '@/components/ai/useExplain';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
@@ -10,7 +10,9 @@ import {
   CL_ADD,
   CL_FORMS,
   CL_GRIDS,
+  CL_GROUP_IDS,
   CL_GROUPS,
+  CL_IMPL_MAX,
   CL_TPL,
   CL_TYPE_IDS,
   CL_TYPES,
@@ -18,10 +20,13 @@ import {
   clFileName,
   clFindRefs,
   clFmHdr,
+  clFugrOf,
   clFullCode,
   clGen,
   clMeta,
   clPackage,
+  clRenamable,
+  clRename,
   clSearchText,
   type ClGroup,
   type ClNode,
@@ -48,19 +53,20 @@ type Obj = {
   type: ClType;
   name: string;
   description: string;
+  implementedAt: string;
   tags: string[];
   nodes: ClNode[];
   createdAt: string;
   updatedAt: string;
 };
-type Patch = Partial<Pick<Obj, 'name' | 'description' | 'tags' | 'nodes'>>;
+type Patch = Partial<Pick<Obj, 'name' | 'description' | 'implementedAt' | 'tags' | 'nodes'>>;
 type Ref = { oid: string; nid: string | null; name: string; type: string };
 type Hist = { a: string; n: string | null; k: string | null; label: string };
 
 const FILTERS: Array<[string, ClType[] | null]> = [
   ['all', null],
   ['SE38', ['PROG']],
-  ['SE37', ['FUGR']],
+  ['SE37', ['FUGR', 'FUNC']],
   ['SE24', ['CLAS', 'INTF']],
   ['SE11', ['TABL', 'STRU', 'DTEL', 'DOMA']],
   ['SNIP', ['SNIP']],
@@ -97,7 +103,8 @@ const IC = {
 };
 const TICON: Record<ClType, string> = {
   PROG: '<path d="M4 5h16v14H4z"></path><path d="M8 10l2 2-2 2"></path><line x1="12" y1="15" x2="16" y2="15"></line>',
-  FUGR: IC.fm,
+  FUGR: '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"></path><path d="M8.5 13.5h6"></path><path d="M12.5 11l2.5 2.5-2.5 2.5"></path>',
+  FUNC: IC.fm,
   CLAS: '<rect x="4" y="4" width="16" height="16" rx="3"></rect><line x1="4" y1="10" x2="20" y2="10"></line><line x1="4" y1="15" x2="20" y2="15"></line>',
   INTF: '<circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2.5"></circle>',
   TABL: '<rect x="3.5" y="5" width="17" height="14" rx="2"></rect><line x1="3.5" y1="10" x2="20.5" y2="10"></line><line x1="10" y1="5" x2="10" y2="19"></line>',
@@ -292,6 +299,14 @@ export function CodelibView() {
   const nLabel = (n: ClNode) => (n.label.startsWith('cl_n_') ? t(n.label) : n.label);
   const isAbap = (n: ClNode) => !n.label.startsWith('cl_n_');
   const isCol = (k: string) => !!col[k];
+  // suggestions for a function module's "Function group": the tenant's groups
+  const fugrs = useMemo(
+    () =>
+      D.filter((x) => x.type === 'FUGR' && x.name)
+        .map((x) => ({ name: x.name, description: x.description }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [D],
+  );
   const togCol = (k: string) => setCol({ ...col, [k]: !col[k] });
   const setNode = (nid: string) => o && setSel({ oid: o.id, nid, k: null });
 
@@ -638,7 +653,10 @@ export function CodelibView() {
                           <span className="kh-cl-iname" data-mono={x.type !== 'SNIP' || undefined}>
                             {x.name}
                           </span>
-                          <span className="kh-cl-idesc">{x.description || '—'}</span>
+                          <span className="kh-cl-idesc">
+                            <span>{x.description || '—'}</span>
+                            {x.implementedAt && <span className="kh-cl-iimpl">@ {x.implementedAt}</span>}
+                          </span>
                         </div>
                         <span className="kh-cl-meta">{clMeta(x)}</span>
                       </div>
@@ -679,21 +697,38 @@ export function CodelibView() {
                 spellCheck={false}
                 maxLength={120}
                 aria-label={t('cl_k')}
-                onChange={(e) =>
-                  upd(o.id, {
-                    name:
-                      o.type === 'SNIP' ? e.target.value : e.target.value.toUpperCase().replace(/\s/g, '_'),
-                  })
-                }
+                onChange={(e) => {
+                  const name =
+                    o.type === 'SNIP' ? e.target.value : e.target.value.toUpperCase().replace(/\s/g, '_');
+                  // the FM / main program node named after the object follows it
+                  const nodes = clRename(o.type, o.nodes, o.name, name);
+                  upd(o.id, nodes === o.nodes ? { name } : { name, nodes });
+                }}
               />
-              <input
-                className="kh-cl-odesc"
-                value={o.description}
-                maxLength={500}
-                placeholder={t('cl_descPh')}
-                aria-label={t('cl_descPh')}
-                onChange={(e) => upd(o.id, { description: e.target.value.replace(/[\r\n]/g, ' ') })}
-              />
+              <div className="kh-cl-odrow">
+                <input
+                  className="kh-cl-odesc"
+                  value={o.description}
+                  maxLength={500}
+                  placeholder={t('cl_descPh')}
+                  aria-label={t('cl_descPh')}
+                  onChange={(e) => upd(o.id, { description: e.target.value.replace(/[\r\n]/g, ' ') })}
+                />
+                <label
+                  className="kh-cl-impl"
+                  title={t('cl_impl')}
+                  data-set={o.implementedAt ? '' : undefined}
+                >
+                  <span aria-hidden="true">@</span>
+                  <input
+                    value={o.implementedAt}
+                    maxLength={CL_IMPL_MAX}
+                    placeholder={t('cl_implPh')}
+                    aria-label={t('cl_impl')}
+                    onChange={(e) => upd(o.id, { implementedAt: e.target.value.replace(/[\r\n]/g, ' ') })}
+                  />
+                </label>
+              </div>
             </div>
             <div className="kh-cl-oacts">
               <button
@@ -730,6 +765,11 @@ export function CodelibView() {
                 <b>{M[0] === '—' ? 'Snippet' : M[0]}</b>
                 {M[0] === '—' ? '' : t(M[2])}
               </span>
+              {o.type === 'FUNC' && clFugrOf(o) && (
+                <span>
+                  {t('cl_fugr')} <b>{clFugrOf(o)}</b>
+                </span>
+              )}
               {clPackage(o) && (
                 <span>
                   {t('cl_pkg')} <b>{clPackage(o)}</b>
@@ -779,7 +819,14 @@ export function CodelibView() {
           <div className="kh-cl-split">
             <nav className="kh-cl-tree" style={{ width: treeW.width }} aria-label={o.name}>
               {[
-                ...CL_GROUPS[o.type].map((g) => {
+                // FM nodes left inside a function group (e.g. one restored from the Trash
+                // after the 0046 migration) stay visible, without "+"
+                ...[
+                  ...CL_GROUPS[o.type],
+                  ...CL_GROUP_IDS.filter(
+                    (g) => !CL_GROUPS[o.type].includes(g) && o.nodes.some((n) => n.g === g),
+                  ),
+                ].map((g) => {
                   const add = CL_ADD[o.type]?.[g];
                   const ck = `T:${o.type}:${g}`;
                   const NS = o.nodes.filter((n) => n.g === g);
@@ -880,7 +927,7 @@ export function CodelibView() {
                       />
                     </button>
                   )}
-                  {node?.user ? (
+                  {node && clRenamable(o.type, node) ? (
                     <>
                       <input
                         className="kh-cl-nlabel"
@@ -890,15 +937,18 @@ export function CodelibView() {
                         aria-label={t('cl_nodeName')}
                         onChange={(e) => renameNode(e.target.value)}
                       />
-                      <button
-                        type="button"
-                        className="kh-cl-del kh-cl-round"
-                        title={t('cl_delNode')}
-                        aria-label={t('cl_delNode')}
-                        onClick={() => void delNode()}
-                      >
-                        <Svg d={TRASH} size={14} />
-                      </button>
+                      {/* the main program / TOP include can be renamed, not deleted */}
+                      {node.user && (
+                        <button
+                          type="button"
+                          className="kh-cl-del kh-cl-round"
+                          title={t('cl_delNode')}
+                          aria-label={t('cl_delNode')}
+                          onClick={() => void delNode()}
+                        >
+                          <Svg d={TRASH} size={14} />
+                        </button>
+                      )}
                     </>
                   ) : (
                     <div className="kh-cl-ntitle">
@@ -959,6 +1009,7 @@ export function CodelibView() {
                             kind={kind}
                             label={label}
                             opts={opts}
+                            fugrs={fugrs}
                             value={tab.vals[key]}
                             onChange={(v) =>
                               updTab((tb) =>
@@ -1103,10 +1154,114 @@ function CodePane({
   );
 }
 
+type Fugr = { name: string; description: string };
+
+/** ABAP name box with suggestions from the function groups of the library (type or pick). */
+function FugrInput({
+  value,
+  label,
+  fugrs,
+  onChange,
+}: {
+  value: string;
+  label: string;
+  fugrs: Fugr[];
+  onChange: (v: string) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [hi, setHi] = useState(-1);
+  const q = value.trim().toUpperCase();
+  const list = useMemo(
+    () =>
+      open
+        ? fugrs
+            .filter(
+              (f) => f.name !== q && (!q || f.name.includes(q) || f.description.toUpperCase().includes(q)),
+            )
+            .slice(0, 30)
+        : [],
+    [fugrs, q, open],
+  );
+  const pick = (f: Fugr) => {
+    onChange(f.name);
+    setOpen(false);
+    setHi(-1);
+  };
+  return (
+    <>
+      <input
+        ref={ref}
+        className="kh-cl-in"
+        data-mono=""
+        value={value}
+        spellCheck={false}
+        maxLength={120}
+        aria-label={label}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={list.length > 0}
+        aria-controls={list.length ? id : undefined}
+        aria-activedescendant={hi >= 0 && list[hi] ? `${id}-${hi}` : undefined}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onChange={(e) => {
+          onChange(e.target.value.toUpperCase().replace(/\s/g, '_'));
+          setHi(-1);
+          setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && list.length) {
+            e.preventDefault();
+            const d = e.key === 'ArrowDown' ? 1 : -1;
+            setHi((h) => ((h + 1 + d + list.length + 1) % (list.length + 1)) - 1);
+          } else if (e.key === 'Enter' && hi >= 0 && list[hi]) {
+            e.preventDefault();
+            pick(list[hi]);
+          } else if (e.key === 'Escape') setOpen(false);
+        }}
+      />
+      {list.length > 0 && (
+        <Popover
+          anchor={ref}
+          align="left"
+          onClose={() => setOpen(false)}
+          className="kh-taglist kh-cl-fugrs"
+          width={Math.max(260, ref.current?.offsetWidth ?? 0)}
+          maxHeight={300}
+          id={id}
+          role="listbox"
+          aria-label={label}
+        >
+          {list.map((f, i) => (
+            <button
+              key={f.name}
+              id={`${id}-${i}`}
+              type="button"
+              role="option"
+              tabIndex={-1}
+              aria-selected={i === hi}
+              // keep the focus in the box
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(f)}
+            >
+              <span className="kh-cl-dot" style={{ background: CL_TYPES.FUGR[1] }} />
+              <b>{f.name}</b>
+              {f.description && <span>{f.description}</span>}
+            </button>
+          ))}
+        </Popover>
+      )}
+    </>
+  );
+}
+
 function Field({
   kind,
   label,
   opts,
+  fugrs,
   value,
   onChange,
   compact,
@@ -1114,10 +1269,20 @@ function Field({
   kind: FieldKind;
   label: string;
   opts?: string[];
+  fugrs?: Fugr[];
   value: Val | undefined;
   onChange: (v: Val) => void;
   compact?: boolean;
 }) {
+  if (kind === 'fugr')
+    return (
+      <FugrInput
+        value={typeof value === 'string' ? value : ''}
+        label={label}
+        fugrs={fugrs ?? []}
+        onChange={onChange}
+      />
+    );
   if (kind === 'check')
     return compact ? (
       <button

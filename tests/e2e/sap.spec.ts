@@ -284,6 +284,75 @@ test('code library SAP: new class, method, generated pool, include reference, Re
   await expect(page.getByText('ZNEW_PROGRAM', { exact: true })).toBeVisible();
 });
 
+test('code library SAP: function module of its own with a picked group, "Implementado @", main program renamed', async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto('app/codelib');
+  const name = page.getByLabel('Objeto de Código');
+
+  // a function group holds includes only
+  await page.getByRole('button', { name: 'Novo Objeto' }).click();
+  await page.getByRole('menuitem', { name: /Grupos de Funções/ }).click();
+  await name.fill('zhr sf grp');
+  await page.getByLabel('Descrição curta').fill('Integração SF');
+  await expect(page.getByRole('button', { name: 'Novo Include' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Novo Módulo de Função' })).toHaveCount(0);
+
+  // a function module: its group typed or picked from the library's groups
+  await page.getByRole('button', { name: 'Novo Objeto' }).click();
+  await page.getByRole('menuitem', { name: /Módulos de Função/ }).click();
+  await expect(name).toHaveValue('Z_NEW_FUNCTION');
+  await name.fill('z hr get');
+  await page.getByLabel('Implementado @').fill('Banco SOL');
+  const grp = page.getByRole('combobox', { name: 'Function group' });
+  await grp.click();
+  await grp.fill('sf');
+  await page.getByRole('option', { name: /ZHR_SF_GRP/ }).click();
+  await expect(grp).toHaveValue('ZHR_SF_GRP');
+  await page.getByRole('tab', { name: 'Texto-fonte' }).click();
+  await expect(page.locator('.kh-ab-pre')).toContainText('FUNCTION z_hr_get.');
+
+  // a program: the main node follows the object name until renamed itself; it cannot be deleted
+  await page.getByRole('button', { name: 'Novo Objeto' }).click();
+  await page.getByRole('menuitem', { name: /Programas/ }).click();
+  const node = page.getByLabel('Nome do componente');
+  await expect(node).toHaveValue('ZNEW_PROGRAM');
+  await name.fill('zrep x');
+  await expect(node).toHaveValue('ZREP_X');
+  await expect(page.getByRole('button', { name: 'Eliminar Componente' })).toHaveCount(0);
+  await node.fill('zrep x main');
+  await expect(node).toHaveValue('ZREP_X_MAIN');
+  await page.getByLabel('Implementado @').fill('EDP');
+
+  await expect
+    .poll(async () => {
+      const r = (await (await page.request.get('api/v1/sap/objects')).json()) as {
+        objects: Array<{ name: string; implementedAt: string; nodes: Array<{ id: string; label: string }> }>;
+      };
+      const p = r.objects.find((o) => o.name === 'ZREP_X');
+      return `${p?.implementedAt}:${p?.nodes.find((n) => n.id === 'main')?.label}`;
+    })
+    .toBe('EDP:ZREP_X_MAIN');
+  await page.reload();
+
+  // separate sections; SE37 shows both kinds
+  await expect(page.locator('.kh-cl-ghead', { hasText: 'Grupos de Funções' })).toBeVisible();
+  await expect(page.locator('.kh-cl-ghead', { hasText: 'Módulos de Função' })).toBeVisible();
+  const fm = page.locator('.kh-cl-item').filter({ hasText: 'Z_HR_GET' });
+  await expect(fm).toContainText('@ Banco SOL');
+  await page.getByRole('button', { name: /^SE37/ }).click();
+  await expect(page.locator('.kh-cl-item')).toHaveCount(2);
+  await page.getByRole('button', { name: /^Todas/ }).click();
+  await fm.click();
+  await expect(page.getByLabel('Implementado @')).toHaveValue('Banco SOL');
+  await expect(page.getByRole('combobox', { name: 'Function group' })).toHaveValue('ZHR_SF_GRP');
+  await expect(page.locator('.kh-cl-ometa')).toContainText('Grupo de funções ZHR_SF_GRP');
+  await page.locator('.kh-cl-item').filter({ hasText: 'ZREP_X' }).click();
+  await expect(page.getByLabel('Nome do componente')).toHaveValue('ZREP_X_MAIN');
+  await expect(page.getByLabel('Implementado @')).toHaveValue('EDP');
+});
+
 test('functional SAP: a test case with steps, progress, filters and Trash', async ({ page }) => {
   await login(page);
   await page.goto('app/fn-test');

@@ -142,7 +142,7 @@ export const KINDS: Kind[] = [
     table: sapObjects,
     id: sapObjects.id,
     title: sql`${sapObjects.type} || ' ' || ${sapObjects.name}`,
-    body: sql`${sapObjects.type} || ' ' || ${sapObjects.name} || ' ' || ${sapObjects.description} || ' ' || ${sapObjects.nodes}::text`,
+    body: sql`${sapObjects.type} || ' ' || ${sapObjects.name} || ' ' || ${sapObjects.description} || ' ' || ${sapObjects.implementedAt} || ' ' || ${sapObjects.nodes}::text`,
     at: sapObjects.updatedAt,
     alive: isNull(sapObjects.deletedAt)!,
     owned: false,

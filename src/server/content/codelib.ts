@@ -3,7 +3,7 @@ import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { itemLinks, sapObjects } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
-import { CL_NEW_NAME, clNewNodes, type ClNode, type ClType } from '@/lib/codelib';
+import { CL_IMPL_MAX, CL_NEW_NAME, clNewNodes, clRename, type ClNode, type ClType } from '@/lib/codelib';
 import { asUser, type Tx } from './tenant';
 
 // Code Library SAP (ZNotes.dc.html isCodelib): ABAP objects shared by the
@@ -15,6 +15,8 @@ export type SapObject = {
   type: ClType;
   name: string;
   description: string;
+  /** "Implementado @" (where / at which client it was built), ≤ 40 chars. */
+  implementedAt: string;
   tags: string[];
   nodes: ClNode[];
   createdAt: string;
@@ -26,6 +28,7 @@ const cols = {
   type: sapObjects.type,
   name: sapObjects.name,
   description: sapObjects.description,
+  implementedAt: sapObjects.implementedAt,
   tags: sapObjects.tags,
   nodes: sapObjects.nodes,
   createdAt: sapObjects.createdAt,
@@ -50,6 +53,12 @@ const MAX_OBJECTS = 5000;
 export const clName = (type: ClType, v: string) =>
   (type === 'SNIP' ? v.trim() : v.toUpperCase().replace(/\s/g, '_')).slice(0, 120);
 
+const clImpl = (v: string) =>
+  v
+    .replace(/[\r\n]+/g, ' ')
+    .trim()
+    .slice(0, CL_IMPL_MAX);
+
 export async function listObjects(auth: AuthContext): Promise<SapObject[]> {
   return asUser(auth, async (tx) => {
     const rows = await tx
@@ -72,7 +81,7 @@ async function count(tx: Tx) {
 
 export async function createObject(
   auth: AuthContext,
-  input: { type: ClType; name?: string },
+  input: { type: ClType; name?: string; implementedAt?: string },
 ): Promise<SapObject> {
   return asUser(auth, async (tx) => {
     if ((await count(tx)) >= MAX_OBJECTS) throw new ApiError(400, 'too_many_items');
@@ -87,6 +96,7 @@ export async function createObject(
         createdBy: auth.user.id,
         type: input.type,
         name,
+        implementedAt: clImpl(input.implementedAt ?? ''),
         nodes: clNewNodes(input.type, name),
       })
       .returning(cols);
@@ -97,6 +107,7 @@ export async function createObject(
 export type ObjectPatch = {
   name?: string;
   description?: string;
+  implementedAt?: string;
   tags?: string[];
   nodes?: ClNode[];
   /** updatedAt the client edited from; a different one means someone else saved meanwhile. */
@@ -120,6 +131,7 @@ export async function updateObject(auth: AuthContext, id: string, patch: ObjectP
       .set({
         ...(patch.name !== undefined ? { name: clName(cur.type as ClType, patch.name) } : {}),
         ...(patch.description !== undefined ? { description: patch.description } : {}),
+        ...(patch.implementedAt !== undefined ? { implementedAt: clImpl(patch.implementedAt) } : {}),
         ...(patch.tags ? { tags: [...new Set(patch.tags.map((t) => t.trim()).filter(Boolean))] } : {}),
         ...(patch.nodes ? { nodes: patch.nodes } : {}),
         updatedAt: now,
@@ -148,8 +160,11 @@ export async function duplicateObject(auth: AuthContext, id: string): Promise<Sa
         type: src.type,
         name,
         description: src.description,
+        implementedAt: src.implementedAt,
         tags: src.tags,
-        nodes: src.nodes,
+        // a function module's label (and a program's main node still named
+        // after it) follows the new name
+        nodes: clRename(src.type as ClType, src.nodes as ClNode[], src.name, name),
       })
       .returning(cols);
     return toObject(r!);

@@ -6,16 +6,20 @@ import {
   clFileName,
   clFindRefs,
   clFmHdr,
+  clFugrOf,
   clFullCode,
   clGen,
   clMeta,
   clNewNodes,
   clPackage,
+  clRenamable,
+  clRename,
   clSearchText,
   clTokens,
   type ClNode,
   type ClObject,
 } from '@/lib/codelib';
+import { ObjectCreate, ObjectPatch } from '@/app/api/v1/sap/schemas';
 
 const obj = (type: ClObject['type'], name: string, nodes = clNewNodes(type, name)): ClObject => ({
   type,
@@ -44,7 +48,7 @@ describe('codelib model', () => {
 
   it('templates add user nodes with unique ids', () => {
     const o = obj('FUGR', 'ZHR_SF');
-    const a = CL_TPL.fm();
+    const a = CL_TPL.finc(o, 2);
     const b = CL_TPL.finc(o, 1);
     expect(a.id).not.toBe(b.id);
     expect(b).toMatchObject({ g: 'inc', label: 'LZHR_SFF01', user: true, sub: 'INCLUDE' });
@@ -73,8 +77,9 @@ describe('codelib model', () => {
   });
 
   it('function module header lists the interface', () => {
-    const fm = CL_TPL.fm();
-    fm.label = 'Z_HR_SF_GET_ABSENCES';
+    const fm = clNewNodes('FUNC', 'Z_HR_SF_GET_ABSENCES')[0]!;
+    expect(fm).toMatchObject({ id: 'fm', g: 'fm', label: 'Z_HR_SF_GET_ABSENCES' });
+    expect(fm.user).toBeUndefined();
     fm.tabs = fm.tabs.map((t) =>
       t.k === 'imp' && t.view === 'grid'
         ? { ...t, rows: [{ param: 'IV_PERNR', typing: 'TYPE', atype: 'PERNR_D', byval: true }] }
@@ -140,6 +145,58 @@ describe('codelib model', () => {
     expect(clMeta(s)).toBe('1 L');
     expect(clSearchText({ ...s, tags: ['ALV'] })).toContain('write 1.');
     expect(clFileName('ZHR PT/Recibos')).toBe('zhr_pt_recibos.abap');
+  });
+
+  it('function groups and function modules are separate objects (D65)', () => {
+    const g = obj('FUGR', 'ZHR_SF');
+    expect(g.nodes.some((n) => n.g === 'fm')).toBe(false);
+    expect(clMeta({ ...g, nodes: [...g.nodes, CL_TPL.finc(g, 1)] })).toBe('1 inc');
+    const f = obj('FUNC', 'Z_HR_SF_GET');
+    expect(f.nodes.map((n) => n.tabs.map((t) => t.k))).toEqual([
+      ['attr', 'imp', 'exp', 'chg', 'tab', 'exc', 'src'],
+    ]);
+    expect(clMeta(f)).toBe('0 par');
+    const withGroup = setTab(f, 'fm', 'attr', { vals: { fugr: 'ZHR_SF' } });
+    expect(clFugrOf(withGroup)).toBe('ZHR_SF');
+    expect(clMeta(withGroup)).toBe('0 par');
+    expect(clSearchText({ ...withGroup, implementedAt: 'Banco SOL', tags: [] })).toContain('zhr_sf');
+    expect(clSearchText({ ...withGroup, implementedAt: 'Banco SOL', tags: [] })).toContain('banco sol');
+    expect(clFullCode(withGroup)).toContain('FUNCTION z_hr_sf_get.');
+  });
+
+  it('API: "Implementado @" is trimmed, ≤ 40 chars, one line; FUNC is a type', () => {
+    expect(ObjectPatch.parse({ implementedAt: '  Banco SOL ' }).implementedAt).toBe('Banco SOL');
+    expect(ObjectPatch.safeParse({ implementedAt: 'x'.repeat(41) }).success).toBe(false);
+    expect(ObjectPatch.safeParse({ implementedAt: 'a\nb' }).success).toBe(false);
+    expect(ObjectCreate.parse({ type: 'FUNC', implementedAt: 'EDP' })).toEqual({
+      type: 'FUNC',
+      implementedAt: 'EDP',
+    });
+  });
+
+  it('renaming the object keeps the FM / main nodes named after it', () => {
+    // a function module IS its object: always follows
+    const f = obj('FUNC', 'Z_NEW_FUNCTION');
+    expect(clRename('FUNC', f.nodes, 'Z_NEW_FUNCTION', 'Z_GET')[0]!.label).toBe('Z_GET');
+    // a program's main node follows while it still has the old or the default name
+    const p = obj('PROG', 'ZNEW_PROGRAM');
+    const p1 = clRename('PROG', p.nodes, 'ZNEW_PROGRAM', 'ZREP');
+    expect(p1[0]!.label).toBe('ZREP');
+    expect(clRename('PROG', p1, 'ZREP', 'ZREP2')[0]!.label).toBe('ZREP2');
+    const renamed = p1.map((n) => (n.id === 'main' ? { ...n, label: 'ZMY_MAIN' } : n));
+    expect(clRename('PROG', renamed, 'ZREP', 'ZREP2')).toBe(renamed); // untouched
+    // function group: TOP include and main program
+    const g = obj('FUGR', 'ZNEW_FUNCTION_GROUP');
+    const g1 = clRename('FUGR', g.nodes, 'ZNEW_FUNCTION_GROUP', 'ZHR');
+    expect(g1.map((n) => n.label)).toEqual(['LZHRTOP', 'cl_n_attr']);
+    expect(g1[1]!.tabs[0]).toMatchObject({ vals: { main: 'SAPLZHR' } });
+    expect(clRename('SNIP', obj('SNIP', 'x').nodes, 'x', 'y')[0]!.label).toBe('cl_n_snip');
+    // main program / TOP can be renamed (not deleted: no `user`); others only if user-added
+    expect(clRenamable('PROG', p.nodes[0]!)).toBe(true);
+    expect(clRenamable('PROG', p.nodes[1]!)).toBe(false);
+    expect(clRenamable('FUGR', g.nodes[0]!)).toBe(true);
+    expect(clRenamable('FUNC', f.nodes[0]!)).toBe(false);
+    expect(clRenamable('PROG', CL_TPL.include(p, 1))).toBe(true);
   });
 
   it('highlighter tokens and references', () => {

@@ -1394,6 +1394,7 @@ export async function linkCandidates(
             ? or(
                 ilike(sapObjects.name, like),
                 ilike(sapObjects.description, like),
+                ilike(sapObjects.implementedAt, like),
                 ilike(sapObjects.type, like),
               )
             : ilike(L.title, like);

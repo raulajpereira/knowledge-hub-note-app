@@ -6,6 +6,7 @@ import { z } from 'zod';
 export const CL_TYPES = {
   PROG: ['SE38', 'oklch(0.8 0.13 50)', 'cl_t_prog'],
   FUGR: ['SE37', 'oklch(0.76 0.12 300)', 'cl_t_fugr'],
+  FUNC: ['SE37', 'oklch(0.78 0.13 340)', 'cl_t_func'],
   CLAS: ['SE24', 'oklch(0.8 0.11 175)', 'cl_t_clas'],
   INTF: ['SE24', 'oklch(0.82 0.1 210)', 'cl_t_intf'],
   TABL: ['SE11', 'oklch(0.78 0.11 245)', 'cl_t_tabl'],
@@ -21,7 +22,9 @@ export const CL_GROUP_IDS = ['code', 'cfg', 'fm', 'inc', 'meth', 'gen'] as const
 export type ClGroup = (typeof CL_GROUP_IDS)[number];
 export const CL_GROUPS: Record<ClType, ClGroup[]> = {
   PROG: ['code', 'cfg'],
-  FUGR: ['fm', 'inc', 'cfg'],
+  // D65: function modules are objects of their own (FUNC), not nodes of the group
+  FUGR: ['inc', 'cfg'],
+  FUNC: ['fm'],
   CLAS: ['cfg', 'meth', 'code', 'gen'],
   INTF: ['cfg', 'meth', 'gen'],
   TABL: ['cfg', 'gen'],
@@ -42,7 +45,8 @@ const VIS = ['Public', 'Protected', 'Private'];
 const TYP3 = ['Type', 'Like', 'Type Ref To'];
 const TYP_FM = ['TYPE', 'LIKE', 'TYPE REF TO'];
 
-export type FieldKind = 'text' | 'mono' | 'sel' | 'check';
+/** `fugr`: an ABAP name typed or picked from the tenant's function groups. */
+export type FieldKind = 'text' | 'mono' | 'sel' | 'check' | 'fugr';
 /** Form field: [key, label, kind, options]. */
 export type FormField = [string, string, FieldKind, string[]?];
 /** Grid column: [key, label, width (0 = grow), kind, options]. */
@@ -94,6 +98,7 @@ export const CL_FORMS = {
   ],
   fm_attr: [
     ['text', 'Short text', 'text'],
+    ['fugr', 'Function group', 'fugr'],
     ['proc', 'Processing Type', 'sel', ['Normal Function Module', 'Remote-Enabled Module', 'Update Module']],
     [
       'upd',
@@ -383,7 +388,15 @@ export type ClNode = {
   user?: boolean;
   tabs: ClTab[];
 };
-export type ClObject = { type: ClType; name: string; description: string; nodes: ClNode[] };
+export type ClObject = {
+  type: ClType;
+  name: string;
+  description: string;
+  /** "Implementado @": where (which client) the object was built; free text. */
+  implementedAt?: string;
+  nodes: ClNode[];
+};
+export const CL_IMPL_MAX = 40;
 
 const MAX_CODE = 200_000;
 const key = z.string().regex(/^[A-Za-z]\w{0,19}$/);
@@ -471,22 +484,6 @@ export const CL_TPL = {
       ],
       { user: true, sub: 'INCLUDE' },
     ),
-  fm: () =>
-    CN(
-      clNodeId(),
-      'fm',
-      'Z_NEW_FUNCTION',
-      [
-        form('attr', 'fm_attr', { text: '', proc: 'Normal Function Module', upd: '—' }),
-        grid('imp', 'fm_imp'),
-        grid('exp', 'fm_exp'),
-        grid('chg', 'fm_imp'),
-        grid('tab', 'fm_tab'),
-        grid('exc', 'fm_exc'),
-        code('src', '\n\n\n\nENDFUNCTION.', 'fm'),
-      ],
-      { user: true },
-    ),
   meth: (o: { type: ClType }) =>
     CN(
       clNodeId(),
@@ -504,7 +501,7 @@ export const CL_TPL = {
 /** Which template the "+" of a tree group adds, per object type. */
 export const CL_ADD: Partial<Record<ClType, Partial<Record<ClGroup, keyof typeof CL_TPL>>>> = {
   PROG: { code: 'include' },
-  FUGR: { fm: 'fm', inc: 'finc' },
+  FUGR: { inc: 'finc' },
   CLAS: { meth: 'meth' },
   INTF: { meth: 'meth' },
 };
@@ -512,6 +509,7 @@ export const CL_ADD: Partial<Record<ClType, Partial<Record<ClGroup, keyof typeof
 export const CL_NEW_NAME: Record<Exclude<ClType, 'SNIP'>, string> = {
   PROG: 'ZNEW_PROGRAM',
   FUGR: 'ZNEW_FUNCTION_GROUP',
+  FUNC: 'Z_NEW_FUNCTION',
   CLAS: 'ZCL_NEW_CLASS',
   INTF: 'ZIF_NEW_INTERFACE',
   TABL: 'ZNEW_TABLE',
@@ -556,6 +554,19 @@ export function clNewNodes(type: ClType, n: string): ClNode[] {
           sub: 'Global data',
         }),
         CN('attr', 'cfg', 'cl_n_attr', [form('attr', 'fugr_attr', { main: `SAPL${n}` })]),
+      ];
+    case 'FUNC':
+      // one function module; its label is the object name (clRename keeps them equal)
+      return [
+        CN('fm', 'fm', n.slice(0, 80), [
+          form('attr', 'fm_attr', { text: '', fugr: '', proc: 'Normal Function Module', upd: '—' }),
+          grid('imp', 'fm_imp'),
+          grid('exp', 'fm_exp'),
+          grid('chg', 'fm_imp'),
+          grid('tab', 'fm_tab'),
+          grid('exc', 'fm_exc'),
+          code('src', '\n\n\n\nENDFUNCTION.', 'fm'),
+        ]),
       ];
     case 'CLAS':
       return [
@@ -653,6 +664,50 @@ export function clNewNodes(type: ClType, n: string): ClNode[] {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+/**
+ * Nodes whose name can be edited in the node header: the user's own (include,
+ * method) and the main code node of a program / the TOP include of a function
+ * group. Only `user` nodes can be deleted.
+ */
+export const clRenamable = (type: ClType, n: ClNode) =>
+  !!n.user || (type === 'PROG' && n.id === 'main') || (type === 'FUGR' && n.id === 'top');
+
+/**
+ * Nodes after the object was renamed from `prev` to `next`: a function
+ * module IS its object (label always follows); a program's main node, the TOP
+ * include and the main program of a function group follow while they still
+ * carry the old (or the default) name, so a renamed node is left alone.
+ */
+export function clRename(type: ClType, nodes: ClNode[], prev: string, next: string): ClNode[] {
+  const def = type === 'SNIP' ? '' : CL_NEW_NAME[type];
+  const was = (v: string, f: (x: string) => string) => v === f(prev) || (!!def && v === f(def));
+  let changed = false;
+  const out = nodes.map((n) => {
+    let label = n.label;
+    let tabs = n.tabs;
+    if (type === 'FUNC' && n.g === 'fm') label = next;
+    else if (type === 'PROG' && n.id === 'main' && was(n.label, (x) => x)) label = next;
+    else if (type === 'FUGR' && n.id === 'top' && was(n.label, (x) => `L${x}TOP`)) label = `L${next}TOP`;
+    else if (type === 'FUGR' && n.id === 'attr')
+      tabs = n.tabs.map((tb) =>
+        tb.view === 'form' && typeof tb.vals.main === 'string' && was(tb.vals.main, (x) => `SAPL${x}`)
+          ? { ...tb, vals: { ...tb.vals, main: `SAPL${next}`.slice(0, 2000) } }
+          : tb,
+      );
+    label = label.slice(0, 80);
+    if (label === n.label && tabs === n.tabs) return n;
+    changed = true;
+    return { ...n, label, tabs };
+  });
+  return changed ? out : nodes;
+}
+
+/** Function group of a function module (its attributes form). */
+export const clFugrOf = (o: ClObject) => {
+  const n = o.nodes.find((x) => x.g === 'fm');
+  return n ? s(nodeVals(n).fugr) : '';
+};
+
 export const clCodeLines = (s: string | undefined) => (s || '').split('\n').length;
 const tabOf = (o: ClObject, id: string, k: string) =>
   o.nodes.find((x) => x.id === id)?.tabs.find((t) => t.k === k);
@@ -695,7 +750,12 @@ export function clMeta(o: ClObject): string {
     case 'PROG':
       return `${n.filter((y) => y.g === 'code').length - 1} inc`;
     case 'FUGR':
-      return `${n.filter((y) => y.g === 'fm').length} FM`;
+      return `${n.filter((y) => y.g === 'inc' && y.id !== 'top').length} inc`;
+    case 'FUNC': {
+      // the group goes in the object header: a long name here would squeeze the FM name
+      const fm = n.find((y) => y.g === 'fm');
+      return fm ? `${['imp', 'exp', 'chg', 'tab'].reduce((a, k) => a + nodeRows(fm, k).length, 0)} par` : '';
+    }
     case 'CLAS':
     case 'INTF':
       return `${n.filter((y) => y.g === 'meth').length} met`;
@@ -925,6 +985,8 @@ export const clSearchText = (o: ClObject & { tags: string[] }) =>
   [
     o.name,
     o.description,
+    o.implementedAt ?? '',
+    o.type === 'FUNC' ? clFugrOf(o) : '',
     o.tags.join(' '),
     ...o.nodes.map((n) => `${n.label} ${n.tabs.map((t) => (t.view === 'code' ? t.code : '')).join(' ')}`),
   ]

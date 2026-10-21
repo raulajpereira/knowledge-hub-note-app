@@ -200,6 +200,8 @@ export const sapObjects = pgTable(
     type: text('type').notNull(),
     name: text('name').notNull().default(''),
     description: text('description').notNull().default(''),
+    /** "Implementado @": where / at which client the object was built (≤ 40). */
+    implementedAt: text('implemented_at').notNull().default(''),
     tags: text('tags')
       .array()
       .notNull()
@@ -216,8 +218,9 @@ export const sapObjects = pgTable(
     index('sap_objects_tenant_idx').on(t.tenantId, t.type),
     check(
       'sap_objects_type_chk',
-      sql`${t.type} in ('PROG','FUGR','CLAS','INTF','TABL','STRU','DTEL','DOMA','SNIP')`,
+      sql`${t.type} in ('PROG','FUGR','FUNC','CLAS','INTF','TABL','STRU','DTEL','DOMA','SNIP')`,
     ),
+    check('sap_objects_impl_len', sql`char_length(${t.implementedAt}) <= 40`),
     check(
       'sap_objects_len',
       sql`char_length(${t.name}) <= 120 and char_length(${t.description}) <= 500 and cardinality(${t.tags}) <= 30 and pg_column_size(${t.nodes}) <= 2000000`,

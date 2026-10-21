@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { TX_SEED } from '@/lib/sap';
+import { ClNodesSchema, clNewNodes } from '@/lib/codelib';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import postgres from 'postgres';
@@ -1550,6 +1551,65 @@ describe.skipIf(!enabled)('notes', () => {
       'ALV rápido (2)',
       'ZHR_PT_RECIBOS_COPY',
     ]);
+  });
+
+  it('codelib: "Implementado @", function modules as their own objects, 0046 moves FMs out of groups', async () => {
+    const a = await signedIn('cl-func@example.pt');
+    const g = await cl.createObject(a, { type: 'FUGR', name: 'zhr sf', implementedAt: '  Banco SOL  ' });
+    expect(g).toMatchObject({ type: 'FUGR', name: 'ZHR_SF', implementedAt: 'Banco SOL' });
+    expect(g.nodes.some((n) => n.g === 'fm')).toBe(false);
+    const f = await cl.createObject(a, { type: 'FUNC' });
+    expect(f).toMatchObject({ type: 'FUNC', name: 'Z_NEW_FUNCTION', implementedAt: '' });
+    expect(f.nodes.map((n) => [n.id, n.g, n.label])).toEqual([['fm', 'fm', 'Z_NEW_FUNCTION']]);
+    const up = await cl.updateObject(a, f.id, { implementedAt: 'EDP\nDistribuição' });
+    expect(up.implementedAt).toBe('EDP Distribuição');
+    // the database keeps it short even if a caller skips the API schema
+    expect(
+      await codeOf(admin`update sap_objects set implemented_at = ${'x'.repeat(41)} where id = ${f.id}`),
+    ).toBe('23514');
+    // a copy of a function module is named after its new name, label included
+    const dup = await cl.duplicateObject(a, f.id);
+    expect(dup).toMatchObject({ name: 'Z_NEW_FUNCTION_COPY', implementedAt: 'EDP Distribuição' });
+    expect(dup.nodes[0]!.label).toBe('Z_NEW_FUNCTION_COPY');
+
+    // data written before 0046: a group holding two FMs (one in a group in the Trash)
+    const fm = (id: string, label: string, text: string) => ({
+      ...clNewNodes('FUNC', label)[0]!,
+      id,
+      user: true,
+      tabs: clNewNodes('FUNC', label)[0]!.tabs.map((t) =>
+        t.view === 'form' ? { ...t, vals: { text, proc: 'Remote-Enabled Module', pkg: 'ZHR' } } : t,
+      ),
+    });
+    const old = [fm('f1', 'Z_HR_GET', 'Obter\nausências'), ...g.nodes, fm('f2', 'Z_HR_POST', 'Publicar')];
+    await admin`update sap_objects set nodes = ${JSON.stringify(old)}::jsonb, created_at = '2026-01-02T03:04:05Z' where id = ${g.id}`;
+    const [gone] =
+      await admin`insert into sap_objects (tenant_id, created_by, type, name, nodes, deleted_at) values (${a.tenant.id}, ${a.user.id}, 'FUGR', 'ZOLD', ${JSON.stringify(old)}::jsonb, now()) returning id`;
+    const sql = await fs.readFile('drizzle/0046_codelib_func_implemented.sql', 'utf8');
+    for (let run = 0; run < 2; run++)
+      for (const st of sql.split('--> statement-breakpoint')) if (st.trim()) await admin.unsafe(st);
+    const all = await cl.listObjects(a);
+    const funcs = all.filter((o) => o.type === 'FUNC' && o.name.startsWith('Z_HR_'));
+    expect(funcs.map((o) => [o.name, o.description, o.tags])).toEqual(
+      expect.arrayContaining([
+        ['Z_HR_GET', 'Obter ausências', []],
+        ['Z_HR_POST', 'Publicar', []],
+      ]),
+    );
+    expect(funcs).toHaveLength(2); // the second run moved nothing
+    for (const o of funcs) {
+      expect(ClNodesSchema.safeParse(o.nodes).success).toBe(true);
+      expect(o.nodes).toHaveLength(1);
+      expect(o.nodes[0]).toMatchObject({ id: 'fm', g: 'fm', label: o.name });
+      expect(o.nodes[0]!.tabs[0]).toMatchObject({ vals: { fugr: 'ZHR_SF', proc: 'Remote-Enabled Module' } });
+      expect(o.nodes[0]!.tabs.at(-1)).toMatchObject({ k: 'src', hdr: 'fm' });
+      expect(o.createdAt).toBe('2026-01-02T03:04:05.000Z');
+    }
+    const g2 = all.find((o) => o.id === g.id)!;
+    expect(g2.nodes.map((n) => n.id)).toEqual(['top', 'attr']);
+    // a group in the Trash is left as it was
+    const [z] = await admin`select jsonb_array_length(nodes) as n from sap_objects where id = ${gone!.id}`;
+    expect(z!.n).toBe(4);
   });
 
   it('functional: records per page shared by the tenant, schema checks, conflict, Trash and counts', async () => {

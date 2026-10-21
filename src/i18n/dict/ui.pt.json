@@ -1119,5 +1119,9 @@
   "set_startSearch": "Procurar página…",
   "tg_color": "Cor da etiqueta",
   "tg_colorAuto": "Automática",
-  "tg_colorHint": "A cor aplica-se a esta etiqueta em toda a aplicação."
+  "tg_colorHint": "A cor aplica-se a esta etiqueta em toda a aplicação.",
+  "cl_t_func": "Módulos de Função",
+  "cl_impl": "Implementado @",
+  "cl_implPh": "Implementado @ …",
+  "cl_fugr": "Grupo de funções"
 }

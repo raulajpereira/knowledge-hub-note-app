@@ -1119,5 +1119,9 @@
   "set_startSearch": "Search page…",
   "tg_color": "Tag colour",
   "tg_colorAuto": "Automatic",
-  "tg_colorHint": "The colour applies to this tag everywhere in the app."
+  "tg_colorHint": "The colour applies to this tag everywhere in the app.",
+  "cl_t_func": "Function Modules",
+  "cl_impl": "Implemented @",
+  "cl_implPh": "Implemented @ …",
+  "cl_fugr": "Function group"
 }

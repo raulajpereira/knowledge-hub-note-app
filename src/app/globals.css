@@ -325,7 +325,7 @@ select optgroup {
 .kh-vc-item[data-on] .kh-vc-item__meta,
 .kh-ar-item[data-on] :is(.kh-ar-item__desc, .kh-ar-item__date),
 :is(.kh-mt-item, .kh-fl-item, .kh-ap-item)[data-on] > div > span:last-child,
-.kh-cl-item[data-on] :is(.kh-cl-idesc, .kh-cl-meta),
+.kh-cl-item[data-on] :is(.kh-cl-idesc, .kh-cl-iimpl, .kh-cl-meta),
 .kh-fn-item[data-on] .kh-fn-imeta,
 .kh-hist__item[data-on] :is(.kh-hist__meta, .kh-hist__ex),
 .kh-mt-item[data-on] .kh-mt-day span {

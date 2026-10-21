@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { normTxMod, SAP_ENVS, TX_MOD_MAX, TX_MOD_RE, TX_TYPES } from '@/lib/sap';
-import { CL_TYPE_IDS, ClNodesSchema, type ClType } from '@/lib/codelib';
+import { CL_IMPL_MAX, CL_TYPE_IDS, ClNodesSchema, type ClType } from '@/lib/codelib';
 import { FN_PAGES } from '@/lib/functional';
 
 const s = (max: number) => z.string().trim().max(max);
@@ -98,6 +98,11 @@ const tag = z
   .min(1)
   .max(40)
   .regex(/^[^\r\n,]*$/);
+const impl = z
+  .string()
+  .trim()
+  .max(CL_IMPL_MAX)
+  .regex(/^[^\r\n]*$/);
 export const ObjectCreate = z.strictObject({
   type: z.enum(CL_TYPE_IDS as [ClType, ...ClType[]]),
   name: z
@@ -105,6 +110,7 @@ export const ObjectCreate = z.strictObject({
     .max(120)
     .regex(/^[^\r\n]*$/)
     .optional(),
+  implementedAt: impl.optional(),
 });
 export const ObjectPatch = z.strictObject({
   name: z
@@ -117,6 +123,7 @@ export const ObjectPatch = z.strictObject({
     .max(500)
     .regex(/^[^\r\n]*$/)
     .optional(),
+  implementedAt: impl.optional(),
   tags: z.array(tag).max(30).optional(),
   nodes: ClNodesSchema.optional(),
   base: z.iso.datetime().optional(),

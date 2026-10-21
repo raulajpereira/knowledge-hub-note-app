@@ -285,6 +285,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 .kh-cl-iname {
   font-size: 13px;
@@ -294,9 +295,16 @@
   text-overflow: ellipsis;
 }
 .kh-cl-idesc {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
   font-size: 12px;
   color: rgb(var(--t) / calc(0.66 * var(--t-k)));
   white-space: nowrap;
+}
+.kh-cl-idesc > span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -402,6 +410,77 @@
   color: rgb(var(--t) / calc(0.8 * var(--t-k)));
   font: inherit;
   font-size: 13.5px;
+}
+/* description + "Implementado @" on one line */
+.kh-cl-odrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.kh-cl-odrow .kh-cl-odesc {
+  flex: 1;
+}
+.kh-cl-impl {
+  flex: 0 1 34ch;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--w) / 0.05);
+  font-size: 12px;
+  cursor: text;
+}
+.kh-cl-impl:focus-within {
+  border-color: rgb(var(--w) / 0.3);
+  background: rgb(var(--w) / 0.1);
+}
+.kh-cl-impl > span {
+  display: none;
+  font-family: 'Geist Mono', monospace;
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
+}
+.kh-cl-impl[data-set] > span {
+  display: inline;
+}
+.kh-cl-onames .kh-cl-impl input {
+  flex: 1;
+  width: 100%;
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
+  font: inherit;
+}
+.kh-cl-impl input::placeholder {
+  color: rgb(var(--t) / calc(0.45 * var(--t-k)));
+}
+/* "@ Banco SOL" after the description in the list (never pushed out by a long one) */
+.kh-cl-idesc > .kh-cl-iimpl {
+  flex: none;
+  max-width: 55%;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
+}
+/* suggestions of a function module's function group */
+.kh-cl-fugrs > button {
+  gap: 9px;
+}
+.kh-cl-fugrs > button b {
+  flex: none;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.kh-cl-fugrs > button > span:last-child:not(.kh-cl-dot) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+  font-size: 12px;
 }
 .kh-cl-odesc::placeholder,
 .kh-cl-tags input::placeholder {
