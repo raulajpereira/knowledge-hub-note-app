@@ -337,7 +337,7 @@ uns minutos (já foi construída para a raiz, o Nginx ainda a serve em `/v2`).
 ```bash
 cd /opt/knowledgehub-v2
 bash infra/cutover/v1-stop.sh               # desliga v1 (PM2), Nginx, PHP-FPM, MySQL, FTP — nada é apagado
-sed -i 's/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=edge/' .env
+grep -q '^COMPOSE_PROFILES=' .env && sed -i 's/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=edge/' .env || echo 'COMPOSE_PROFILES=edge' >> .env
 docker compose up -d --no-deps caddy       # só o Caddy, em 80/443 (o web/worker do deploy ficam como estão)
 docker compose logs caddy | grep -iE 'certificate obtained|error'
 curl -sI https://knowledge-hub.cloud | head -1              # 200

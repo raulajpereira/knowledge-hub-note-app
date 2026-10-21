@@ -435,7 +435,7 @@ Mensagens de conta por confirmar, códigos inválido/pausado/expirado/esgotado/s
 ## O que falta / depende do utilizador
 - Preencher `LEGAL_*` no `.env` da VPS, rever os textos legais com um jurista e pôr `LEGAL_REVIEWED=true`.
 - Opcional: chaves Cloudflare Turnstile e `ADMIN_IP_ALLOWLIST` no `.env`.
-- Passagem para a v2 na raiz e fim da v1 (`DEPLOY.md §7`, scripts em `infra/cutover/`) — em conjunto.
+- **Passagem feita a 21/10/2026**: v2 em `https://knowledge-hub.cloud` (Caddy + Let's Encrypt), v1 desligada (`v1-stop.sh`). Falta: apagar a v1 de vez daqui a uns dias (`infra/cutover/v1-purge.sh`), tarefa no PC para copiar os backups (`DEPLOY.md §6`) e monitor externo (§6b).
 - Preparar a VPS e o `.env` (ver `docs/DEPLOY.md` §1–4) e criar o secret `VPS_APP_DIR_V2`.
 - Backups semanais para o PC (`DEPLOY.md §6`): palavra-passe em `/root/.kh-backup-pass`, cron de domingo e tarefa no PC.
 - Caixa SMTP da Hostinger para envio (`no-reply@knowledge-hub.cloud`).
