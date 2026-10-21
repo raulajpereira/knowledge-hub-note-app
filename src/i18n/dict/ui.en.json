@@ -1123,5 +1123,6 @@
   "cl_t_func": "Function Modules",
   "cl_impl": "Implemented @",
   "cl_implPh": "Implemented @ …",
+  "cl_implLbl": "Implemented",
   "cl_fugr": "Function group"
 }

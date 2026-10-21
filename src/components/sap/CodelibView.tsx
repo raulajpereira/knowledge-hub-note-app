@@ -113,8 +113,9 @@ const TICON: Record<ClType, string> = {
   DOMA: '<path d="M4 6h16"></path><path d="M4 12h10"></path><path d="M4 18h6"></path>',
   SNIP: IC.code,
 };
+// copy code = clipboard (duplicate object = two squares)
 const COPY =
-  '<rect x="9" y="9" width="11" height="11" rx="2.5"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path>';
+  '<rect x="8" y="3" width="8" height="4" rx="1.3"></rect><path d="M16 5h1.5A2.5 2.5 0 0 1 20 7.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-11A2.5 2.5 0 0 1 6.5 5H8"></path><path d="M9 12h6"></path><path d="M9 16h4"></path>';
 const OK = '<path d="M5 12.5l4.5 4.5L19 7.5"></path>';
 const X = '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>';
 const TRASH = '<path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path>';
@@ -657,6 +658,16 @@ export function CodelibView() {
                             <span>{x.description || '—'}</span>
                             {x.implementedAt && <span className="kh-cl-iimpl">@ {x.implementedAt}</span>}
                           </span>
+                          {x.tags.length > 0 && (
+                            <span className="kh-cl-itags">
+                              {x.tags.slice(0, 4).map((tg) => (
+                                <span key={tg} className="kh-tagc" style={tagStyle(tg)}>
+                                  {tg}
+                                </span>
+                              ))}
+                              {x.tags.length > 4 && <span className="kh-cl-imore">+{x.tags.length - 4}</span>}
+                            </span>
+                          )}
                         </div>
                         <span className="kh-cl-meta">{clMeta(x)}</span>
                       </div>
@@ -705,32 +716,27 @@ export function CodelibView() {
                   upd(o.id, nodes === o.nodes ? { name } : { name, nodes });
                 }}
               />
-              <div className="kh-cl-odrow">
-                <input
-                  className="kh-cl-odesc"
-                  value={o.description}
-                  maxLength={500}
-                  placeholder={t('cl_descPh')}
-                  aria-label={t('cl_descPh')}
-                  onChange={(e) => upd(o.id, { description: e.target.value.replace(/[\r\n]/g, ' ') })}
-                />
-                <label
-                  className="kh-cl-impl"
-                  title={t('cl_impl')}
-                  data-set={o.implementedAt ? '' : undefined}
-                >
-                  <span aria-hidden="true">@</span>
-                  <input
-                    value={o.implementedAt}
-                    maxLength={CL_IMPL_MAX}
-                    placeholder={t('cl_implPh')}
-                    aria-label={t('cl_impl')}
-                    onChange={(e) => upd(o.id, { implementedAt: e.target.value.replace(/[\r\n]/g, ' ') })}
-                  />
-                </label>
-              </div>
+              <input
+                className="kh-cl-odesc"
+                value={o.description}
+                maxLength={500}
+                placeholder={t('cl_descPh')}
+                aria-label={t('cl_descPh')}
+                onChange={(e) => upd(o.id, { description: e.target.value.replace(/[\r\n]/g, ' ') })}
+              />
             </div>
             <div className="kh-cl-oacts">
+              <label className="kh-cl-impl" title={t('cl_impl')}>
+                <span className="kh-cl-impl__lbl">{t('cl_implLbl')}</span>
+                <span aria-hidden="true">@</span>
+                <input
+                  value={o.implementedAt}
+                  maxLength={CL_IMPL_MAX}
+                  placeholder={t('cl_implPh')}
+                  aria-label={t('cl_impl')}
+                  onChange={(e) => upd(o.id, { implementedAt: e.target.value.replace(/[\r\n]/g, ' ') })}
+                />
+              </label>
               <button
                 type="button"
                 title={t('cl_copyAll')}

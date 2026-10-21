@@ -1123,5 +1123,6 @@
   "cl_t_func": "Módulos de Função",
   "cl_impl": "Implementado @",
   "cl_implPh": "Implementado @ …",
+  "cl_implLbl": "Implementado",
   "cl_fugr": "Grupo de funções"
 }
