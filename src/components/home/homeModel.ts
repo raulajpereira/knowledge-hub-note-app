@@ -1,4 +1,4 @@
-import { HOME_SPAN, type HomePrefs, type HomeType } from '@/lib/prefs';
+import { HOME_ROW_MAX, HOME_SPAN, type HomePrefs, type HomeType } from '@/lib/prefs';
 
 // Início model (prototype HOME_DEF, HOME_ICONS, QUICK_DEF, QUICK_TINT, SC_DEF, hPack).
 export type Widget = HomePrefs['widgets'][number];
@@ -144,4 +144,128 @@ export function resizeRow(f: number[], j: number, fn: number, minF: number): num
     nf = nf.map((x) => x / s);
   }
   return nf.map((x) => +x.toFixed(4));
+}
+
+// ── Row layout ─────────────────────────────────────────────────────────────
+// home.rows lists the card ids of each row; the cards of a row share its width
+// (equally, unless the bars between them were dragged: widget.fr). Layouts saved
+// before rows existed are packed by size once, on read (same look as before).
+export type Rows = string[][];
+/** Where a dragged card lands: next to card `ref` (in its row) or in a new row at boundary `at`. */
+export type DropTarget = { kind: 'into'; ref: string; after: boolean } | { kind: 'new'; at: number };
+
+const chunk = (r: string[]) =>
+  Array.from({ length: Math.ceil(r.length / HOME_ROW_MAX) }, (_, i) =>
+    r.slice(i * HOME_ROW_MAX, (i + 1) * HOME_ROW_MAX),
+  );
+
+/** Saved prefs → prefs with consistent `rows` (old flat layouts migrated; unknown/duplicate ids dropped; cards missing from rows get a row of their own at the end). */
+export function migrateHome(home: HomePrefs, modules: ReadonlySet<string>): HomePrefs {
+  let widgets = home.widgets;
+  let rows: Rows;
+  if (home.rows) {
+    const ids = new Set(widgets.map((w) => w.id));
+    const seen = new Set<string>();
+    rows = home.rows
+      .map((r) => r.filter((id) => ids.has(id) && !seen.has(id) && !!seen.add(id)))
+      .flatMap(chunk)
+      .filter((r) => r.length);
+    for (const w of widgets) if (!seen.has(w.id)) rows.push([w.id]);
+  } else {
+    // Old layout: rows as packed by size, the size proportions kept as fractions.
+    const visible = widgets.filter((w) => widgetAllowed(w.type, modules));
+    const packed = pack(visible);
+    rows = packed.map((r) => r.items.map((it) => it.w.id));
+    const fr = new Map<string, number | undefined>();
+    for (const r of packed) {
+      const equal = r.items.every((it) => Math.abs(it.f - r.items[0]!.f) < 1e-4);
+      for (const it of r.items) fr.set(it.w.id, equal ? undefined : +it.f.toFixed(4));
+    }
+    for (const w of widgets) if (!fr.has(w.id)) rows.push([w.id]);
+    widgets = widgets.map((w) => {
+      const { fr: _old, ...rest } = w;
+      const f = fr.get(w.id);
+      return f === undefined ? rest : { ...rest, fr: f };
+    });
+  }
+  return { ...home, widgets, rows };
+}
+
+/** The rows on screen: only cards the plan allows; rows left empty disappear. */
+export function visibleRows(home: HomePrefs, modules: ReadonlySet<string>): Widget[][] {
+  const byId = new Map(home.widgets.map((w) => [w.id, w]));
+  return (home.rows ?? [])
+    .map((r) => r.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : [])))
+    .map((r) => r.filter((w) => widgetAllowed(w.type, modules)))
+    .filter((r) => r.length);
+}
+
+/** Width fraction of each card of a row (equal unless resized). */
+export function rowFractions(row: Widget[]): number[] {
+  const raw = row.map((w) => w.fr ?? 1 / row.length);
+  const sum = raw.reduce((a, b) => a + b, 0) || 1;
+  return raw.map((x) => x / sum);
+}
+
+/** Card `id` placed at `target`; null when that isn't possible (full row, unknown card). */
+function place(rows: Rows, id: string, target: DropTarget, max: number): Rows | null {
+  if (!rows.some((r) => r.includes(id))) return null;
+  // Take the card out but keep the (maybe now empty) row so indices still match `target`.
+  const L = rows.map((r) => r.filter((x) => x !== id));
+  if (target.kind === 'new') {
+    if (target.at < 0 || target.at > L.length) return null;
+    L.splice(target.at, 0, [id]);
+  } else {
+    if (target.ref === id) return null;
+    const r = L.find((x) => x.includes(target.ref));
+    if (!r || r.length >= max) return null;
+    r.splice(r.indexOf(target.ref) + (target.after ? 1 : 0), 0, id);
+  }
+  return L.filter((r) => r.length);
+}
+
+/** Moves card `id` to `target`; null when that isn't possible or nothing changes. */
+export function moveCard(rows: Rows, id: string, target: DropTarget, max = HOME_ROW_MAX): Rows | null {
+  const L = place(rows, id, target, max);
+  return L && JSON.stringify(L) !== JSON.stringify(rows) ? L : null;
+}
+
+/** Keyboard alternative to the drag (← →): the card steps to the previous/next place in reading order —
+ * between cards of a row, then a row of its own before the next row, and so on. */
+export function stepCard(rows: Rows, id: string, delta: -1 | 1, max = HOME_ROW_MAX): Rows | null {
+  const rest = rows.map((r) => r.filter((x) => x !== id));
+  const targets: DropTarget[] = [];
+  rest.forEach((r, i) => {
+    targets.push({ kind: 'new', at: i });
+    r.forEach((ref) => targets.push({ kind: 'into', ref, after: false }));
+    if (r.length) targets.push({ kind: 'into', ref: r[r.length - 1]!, after: true });
+  });
+  targets.push({ kind: 'new', at: rest.length });
+  const cur = JSON.stringify(rows);
+  const seq: string[] = [];
+  for (const t of targets) {
+    const L = place(rows, id, t, max);
+    const k = L && JSON.stringify(L);
+    if (k && k !== seq[seq.length - 1]) seq.push(k);
+  }
+  const i = seq.indexOf(cur);
+  const next = i < 0 ? undefined : seq[i + delta];
+  return next ? (JSON.parse(next) as Rows) : null;
+}
+
+/** New on-screen rows → prefs: cards hidden by the plan keep their rows (at the end), and every card
+ * whose row changed members goes back to an equal share. */
+export function withRows(home: HomePrefs, modules: ReadonlySet<string>, vis: Rows): HomePrefs {
+  const shown = new Set(vis.flat());
+  const hidden = (home.rows ?? []).map((r) => r.filter((id) => !shown.has(id))).filter((r) => r.length);
+  const rows = [...vis, ...hidden];
+  const keyOf = (L: Rows) => new Map(L.flatMap((r) => r.map((id) => [id, [...r].sort().join(',')] as const)));
+  const before = keyOf(visibleRows(home, modules).map((r) => r.map((w) => w.id)));
+  const after = keyOf(vis);
+  const widgets = home.widgets.map((w) => {
+    if (w.fr === undefined || before.get(w.id) === after.get(w.id)) return w;
+    const { fr: _fr, ...rest } = w;
+    return rest;
+  });
+  return { ...home, widgets, rows };
 }

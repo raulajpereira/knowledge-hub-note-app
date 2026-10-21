@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { ZodError } from 'zod';
 import { parsePrefsPatch } from '@/lib/prefs';
-import { defaultWidgets, pack, resizeRow, widgetAllowed } from '@/components/home/homeModel';
+import {
+  defaultWidgets,
+  migrateHome,
+  moveCard,
+  pack,
+  resizeRow,
+  rowFractions,
+  stepCard,
+  visibleRows,
+  widgetAllowed,
+  withRows,
+  type Widget,
+} from '@/components/home/homeModel';
 import { wxAlerts, wxKind, wxLabelKey } from '@/components/home/weatherArt';
 import { DOMAIN_RE, iconType } from '@/server/favicon';
 
@@ -60,6 +72,110 @@ describe('dashboard layout', () => {
       }),
     ).toThrow(ZodError);
     expect(() => parsePrefsPatch({ weatherLoc: { lat: 200, lon: 0, city: 'x' } })).toThrow(ZodError);
+  });
+});
+
+describe('dashboard rows', () => {
+  const all = new Set(['notes', 'tasks', 'tcodes', 'transports', 'issues', 'systems', 'emails']);
+  const W = (id: string, type: Widget['type'] = 'focus', extra: Partial<Widget> = {}): Widget => ({
+    id,
+    type,
+    size: 'M',
+    ...extra,
+  });
+
+  it('migrates an old flat layout to rows packed by size, keeping the proportions', () => {
+    const h = migrateHome(
+      {
+        widgets: [W('a', 'today', { size: 'L' }), W('b', 'capture', { size: 'S' }), W('c'), W('d'), W('e')],
+      },
+      all,
+    );
+    expect(h.rows).toEqual([['a', 'b'], ['c', 'd'], ['e']]);
+    expect(h.widgets.map((w) => w.fr)).toEqual([0.6667, 0.3333, undefined, undefined, undefined]);
+    expect(rowFractions(visibleRows(h, all)[1]!)).toEqual([0.5, 0.5]);
+    // the default dashboard looks like before (today + capture side by side, …)
+    expect(migrateHome({ widgets: defaultWidgets(all) }, all).rows![0]).toEqual(['w0', 'w1']);
+  });
+
+  it('cards hidden by the plan keep a row of their own and reappear at the end', () => {
+    const h = migrateHome({ widgets: [W('a'), W('t', 'transports'), W('b')] }, new Set(['notes']));
+    expect(h.rows).toEqual([['a', 'b'], ['t']]);
+    expect(visibleRows(h, new Set(['notes'])).map((r) => r.map((w) => w.id))).toEqual([['a', 'b']]);
+  });
+
+  it('cleans saved rows: unknown/duplicate ids dropped, missing cards appended, long rows split', () => {
+    const h = migrateHome(
+      {
+        widgets: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((x) => W(x)),
+        rows: [
+          ['a', 'zz', 'b'],
+          ['a', 'c', 'd', 'e', 'f', 'g'],
+        ],
+      },
+      all,
+    );
+    expect(h.rows).toEqual([['a', 'b'], ['c', 'd', 'e', 'f', 'g'], ['h']]);
+  });
+
+  it('dropping next to a card puts it in that row (which splits among one more)', () => {
+    const rows = [['a', 'b'], ['c', 'd'], ['e']];
+    expect(moveCard(rows, 'e', { kind: 'into', ref: 'a', after: true })).toEqual([
+      ['a', 'e', 'b'],
+      ['c', 'd'],
+    ]);
+    expect(moveCard(rows, 'c', { kind: 'into', ref: 'b', after: true })).toEqual([
+      ['a', 'b', 'c'],
+      ['d'],
+      ['e'],
+    ]);
+    expect(moveCard(rows, 'a', { kind: 'into', ref: 'b', after: false })).toBeNull(); // no change
+    // a full row takes no more
+    expect(moveCard([['a', 'b'], ['c']], 'c', { kind: 'into', ref: 'a', after: true }, 2)).toBeNull();
+    // equal shares after the row changed members (custom widths are dropped)
+    const h = migrateHome(
+      { widgets: [W('a', 'today', { size: 'L' }), W('b', 'capture', { size: 'S' }), W('c'), W('d')] },
+      all,
+    );
+    const nh = withRows(h, all, moveCard(h.rows!, 'c', { kind: 'into', ref: 'b', after: true })!);
+    expect(nh.rows).toEqual([['a', 'b', 'c'], ['d']]);
+    expect(rowFractions(visibleRows(nh, all)[0]!)).toEqual([1 / 3, 1 / 3, 1 / 3]);
+  });
+
+  it('dropping between rows makes a new row; a row left empty disappears', () => {
+    const rows = [['a', 'b'], ['c']];
+    expect(moveCard(rows, 'b', { kind: 'new', at: 0 })).toEqual([['b'], ['a'], ['c']]);
+    expect(moveCard(rows, 'b', { kind: 'new', at: 2 })).toEqual([['a'], ['c'], ['b']]);
+    expect(moveCard(rows, 'c', { kind: 'new', at: 0 })).toEqual([['c'], ['a', 'b']]);
+    expect(moveCard(rows, 'c', { kind: 'new', at: 1 })).toBeNull(); // already a row of its own there
+    expect(moveCard(rows, 'c', { kind: 'into', ref: 'a', after: false })).toEqual([['c', 'a', 'b']]);
+  });
+
+  it('← → step a card through every place in reading order', () => {
+    const rows = [
+      ['a', 'b'],
+      ['c', 'd'],
+    ];
+    expect(stepCard(rows, 'a', 1)).toEqual([
+      ['b', 'a'],
+      ['c', 'd'],
+    ]);
+    expect(stepCard(rows, 'b', 1)).toEqual([['a'], ['b'], ['c', 'd']]);
+    expect(stepCard([['a'], ['b'], ['c', 'd']], 'b', 1)).toEqual([['a'], ['b', 'c', 'd']]);
+    expect(stepCard(rows, 'a', -1)).toEqual([['a'], ['b'], ['c', 'd']]);
+    expect(stepCard([['a'], ['b']], 'a', -1)).toBeNull();
+    expect(stepCard([['a'], ['b']], 'b', 1)).toBeNull();
+    // full rows are skipped
+    expect(stepCard([['a'], ['b', 'c']], 'a', 1, 2)).toEqual([['b', 'c'], ['a']]);
+  });
+
+  it('validates saved rows', () => {
+    expect(parsePrefsPatch({ home: { widgets: [W('a')], rows: [['a']] } })).toBeTruthy();
+    expect(() => parsePrefsPatch({ home: { widgets: [], rows: [[]] } })).toThrow(ZodError);
+    expect(() =>
+      parsePrefsPatch({ home: { widgets: [], rows: [['a', 'b', 'c', 'd', 'e', 'f', 'g']] } }),
+    ).toThrow(ZodError);
+    expect(() => parsePrefsPatch({ home: { widgets: [], rows: [['<x>']] } })).toThrow(ZodError);
   });
 });
 

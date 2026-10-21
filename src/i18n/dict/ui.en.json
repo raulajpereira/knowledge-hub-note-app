@@ -30,7 +30,7 @@
   "auth_verifyOkS": "Your account is active. You can sign in now.",
   "auth_verifyOkT": "Email confirmed",
   "auth_verifySent": "Account created. We sent you an email to confirm your address — open the link to activate your account.",
-  "h_editHint": "Drag a card by its ⠿ handle (or use ← →) to move it. Drag the bar between two cards to adjust the width; S/M/L/XL changes the size.",
+  "h_editHint": "Drag a card by its ⠿ handle (or use ← →): next to another card it joins that row (the width is shared, up to 6 per row); above or below a row it starts a new row. Drag the bar between two cards to adjust the width.",
   "home_edit": "Edit",
   "home_noItems": "Nothing here yet.",
   "home_noNotes": "Your recent notes appear here.",
@@ -1124,5 +1124,6 @@
   "cl_impl": "Implemented @",
   "cl_implPh": "Implemented @ …",
   "cl_implLbl": "Implemented",
-  "cl_fugr": "Function group"
+  "cl_fugr": "Function group",
+  "h_equal": "Share the row equally"
 }

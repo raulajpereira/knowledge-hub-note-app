@@ -91,6 +91,8 @@ export const HOME_TYPES = [
 export type HomeType = (typeof HOME_TYPES)[number];
 export const HOME_SIZES = ['S', 'M', 'L', 'XL'] as const;
 export const HOME_SPAN = { S: 4, M: 6, L: 8, XL: 12 } as const;
+/** Most cards side by side in one Início row (they share its width). */
+export const HOME_ROW_MAX = 6;
 
 const Widget = z.object({
   id: z.string().regex(/^[\w-]{1,40}$/),
@@ -120,6 +122,16 @@ export const SapNewsSource = z.object({
 export type SapNewsSource = z.infer<typeof SapNewsSource>;
 export const HomePrefs = z.object({
   widgets: z.array(Widget).max(40),
+  /** Card ids per row, top to bottom (absent = layout saved before rows: packed by size on read). */
+  rows: z
+    .array(
+      z
+        .array(z.string().regex(/^[\w-]{1,40}$/))
+        .min(1)
+        .max(HOME_ROW_MAX),
+    )
+    .max(40)
+    .optional(),
   showWx: z.boolean().optional(),
   quick: z
     .array(z.string().regex(/^[a-z][a-z0-9_]{1,31}$/))

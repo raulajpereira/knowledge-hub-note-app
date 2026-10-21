@@ -243,9 +243,36 @@
   cursor: pointer;
   white-space: nowrap;
 }
+/* Card rows: the cards of a row share its width; too narrow for all of them → the row wraps. */
+.kh-home__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 24px 28px;
+}
+.kh-home__row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  min-width: 0;
+}
+/* Where a dragged card makes a new row */
+.kh-home__rowdrop {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  z-index: 4;
+  pointer-events: none;
+}
 .kh-card {
   position: relative;
-  min-width: min(100%, 240px);
+  container-type: inline-size;
+  min-width: min(100%, 160px);
   min-height: 180px;
   display: flex;
   flex-direction: column;
@@ -289,8 +316,51 @@
   opacity: 0.35;
   cursor: default;
 }
-/* Where the dragged card will land */
+/* Card header: grip (editing), icon, title, count, "see all" / edit tools */
+.kh-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.kh-card__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-card__tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+/* Narrow cards (4–6 per row): the title keeps the room; count and "see all" text step aside, and
+   while editing the tools go to a second line. */
+@container (max-width: 300px) {
+  .kh-card__count,
+  .kh-card__moreTxt {
+    display: none;
+  }
+  .kh-card[data-editing='true'] .kh-card__icon {
+    display: none;
+  }
+  .kh-card[data-editing='true'] .kh-card__title {
+    flex-basis: calc(100% - 44px);
+  }
+}
+@container (max-width: 200px) {
+  .kh-card .kh-sc__ic {
+    display: none;
+  }
+}
+/* Where the dragged card will land inside a row */
 .kh-card__drop {
+  pointer-events: none;
   position: absolute;
   top: 8px;
   bottom: 8px;
@@ -718,7 +788,7 @@
 /* Transações Favoritas / Acesso Rápido SAP (prototype hTcodes / hSystems) */
 .kh-htx {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
   gap: 10px;
 }
 .kh-htx__it {
@@ -783,7 +853,7 @@
 }
 .kh-hsys {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr));
   gap: 8px;
 }
 .kh-hsys > button {

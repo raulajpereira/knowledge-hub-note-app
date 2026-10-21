@@ -14,7 +14,7 @@ import { usePref, usePrefsContext } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { NavIcon } from '@/components/shell/icons';
 import { hrefOf, moduleOf, normalizeNav } from '@/components/shell/nav';
-import { HOME_SIZES, HOME_TYPES, type HomePrefs, type HomeType, type NavEntry } from '@/lib/prefs';
+import { HOME_TYPES, type HomePrefs, type HomeType, type NavEntry } from '@/lib/prefs';
 import { useI18n } from '@/i18n/client';
 import {
   HOME_ICONS,
@@ -23,9 +23,15 @@ import {
   SC_DEF,
   WIDGET_PAGE,
   defaultWidgets,
-  pack,
+  migrateHome,
+  moveCard,
   resizeRow,
+  rowFractions,
+  stepCard,
+  visibleRows,
   widgetAllowed,
+  withRows,
+  type DropTarget,
   type Widget,
 } from './homeModel';
 import { fmtT, pomo, usePomodoro } from './pomodoro';
@@ -112,6 +118,8 @@ const svg = (d: string, size = 15, sw = 1.9) => (
     dangerouslySetInnerHTML={{ __html: d }}
   />
 );
+/** Narrowest a card gets inside a row (matches .kh-card min-width); below it the row wraps. */
+const CARD_MIN = 160;
 const X = '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>';
 const GRIP =
   '<circle cx="9" cy="6" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="18" r="1"></circle>';
@@ -151,15 +159,21 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
   const prefsCtx = usePrefsContext()!;
   const [saved, setHome] = usePref<HomePrefs | undefined>('home', undefined);
   const [navSaved] = usePref<NavEntry[] | undefined>('nav', undefined);
-  const home: HomePrefs = useMemo(() => saved ?? { widgets: defaultWidgets(modules) }, [saved, modules]);
-  const widgets = home.widgets.filter((w) => widgetAllowed(w.type, modules));
+  // Always row-based on screen: old flat layouts (and the default) are migrated on read.
+  const home: HomePrefs = useMemo(
+    () => migrateHome(saved ?? { widgets: defaultWidgets(modules) }, modules),
+    [saved, modules],
+  );
+  const rows = useMemo(() => visibleRows(home, modules), [home, modules]);
+  const rowIds = rows.map((r) => r.map((w) => w.id));
   const save = useCallback((patch: Partial<HomePrefs>) => setHome({ ...home, ...patch }), [home, setHome]);
   const latest = useRef(home);
   latest.current = home;
 
   const [editing, setEditing] = useState(false);
   const [drag, setDrag] = useState<string | null>(null);
-  const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null);
+  const [drop, setDrop] = useState<DropTarget | null>(null);
+  const rowsEl = useRef<HTMLDivElement>(null);
   const [quickEdit, setQuickEdit] = useState(false);
   const [scForm, setScForm] = useState<{ id: string | null; title: string; url: string } | null>(null);
   const [live, setLive] = useState<Record<string, number> | null>(null); // fractions while resizing
@@ -204,60 +218,116 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
   const greeting =
     hour === null ? '' : `${t(hour < 12 ? 'h_morning' : hour < 20 ? 'h_afternoon' : 'h_evening')}, ${first}`;
 
-  /** Moves card `from` right before (or after) card `to`. */
-  const moveW = (from: string, to: string, after: boolean) => {
-    if (from === to) return;
-    const L = home.widgets.slice();
-    const i = L.findIndex((w) => w.id === from);
-    if (i < 0) return;
-    const [x] = L.splice(i, 1);
-    const j = L.findIndex((w) => w.id === to);
-    if (j < 0) return;
-    L.splice(after ? j + 1 : j, 0, x!);
-    save({ widgets: L });
+  const moveTo = (id: string, target: DropTarget) => {
+    const L = moveCard(rowIds, id, target);
+    if (L) setHome(withRows(home, modules, L));
   };
   const moveBy = (id: string, delta: -1 | 1) => {
-    const vis = widgets.map((w) => w.id);
-    const k = vis.indexOf(id);
-    const other = vis[k + delta];
-    if (other) moveW(id, other, delta === 1);
+    const L = stepCard(rowIds, id, delta);
+    if (L) setHome(withRows(home, modules, L));
   };
-  // Pointer-based drag from the ⠿ handle: a bar shows where the card will land.
+  const removeW = (id: string) => {
+    const h = withRows(
+      home,
+      modules,
+      rowIds.map((r) => r.filter((x) => x !== id)).filter((r) => r.length),
+    );
+    setHome({
+      ...h,
+      widgets: h.widgets.filter((x) => x.id !== id),
+      rows: h.rows!.map((r) => r.filter((x) => x !== id)).filter((r) => r.length),
+    });
+  };
+  /** Drop target under the pointer: the top/bottom edge of a row or the gap between rows → a new row
+   * there; elsewhere in a row → next to the nearest card (that row then splits among one more). */
+  const dropAt = (id: string, x: number, y: number): DropTarget | null => {
+    const els = Array.from(rowsEl.current?.querySelectorAll<HTMLElement>('[data-hrow]') ?? []);
+    const rects = els.map((el) => el.getBoundingClientRect());
+    if (!rects.length) return null;
+    let t: DropTarget | null = null;
+    const i = rects.findIndex((r) => y >= r.top && y <= r.bottom);
+    if (i < 0) {
+      const k = rects.findIndex((r) => y < r.top);
+      t = { kind: 'new', at: k < 0 ? rects.length : k };
+    } else {
+      const r = rects[i]!;
+      const band = Math.min(28, r.height * 0.18);
+      if (y < r.top + band) t = { kind: 'new', at: i };
+      else if (y > r.bottom - band) t = { kind: 'new', at: i + 1 };
+      else {
+        let best: { ref: string; after: boolean; d: number } | null = null;
+        for (const c of Array.from(els[i]!.querySelectorAll<HTMLElement>('[data-hw]'))) {
+          const ref = c.dataset.id;
+          if (!ref || ref === id) continue;
+          const b = c.getBoundingClientRect();
+          const d = Math.hypot(Math.max(b.left - x, 0, x - b.right), Math.max(b.top - y, 0, y - b.bottom));
+          if (!best || d < best.d) best = { ref, after: x > b.left + b.width / 2, d };
+        }
+        if (best) t = { kind: 'into', ref: best.ref, after: best.after };
+      }
+    }
+    return t && moveCard(rowIds, id, t) ? t : null;
+  };
+  // Pointer-based drag from the ⠿ handle: a vertical bar shows a place inside a row, a horizontal one a new row.
   const startDrag = (id: string) => (e: React.PointerEvent) => {
     e.preventDefault();
     setDrag(id);
     document.body.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
-    let target: { id: string; after: boolean } | null = null;
-    const mv = (ev: PointerEvent) => {
-      const card = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>('[data-hw]');
-      const tid = card?.dataset.id;
-      if (!card || !tid || tid === id) {
-        target = null;
-      } else {
-        const r = card.getBoundingClientRect();
-        target = { id: tid, after: ev.clientX > r.left + r.width / 2 };
-      }
+    let target: DropTarget | null = null;
+    let px = e.clientX;
+    let py = e.clientY;
+    let moved = false;
+    const aim = () => {
+      target = dropAt(id, px, py);
       setDrop(target);
     };
+    const mv = (ev: PointerEvent) => {
+      px = ev.clientX;
+      py = ev.clientY;
+      moved = true;
+      aim();
+    };
+    // Near the top/bottom edge of the scrolling area the page scrolls, so far rows can be reached.
+    let scroller: HTMLElement | null = rowsEl.current;
+    while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY))
+      scroller = scroller.parentElement;
+    let raf = 0;
+    const tick = () => {
+      if (scroller && moved) {
+        const r = scroller.getBoundingClientRect();
+        const dy = py < r.top + 60 ? -1 : py > r.bottom - 60 ? 1 : 0;
+        if (dy) {
+          const top = scroller.scrollTop;
+          scroller.scrollTop += dy * 14;
+          if (scroller.scrollTop !== top) aim();
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
     const up = () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('pointermove', mv);
       window.removeEventListener('pointerup', up);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      if (target) moveW(id, target.id, target.after);
+      if (target) moveTo(id, target);
       setDrag(null);
       setDrop(null);
     };
     window.addEventListener('pointermove', mv);
     window.addEventListener('pointerup', up);
   };
-  const addW = (type: HomeType) =>
-    save({
+  // A newly added card gets a row of its own at the end.
+  const addW = (type: HomeType) => {
+    const id = `w${Date.now()}`;
+    setHome({
+      ...home,
       widgets: [
         ...home.widgets,
         {
-          id: `w${Date.now()}`,
+          id,
           type,
           size:
             type === 'today'
@@ -267,58 +337,54 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
                 : 'S',
         },
       ],
+      rows: [...(home.rows ?? []), [id]],
     });
+  };
 
-  const rows = pack(widgets);
-  const startResize =
-    (row: ReturnType<typeof pack>[number], j: number, side: 'r' | 'l') => (e: React.PointerEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const card = (e.currentTarget as HTMLElement).closest('[data-hw]') as HTMLElement;
-      const rowEl = card.parentElement!;
-      const gap = parseFloat(getComputedStyle(rowEl).columnGap) || 16;
-      const n = row.items.length;
-      const avail = rowEl.clientWidth - gap * (n - 1);
-      const w0 = card.getBoundingClientRect().width;
-      const x0 = e.clientX;
-      const minF = Math.min(260 / avail, 1 / n);
-      const f = row.items.map((it) => it.f);
-      const ids = row.items.map((it) => it.w.id);
-      let nf = f;
-      document.body.style.cursor = 'ew-resize';
-      document.body.style.userSelect = 'none';
-      const mv = (ev: PointerEvent) => {
-        const dx = ev.clientX - x0;
-        nf = resizeRow(f, j, (w0 + (side === 'r' ? dx : -dx)) / avail, minF);
-        setLive(Object.fromEntries(ids.map((id, k) => [id, nf[k]!])));
-      };
-      const up = () => {
-        window.removeEventListener('pointermove', mv);
-        window.removeEventListener('pointerup', up);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        setLive(null);
-        if (nf !== f)
-          save({
-            widgets: home.widgets.map((x) => (ids.includes(x.id) ? { ...x, fr: nf[ids.indexOf(x.id)] } : x)),
-          });
-      };
-      window.addEventListener('pointermove', mv);
-      window.addEventListener('pointerup', up);
+  const startResize = (row: Widget[], j: number, side: 'r' | 'l') => (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const card = (e.currentTarget as HTMLElement).closest('[data-hw]') as HTMLElement;
+    const rowEl = card.parentElement!;
+    const gap = parseFloat(getComputedStyle(rowEl).columnGap) || 16;
+    const n = row.length;
+    const avail = rowEl.clientWidth - gap * (n - 1);
+    const w0 = card.getBoundingClientRect().width;
+    const x0 = e.clientX;
+    const minF = Math.min(CARD_MIN / avail, 1 / n);
+    const f = rowFractions(row);
+    const ids = row.map((w) => w.id);
+    let nf = f;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+    const mv = (ev: PointerEvent) => {
+      const dx = ev.clientX - x0;
+      nf = resizeRow(f, j, (w0 + (side === 'r' ? dx : -dx)) / avail, minF);
+      setLive(Object.fromEntries(ids.map((id, k) => [id, nf[k]!])));
     };
-  const cycleSize = (row: ReturnType<typeof pack>[number], w: Widget) => {
-    const ids = row.items.map((it) => it.w.id);
+    const up = () => {
+      window.removeEventListener('pointermove', mv);
+      window.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setLive(null);
+      if (nf !== f)
+        save({
+          widgets: home.widgets.map((x) => (ids.includes(x.id) ? { ...x, fr: nf[ids.indexOf(x.id)] } : x)),
+        });
+    };
+    window.addEventListener('pointermove', mv);
+    window.addEventListener('pointerup', up);
+  };
+  /** Back to an equal share of the row. */
+  const equalize = (row: Widget[]) => {
+    const ids = row.map((w) => w.id);
     save({
-      widgets: home.widgets.map((x) =>
-        ids.includes(x.id)
-          ? {
-              ...x,
-              fr: undefined,
-              size:
-                x.id === w.id ? HOME_SIZES[(HOME_SIZES.indexOf(x.size) + 1) % HOME_SIZES.length]! : x.size,
-            }
-          : x,
-      ),
+      widgets: home.widgets.map((x) => {
+        if (!ids.includes(x.id)) return x;
+        const { fr: _fr, ...rest } = x;
+        return rest;
+      }),
     });
   };
 
@@ -470,7 +536,11 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
       case 'today':
         return (
           <div
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10 }}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,130px),1fr))',
+              gap: 10,
+            }}
           >
             {todayStats.map((s) => (
               <Link key={s.m} href={hrefOf(s.page)} className="kh-stat" scroll={false}>
@@ -525,7 +595,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
               style={{
                 flex: 1,
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))',
+                gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,120px),1fr))',
                 gridAutoRows: 'minmax(84px,1fr)',
                 gap: 10,
               }}
@@ -626,7 +696,11 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
         return (
           <>
             <div
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,260px),1fr))',
+                gap: 12,
+              }}
             >
               {shortcuts.map((x) => {
                 const dom = domainOf(x.url);
@@ -757,7 +831,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
               gap: 12,
             }}
           >
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
               {(
                 [
                   ['focus', t('h_focus')],
@@ -778,8 +852,8 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
             <div
               style={{
                 position: 'relative',
-                width: 140,
-                height: 140,
+                width: 'min(140px, 100%)',
+                aspectRatio: '1',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -1304,140 +1378,153 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           </div>
         </div>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px 28px' }}>
-        {rows.map((row, ri) => (
-          <div key={ri} style={{ display: 'flex', flexWrap: 'wrap', gap: 16, minWidth: 0 }}>
-            {row.items.map((it, j) => {
-              const w = it.w;
-              const f = live?.[w.id] ?? it.f;
-              const n = row.items.length;
-              const page = WIDGET_PAGE[w.type];
-              return (
-                <div
-                  key={w.id}
-                  data-hw=""
-                  data-type={w.type}
-                  className="kh-card"
-                  data-editing={editing}
-                  data-id={w.id}
-                  // While editing, card contents don't navigate (links, tiles).
-                  onClickCapture={(e) => {
-                    if (editing && (e.target as HTMLElement).closest('a')) e.preventDefault();
-                  }}
-                  style={{ flex: `${(f * 100).toFixed(3)} 1 0`, opacity: drag === w.id ? 0.45 : 1 }}
-                >
-                  {drop?.id === w.id && (
-                    <span className="kh-card__drop" style={drop.after ? { right: -10 } : { left: -10 }} />
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {editing && (
-                      <button
-                        type="button"
-                        className="kh-card__handle"
-                        title={t('dragT')}
-                        aria-label={`${t('dragT')} ${t(`w_${w.type}`)}`}
-                        onPointerDown={startDrag(w.id)}
-                      >
-                        {svg(GRIP, 16, 2.4)}
-                      </button>
-                    )}
-                    <span className="kh-card__icon">{svg(HOME_ICONS[w.type], 15, 1.8)}</span>
-                    <span
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        fontSize: 15,
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {t(`w_${w.type}`)}
-                    </span>
-                    {counts[w.type] !== undefined && (
+      <div className="kh-home__rows" ref={rowsEl}>
+        {rows.map((row, ri) => {
+          const fr = rowFractions(row);
+          const n = row.length;
+          return (
+            <div key={row[0]!.id} className="kh-home__row" data-hrow={ri} data-n={n}>
+              {drop?.kind === 'new' &&
+                (drop.at === ri || (drop.at === rows.length && ri === rows.length - 1)) && (
+                  <span
+                    className="kh-home__rowdrop"
+                    data-testid="row-drop"
+                    style={drop.at === ri ? { top: -10 } : { bottom: -10 }}
+                  />
+                )}
+              {row.map((w, j) => {
+                const f = live?.[w.id] ?? fr[j]!;
+                const page = WIDGET_PAGE[w.type];
+                return (
+                  <div
+                    key={w.id}
+                    data-hw=""
+                    data-type={w.type}
+                    className="kh-card"
+                    data-editing={editing}
+                    data-id={w.id}
+                    // While editing, card contents don't navigate (links, tiles).
+                    onClickCapture={(e) => {
+                      if (editing && (e.target as HTMLElement).closest('a')) e.preventDefault();
+                    }}
+                    style={{ flex: `${(f * 100).toFixed(3)} 1 0`, opacity: drag === w.id ? 0.45 : 1 }}
+                  >
+                    {drop?.kind === 'into' && drop.ref === w.id && (
                       <span
-                        className="kh-mono"
-                        style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.62 * var(--t-k)))' }}
-                      >
-                        {counts[w.type]}
+                        className="kh-card__drop"
+                        data-testid="card-drop"
+                        style={drop.after ? { right: -10 } : { left: -10 }}
+                      />
+                    )}
+                    <div className="kh-card__head">
+                      {editing && (
+                        <button
+                          type="button"
+                          className="kh-card__handle"
+                          title={t('dragT')}
+                          aria-label={`${t('dragT')} ${t(`w_${w.type}`)}`}
+                          onPointerDown={startDrag(w.id)}
+                        >
+                          {svg(GRIP, 16, 2.4)}
+                        </button>
+                      )}
+                      <span className="kh-card__icon">{svg(HOME_ICONS[w.type], 15, 1.8)}</span>
+                      <span className="kh-card__title" title={t(`w_${w.type}`)}>
+                        {t(`w_${w.type}`)}
                       </span>
+                      {counts[w.type] !== undefined && (
+                        <span
+                          className="kh-mono kh-card__count"
+                          style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.62 * var(--t-k)))' }}
+                        >
+                          {counts[w.type]}
+                        </span>
+                      )}
+                      {!editing && page && (
+                        <Link
+                          href={hrefOf(page)}
+                          scroll={false}
+                          className="kh-card__more"
+                          aria-label={t('h_seeAll')}
+                          title={t('h_seeAll')}
+                        >
+                          <span className="kh-card__moreTxt">{t('h_seeAll')}&nbsp;</span>→
+                        </Link>
+                      )}
+                      {editing && (
+                        <span className="kh-card__tools">
+                          <button
+                            type="button"
+                            className="kh-card__x"
+                            style={{ color: 'var(--text)' }}
+                            title={t('upT')}
+                            aria-label={`${t('upT')} ${t(`w_${w.type}`)}`}
+                            disabled={!stepCard(rowIds, w.id, -1)}
+                            onClick={() => moveBy(w.id, -1)}
+                          >
+                            {svg('<path d="M15 6l-6 6 6 6"></path>', 13, 2.4)}
+                          </button>
+                          <button
+                            type="button"
+                            className="kh-card__x"
+                            style={{ color: 'var(--text)' }}
+                            title={t('downT')}
+                            aria-label={`${t('downT')} ${t(`w_${w.type}`)}`}
+                            disabled={!stepCard(rowIds, w.id, 1)}
+                            onClick={() => moveBy(w.id, 1)}
+                          >
+                            {svg('<path d="M9 6l6 6-6 6"></path>', 13, 2.4)}
+                          </button>
+                          {n > 1 && row.some((x) => x.fr !== undefined) && (
+                            <button
+                              type="button"
+                              className="kh-card__size"
+                              title={t('h_equal')}
+                              aria-label={`${t('h_equal')} (${Math.round(f * 100)}%)`}
+                              onClick={() => equalize(row)}
+                            >
+                              {Math.round(f * 100)}%
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="kh-card__x"
+                            title={t('del')}
+                            aria-label={`${t('del')} ${t(`w_${w.type}`)}`}
+                            onClick={() => removeW(w.id)}
+                          >
+                            {svg(X, 12, 2.4)}
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                    {editing && j < n - 1 && (
+                      <div
+                        className="kh-card__grip"
+                        style={{ right: -12 }}
+                        title={t('h_resize')}
+                        onPointerDown={startResize(row, j, 'r')}
+                      >
+                        <span />
+                      </div>
                     )}
-                    {!editing && page && (
-                      <Link href={hrefOf(page)} scroll={false} className="kh-card__more">
-                        {t('h_seeAll')} →
-                      </Link>
+                    {editing && n > 1 && j === n - 1 && (
+                      <div
+                        className="kh-card__grip"
+                        style={{ left: -12 }}
+                        title={t('h_resize')}
+                        onPointerDown={startResize(row, j, 'l')}
+                      >
+                        <span />
+                      </div>
                     )}
-                    {editing && (
-                      <>
-                        <button
-                          type="button"
-                          className="kh-card__x"
-                          style={{ color: 'var(--text)' }}
-                          title={t('upT')}
-                          aria-label={`${t('upT')} ${t(`w_${w.type}`)}`}
-                          disabled={widgets[0]?.id === w.id}
-                          onClick={() => moveBy(w.id, -1)}
-                        >
-                          {svg('<path d="M15 6l-6 6 6 6"></path>', 13, 2.4)}
-                        </button>
-                        <button
-                          type="button"
-                          className="kh-card__x"
-                          style={{ color: 'var(--text)' }}
-                          title={t('downT')}
-                          aria-label={`${t('downT')} ${t(`w_${w.type}`)}`}
-                          disabled={widgets[widgets.length - 1]?.id === w.id}
-                          onClick={() => moveBy(w.id, 1)}
-                        >
-                          {svg('<path d="M9 6l6 6-6 6"></path>', 13, 2.4)}
-                        </button>
-                        <button
-                          type="button"
-                          className="kh-card__size"
-                          title={t('h_size')}
-                          onClick={() => cycleSize(row, w)}
-                        >
-                          {w.fr !== undefined ? `${Math.round(f * 100)}%` : w.size}
-                        </button>
-                        <button
-                          type="button"
-                          className="kh-card__x"
-                          title={t('del')}
-                          aria-label={`${t('del')} ${t(`w_${w.type}`)}`}
-                          onClick={() => save({ widgets: home.widgets.filter((x) => x.id !== w.id) })}
-                        >
-                          {svg(X, 12, 2.4)}
-                        </button>
-                      </>
-                    )}
+                    {body(w.type)}
                   </div>
-                  {editing && j < n - 1 && (
-                    <div
-                      className="kh-card__grip"
-                      style={{ right: -12 }}
-                      title={t('h_resize')}
-                      onPointerDown={startResize(row, j, 'r')}
-                    >
-                      <span />
-                    </div>
-                  )}
-                  {editing && n > 1 && j === n - 1 && (
-                    <div
-                      className="kh-card__grip"
-                      style={{ left: -12 }}
-                      title={t('h_resize')}
-                      onPointerDown={startResize(row, j, 'l')}
-                    >
-                      <span />
-                    </div>
-                  )}
-                  {body(w.type)}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
