@@ -491,6 +491,11 @@ export function ApiView() {
       })
       .catch(() => setItems([]));
   }, []);
+  // the remembered folder was deleted (here or on another device): back to all requests
+  useEffect(() => {
+    if (items && folder !== 'all' && folder !== 'none' && !folders.some((f) => f.id === folder))
+      setFolder('all');
+  }, [items, folders, folder, setFolder]);
 
   const fail = () => toast({ message: t('ne_saveFail'), tone: 'error' });
   const flush = useCallback(
