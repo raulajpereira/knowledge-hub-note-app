@@ -1,13 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
 import { modColor, TX_TYPES, txModules, type TxType } from '@/lib/sap';
 import { ResizableTable, useConfirm, usePersistentState, useToast, type Column } from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
+import { useListDetail } from '@/components/content/MobilePane';
 import { ModuleCombo } from './ModuleCombo';
 import { SidePanel } from './SidePanel';
 import './sap.css';
@@ -62,10 +63,11 @@ export function TcodesView() {
   const toast = useToast();
   const confirm = useConfirm();
   const when = useWhen();
-  const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const activeId = sp.get('x');
+  // phones: list → transaction with ← Voltar; tablets: the panel floats over the list (D70)
+  const md = useListDetail('x');
   const [items, setItems] = useState<Tcode[] | null>(null);
   const [mod, setMod] = usePersistentState<string>('tcodes.mod', 'all');
   const [type, setType] = usePersistentState<string>('tcodes.type', 'all');
@@ -97,10 +99,11 @@ export function TcodesView() {
   }, []);
 
   const open = (id: string | null) => {
+    if (!id && md.phone) return md.back();
     const p = new URLSearchParams(sp.toString());
     if (id) p.set('x', id);
     else p.delete('x');
-    router.replace(`${pathname}${p.size ? `?${p}` : ''}`, { scroll: false });
+    md.go(`${pathname}${p.size ? `?${p}` : ''}`, id);
   };
   const upd = (id: string, patch: Patch, delay = 500) => {
     setItems(
@@ -272,7 +275,7 @@ export function TcodesView() {
   );
 
   return (
-    <section className="kh-sap">
+    <section className="kh-sap" data-pane={md.pane}>
       <div className="kh-sap-main">
         <div className="kh-sap-head">
           <div className="kh-sap-titles">
@@ -333,11 +336,54 @@ export function TcodesView() {
             emptyLabel={items ? t('x_empty') : ''}
             resizeLabel={t('resize')}
             minWidth={680}
+            card={(x) => (
+              <>
+                {starBtn(x)}
+                <div className="kh-tcard__main">
+                  <div className="kh-tcard__t">
+                    <span className="kh-tx-code">{x.code || '—'}</span>
+                    <span
+                      className="kh-tx-mod"
+                      style={{
+                        background: modColor(x.module).replace(')', ' / .2)'),
+                        borderColor: modColor(x.module).replace(')', ' / .5)'),
+                      }}
+                    >
+                      {x.module}
+                    </span>
+                  </div>
+                  <span className="kh-tcard__s">{x.description || '—'}</span>
+                  <span className="kh-tcard__m">
+                    {x.program && <span className="kh-sap-mono">{x.program}</span>}
+                    <span>{typeLabel(x.type)}</span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="kh-tcard__btn"
+                  title={t('x_copy')}
+                  aria-label={`${t('x_copy')} ${x.code}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copy(x);
+                  }}
+                >
+                  <Svg d={copied === x.id ? OK : COPY} s={17} />
+                </button>
+              </>
+            )}
           />
         </div>
       </div>
       {act && (
-        <SidePanel id="tcodes" def={440} min={300} resizeLabel={t('resize')}>
+        <SidePanel
+          id="tcodes"
+          def={440}
+          min={300}
+          resizeLabel={t('resize')}
+          onBack={md.back}
+          backTitle={act.code || t('x_new')}
+        >
           <div className="kh-sap-pbody kh-tx-panel">
             <div className="kh-tx-phead">
               <span className="kh-tx-big">{act.code || t('x_new')}</span>

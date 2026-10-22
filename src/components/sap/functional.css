@@ -620,25 +620,6 @@
   color: rgb(var(--t) / calc(0.5 * var(--t-k)));
 }
 
-@media (max-width: 900px) {
-  .kh-fn {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: auto minmax(0, 1fr);
-    overflow: auto;
-  }
-  .kh-fn-handle {
-    display: none;
-  }
-  .kh-fn-side {
-    max-height: 45vh;
-    border-right: 0;
-    border-bottom: 1px solid rgb(var(--w) / 0.1);
-  }
-  .kh-fn-fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 /* Relatório de testes (button) */
 .kh-fn-rep {
   height: 32px;
@@ -1057,4 +1038,234 @@
 }
 .kh-cu-phase {
   min-width: 1060px;
+}
+
+/* ── Phones and tablets (D70): Funcional SAP (processos, testes, migração, cutover) ── */
+@media (max-width: 1099.98px) {
+  .kh-fn-handle {
+    display: none;
+  }
+  .kh-fn-detail {
+    padding: 18px 18px 26px;
+    gap: 16px;
+  }
+  .kh-fn-dhead {
+    flex-wrap: wrap;
+  }
+  .kh-fn-names {
+    flex: 1 1 100%;
+  }
+  .kh-fn-item {
+    min-height: 56px;
+  }
+  .kh-fn-rhead > button {
+    height: 40px;
+  }
+  .kh-fn-rdel {
+    width: 40px;
+    height: 40px;
+  }
+  /* no hover on touch: the evidence's × is always there */
+  .kh-ev-x {
+    opacity: 1;
+    width: 26px;
+    height: 26px;
+    line-height: 26px;
+  }
+  .kh-ev-add {
+    height: 40px;
+  }
+}
+@media (max-width: 767.98px) {
+  /* one pane at a time (data-pane from the URL's ?r=) */
+  .kh-fn {
+    grid-template-columns: minmax(0, 1fr) !important;
+    border-radius: 24px;
+  }
+  .kh-fn[data-pane='detail'] > .kh-fn-side,
+  .kh-fn:not([data-pane='detail']) > .kh-fn-main {
+    display: none;
+  }
+  .kh-fn-side {
+    border-right: 0;
+  }
+  .kh-fn-head {
+    padding: 14px 12px 10px;
+  }
+  .kh-fn-titlerow h1 {
+    font-size: 22px;
+  }
+  .kh-fn-search {
+    height: 46px;
+  }
+  .kh-fn-fsel {
+    height: 38px;
+  }
+  .kh-fn-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .kh-fn-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-fn-chips > button {
+    flex: none;
+    height: 36px;
+  }
+  .kh-fn-new {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-fn-detail {
+    padding: 14px 14px 30px;
+  }
+  .kh-fn-st,
+  .kh-fn-rep,
+  .kh-fn-del {
+    height: 44px;
+  }
+  .kh-fn-del {
+    width: 44px;
+  }
+  .kh-fn-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kh-fn-in {
+    height: 46px;
+  }
+  /* the steps / objects / rows table becomes one card per row, each field
+     with its column name over it */
+  .kh-fn-table {
+    border: 0;
+    background: none;
+    overflow: visible;
+  }
+  .kh-fn-table > div {
+    min-width: 0 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .kh-fn-thead {
+    display: none;
+  }
+  .kh-fn-rowwrap {
+    border-radius: 18px;
+    border: 1px solid rgb(var(--w) / 0.14);
+    background: rgb(var(--w) / 0.05);
+    overflow: hidden;
+  }
+  .kh-fn-trow {
+    position: relative;
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px 12px 12px;
+    border-bottom: 0;
+  }
+  .kh-fn-rn {
+    align-self: flex-start;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .kh-fn-rn::before {
+    content: '#';
+  }
+  .kh-fn-rdel {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+  .kh-fn-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
+  }
+  .kh-fn-cell::before {
+    content: attr(data-label);
+    font-size: 11.5px;
+    color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+  }
+  .kh-fn-cin,
+  .kh-fn-rst {
+    height: 44px;
+    border: 1px solid rgb(var(--w) / 0.12);
+    background-color: rgb(var(--d) / calc(0.18 * var(--d-k)));
+  }
+  .kh-fn-rowwrap .kh-ev {
+    padding: 0 12px 12px;
+  }
+  /* cutover: each activity as a card (two columns of fields) */
+  .kh-cu-list {
+    overflow: visible;
+  }
+  .kh-cu-phase {
+    min-width: 0;
+  }
+  .kh-cu-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px 12px 12px;
+  }
+  .kh-cu-n {
+    text-align: left;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .kh-cu-row > .kh-fn-rdel {
+    position: static;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .kh-cu-main {
+    grid-column: 1 / -1;
+  }
+  .kh-cu-f > span {
+    padding: 0 2px 2px;
+  }
+  .kh-cu-plan {
+    align-self: end;
+  }
+  .kh-cu-sum {
+    gap: 10px 16px;
+  }
+  /* test evidence: full-screen viewer */
+  .kh-lb {
+    place-items: stretch;
+    background: rgba(8, 6, 5, 0.94);
+  }
+  .kh-lb-in {
+    max-width: none;
+    max-height: none;
+    justify-content: center;
+    padding: env(safe-area-inset-top) 0 calc(12px + env(safe-area-inset-bottom));
+  }
+  .kh-lb-in img {
+    max-width: 100vw;
+    max-height: calc(100dvh - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 0;
+    object-fit: contain;
+  }
+  .kh-lb-bar {
+    max-width: calc(100vw - 24px);
+  }
+  .kh-lb-bar > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .kh-lb-bar button {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
 }

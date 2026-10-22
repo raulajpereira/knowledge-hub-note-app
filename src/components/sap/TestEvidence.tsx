@@ -130,6 +130,8 @@ export function Lightbox({
   const { t } = useI18n();
   const [i, setI] = useState(start);
   const cur = items[i];
+  // touch: swipe sideways for the previous / next image
+  const x0 = useRef<number | null>(null);
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -142,7 +144,21 @@ export function Lightbox({
   if (!cur) return null;
   return (
     <div className="kh-lb" role="dialog" aria-modal="true" aria-label={cur.name} onClick={onClose}>
-      <div className="kh-lb-in" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="kh-lb-in"
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => {
+          x0.current = e.touches.length === 1 ? (e.touches[0]?.clientX ?? null) : null;
+        }}
+        onTouchEnd={(e) => {
+          const x = e.changedTouches[0]?.clientX;
+          if (x0.current === null || x === undefined) return;
+          const dx = x - x0.current;
+          x0.current = null;
+          if (dx < -60) setI((v) => Math.min(items.length - 1, v + 1));
+          else if (dx > 60) setI((v) => Math.max(0, v - 1));
+        }}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element -- evidence streamed by our API */}
         <img src={evidenceSrc(cur.id)} alt={cur.name} />
         <div className="kh-lb-bar">

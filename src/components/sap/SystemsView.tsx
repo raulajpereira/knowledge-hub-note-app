@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
 import { api } from '@/lib/client/api';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
 import { ShellContext } from '@/components/shell/ShellContext';
+import { useListDetail } from '@/components/content/MobilePane';
 import { downloadShortcut, SidePanel } from './SidePanel';
 import { LandscapeMap, type MapTransport } from './LandscapeMap';
 import './sap.css';
@@ -82,10 +83,11 @@ export function SystemsView() {
   const toast = useToast();
   const confirm = useConfirm();
   const when = useWhen();
-  const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const activeId = sp.get('s');
+  // phones: list → system with ← Voltar; tablets: the panel floats over the list (D70)
+  const md = useListDetail('s');
   const [items, setItems] = useState<SapSystem[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [view, setView] = usePersistentState<'list' | 'cards' | 'map'>('systems.view', 'cards');
@@ -131,10 +133,11 @@ export function SystemsView() {
   const envName = (e: SapEnv) => (e === 'OTH' ? t('s_envOTH') : e);
 
   const open = (id: string | null) => {
+    if (!id && md.phone) return md.back();
     const p = new URLSearchParams(sp.toString());
     if (id) p.set('s', id);
     else p.delete('s');
-    router.replace(`${pathname}${p.size ? `?${p}` : ''}`, { scroll: false });
+    md.go(`${pathname}${p.size ? `?${p}` : ''}`, id);
   };
   const flush = (id: string) => {
     const p = timers.current.get(id);
@@ -347,7 +350,7 @@ export function SystemsView() {
   const chip = (on: boolean) => ({ 'data-on': on || undefined, 'aria-pressed': on });
 
   return (
-    <section className="kh-sap">
+    <section className="kh-sap" data-pane={md.pane}>
       <div className="kh-sap-main">
         <div className="kh-sap-head">
           <div className="kh-sap-titles">
@@ -427,6 +430,37 @@ export function SystemsView() {
               emptyLabel={items ? t('s_empty') : ''}
               resizeLabel={t('resize')}
               minWidth={1100}
+              card={(x) => (
+                <>
+                  <div className="kh-tcard__main">
+                    <div className="kh-tcard__t">
+                      <span>{x.name}</span>
+                      {envBadge(x.env)}
+                    </div>
+                    <span className="kh-tcard__s">
+                      <span className="kh-sap-mono kh-sap-strong">{x.sid || '—'}</span>
+                      {cName(x.clientId) ? ` · ${cName(x.clientId)}` : ''}
+                      {x.type ? ` · ${x.type}` : ''}
+                    </span>
+                    <span className="kh-tcard__m kh-sap-mono">
+                      {x.host || '—'} · {x.inst || '—'} · {x.mandt || '—'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="kh-tcard__btn"
+                    title={t('s_gui')}
+                    aria-label={`${t('s_gui')} ${x.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      gui(x);
+                    }}
+                  >
+                    <Svg d={I.gui} />
+                  </button>
+                  {favBtn(x)}
+                </>
+              )}
             />
           </div>
         ) : (
@@ -523,7 +557,7 @@ export function SystemsView() {
         )}
       </div>
       {act && (
-        <SidePanel id="systems" def={460} resizeLabel={t('resize')}>
+        <SidePanel id="systems" def={460} resizeLabel={t('resize')} onBack={md.back} backTitle={act.name}>
           <div className="kh-sap-ptop">
             <span>
               {t('createdAt')} {when(act.createdAt)}

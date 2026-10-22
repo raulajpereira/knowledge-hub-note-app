@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { cx } from './cx';
 import { usePersistentState } from './usePersistentState';
+import { useViewport } from './useViewport';
 
 export type Column<Row> = {
   key: string;
@@ -35,6 +36,8 @@ type Props<Row> = {
   minWidth?: number;
   maxHeight?: number | string;
   className?: string;
+  /** Phones: each row drawn as a card by this instead of the grid (D70). */
+  card?: (row: Row) => React.ReactNode;
 };
 
 const MIN = 40;
@@ -58,7 +61,9 @@ export function ResizableTable<Row>({
   minWidth,
   maxHeight,
   className,
+  card,
 }: Props<Row>) {
+  const phone = useViewport() === 'phone';
   const defaults = useMemo(() => columns.map((c) => c.width), [columns]);
   const [saved, setSaved, resetSaved] = usePersistentState<number[] | null>(`rt.${id}`, null);
   const [live, setLive] = useState<number[] | null>(null);
@@ -115,6 +120,39 @@ export function ResizableTable<Row>({
     else if (sort.dir === 'asc') onSortChange({ key, dir: 'desc' });
     else onSortChange(null);
   };
+
+  if (card && phone)
+    return (
+      <div className={cx('kh-table-cards', className)} role="list">
+        {rows.length === 0 ? (
+          <div className="kh-table__empty">{emptyLabel}</div>
+        ) : (
+          rows.map((row) => {
+            const k = rowKey(row);
+            return (
+              <div
+                key={k}
+                role="listitem"
+                className="kh-table-card"
+                aria-current={selectedKey === k || undefined}
+                data-on={selectedKey === k || undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === 'Enter' && e.target === e.currentTarget) onRowClick(row);
+                      }
+                    : undefined
+                }
+              >
+                {card(row)}
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
 
   return (
     <div className={cx('kh-well', 'kh-table', className)} style={{ maxHeight }} data-zs="">

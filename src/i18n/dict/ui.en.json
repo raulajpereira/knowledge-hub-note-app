@@ -1122,7 +1122,7 @@
   "tg_colorHint": "The colour applies to this tag everywhere in the app.",
   "cl_t_func": "Function Modules",
   "cl_impl": "Implemented @",
-  "cl_implPh": "Implemented @ …",
+  "cl_implPh": "client or place…",
   "cl_implLbl": "Implemented",
   "cl_fugr": "Function group",
   "h_equal": "Share the row equally",
@@ -1198,5 +1198,7 @@
   "shr_file1": "1 file",
   "fl_pdfPhone": "On a phone the PDF opens in the system viewer.",
   "fl_openPdf": "Open PDF",
-  "shr_short": "Share"
+  "shr_short": "Share",
+  "cl_nodes": "Structure",
+  "lm_zoom": "Map zoom"
 }

@@ -622,3 +622,214 @@
 .kh-is-panel__body > * {
   flex-shrink: 0;
 }
+
+/* ── Phones and tablets (D70) ────────────────────────────────────────── */
+@media (max-width: 1099.98px) {
+  /* tablets: the task's panel floats over the table / Kanban from the right */
+  .kh-is-panel {
+    position: absolute;
+    z-index: 8;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(420px, 64%);
+    max-width: none;
+    border-left: 1px solid rgb(var(--w) / 0.22);
+    border-radius: 26px 0 0 26px;
+    /* nearly opaque: a blur nested in the page's glass has nothing to blur */
+    background: color-mix(in srgb, var(--kh-option-bg) 92%, transparent);
+    box-shadow:
+      inset 1px 0 0 rgba(255, 255, 255, 0.22),
+      -24px 0 60px rgb(0 0 0 / calc(0.3 * var(--sh-k)));
+  }
+  .kh-is-head {
+    padding: 16px 16px 12px;
+  }
+  .kh-is-chips {
+    padding: 0 16px 12px;
+  }
+  .kh-is-del,
+  .kh-is-close {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-is-pick button {
+    height: 40px;
+  }
+  .kh-is-rz,
+  .kh-is-kanrz {
+    display: none;
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-is {
+    border-radius: 24px;
+  }
+  /* one pane at a time (data-pane from the URL's ?i=) */
+  .kh-is[data-pane='detail'] > .kh-is-main {
+    display: none;
+  }
+  .kh-is-panel {
+    position: static;
+    flex: 1;
+    width: auto;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  .kh-is-close {
+    display: none;
+  }
+  .kh-is-panel__top {
+    padding: 12px 12px 0 16px;
+  }
+  .kh-is-panel__body {
+    padding: 10px 16px 28px;
+  }
+  .kh-is-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kh-is-input {
+    min-height: 46px;
+  }
+  /* header: title + "Nova", the view switch and the project, the search */
+  .kh-is-head {
+    gap: 8px;
+    padding: 14px 12px 10px;
+  }
+  .kh-is-title {
+    flex: 1 1 calc(100% - 200px);
+    flex-direction: column;
+    gap: 2px;
+  }
+  .kh-is-title > div:first-child {
+    font-size: 22px;
+    white-space: normal;
+  }
+  .kh-is-title > div:last-child {
+    font-size: 12px;
+  }
+  .kh-is-new {
+    order: 1;
+    height: 44px;
+    padding: 0 16px;
+  }
+  .kh-is-seg {
+    order: 2;
+  }
+  .kh-is-seg button {
+    height: 36px;
+    padding: 0 14px;
+  }
+  .kh-is-select {
+    order: 3;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 44px;
+  }
+  .kh-is-search {
+    order: 4;
+    flex: 1 1 100%;
+    width: auto;
+    height: 46px;
+  }
+  .kh-is-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 12px 10px;
+  }
+  .kh-is-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-is-chips button {
+    flex: none;
+    height: 36px;
+  }
+  /* Kanban: the column switch replaces the status filter */
+  .kh-is[data-view='kanban'] .kh-is-chips {
+    display: none;
+  }
+  /* the cards */
+  .kh-is-mkan {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .kh-is-mcols {
+    flex: none;
+    display: flex;
+    gap: 4px;
+    margin: 0 12px 10px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgb(var(--w) / 0.08);
+    border: 1px solid rgb(var(--w) / 0.14);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .kh-is-mcols::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-is-mcols > button {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .kh-is-mcols > button[data-on] {
+    background: var(--ink);
+    color: var(--ink-inv);
+  }
+  .kh-is-mcols > button > span:last-child {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    opacity: 0.7;
+  }
+  .kh-is-mlist {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 2px 10px 16px;
+  }
+  .kh-is-mlist > .kh-is-card {
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .kh-is-card__pj {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .kh-is-madd {
+    flex: none;
+    height: 48px;
+    border-radius: 16px;
+    border: 1.5px dashed rgb(var(--w) / 0.26);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}

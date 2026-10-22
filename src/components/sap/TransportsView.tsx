@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
 import { useI18n } from '@/i18n/client';
 import { refreshCounts } from '@/components/shell/counts';
@@ -16,6 +16,7 @@ import {
   type Column,
 } from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
+import { useListDetail } from '@/components/content/MobilePane';
 import { SidePanel } from './SidePanel';
 import './sap.css';
 
@@ -95,10 +96,11 @@ export function TransportsView() {
   const toast = useToast();
   const confirm = useConfirm();
   const when = useWhen();
-  const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const activeId = sp.get('o');
+  // phones: list → request with ← Voltar; tablets: the panel floats over the list (D70)
+  const md = useListDetail('o');
   const [items, setItems] = useState<Transport[] | null>(null);
   const [systems, setSystems] = useState<Sys[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -166,10 +168,11 @@ export function TransportsView() {
   }, []);
 
   const open = (id: string | null) => {
+    if (!id && md.phone) return md.back();
     const p = new URLSearchParams(sp.toString());
     if (id) p.set('o', id);
     else p.delete('o');
-    router.replace(`${pathname}${p.size ? `?${p}` : ''}`, { scroll: false });
+    md.go(`${pathname}${p.size ? `?${p}` : ''}`, id);
   };
   const replace = (x: Transport) => setItems((cur) => cur && cur.map((y) => (y.id === x.id ? x : y)));
   const upd = (id: string, patch: Patch, delay = 500) => {
@@ -512,7 +515,7 @@ export function TransportsView() {
   ];
 
   return (
-    <section className="kh-sap">
+    <section className="kh-sap" data-pane={md.pane}>
       <div className="kh-sap-main">
         <div className="kh-sap-head">
           <div className="kh-sap-titles">
@@ -724,12 +727,47 @@ export function TransportsView() {
               emptyLabel={items ? t('o_empty') : ''}
               resizeLabel={t('resize')}
               minWidth={1300}
+              card={(x) => (
+                <div className="kh-tcard__main">
+                  <div className="kh-tcard__t">
+                    <span className="kh-ot-code">{x.trkorr || '—'}</span>
+                    {typeTag(x)}
+                  </div>
+                  <span className="kh-tcard__s">{x.description || '—'}</span>
+                  <span className="kh-tcard__m">
+                    <span className="kh-ot-steps">
+                      {x.junkAt && junkTag}
+                      {(
+                        [
+                          [t('o_rel'), x.releasedAt],
+                          ['QAS', x.qasAt],
+                          ['PRD', x.prdAt],
+                        ] as const
+                      ).map(([label, at]) => (
+                        <span key={label} className="kh-ot-tag" data-done={at ? '' : undefined}>
+                          {label}
+                        </span>
+                      ))}
+                    </span>
+                    <span>
+                      {[cName(x.clientId), sysById(x.systemId)?.name].filter(Boolean).join(' · ') || '—'}
+                    </span>
+                  </span>
+                </div>
+              )}
             />
           </div>
         )}
       </div>
       {act && (
-        <SidePanel id="transports" def={540} min={380} resizeLabel={t('resize')}>
+        <SidePanel
+          id="transports"
+          def={540}
+          min={380}
+          resizeLabel={t('resize')}
+          onBack={md.back}
+          backTitle={act.trkorr || t('o_new')}
+        >
           <div className="kh-sap-ptop">
             <span>
               {t('createdAt')} {when(act.createdAt)}

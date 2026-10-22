@@ -3,7 +3,7 @@
 import { AiButton } from '@/components/ai/AiButton';
 import { useExplain } from '@/components/ai/useExplain';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import {
@@ -36,10 +36,19 @@ import {
   type Row,
   type Val,
 } from '@/lib/codelib';
-import { Popover, useConfirm, usePersistentState, useToast, TagInput, useTagStyle } from '@/components/ui';
+import {
+  Popover,
+  Sheet,
+  useConfirm,
+  usePersistentState,
+  useToast,
+  TagInput,
+  useTagStyle,
+} from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
+import { BackBar, useListDetail } from '@/components/content/MobilePane';
 import { AbapEditor } from './AbapEditor';
 import './codelib.css';
 
@@ -157,7 +166,6 @@ export function CodelibView() {
   const when = useWhen();
   const toast = useToast();
   const confirm = useConfirm();
-  const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
   const [items, setItems] = useState<Obj[] | null>(null);
@@ -180,6 +188,11 @@ export function CodelibView() {
   const newRef = useRef<HTMLButtonElement>(null);
   const copyTm = useRef<ReturnType<typeof setTimeout>>(undefined);
   const activeId = sp.get('o');
+  // phones: list → object with ← Voltar; phones and tablets: the node tree
+  // opens in a sheet from the node picker, the editor gets the width (D70)
+  const md = useListDetail('o');
+  const mdGo = md.go;
+  const [treeOpen, setTreeOpen] = useState(false);
 
   const load = useCallback(async () => {
     const r = await api<{ objects: Obj[] }>('/sap/objects');
@@ -198,9 +211,9 @@ export function CodelibView() {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('o', id);
       else next.delete('o');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, mdGo, sp],
   );
 
   // ── Saving (debounced per object, `base` = updatedAt it was edited from) ──
@@ -309,7 +322,10 @@ export function CodelibView() {
     [D],
   );
   const togCol = (k: string) => setCol({ ...col, [k]: !col[k] });
-  const setNode = (nid: string) => o && setSel({ oid: o.id, nid, k: null });
+  const setNode = (nid: string) => {
+    if (o) setSel({ oid: o.id, nid, k: null });
+    setTreeOpen(false);
+  };
 
   // index of names that link to another object or node (prototype RIX)
   const rix = useMemo(() => {
@@ -413,7 +429,8 @@ export function CodelibView() {
     }
     const rest = D.filter((x) => x.id !== o.id);
     setItems(rest);
-    open(rest[0]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[0]?.id ?? null);
     refreshCounts();
   };
   const setNodes = (fn: (nodes: ClNode[]) => ClNode[]) => o && upd(o.id, { nodes: fn(o.nodes) });
@@ -530,9 +547,94 @@ export function CodelibView() {
   };
 
   if (!items) return <section className="kh-cl" aria-busy="true" />;
+  // the object's node tree: a column on desktop, a sheet on phones/tablets
+  const tree$ = o && (
+    <nav className="kh-cl-tree" style={{ width: treeW.width }} aria-label={o.name}>
+      {[
+        // FM nodes left inside a function group (e.g. one restored from the Trash
+        // after the 0046 migration) stay visible, without "+"
+        ...[
+          ...CL_GROUPS[o.type],
+          ...CL_GROUP_IDS.filter((g) => !CL_GROUPS[o.type].includes(g) && o.nodes.some((n) => n.g === g)),
+        ].map((g) => {
+          const add = CL_ADD[o.type]?.[g];
+          const ck = `T:${o.type}:${g}`;
+          const NS = o.nodes.filter((n) => n.g === g);
+          return { g, ck, add, label: t(`cl_g_${g}`), icon: IC[g], count: NS.length, nodes: NS };
+        }),
+        {
+          g: 'rel' as const,
+          ck: 'T:rel',
+          add: undefined,
+          label: t('cl_g_rel'),
+          icon: IC.rel,
+          count: '',
+          nodes: [],
+        },
+      ].map((G) => {
+        const opened = !isCol(G.ck);
+        return (
+          <div key={G.g} className="kh-cl-tg">
+            <div className="kh-cl-tghead">
+              <button type="button" aria-expanded={opened} onClick={() => togCol(G.ck)}>
+                <span className="kh-cl-chev" style={{ transform: `rotate(${opened ? 90 : 0}deg)` }}>
+                  <Svg d={CHEV} size={12} sw={2.4} />
+                </span>
+                <Svg d={G.icon} size={13} />
+                <span className="kh-cl-tglabel">{G.label}</span>
+                <span className="kh-cl-meta">{G.count}</span>
+              </button>
+              {G.add && (
+                <button
+                  type="button"
+                  className="kh-cl-add"
+                  title={t(`cl_add_${G.add}`)}
+                  aria-label={t(`cl_add_${G.add}`)}
+                  onClick={() => {
+                    addNode(G.g as ClGroup);
+                    setTreeOpen(false);
+                  }}
+                >
+                  <Svg d={PLUS} size={11} sw={2.4} />
+                </button>
+              )}
+            </div>
+            {opened && (
+              <div className="kh-cl-tnodes">
+                {G.g === 'rel' ? (
+                  <TreeNode
+                    on={isLinks}
+                    label={t('cx_title')}
+                    sub={t('cl_relSub')}
+                    icon={IC.rel}
+                    color={M[1]}
+                    onClick={() => setNode(LINKS)}
+                  />
+                ) : (
+                  G.nodes.map((n) => (
+                    <TreeNode
+                      key={n.id}
+                      on={node?.id === n.id}
+                      label={nLabel(n)}
+                      mono={isAbap(n)}
+                      sub={nSub(n)}
+                      icon={nIcon(n)}
+                      color={M[1]}
+                      count={cnt(n)}
+                      onClick={() => setNode(n.id)}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
 
   return (
-    <section className="kh-cl">
+    <section className="kh-cl" data-pane={md.pane}>
       {/* ── list ── */}
       <div className="kh-cl-list" style={{ width: listW.width }}>
         <div className="kh-cl-lhead">
@@ -696,6 +798,7 @@ export function CodelibView() {
       {!o && <div className="kh-cl-none">{t('cl_noActive')}</div>}
       {o && (
         <div className="kh-cl-main">
+          {md.phone && <BackBar onBack={md.back} title={o.name} />}
           <div className="kh-cl-ohead">
             <span className="kh-cl-otype" style={{ background: tint(M[1]), borderColor: M[1] }}>
               {o.type}
@@ -823,100 +926,43 @@ export function CodelibView() {
             )}
           </div>
           <div className="kh-cl-split">
-            <nav className="kh-cl-tree" style={{ width: treeW.width }} aria-label={o.name}>
-              {[
-                // FM nodes left inside a function group (e.g. one restored from the Trash
-                // after the 0046 migration) stay visible, without "+"
-                ...[
-                  ...CL_GROUPS[o.type],
-                  ...CL_GROUP_IDS.filter(
-                    (g) => !CL_GROUPS[o.type].includes(g) && o.nodes.some((n) => n.g === g),
-                  ),
-                ].map((g) => {
-                  const add = CL_ADD[o.type]?.[g];
-                  const ck = `T:${o.type}:${g}`;
-                  const NS = o.nodes.filter((n) => n.g === g);
-                  return { g, ck, add, label: t(`cl_g_${g}`), icon: IC[g], count: NS.length, nodes: NS };
-                }),
-                {
-                  g: 'rel' as const,
-                  ck: 'T:rel',
-                  add: undefined,
-                  label: t('cl_g_rel'),
-                  icon: IC.rel,
-                  count: '',
-                  nodes: [],
-                },
-              ].map((G) => {
-                const opened = !isCol(G.ck);
-                return (
-                  <div key={G.g} className="kh-cl-tg">
-                    <div className="kh-cl-tghead">
-                      <button type="button" aria-expanded={opened} onClick={() => togCol(G.ck)}>
-                        <span className="kh-cl-chev" style={{ transform: `rotate(${opened ? 90 : 0}deg)` }}>
-                          <Svg d={CHEV} size={12} sw={2.4} />
-                        </span>
-                        <Svg d={G.icon} size={13} />
-                        <span className="kh-cl-tglabel">{G.label}</span>
-                        <span className="kh-cl-meta">{G.count}</span>
-                      </button>
-                      {G.add && (
-                        <button
-                          type="button"
-                          className="kh-cl-add"
-                          title={t(`cl_add_${G.add}`)}
-                          aria-label={t(`cl_add_${G.add}`)}
-                          onClick={() => addNode(G.g as ClGroup)}
-                        >
-                          <Svg d={PLUS} size={11} sw={2.4} />
-                        </button>
-                      )}
-                    </div>
-                    {opened && (
-                      <div className="kh-cl-tnodes">
-                        {G.g === 'rel' ? (
-                          <TreeNode
-                            on={isLinks}
-                            label={t('cx_title')}
-                            sub={t('cl_relSub')}
-                            icon={IC.rel}
-                            color={M[1]}
-                            onClick={() => setNode(LINKS)}
-                          />
-                        ) : (
-                          G.nodes.map((n) => (
-                            <TreeNode
-                              key={n.id}
-                              on={node?.id === n.id}
-                              label={nLabel(n)}
-                              mono={isAbap(n)}
-                              sub={nSub(n)}
-                              icon={nIcon(n)}
-                              color={M[1]}
-                              count={cnt(n)}
-                              onClick={() => setNode(n.id)}
-                            />
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </nav>
-            <div
-              className="kh-cl-handle kh-cl-handle--tree"
-              role="separator"
-              aria-orientation="vertical"
-              title={t('cl_resize')}
-              data-drag={treeW.dragging || undefined}
-              onPointerDown={treeW.down}
-              onDoubleClick={treeW.reset}
-            >
-              <span />
-            </div>
+            {!md.compact && tree$}
+            {!md.compact && (
+              <div
+                className="kh-cl-handle kh-cl-handle--tree"
+                role="separator"
+                aria-orientation="vertical"
+                title={t('cl_resize')}
+                data-drag={treeW.dragging || undefined}
+                onPointerDown={treeW.down}
+                onDoubleClick={treeW.reset}
+              >
+                <span />
+              </div>
+            )}
             <div className="kh-cl-node">
               <div className="kh-cl-nhead">
+                {md.compact && (
+                  <button
+                    type="button"
+                    className="kh-cl-npick"
+                    aria-haspopup="dialog"
+                    aria-label={`${t('cl_nodes')}: ${isLinks ? t('cx_title') : node ? nLabel(node) : ''}`}
+                    onClick={() => setTreeOpen(true)}
+                  >
+                    <span className="kh-cl-nicon">
+                      <Svg d={isLinks ? IC.rel : node ? nIcon(node) : IC.code} size={14} />
+                    </span>
+                    <span className="kh-cl-grow">
+                      <span className="kh-cl-nname" data-mono={(node && isAbap(node)) || undefined}>
+                        {isLinks ? t('cx_title') : node ? nLabel(node) : ''}
+                      </span>
+                      <span className="kh-cl-nsub">{isLinks ? t('cl_relSub') : node ? nSub(node) : ''}</span>
+                    </span>
+                    <span className="kh-cl-npick__all">{t('cl_nodes')}</span>
+                    <Svg d='<path d="M6 9l6 6 6-6"></path>' size={14} sw={2.4} />
+                  </button>
+                )}
                 <div className="kh-cl-nrow">
                   {canBack && (
                     <button
@@ -1041,6 +1087,17 @@ export function CodelibView() {
             </div>
           </div>
         </div>
+      )}
+      {md.compact && o && (
+        <Sheet
+          open={treeOpen}
+          onClose={() => setTreeOpen(false)}
+          title={t('cl_nodes')}
+          closeLabel={t('i_close')}
+          className="kh-cl-tsheet"
+        >
+          {tree$}
+        </Sheet>
       )}
     </section>
   );

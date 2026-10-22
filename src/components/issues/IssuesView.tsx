@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
@@ -9,6 +9,7 @@ import { fmtDue, localDay } from '@/lib/tasks';
 import { useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
+import { BackBar, useListDetail } from '@/components/content/MobilePane';
 import './issues.css';
 
 // Tarefas de Projeto — ZNotes.dc.html `isIssues`: a table with resizable,
@@ -98,7 +99,6 @@ export function IssuesView() {
   const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
-  const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
   const [view, setView] = usePersistentState<'table' | 'kanban'>('issues.view', 'table');
@@ -122,15 +122,24 @@ export function IssuesView() {
   const [over, setOver] = useState<Status | null>(null);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const activeId = sp.get('i');
+  // phones: cards (the table's rows / one Kanban column at a time) → the
+  // task full-screen with ← Voltar; tablets: the panel floats over (D70)
+  const md = useListDetail('i');
+  const mdGo = md.go;
+  const mdBack = md.back;
+  const phone = md.phone;
+  const [kanCol, setKanCol] = useState<Status>('open');
+  const swipeX = useRef<number | null>(null);
 
   const open = useCallback(
     (id: string | null) => {
+      if (!id && phone) return mdBack();
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('i', id);
       else next.delete('i');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, mdGo, mdBack, phone, sp],
   );
 
   useEffect(() => {
@@ -284,8 +293,46 @@ export function IssuesView() {
     }
   };
 
+  // phones: one card per task (the Kanban's card, with its status)
+  const mCard = (x: Issue, withStatus: boolean) => {
+    const d = due(x);
+    const p = projects.find((y) => y.id === x.projectId);
+    return (
+      <div
+        key={x.id}
+        className="kh-is-card"
+        data-on={x.id === activeId || undefined}
+        role="button"
+        tabIndex={0}
+        onClick={() => open(x.id)}
+        onKeyDown={(e) => e.key === 'Enter' && open(x.id)}
+      >
+        <div className="kh-is-card__t">{x.title}</div>
+        {x.description && <div className="kh-is-card__d">{x.description}</div>}
+        <div className="kh-is-card__row">
+          {withStatus && <Badge label={t(STATUS[x.status][0])} color={STATUS[x.status][1]} />}
+          <Badge label={t(PRIO[x.priority][0])} color={PRIO[x.priority][1]} />
+          {x.dueOn && (
+            <span className="kh-is-due" style={{ color: d.color }}>
+              {d.label}
+            </span>
+          )}
+        </div>
+        {x.waiting && x.waiting !== 'N/A' && <div className="kh-is-card__w">⏳ {x.waiting}</div>}
+        <div className="kh-is-card__f">
+          <span className="kh-is-card__pj">
+            {p && <span className="kh-is-dot" style={{ background: p.color }} />}
+            {p ? projectLabel(p) : '—'}
+          </span>
+          <span>{fmtStamp(x.createdAt)}</span>
+        </div>
+      </div>
+    );
+  };
+  const kanCards = sorted.filter((x) => x.status === kanCol);
+
   return (
-    <section className="kh-is">
+    <section className="kh-is" data-pane={md.pane} data-view={view}>
       <div className="kh-is-main">
         <div className="kh-is-head">
           <div className="kh-is-title">
@@ -374,7 +421,54 @@ export function IssuesView() {
           ))}
         </div>
 
-        {view === 'table' ? (
+        {phone && view === 'table' ? (
+          <div className="kh-is-mlist">
+            {sorted.map((x) => mCard(x, true))}
+            {items && !sorted.length && <div className="kh-is-empty">{t('i_empty')}</div>}
+          </div>
+        ) : phone ? (
+          <div className="kh-is-mkan">
+            <div className="kh-is-mcols" role="tablist" aria-label={t('i_kanban')}>
+              {STATUSES.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={kanCol === k}
+                  data-on={kanCol === k || undefined}
+                  onClick={() => setKanCol(k)}
+                >
+                  <span className="kh-is-dot" style={{ background: STATUS[k][1] }} />
+                  {t(STATUS[k][0])}
+                  <span>{sorted.filter((x) => x.status === k).length}</span>
+                </button>
+              ))}
+            </div>
+            <div
+              className="kh-is-mlist"
+              role="tabpanel"
+              aria-label={t(STATUS[kanCol][0])}
+              onTouchStart={(e) => {
+                swipeX.current = e.touches.length === 1 ? (e.touches[0]?.clientX ?? null) : null;
+              }}
+              onTouchEnd={(e) => {
+                const x = e.changedTouches[0]?.clientX;
+                if (swipeX.current === null || x === undefined) return;
+                const dx = x - swipeX.current;
+                swipeX.current = null;
+                if (Math.abs(dx) < 70) return;
+                const i = STATUSES.indexOf(kanCol) + (dx < 0 ? 1 : -1);
+                if (i >= 0 && i < STATUSES.length) setKanCol(STATUSES[i]!);
+              }}
+            >
+              {kanCards.map((x) => mCard(x, false))}
+              {items && !kanCards.length && <div className="kh-is-empty">{t('i_empty')}</div>}
+              <button type="button" className="kh-is-madd" onClick={() => void create(kanCol)}>
+                + {t('i_new')} · {t(STATUS[kanCol][0])}
+              </button>
+            </div>
+          </div>
+        ) : view === 'table' ? (
           <div className="kh-is-table">
             <div style={{ minWidth: tableW }}>
               <div className="kh-is-th" style={{ gridTemplateColumns: grid }}>
@@ -559,6 +653,7 @@ export function IssuesView() {
 
       {a && (
         <aside className="kh-is-panel" key={a.id}>
+          {phone && <BackBar onBack={md.back} title={a.title} />}
           <div className="kh-is-panel__top">
             <span className="kh-is-created">
               <svg

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import type { JSONContent } from '@tiptap/react';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
@@ -32,6 +32,7 @@ import { ShellContext } from '@/components/shell/ShellContext';
 import { Connections } from '@/components/content/Connections';
 import { editableDoc } from '@/components/notes/NoteEditor';
 import { useWhen } from '@/components/content/useWhen';
+import { useListDetail } from '@/components/content/MobilePane';
 import { SidePanel } from './SidePanel';
 import { SapNoteDoc } from './SapNoteDoc';
 import './sap.css';
@@ -112,10 +113,11 @@ export function SapNotesView() {
   const confirm = useConfirm();
   const when = useWhen();
   const shell = useContext(ShellContext);
-  const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const activeId = sp.get('n');
+  // phones: list → note with ← Voltar; tablets: the panel floats over the list (D70)
+  const md = useListDetail('n');
   const [items, setItems] = useState<SapNote[] | null>(null);
   const [systems, setSystems] = useState<Sys[]>([]);
   const [transports, setTransports] = useState<Tr[]>([]);
@@ -176,10 +178,11 @@ export function SapNotesView() {
   }, [load, fail]);
 
   const open = (id: string | null) => {
+    if (!id && md.phone) return md.back();
     const p = new URLSearchParams(sp.toString());
     if (id) p.set('n', id);
     else p.delete('n');
-    router.replace(`${pathname}${p.size ? `?${p}` : ''}`, { scroll: false });
+    md.go(`${pathname}${p.size ? `?${p}` : ''}`, id);
   };
   const flush = useCallback(
     (id: string) => {
@@ -475,7 +478,7 @@ export function SapNotesView() {
   const nFilters = [fComp, fCat, fPrio, fSt, fProj].filter(Boolean).length;
 
   return (
-    <section className="kh-sap kh-sn">
+    <section className="kh-sap kh-sn" data-pane={md.pane}>
       <div className="kh-sap-main">
         <div className="kh-sap-head">
           <div className="kh-sap-titles">
@@ -598,6 +601,30 @@ export function SapNotesView() {
               emptyLabel={items ? t('sn_empty') : ''}
               resizeLabel={t('resize')}
               minWidth={1200}
+              card={(x) => (
+                <div className="kh-tcard__main">
+                  <div className="kh-tcard__t">
+                    <span className="kh-sap-mono">
+                      {x.number} <span className="kh-sn-cv">v{x.version}</span>
+                    </span>
+                    {x.priority && prioPill(x.priority)}
+                  </div>
+                  <span className="kh-tcard__s">{x.title || '—'}</span>
+                  <span className="kh-tcard__m">
+                    {x.component && <span className="kh-sap-mono">{x.component}</span>}
+                    {x.releasedOn && <span className="kh-sap-mono">{x.releasedOn}</span>}
+                    <span className="kh-sn-dots">
+                      {systems.map((s) => (
+                        <i
+                          key={s.id}
+                          title={`${sysLabel(s)} · ${stL(stOf(x, s.id))}`}
+                          style={{ background: statusColor(stOf(x, s.id)) }}
+                        />
+                      ))}
+                    </span>
+                  </span>
+                </div>
+              )}
             />
           </div>
         ) : (
@@ -672,7 +699,13 @@ export function SapNotesView() {
         )}
       </div>
       {act && (
-        <SidePanel id="sapnotes" def={520} resizeLabel={t('resize')}>
+        <SidePanel
+          id="sapnotes"
+          def={520}
+          resizeLabel={t('resize')}
+          onBack={md.back}
+          backTitle={`${act.number} · ${act.title}`}
+        >
           <NotePanel
             key={act.id}
             note={act}

@@ -9,6 +9,7 @@ import { api } from '@/lib/client/api';
 import { DEV_LANGS, DEV_TYPES, highlight, langOf, type DevLang, type DevType } from '@/lib/devlib';
 import { Modal, TagInput, useConfirm, usePersistentState, useTagStyle, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
+import { BackBar, useListDetail } from '@/components/content/MobilePane';
 import './devlib.css';
 
 // Biblioteca de Código — DevLibrary.dc.html: snippets grouped by language,
@@ -58,6 +59,9 @@ export function DevLibView() {
   const preRef = useRef<HTMLPreElement>(null);
   const gutRef = useRef<HTMLPreElement>(null);
   const selId = sp.get('s');
+  // phones: list → snippet with ← Voltar; tablets: a narrower list beside it (D70)
+  const md = useListDetail('s');
+  const mdGo = md.go;
 
   const lname = useCallback((l: DevLang) => (l.id === 'plain' ? t('dl_plain') : l.name), [t]);
   const tyName = (k: string) => t(`dl_t_${k}`);
@@ -70,9 +74,9 @@ export function DevLibView() {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('s', id);
       else next.delete('s');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp, selId],
+    [path, mdGo, sp, selId],
   );
 
   useEffect(() => {
@@ -221,7 +225,8 @@ export function DevLibView() {
           .filter((x) => x.id !== sel.id)
           .map((x) => ({ ...x, related: x.related.filter((r) => r !== sel.id) })),
     );
-    open(null);
+    if (md.phone) md.back();
+    else open(null);
     refreshCounts();
   };
   const download = () => {
@@ -273,7 +278,12 @@ export function DevLibView() {
   };
 
   return (
-    <section ref={sectionRef} className="kh-dl" style={{ gridTemplateColumns: colTpl }}>
+    <section
+      ref={sectionRef}
+      className="kh-dl"
+      data-pane={md.pane}
+      style={{ gridTemplateColumns: md.compact ? `${Math.min(cw, 300)}px minmax(0,1fr)` : colTpl }}
+    >
       <div
         className="kh-dl-handle"
         style={{ left: `calc(min(${cw}px, calc(100% - 420px)) - 7px)` }}
@@ -474,6 +484,7 @@ export function DevLibView() {
       </div>
 
       <div className="kh-dl-main">
+        {md.phone && sel && <BackBar onBack={md.back} title={sel.title} />}
         {sel && fa && L ? (
           <div className="kh-dl-body">
             <div className="kh-dl-top">

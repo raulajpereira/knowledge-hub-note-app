@@ -762,3 +762,109 @@
   color: var(--ink-inv);
   font-weight: 600;
 }
+
+/* ── Phones and tablets (D70) ────────────────────────────────────────── */
+@media (max-width: 1099.98px) {
+  .kh-dl-handle {
+    display: none;
+  }
+  .kh-dl-body {
+    padding: 18px 18px 24px;
+  }
+  .kh-dl-item {
+    min-height: 56px;
+  }
+  .kh-dl-round {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-dl-copy,
+  .kh-dl-mini {
+    min-height: 36px;
+  }
+}
+@media (max-width: 767.98px) {
+  /* one pane at a time (data-pane from the URL's ?s=) */
+  .kh-dl {
+    grid-template-columns: minmax(0, 1fr) !important;
+    border-radius: 24px;
+  }
+  .kh-dl[data-pane='detail'] > .kh-dl-side,
+  .kh-dl:not([data-pane='detail']) > .kh-dl-main {
+    display: none;
+  }
+  .kh-dl-side {
+    border-right: 0;
+  }
+  .kh-dl-sidehead {
+    padding: 14px 12px 10px;
+  }
+  .kh-dl-titlerow h1 {
+    font-size: 22px;
+  }
+  .kh-dl-new {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-dl-search {
+    height: 46px;
+  }
+  .kh-dl-sel {
+    height: 40px;
+  }
+  .kh-dl-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .kh-dl-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-dl-chips button {
+    flex: none;
+    height: 36px;
+  }
+  .kh-dl-body {
+    padding: 14px 14px 28px;
+  }
+  .kh-dl-top {
+    flex-wrap: wrap;
+  }
+  .kh-dl-back {
+    height: 40px;
+  }
+  .kh-dl-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kh-dl-field input,
+  .kh-dl-sel--box {
+    height: 46px;
+  }
+  .kh-dl-editor {
+    flex: none !important;
+    height: 66dvh;
+    min-height: 320px;
+  }
+  .kh-dl-tabs > button {
+    height: 36px;
+  }
+  .kh-dl-fname {
+    flex: 1 1 140px;
+    width: auto;
+    height: 40px;
+  }
+  /* 16 px code: the editing textarea is (no zoom-in on iOS); the colours and
+     line numbers drawn beside / under it must match */
+  .kh-dl-gutter,
+  .kh-dl-hl,
+  .kh-dl-ta {
+    font-size: 16px !important;
+  }
+  .kh-dl-hl,
+  .kh-dl-ta {
+    padding: 12px 12px;
+  }
+  .kh-dl-rel {
+    height: 40px;
+  }
+}

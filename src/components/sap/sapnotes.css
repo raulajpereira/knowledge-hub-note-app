@@ -461,3 +461,55 @@
   margin-bottom: 8px;
   line-height: 1.6;
 }
+
+/* ── Phones (D70) ─────────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+  .kh-sn-filters {
+    align-items: center;
+  }
+  .kh-sn-fsel {
+    flex: none;
+    height: 36px;
+  }
+  .kh-sn-clear {
+    flex: none;
+    height: 36px;
+  }
+  .kh-sn-cv {
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.65;
+  }
+  /* the matrix scrolls inside its box; the note column stays, narrower */
+  .kh-sn-mwrap {
+    padding: 0 10px 14px;
+  }
+  .kh-sn-matrix th.kh-sn-mnote {
+    min-width: 132px;
+    max-width: 150px;
+  }
+  .kh-sn-mnote button {
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+  }
+  .kh-sn-mcell {
+    min-height: 40px;
+  }
+  .kh-sn-numrow {
+    grid-template-columns: 1fr 0.7fr;
+  }
+  .kh-sn-numrow > :last-child {
+    grid-column: 1 / -1;
+  }
+  /* each system: name + status, then the date and the transport */
+  .kh-sn-sysrow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    row-gap: 6px;
+    padding: 6px 0 10px;
+    border-bottom: 1px solid rgb(var(--w) / 0.08);
+  }
+  .kh-sn-sysrow :is(select, input) {
+    min-height: 44px;
+  }
+}

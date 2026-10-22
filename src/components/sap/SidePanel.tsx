@@ -1,11 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { usePersistentState } from '@/components/ui';
+import { usePersistentState, useViewport } from '@/components/ui';
+import { BackBar } from '@/components/content/MobilePane';
 
 /**
  * Prototype `panelRes`: the right-hand detail panel of the SAP screens,
  * resizable by its left handle (double-click restores the default width).
+ * Tablets: the panel floats over the list (sap.css); phones: it is the whole
+ * page with "← Voltar" (`onBack`) on top (D70).
  */
 export function SidePanel({
   id,
@@ -13,6 +16,8 @@ export function SidePanel({
   min = 340,
   max = 1300,
   resizeLabel,
+  onBack,
+  backTitle,
   children,
 }: {
   id: string;
@@ -20,8 +25,12 @@ export function SidePanel({
   min?: number;
   max?: number;
   resizeLabel: string;
+  /** phones: the "← Voltar" bar on top (back to the list) */
+  onBack?: () => void;
+  backTitle?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const phone = useViewport() === 'phone';
   const [saved, setSaved] = usePersistentState<number>(`panel.${id}`, def);
   const [live, setLive] = useState<number | null>(null);
   const w0 = useRef(0);
@@ -63,6 +72,7 @@ export function SidePanel({
         <div />
       </div>
       <div className="kh-sap-panel" style={{ width }}>
+        {phone && onBack && <BackBar onBack={onBack} title={backTitle} />}
         {children}
       </div>
     </>

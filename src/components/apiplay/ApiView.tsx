@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
-import { Modal, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Modal, Sheet, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { encodeFormBody, parseFormBody, storeFormBody } from '@/lib/apiForm';
 import { codeHtml, guessLang } from '@/lib/codeHighlight';
 import { usePref } from '@/components/shell/PrefsProvider';
@@ -13,6 +13,7 @@ import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
 import { useWhen } from '@/components/content/useWhen';
+import { BackBar, FoldersButton, useListDetail } from '@/components/content/MobilePane';
 import '../emails/emails.css';
 import './apiplay.css';
 
@@ -434,7 +435,6 @@ export function ApiView() {
   const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
-  const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
   const { focus } = useShell();
@@ -467,15 +467,19 @@ export function ApiView() {
   const timers = useRef(new Map<string, { patch: Partial<Req>; tm: ReturnType<typeof setTimeout> }>());
   const envTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeId = sp.get('r');
+  // phones: list → request with ← Voltar; phones and tablets: the folders in a sheet (D70)
+  const md = useListDetail('r');
+  const mdGo = md.go;
+  const [foldersOpen, setFoldersOpen] = useState(false);
 
   const open = useCallback(
     (id: string | null) => {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('r', id);
       else next.delete('r');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, mdGo, sp],
   );
 
   useEffect(() => {
@@ -635,7 +639,8 @@ export function ApiView() {
     const idx = list.findIndex((x) => x.id === act.id);
     const rest = list.filter((x) => x.id !== act.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== act.id));
-    open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
   };
   const addFolder = async () => {
@@ -924,12 +929,220 @@ export function ApiView() {
       ]
     : [];
 
+  const pickFolder = (id: string) => {
+    setFolder(id);
+    setFoldersOpen(false);
+  };
+  const folderLabel =
+    folder === 'all'
+      ? t('p_all')
+      : folder === 'none'
+        ? t('p_noFolder')
+        : (folders.find((f) => f.id === folder)?.name ?? t('p_all'));
+  const folders$ = (
+    <div
+      className="kh-em-folders kh-ap-folders"
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(null);
+      }}
+    >
+      {[
+        { id: 'all', name: t('p_all'), n: all.length },
+        { id: 'none', name: t('p_noFolder'), n: all.filter((x) => !x.folderId).length },
+      ].map((f) => (
+        <div
+          key={f.id}
+          className="kh-em-folder kh-ap-frow"
+          data-on={folder === f.id || undefined}
+          data-top
+          data-drop={over?.id === f.id ? 'inside' : undefined}
+          onClick={() => pickFolder(f.id)}
+          // a request dropped on "Sem Pasta" leaves its folder
+          onDragOver={(e) => {
+            if (drag?.kind !== 'req' || f.id !== 'none') return;
+            e.preventDefault();
+            setOver({ id: f.id, zone: 'inside' });
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (drag?.kind === 'req' && f.id === 'none') upd(drag.id, { folderId: null }, 0);
+            endDrag();
+          }}
+        >
+          <Svg d={I.folder} s={17} />
+          <button
+            type="button"
+            className="kh-rowbtn kh-em-folder__name"
+            aria-current={folder === f.id || undefined}
+            onClick={(e) => {
+              e.stopPropagation();
+              pickFolder(f.id);
+            }}
+          >
+            {f.name}
+          </button>
+          <span className="kh-em-count">{f.n}</span>
+        </div>
+      ))}
+      {shownRows.map(({ f, depth }) => {
+        const kids = kidsOf(f.id);
+        const isOpen = !closedSet.has(f.id);
+        const zone = over?.id === f.id ? over.zone : undefined;
+        const pad = 4 + depth * 18;
+        const sib = kidsOf(f.parentId);
+        const i = sib.findIndex((x) => x.id === f.id);
+        return (
+          <div
+            key={f.id}
+            className="kh-em-folder kh-ap-frow"
+            data-on={folder === f.id || undefined}
+            data-depth={depth}
+            data-drop={zone}
+            data-dragging={(drag?.kind === 'folder' && drag.id === f.id) || undefined}
+            style={
+              {
+                paddingLeft: pad,
+                '--kh-ap-ind': `${pad + (zone === 'after' && kids.length && isOpen ? 40 : 22)}px`,
+              } as React.CSSProperties
+            }
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', f.name);
+              setDrag({ kind: 'folder', id: f.id });
+            }}
+            onDragEnd={endDrag}
+            onDragOver={(e) => {
+              if (!drag) return;
+              // not into itself or one of its subfolders
+              if (drag.kind === 'folder' && subOf(drag.id).has(f.id)) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              const r = e.currentTarget.getBoundingClientRect();
+              const y = (e.clientY - r.top) / r.height;
+              const z: Zone =
+                drag.kind === 'req' ? 'inside' : y < 0.28 ? 'before' : y > 0.72 ? 'after' : 'inside';
+              if (over?.id !== f.id || over.zone !== z) setOver({ id: f.id, zone: z });
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (zone) dropOnFolder(f, zone);
+              endDrag();
+            }}
+            onClick={() => pickFolder(f.id)}
+          >
+            {kids.length ? (
+              <button
+                type="button"
+                className="kh-ap-chev"
+                aria-expanded={isOpen}
+                aria-label={`${isOpen ? t('p_fCollapse') : t('p_fExpand')} ${f.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setClosed(isOpen ? [...closed, f.id] : closed.filter((x) => x !== f.id));
+                }}
+              >
+                <Svg d={I.chev} s={13} />
+              </button>
+            ) : (
+              <i className="kh-ap-chev" aria-hidden="true" />
+            )}
+            <Svg d={I.folder} s={17} />
+            <button
+              type="button"
+              className="kh-rowbtn kh-em-folder__name"
+              aria-current={folder === f.id || undefined}
+              aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+              onClick={(e) => {
+                e.stopPropagation();
+                pickFolder(f.id);
+              }}
+              onKeyDown={(e) => {
+                if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+                e.preventDefault();
+                const to = e.key === 'ArrowUp' ? i - 1 : i + 1;
+                if (to >= 0 && to < sib.length) void moveFolder(f.id, f.parentId, to);
+              }}
+            >
+              {f.name}
+            </button>
+            <button
+              type="button"
+              className="kh-ap-fmove"
+              title={t('p_fMove')}
+              aria-label={`${t('p_fMove')} ${f.name}`}
+              aria-haspopup="dialog"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMover(f);
+              }}
+            >
+              <Svg d={I.move} s={14} />
+            </button>
+            <button
+              type="button"
+              title={t('del')}
+              aria-label={`${t('del')} ${f.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                void removeFolder(f);
+              }}
+            >
+              <Svg d={I.trash} s={14} />
+            </button>
+            <span className="kh-em-count">{countOf(f.id)}</span>
+          </div>
+        );
+      })}
+      {drag?.kind === 'folder' && (
+        <div
+          className="kh-ap-droptop"
+          data-over={over?.id === 'top' || undefined}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (over?.id !== 'top') setOver({ id: 'top', zone: 'inside' });
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            void moveFolder(drag.id, null, kidsOf(null).filter((f) => f.id !== drag.id).length);
+            endDrag();
+          }}
+        >
+          <Svg d={I.up} s={15} />
+          {t('p_fToTop')}
+        </div>
+      )}
+      <div className="kh-em-newfolder">
+        <input
+          value={newFolder}
+          maxLength={80}
+          placeholder={t('a_folderPh')}
+          aria-label={t('a_folderPh')}
+          onChange={(e) => setNewFolder(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
+        />
+        <button type="button" onClick={() => void addFolder()}>
+          + {t('newFolder')}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div
-      className="kh-em kh-page-card"
-      style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
+      className="kh-em kh-page-card kh-ap"
+      data-ld=""
+      data-pane={md.pane}
+      style={{
+        gridTemplateColumns: md.compact
+          ? `${Math.min(listW, 300)}px minmax(0,1fr)`
+          : focus
+            ? 'minmax(0,1fr)'
+            : `${listW}px minmax(0,1fr)`,
+      }}
     >
-      {!focus && (
+      {!focus && !md.compact && (
         <ColHandle
           style={{ left: listW }}
           value={listW}
@@ -940,7 +1153,7 @@ export function ApiView() {
           onReset={() => setCols({ ...cols, list: COL_DEFAULTS.list })}
         />
       )}
-      {!focus && (
+      {(!focus || md.compact) && (
         <div className="kh-em-side">
           <div className="kh-em-top">
             <label className="kh-em-search">
@@ -962,193 +1175,13 @@ export function ApiView() {
               <Svg d={I.plus} s={16} />
             </button>
           </div>
-          <div
-            className="kh-em-folders kh-ap-folders"
-            onDragLeave={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(null);
-            }}
-          >
-            {[
-              { id: 'all', name: t('p_all'), n: all.length },
-              { id: 'none', name: t('p_noFolder'), n: all.filter((x) => !x.folderId).length },
-            ].map((f) => (
-              <div
-                key={f.id}
-                className="kh-em-folder kh-ap-frow"
-                data-on={folder === f.id || undefined}
-                data-top
-                data-drop={over?.id === f.id ? 'inside' : undefined}
-                onClick={() => setFolder(f.id)}
-                // a request dropped on "Sem Pasta" leaves its folder
-                onDragOver={(e) => {
-                  if (drag?.kind !== 'req' || f.id !== 'none') return;
-                  e.preventDefault();
-                  setOver({ id: f.id, zone: 'inside' });
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (drag?.kind === 'req' && f.id === 'none') upd(drag.id, { folderId: null }, 0);
-                  endDrag();
-                }}
-              >
-                <Svg d={I.folder} s={17} />
-                <button
-                  type="button"
-                  className="kh-rowbtn kh-em-folder__name"
-                  aria-current={folder === f.id || undefined}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFolder(f.id);
-                  }}
-                >
-                  {f.name}
-                </button>
-                <span className="kh-em-count">{f.n}</span>
-              </div>
-            ))}
-            {shownRows.map(({ f, depth }) => {
-              const kids = kidsOf(f.id);
-              const isOpen = !closedSet.has(f.id);
-              const zone = over?.id === f.id ? over.zone : undefined;
-              const pad = 4 + depth * 18;
-              const sib = kidsOf(f.parentId);
-              const i = sib.findIndex((x) => x.id === f.id);
-              return (
-                <div
-                  key={f.id}
-                  className="kh-em-folder kh-ap-frow"
-                  data-on={folder === f.id || undefined}
-                  data-depth={depth}
-                  data-drop={zone}
-                  data-dragging={(drag?.kind === 'folder' && drag.id === f.id) || undefined}
-                  style={
-                    {
-                      paddingLeft: pad,
-                      '--kh-ap-ind': `${pad + (zone === 'after' && kids.length && isOpen ? 40 : 22)}px`,
-                    } as React.CSSProperties
-                  }
-                  draggable
-                  onDragStart={(e) => {
-                    e.stopPropagation();
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', f.name);
-                    setDrag({ kind: 'folder', id: f.id });
-                  }}
-                  onDragEnd={endDrag}
-                  onDragOver={(e) => {
-                    if (!drag) return;
-                    // not into itself or one of its subfolders
-                    if (drag.kind === 'folder' && subOf(drag.id).has(f.id)) return;
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    const r = e.currentTarget.getBoundingClientRect();
-                    const y = (e.clientY - r.top) / r.height;
-                    const z: Zone =
-                      drag.kind === 'req' ? 'inside' : y < 0.28 ? 'before' : y > 0.72 ? 'after' : 'inside';
-                    if (over?.id !== f.id || over.zone !== z) setOver({ id: f.id, zone: z });
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (zone) dropOnFolder(f, zone);
-                    endDrag();
-                  }}
-                  onClick={() => setFolder(f.id)}
-                >
-                  {kids.length ? (
-                    <button
-                      type="button"
-                      className="kh-ap-chev"
-                      aria-expanded={isOpen}
-                      aria-label={`${isOpen ? t('p_fCollapse') : t('p_fExpand')} ${f.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setClosed(isOpen ? [...closed, f.id] : closed.filter((x) => x !== f.id));
-                      }}
-                    >
-                      <Svg d={I.chev} s={13} />
-                    </button>
-                  ) : (
-                    <i className="kh-ap-chev" aria-hidden="true" />
-                  )}
-                  <Svg d={I.folder} s={17} />
-                  <button
-                    type="button"
-                    className="kh-rowbtn kh-em-folder__name"
-                    aria-current={folder === f.id || undefined}
-                    aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFolder(f.id);
-                    }}
-                    onKeyDown={(e) => {
-                      if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-                      e.preventDefault();
-                      const to = e.key === 'ArrowUp' ? i - 1 : i + 1;
-                      if (to >= 0 && to < sib.length) void moveFolder(f.id, f.parentId, to);
-                    }}
-                  >
-                    {f.name}
-                  </button>
-                  <button
-                    type="button"
-                    className="kh-ap-fmove"
-                    title={t('p_fMove')}
-                    aria-label={`${t('p_fMove')} ${f.name}`}
-                    aria-haspopup="dialog"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMover(f);
-                    }}
-                  >
-                    <Svg d={I.move} s={14} />
-                  </button>
-                  <button
-                    type="button"
-                    title={t('del')}
-                    aria-label={`${t('del')} ${f.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void removeFolder(f);
-                    }}
-                  >
-                    <Svg d={I.trash} s={14} />
-                  </button>
-                  <span className="kh-em-count">{countOf(f.id)}</span>
-                </div>
-              );
-            })}
-            {drag?.kind === 'folder' && (
-              <div
-                className="kh-ap-droptop"
-                data-over={over?.id === 'top' || undefined}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (over?.id !== 'top') setOver({ id: 'top', zone: 'inside' });
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  void moveFolder(drag.id, null, kidsOf(null).filter((f) => f.id !== drag.id).length);
-                  endDrag();
-                }}
-              >
-                <Svg d={I.up} s={15} />
-                {t('p_fToTop')}
-              </div>
-            )}
-            <div className="kh-em-newfolder">
-              <input
-                value={newFolder}
-                maxLength={80}
-                placeholder={t('a_folderPh')}
-                aria-label={t('a_folderPh')}
-                onChange={(e) => setNewFolder(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
-              />
-              <button type="button" onClick={() => void addFolder()}>
-                + {t('newFolder')}
-              </button>
+          {md.compact ? (
+            <div className="kh-em-mfolders">
+              <FoldersButton label={folderLabel} onClick={() => setFoldersOpen(true)} />
             </div>
-          </div>
+          ) : (
+            folders$
+          )}
           <section className="kh-em-list kh-ap-list" aria-label={t('nav_api')}>
             {list.map((x) => {
               const r = resps[x.id];
@@ -1187,6 +1220,7 @@ export function ApiView() {
       )}
 
       <section className="kh-em-read kh-ap-read">
+        {md.phone && activeId && <BackBar onBack={md.back} title={act?.title ?? ''} />}
         {act ? (
           <div className="kh-ap-main" data-fill={(tab === 'response' && rs?.ok) || undefined}>
             <div className="kh-ap-head">
@@ -1300,9 +1334,15 @@ export function ApiView() {
                 onBlur={() => setUrlDraft(null)}
                 onKeyDown={(e) => e.key === 'Enter' && void send()}
               />
-              <button type="button" className="kh-ap-send" disabled={sending} onClick={() => void send()}>
+              <button
+                type="button"
+                className="kh-ap-send"
+                aria-label={t('p_send')}
+                disabled={sending}
+                onClick={() => void send()}
+              >
                 <Svg d={I.send} />
-                {sending ? t('p_sending') : t('p_send')}
+                <span className="kh-ap-sendl">{sending ? t('p_sending') : t('p_send')}</span>
               </button>
             </div>
             <div className="kh-ap-resolved">→ {resolve(fullUrl(act))}</div>
@@ -1560,6 +1600,17 @@ export function ApiView() {
             void moveFolder(mover.id, parentId, position);
           }}
         />
+      )}
+      {md.compact && (
+        <Sheet
+          open={foldersOpen}
+          onClose={() => setFoldersOpen(false)}
+          title={t('mob_folders')}
+          closeLabel={t('i_close')}
+          className="kh-em-fsheet kh-ap-fsheet"
+        >
+          {folders$}
+        </Sheet>
       )}
     </div>
   );

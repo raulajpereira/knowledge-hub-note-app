@@ -1354,3 +1354,81 @@ button.kh-table__th {
     }
   }
 }
+
+/* ResizableTable on phones (card prop): one card per row (D70) */
+.kh-table-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kh-table-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  box-sizing: border-box;
+  padding: 10px 10px 10px 14px;
+  border-radius: 18px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.07);
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.kh-table-card:active {
+  background: rgb(var(--w) / 0.14);
+}
+.kh-table-card[data-on] {
+  border-color: rgb(var(--w) / 0.45);
+}
+.kh-tcard__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kh-tcard__t {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.kh-tcard__t > :first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-tcard__s {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
+}
+.kh-tcard__m {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  font-size: 12px;
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
+}
+.kh-tcard__btn {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(var(--w) / 0.1);
+  color: var(--ink);
+  cursor: pointer;
+}

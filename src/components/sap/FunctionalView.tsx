@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import {
@@ -20,6 +20,7 @@ import {
 import { useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { useWhen } from '@/components/content/useWhen';
+import { BackBar, useListDetail } from '@/components/content/MobilePane';
 import { AiButton } from '@/components/ai/AiButton';
 import { aiError, useAi } from '@/components/ai/useAi';
 import { SaveTemplateButton, TemplateButton } from '@/components/templates/Templates';
@@ -58,7 +59,6 @@ export function FunctionalView({ page }: { page: FnPage }) {
   const { ready: aiReady } = useAi();
   const [aiBusy, setAiBusy] = useState(false);
   const confirm = useConfirm();
-  const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
   const P = FN[page];
@@ -82,6 +82,10 @@ export function FunctionalView({ page }: { page: FnPage }) {
   conflictRef.current = conflict;
   const sectionRef = useRef<HTMLElement>(null);
   const selId = sp.get('r');
+  // phones: list → record with ← Voltar (nothing opens by itself); tablets:
+  // a narrower list beside the record (D70)
+  const md = useListDetail('r');
+  const mdGo = md.go;
   const unsaved = useRef(new Set<string>());
   const [fCycle, setFCycle] = useState('');
   const [evidence, setEvidence] = useState<Record<string, Evidence[]>>({});
@@ -117,9 +121,9 @@ export function FunctionalView({ page }: { page: FnPage }) {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('r', id);
       else next.delete('r');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, mdGo, sp],
   );
 
   // ── Saving (debounced per record, conflict by updatedAt) ───────────────────
@@ -284,7 +288,7 @@ export function FunctionalView({ page }: { page: FnPage }) {
       (!fCycle || r.f.cycle === fCycle) &&
       (!query || JSON.stringify([r.title, r.code, r.f, r.rows]).toLowerCase().includes(query)),
   );
-  const sel = all.find((r) => r.id === selId) ?? list[0] ?? null;
+  const sel = all.find((r) => r.id === selId) ?? (md.phone ? null : list[0]) ?? null;
   const selKey = sel?.id;
   useEffect(() => {
     if (page !== 'fn_test' || !selKey || evidence[selKey]) return;
@@ -354,7 +358,8 @@ export function FunctionalView({ page }: { page: FnPage }) {
       return toast({ message: t('ne_saveFail'), tone: 'error' });
     }
     setItems((cur) => cur && cur.filter((x) => x.id !== sel.id));
-    open(null);
+    if (md.phone) md.back();
+    else open(null);
     refreshCounts();
   };
 
@@ -441,7 +446,12 @@ export function FunctionalView({ page }: { page: FnPage }) {
     sel && upd(sel.id, { rows: sel.rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)) });
 
   return (
-    <section ref={sectionRef} className="kh-fn" style={{ gridTemplateColumns: colTpl }}>
+    <section
+      ref={sectionRef}
+      className="kh-fn"
+      data-pane={md.pane}
+      style={{ gridTemplateColumns: md.compact ? `${Math.min(cw, 300)}px minmax(0,1fr)` : colTpl }}
+    >
       <div
         className="kh-fn-handle"
         style={{ left: `calc(min(${cw}px, calc(100% - 420px)) - 7px)` }}
@@ -628,6 +638,7 @@ export function FunctionalView({ page }: { page: FnPage }) {
         </div>
       </div>
       <div className="kh-fn-main">
+        {md.phone && sel && <BackBar onBack={md.back} title={sel.title || sel.code} />}
         {!sel && <div className="kh-fn-pick">{t('fn_pick')}</div>}
         {sel && (
           <div className="kh-fn-detail">
@@ -887,7 +898,7 @@ export function FunctionalView({ page }: { page: FnPage }) {
                             const v = row[k] || (kind === 'rst' ? 'todo' : '');
                             const label = `${tr(lb)} ${i + 1}`;
                             return (
-                              <span key={k} className="kh-fn-cell">
+                              <span key={k} className="kh-fn-cell" data-label={tr(lb)}>
                                 {kind === 'rst' ? (
                                   <select
                                     className="kh-fn-rst"

@@ -1122,7 +1122,7 @@
   "tg_colorHint": "A cor aplica-se a esta etiqueta em toda a aplicação.",
   "cl_t_func": "Módulos de Função",
   "cl_impl": "Implementado @",
-  "cl_implPh": "Implementado @ …",
+  "cl_implPh": "cliente ou local…",
   "cl_implLbl": "Implementado",
   "cl_fugr": "Grupo de funções",
   "h_equal": "Repartir a linha por igual",
@@ -1198,5 +1198,7 @@
   "shr_file1": "1 ficheiro",
   "fl_pdfPhone": "No telemóvel o PDF abre no visualizador do sistema.",
   "fl_openPdf": "Abrir PDF",
-  "shr_short": "Partilhar"
+  "shr_short": "Partilhar",
+  "cl_nodes": "Estrutura",
+  "lm_zoom": "Zoom do mapa"
 }

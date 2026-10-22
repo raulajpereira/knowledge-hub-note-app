@@ -564,21 +564,6 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-@media (max-width: 900px) {
-  .kh-sap {
-    flex-direction: column;
-  }
-  .kh-sap-handle {
-    display: none;
-  }
-  .kh-sap-panel {
-    width: auto !important;
-    max-width: none;
-    max-height: 60vh;
-    border-left: 0;
-    border-top: 1px solid var(--kh-divider, rgb(var(--w) / 0.1));
-  }
-}
 
 /* TCodes */
 .kh-tx-cell0 {
@@ -1468,4 +1453,256 @@
 .kh-lm-note {
   font-size: 12px;
   color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+}
+
+/* ── Phones and tablets (D70): Sistemas, TCodes, Ordens, Notas SAP ─────────── */
+@media (max-width: 1099.98px) {
+  .kh-sap {
+    position: relative;
+  }
+  .kh-sap-handle {
+    display: none;
+  }
+  /* tablets: the detail panel floats over the list, from the right */
+  .kh-sap-panel {
+    position: absolute;
+    z-index: 8;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(460px, 66%) !important;
+    max-width: none;
+    border: 0;
+    border-left: 1px solid rgb(var(--w) / 0.22);
+    border-radius: 26px 0 0 26px;
+    /* nearly opaque: a blur nested in the page's glass has nothing to blur */
+    background: color-mix(in srgb, var(--kh-option-bg) 92%, transparent);
+    box-shadow:
+      inset 1px 0 0 rgba(255, 255, 255, 0.22),
+      -24px 0 60px rgb(0 0 0 / calc(0.3 * var(--sh-k)));
+    animation: kh-sap-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .kh-sap-head {
+    padding: 16px 16px 10px;
+  }
+  .kh-sap-chips,
+  .kh-ot-stats,
+  .kh-ot-filters {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .kh-sap-body {
+    padding: 0 16px 16px;
+  }
+  .kh-sap-chips > button {
+    height: 36px;
+  }
+  .kh-sap-ico {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-sap-ico--del,
+  .kh-sap-ico--x {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-tx-fav {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-lm {
+    padding: 0;
+  }
+}
+@keyframes kh-sap-in {
+  from {
+    transform: translateX(30%);
+    opacity: 0.5;
+  }
+}
+@media (max-width: 767.98px) {
+  /* one pane at a time (data-pane from the URL): the list, or the detail */
+  .kh-sap[data-pane='detail'] > .kh-sap-main {
+    display: none;
+  }
+  .kh-sap-panel {
+    position: static;
+    flex: 1;
+    width: auto !important;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    animation: none;
+  }
+  .kh-sap {
+    border-radius: 24px;
+  }
+  /* title + "Novo" on the first row, then the views, then the search */
+  .kh-sap-head {
+    gap: 8px;
+    padding: 14px 12px 10px;
+  }
+  .kh-sap-titles {
+    flex: 1 1 calc(100% - 200px);
+  }
+  .kh-sap-titles h1 {
+    font-size: 22px;
+    white-space: normal;
+  }
+  .kh-sap-titles > div {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .kh-sap-new {
+    order: 1;
+    height: 44px;
+    padding: 0 16px;
+  }
+  .kh-sap-head > .kh-sap-ghost {
+    order: 2;
+    height: 40px;
+  }
+  .kh-sap-seg {
+    order: 3;
+  }
+  .kh-sap-seg button {
+    height: 36px;
+    padding: 0 12px;
+  }
+  .kh-sap-search {
+    order: 4;
+    flex: 1 1 100%;
+    width: auto;
+    height: 46px;
+  }
+  /* filter chips slide sideways instead of wrapping over many rows */
+  .kh-sap-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 12px 10px;
+  }
+  .kh-sap-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-sap-chips > * {
+    flex: none;
+  }
+  .kh-sap-chips > div[style] {
+    display: none;
+  }
+  .kh-sap-body {
+    padding: 0 10px 14px;
+  }
+  .kh-sap-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kh-sap-route {
+    display: none;
+  }
+  .kh-sap-card__acts > * {
+    height: 44px;
+  }
+  /* the detail */
+  .kh-sap-ico--x {
+    display: none;
+  }
+  .kh-sap-ptop {
+    flex-wrap: wrap;
+    padding: 12px 12px 0 16px;
+  }
+  .kh-sap-pbody {
+    padding: 10px 16px 28px;
+  }
+  .kh-sap-ptitle {
+    font-size: 20px;
+  }
+  .kh-sap-input,
+  .kh-sap-select {
+    height: 46px;
+  }
+  .kh-sap-primary,
+  .kh-sap-ghost {
+    min-height: 44px;
+  }
+  /* transports: the stage counters in one sliding row */
+  .kh-ot-stats {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 12px 10px;
+  }
+  .kh-ot-stats > button {
+    flex: 0 0 116px;
+  }
+  .kh-ot-filters {
+    padding: 0 12px 10px;
+  }
+  .kh-table-card .kh-ot-tag {
+    background: rgb(var(--w) / 0.05);
+    border-color: rgb(var(--w) / 0.14);
+    color: rgb(var(--t) / calc(0.55 * var(--t-k)));
+  }
+  .kh-table-card .kh-ot-tag[data-done] {
+    background: oklch(0.8 0.14 150 / 0.28);
+    border-color: oklch(0.8 0.14 150 / 0.6);
+    color: var(--ink);
+  }
+  .kh-lm-bar {
+    flex-wrap: wrap;
+  }
+  .kh-lm-hint {
+    flex-basis: 100%;
+  }
+}
+/* the landscape map's zoom (phones and tablets) */
+.kh-lm-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.08);
+}
+.kh-lm-zoom > button {
+  width: 40px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+.kh-lm-zoom > button:disabled {
+  opacity: 0.4;
+}
+.kh-lm-zoom > span {
+  min-width: 44px;
+  text-align: center;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kh-sap-panel {
+    animation: none;
+  }
+}
+/* the header's SAP TCodes as a sheet (phones) */
+.kh-tcp-sheet .kh-tcp__cap > span:last-child {
+  display: none;
+}
+.kh-tcp-sheet .kh-tcp__list {
+  overflow: visible;
+}
+.kh-tcp-sheet .kh-tcp__list > button {
+  min-height: 54px;
 }

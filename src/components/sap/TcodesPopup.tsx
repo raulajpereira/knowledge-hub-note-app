@@ -4,14 +4,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { modColor } from '@/lib/sap';
+import { Sheet, useViewport } from '@/components/ui';
 import type { Tcode } from './TcodesView';
 import './sap.css';
 
 // Header "SAP TCodes" popup (prototype tcOpen): the most picked transactions,
 // search over code/description/program/module, click or Enter copies the code.
+// Phones: the same content in a bottom sheet (D70).
 
 export function TcodesPopup({ onClose }: { onClose: () => void }) {
   const { t } = useI18n();
+  const phone = useViewport() === 'phone';
   const [items, setItems] = useState<Tcode[] | null>(null);
   const [q, setQ] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
@@ -48,6 +51,65 @@ export function TcodesPopup({ onClose }: { onClose: () => void }) {
     clearTimeout(tm.current);
     tm.current = setTimeout(() => setCopied(null), 1400);
   };
+  const content = (
+    <>
+      <label className="kh-tcp__search">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="rgb(var(--t) / calc(.7 * var(--t-k)))"
+          strokeWidth="2"
+          strokeLinecap="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <line x1="16.5" y1="16.5" x2="21" y2="21" />
+        </svg>
+        <input
+          autoFocus
+          value={q}
+          spellCheck={false}
+          placeholder={t('tc_ph')}
+          aria-label={t('tc_ph')}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onClose();
+            else if (e.key === 'Enter' && list[0]) pick(list[0]);
+          }}
+        />
+      </label>
+      <div className="kh-tcp__cap">
+        <span>{query ? `${t('tc_res')} · ${list.length}` : `✦ ${t('tc_most')}`}</span>
+        <span>{t('tc_hint')}</span>
+      </div>
+      <div className="kh-tcp__list">
+        {list.map((x, i) => (
+          <button
+            key={x.id}
+            type="button"
+            data-first={(query && i === 0) || undefined}
+            onClick={() => pick(x)}
+          >
+            <span className="kh-tcp__code">{x.code}</span>
+            <span className="kh-tcp__desc">{x.description}</span>
+            {copied === x.id && <span className="kh-tcp__ok">✓ {t('tc_copied')}</span>}
+            <span className="kh-tcp__mod">
+              <span style={{ background: modColor(x.module) }} />
+              {x.module || '—'}
+            </span>
+          </button>
+        ))}
+        {items && !list.length && <div className="kh-tcp__none">{t('tc_none')}</div>}
+      </div>
+    </>
+  );
+  if (phone)
+    return (
+      <Sheet open onClose={onClose} title="SAP TCodes" closeLabel={t('tc_close')} className="kh-tcp-sheet">
+        {content}
+      </Sheet>
+    );
   return (
     <div className="kh-tcp-dim" onClick={onClose}>
       <div
@@ -89,55 +151,7 @@ export function TcodesPopup({ onClose }: { onClose: () => void }) {
             </svg>
           </button>
         </div>
-        <label className="kh-tcp__search">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="rgb(var(--t) / calc(.7 * var(--t-k)))"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <line x1="16.5" y1="16.5" x2="21" y2="21" />
-          </svg>
-          <input
-            autoFocus
-            value={q}
-            spellCheck={false}
-            placeholder={t('tc_ph')}
-            aria-label={t('tc_ph')}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') onClose();
-              else if (e.key === 'Enter' && list[0]) pick(list[0]);
-            }}
-          />
-        </label>
-        <div className="kh-tcp__cap">
-          <span>{query ? `${t('tc_res')} · ${list.length}` : `✦ ${t('tc_most')}`}</span>
-          <span>{t('tc_hint')}</span>
-        </div>
-        <div className="kh-tcp__list">
-          {list.map((x, i) => (
-            <button
-              key={x.id}
-              type="button"
-              data-first={(query && i === 0) || undefined}
-              onClick={() => pick(x)}
-            >
-              <span className="kh-tcp__code">{x.code}</span>
-              <span className="kh-tcp__desc">{x.description}</span>
-              {copied === x.id && <span className="kh-tcp__ok">✓ {t('tc_copied')}</span>}
-              <span className="kh-tcp__mod">
-                <span style={{ background: modColor(x.module) }} />
-                {x.module || '—'}
-              </span>
-            </button>
-          ))}
-          {items && !list.length && <div className="kh-tcp__none">{t('tc_none')}</div>}
-        </div>
+        {content}
       </div>
     </div>
   );

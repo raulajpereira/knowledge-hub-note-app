@@ -963,12 +963,127 @@
   border-radius: 14px;
   background: rgb(var(--d) / calc(0.22 * var(--d-k)));
 }
-@media (max-width: 700px) {
-  .kh-wb-top {
-    left: 60px;
-    right: 14px;
-  }
-}
 .kh-wb-keys > div > span:nth-child(even) {
   align-self: start;
+}
+
+/* ── Phones and tablets (D70): touch — pinch to zoom, one finger pans ──── */
+@media (max-width: 1099.98px) {
+  .kh-wb-round {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-wb-bar {
+    height: 50px;
+  }
+  .kh-wb-tool {
+    width: 42px;
+    height: 42px;
+  }
+  .kh-wb-lock {
+    width: 42px;
+    height: 36px;
+  }
+  .kh-wb-zoom {
+    height: 48px;
+  }
+  .kh-wb-zoom > button {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-wb-brow > button {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-wb-sw {
+    width: 28px;
+    height: 28px;
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-wb {
+    border-radius: 24px;
+  }
+  /* name bar across the top */
+  .kh-wb-top {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+  }
+  .kh-wb-bar {
+    align-self: stretch;
+    min-width: 0;
+  }
+  .kh-wb-name {
+    flex: 1;
+    min-width: 0;
+    width: auto !important;
+  }
+  /* the style options of the selection: one row that slides */
+  .kh-wb-style {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-self: stretch;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .kh-wb-style::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-wb-style > * {
+    flex: none;
+  }
+  /* tools: a sliding row at the bottom (room on the right for the AI button) */
+  .kh-wb-tools {
+    top: auto;
+    left: 10px;
+    right: 70px;
+    bottom: 10px;
+    max-height: none;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 18px;
+  }
+  .kh-wb-hsep {
+    width: 1px;
+    height: 24px;
+    margin: 0 3px;
+  }
+  /* undo / redo / zoom above the tools, on the left */
+  .kh-wb-zoom {
+    right: auto;
+    left: 10px;
+    bottom: 72px;
+  }
+  .kh-wb-help,
+  .kh-wb-keys {
+    display: none;
+  }
+  .kh-wb-dim {
+    padding: 10px;
+  }
+  /* the boards sheet */
+  .kh-wb-bsheet .kh-wb-boards__head {
+    padding: 0 0 6px;
+  }
+  .kh-wb-bsheet .kh-wb-boards__head > div {
+    display: none;
+  }
+  .kh-wb-bsheet .kh-wb-boards__head input {
+    height: 46px;
+  }
+  .kh-wb-bsheet .kh-wb-boards__list {
+    overflow: visible;
+    padding: 0;
+  }
+  .kh-wb-bsheet .kh-wb-brow {
+    min-height: 64px;
+  }
+  .kh-wb-bsheet .kh-wb-boards__foot {
+    padding: 8px 0 0;
+  }
+  .kh-wb-bsheet .kh-wb-boards__foot button {
+    height: 48px;
+  }
 }

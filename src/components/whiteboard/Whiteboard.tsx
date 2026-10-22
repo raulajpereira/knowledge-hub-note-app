@@ -2,7 +2,7 @@
 
 import { Component, type ReactNode } from 'react';
 import { api, isApiFailure } from '@/lib/client/api';
-import { onActivateKey, type ConfirmOptions } from '@/components/ui';
+import { onActivateKey, Sheet, type ConfirmOptions } from '@/components/ui';
 import {
   isBox,
   isLine,
@@ -163,7 +163,8 @@ type Drag =
   | { k: 'erase'; before: WbEl[]; gone: Set<string> }
   | { k: 'pen'; id: string; before: WbEl[]; last?: Pt }
   | { k: 'shape'; id: string; p0: { x: number; y: number }; before: WbEl[] }
-  | { k: 'line'; id: string; before: WbEl[] };
+  | { k: 'line'; id: string; before: WbEl[] }
+  | { k: 'pinch'; d0: number; m0: { x: number; y: number }; v0: View };
 export type Peek = {
   k: string;
   type: LinkType;
@@ -179,6 +180,8 @@ export type WhiteboardProps = {
   confirm: (o: ConfirmOptions) => Promise<boolean>;
   toast: (o: { message: ReactNode; tone?: 'info' | 'success' | 'warning' | 'error' }) => void;
   go: (type: LinkType, id: string) => void;
+  /** phones: the boards list opens as a sheet, no keyboard help (D70) */
+  phone?: boolean;
 };
 type State = {
   data: Data | null;
@@ -270,6 +273,8 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
   private svg: SVGSVGElement | null = null;
   private fileIn: HTMLInputElement | null = null;
   private d: Drag | null = null;
+  /** fingers on the canvas (touch): two of them pinch-zoom and pan (D70) */
+  private touches = new Map<number, { x: number; y: number }>();
   private spaceDown = false;
   private clip: WbEl[] | null = null;
   private dirty = new Set<string>();
@@ -927,8 +932,32 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
       this.pick(T);
     }
   };
+  /** A second finger: what the first one started is undone and the two pinch. */
+  startPinch(e: React.PointerEvent<HTMLDivElement>) {
+    const d = this.d;
+    if (d && 'before' in d) this.rawEls(d.before);
+    if (d?.k === 'marq') this.setState({ marq: null });
+    const [a, b] = [...this.touches.values()] as [{ x: number; y: number }, { x: number; y: number }];
+    this.d = {
+      k: 'pinch',
+      d0: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+      m0: this.local({ clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 }),
+      v0: { ...this.view() },
+    };
+    this.setState({ panning: true, hover: null });
+    try {
+      this.cv!.setPointerCapture(e.pointerId);
+    } catch {
+      // pointer already gone
+    }
+  }
   onDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!this.state.data || !this.cv) return;
+    if (e.pointerType === 'touch') {
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.touches.size === 2) return this.startPinch(e);
+      if (this.touches.size > 2) return;
+    }
     const S = this.state,
       b = this.board(),
       v = this.view(),
@@ -1100,8 +1129,22 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
     }
   };
   onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch' && this.touches.has(e.pointerId))
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const d = this.d;
     if (!d) return;
+    if (d.k === 'pinch') {
+      const [a, b] = [...this.touches.values()];
+      if (!a || !b) return;
+      const m = this.local({ clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 });
+      const z = Math.min(4, Math.max(0.1, (d.v0.z * Math.hypot(a.x - b.x, a.y - b.y)) / d.d0));
+      this.setView({
+        z,
+        x: m.x - (d.m0.x - d.v0.x) * (z / d.v0.z),
+        y: m.y - (d.m0.y - d.v0.y) * (z / d.v0.z),
+      });
+      return;
+    }
     const p = this.toW(e),
       z = this.view().z;
     if (d.k === 'pan') {
@@ -1224,6 +1267,15 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
     if (d.k === 'erase') this.eraseAt(e);
   };
   onUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') this.touches.delete(e.pointerId);
+    if (this.d?.k === 'pinch') {
+      // the pinch ends with the second finger; the one left does nothing
+      if (this.touches.size === 0) {
+        this.d = null;
+        this.setState({ panning: false });
+      }
+      return;
+    }
     const d = this.d;
     this.d = null;
     if (!d) return;
@@ -1938,6 +1990,74 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
           .sort((a, c) => c.updated - a.updated)
       : [];
     const sep = <span className="kh-wb-sep" />;
+    const boards$ = (
+      <>
+        <div className="kh-wb-boards__head">
+          <div>
+            <span>{T('wb_boards')}</span>
+            <span>{S.data.boards.length}</span>
+          </div>
+          <input
+            value={S.bq}
+            onChange={(e) => this.setState({ bq: e.target.value })}
+            placeholder={T('wb_search')}
+            aria-label={T('wb_search')}
+          />
+        </div>
+        <div className="kh-wb-boards__list">
+          {rows.map((x) => {
+            const n = x.els.length;
+            return (
+              <div
+                key={x.id}
+                className="kh-wb-brow"
+                data-on={x.id === b.id || undefined}
+                role="button"
+                tabIndex={0}
+                onClick={() => this.setActive(x.id)}
+                onKeyDown={onActivateKey(() => this.setActive(x.id))}
+              >
+                <div className="kh-wb-brow__pv">{this.preview(x)}</div>
+                <div className="kh-wb-brow__txt">
+                  <span>{x.name || T('wb_untitled')}</span>
+                  <span>
+                    {n} {n === 1 ? T('wb_el1') : T('wb_els')} · {fmt(x.updated)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  title={T('wb_dup')}
+                  aria-label={`${T('wb_dup')} ${x.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void this.dupBoard(x);
+                  }}
+                >
+                  <Ico k="dup" s={14} />
+                </button>
+                <button
+                  type="button"
+                  data-del="1"
+                  title={T('wb_del')}
+                  aria-label={`${T('wb_del')} ${x.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void this.delBoard(x);
+                  }}
+                >
+                  <Ico k="trash" s={14} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <div className="kh-wb-boards__foot">
+          <button type="button" onClick={() => void this.newBoard()}>
+            + {T('wb_newBoard')}
+          </button>
+        </div>
+      </>
+    );
 
     return (
       <section className="kh-wb" ref={(n) => void (this.root = n)}>
@@ -2265,78 +2385,26 @@ export class Whiteboard extends Component<WhiteboardProps, State> {
           )}
         </div>
 
-        {S.showBoards && (
+        {S.showBoards && !this.props.phone && (
           <div
             className="kh-wb-boards"
             onPointerDown={(e) => e.stopPropagation()}
             role="dialog"
             aria-label={T('wb_boards')}
           >
-            <div className="kh-wb-boards__head">
-              <div>
-                <span>{T('wb_boards')}</span>
-                <span>{S.data.boards.length}</span>
-              </div>
-              <input
-                value={S.bq}
-                onChange={(e) => this.setState({ bq: e.target.value })}
-                placeholder={T('wb_search')}
-                aria-label={T('wb_search')}
-              />
-            </div>
-            <div className="kh-wb-boards__list">
-              {rows.map((x) => {
-                const n = x.els.length;
-                return (
-                  <div
-                    key={x.id}
-                    className="kh-wb-brow"
-                    data-on={x.id === b.id || undefined}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => this.setActive(x.id)}
-                    onKeyDown={onActivateKey(() => this.setActive(x.id))}
-                  >
-                    <div className="kh-wb-brow__pv">{this.preview(x)}</div>
-                    <div className="kh-wb-brow__txt">
-                      <span>{x.name || T('wb_untitled')}</span>
-                      <span>
-                        {n} {n === 1 ? T('wb_el1') : T('wb_els')} · {fmt(x.updated)}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      title={T('wb_dup')}
-                      aria-label={`${T('wb_dup')} ${x.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void this.dupBoard(x);
-                      }}
-                    >
-                      <Ico k="dup" s={14} />
-                    </button>
-                    <button
-                      type="button"
-                      data-del="1"
-                      title={T('wb_del')}
-                      aria-label={`${T('wb_del')} ${x.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void this.delBoard(x);
-                      }}
-                    >
-                      <Ico k="trash" s={14} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="kh-wb-boards__foot">
-              <button type="button" onClick={() => void this.newBoard()}>
-                + {T('wb_newBoard')}
-              </button>
-            </div>
+            {boards$}
           </div>
+        )}
+        {S.showBoards && this.props.phone && (
+          <Sheet
+            open
+            onClose={() => this.setState({ showBoards: false })}
+            title={T('wb_boards')}
+            closeLabel={T('i_close')}
+            className="kh-wb-bsheet"
+          >
+            {boards$}
+          </Sheet>
         )}
 
         <div className="kh-wb-tools" role="toolbar" aria-label={T('wb_help')}>

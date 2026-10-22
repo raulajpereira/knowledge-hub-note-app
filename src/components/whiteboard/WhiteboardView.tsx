@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
-import { useConfirm, useToast } from '@/components/ui';
+import { useConfirm, useToast, useViewport } from '@/components/ui';
 import { itemHref } from '@/components/content/Connections';
 import type { LinkType } from '@/lib/whiteboard';
 import { Whiteboard } from './Whiteboard';
@@ -13,7 +13,8 @@ export function WhiteboardView() {
   const confirm = useConfirm();
   const toast = useToast();
   const router = useRouter();
+  const phone = useViewport() === 'phone';
   const go = (type: LinkType, id: string) =>
     router.push(type === 'snippet' ? `/app/devlib?s=${id}` : itemHref(type, id));
-  return <Whiteboard t={t} confirm={confirm} toast={toast} go={go} />;
+  return <Whiteboard t={t} confirm={confirm} toast={toast} go={go} phone={phone} />;
 }

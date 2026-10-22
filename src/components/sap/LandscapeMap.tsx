@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useI18n } from '@/i18n/client';
+import { useViewport } from '@/components/ui';
 import { envColor, type SapEnv } from '@/lib/sap';
 import { landscapes, routes, type LSystem, type LTransport } from '@/lib/landscape';
 
@@ -40,6 +41,9 @@ export function LandscapeMap({
   const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const [edge, setEdge] = useState<string | null>(null);
+  // phones/tablets: the whole map fits the width; − / + zoom in (the box scrolls) (D70)
+  const compact = useViewport() !== 'desktop';
+  const [zoom, setZoom] = useState(1);
 
   const lands = useMemo(() => landscapes(systems), [systems]);
   const rts = useMemo(() => routes(systems, transports ?? []), [systems, transports]);
@@ -142,6 +146,27 @@ export function LandscapeMap({
         <button type="button" className="kh-sap-ghost kh-lm-btn" onClick={downloadPng}>
           {t('lm_png')}
         </button>
+        {compact && (
+          <span className="kh-lm-zoom" role="group" aria-label={t('lm_zoom')}>
+            <button
+              type="button"
+              aria-label={t('wb_zoomOut')}
+              disabled={zoom <= 1}
+              onClick={() => setZoom((z) => Math.max(1, z / 1.5))}
+            >
+              −
+            </button>
+            <span>{Math.round(zoom * 100)}%</span>
+            <button
+              type="button"
+              aria-label={t('wb_zoomIn')}
+              disabled={zoom >= 4}
+              onClick={() => setZoom((z) => Math.min(4, z * 1.5))}
+            >
+              +
+            </button>
+          </span>
+        )}
       </div>
       <div className="kh-lm-scroll">
         <svg
@@ -149,7 +174,11 @@ export function LandscapeMap({
           width={W}
           height={H}
           viewBox={`0 0 ${W} ${H}`}
-          style={{ width: '100%', maxWidth: W, minWidth: Math.min(W, 820), height: 'auto' }}
+          style={
+            compact
+              ? { width: `${zoom * 100}%`, maxWidth: 'none', height: 'auto' }
+              : { width: '100%', maxWidth: W, minWidth: Math.min(W, 820), height: 'auto' }
+          }
           role="img"
           aria-label={t('lm_title')}
           className="kh-lm-svg"

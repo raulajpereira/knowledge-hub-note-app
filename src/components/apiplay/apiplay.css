@@ -773,3 +773,138 @@
   width: 72px;
   background: rgb(var(--w) / 0.5);
 }
+
+/* ── Phones and tablets (D70): collections in the "Pastas" sheet ─────────── */
+@media (max-width: 1099.98px) {
+  .kh-ap-fsheet .kh-ap-folders {
+    max-height: none;
+  }
+  /* no hover on touch: "Mover" is always there */
+  .kh-ap-fsheet .kh-em-folder .kh-ap-fmove {
+    opacity: 1;
+  }
+  .kh-ap-fsheet .kh-ap-frow .kh-ap-chev {
+    width: 36px;
+    height: 36px;
+  }
+  .kh-ap-main {
+    padding: 18px 18px 24px;
+  }
+  .kh-ap-item {
+    min-height: 56px;
+  }
+  .kh-ap-rm {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-ap-envbtn {
+    width: 36px;
+    height: 36px;
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-ap-main {
+    gap: 14px;
+    padding: 14px 12px 28px;
+  }
+  .kh-ap-titles {
+    flex-basis: 100%;
+  }
+  .kh-ap-title {
+    font-size: 20px;
+  }
+  .kh-ap-env {
+    height: 44px;
+  }
+  .kh-ap-env select {
+    height: 34px;
+  }
+  .kh-ap-folder {
+    flex: 1 1 120px;
+    height: 44px;
+    max-width: none;
+  }
+  /* method, URL and Send in one compact row */
+  .kh-ap-bar {
+    gap: 4px;
+    padding: 4px;
+  }
+  .kh-ap-method {
+    height: 44px;
+    padding: 0 24px 0 10px;
+    background-position: right 8px center;
+    background-size: 10px;
+  }
+  .kh-ap-url {
+    height: 44px;
+    padding: 0 4px;
+  }
+  .kh-ap-send {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    justify-content: center;
+    padding: 0;
+  }
+  .kh-ap-sendl {
+    display: none;
+  }
+  .kh-ap-resolved {
+    padding: 0 10px;
+  }
+  /* the tabs slide sideways */
+  .kh-ap-tabs {
+    flex-wrap: nowrap;
+    align-self: stretch;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .kh-ap-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-ap-tabs button {
+    flex: none;
+    height: 38px;
+  }
+  .kh-ap-kvrow {
+    grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.2fr) 40px;
+    gap: 6px;
+  }
+  .kh-ap-ck {
+    width: 26px;
+    height: 26px;
+  }
+  .kh-ap-kvrow input,
+  .kh-ap-field input {
+    height: 44px;
+    padding: 0 10px;
+  }
+  .kh-ap-add,
+  .kh-ap-fmt,
+  .kh-ap-pill {
+    height: 40px;
+  }
+  /* the response: body, then headers (no splitter) */
+  .kh-ap-main[data-fill] .kh-ap-resp {
+    flex: none;
+  }
+  .kh-ap-split {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .kh-ap-splitter {
+    display: none;
+  }
+  .kh-ap-resp .kh-ap-respbody {
+    height: 56dvh;
+    min-height: 260px;
+  }
+  .kh-ap-split .kh-ap-rh {
+    overflow: visible;
+  }
+  .kh-ap-grid,
+  .kh-ap-rh > div + div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
