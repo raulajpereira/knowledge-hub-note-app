@@ -221,7 +221,7 @@ test('Trash: delete, restore, delete permanently', async ({ page }) => {
   await page.getByRole('button', { name: 'Mover para o Lixo' }).click();
   await expect(page.locator('.kh-nt-card', { hasText: 'Debug de jobs' })).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Lixo' }).click();
+  await page.getByRole('link', { name: 'Lixo', exact: true }).click();
   await expect(page.locator('.kh-tr__row')).toHaveCount(1);
   await page.getByRole('button', { name: 'Recuperar', exact: true }).click();
   await expect(page.getByText('O Lixo está vazio')).toBeVisible();

@@ -40,7 +40,11 @@ test.beforeAll(async ({ browser }) => {
     { encoding: 'utf8' },
   );
   const code = /KH-LIC-\d{6}/.exec(out)![0];
-  const page = await browser.newPage({ locale: 'pt-PT' });
+  const page = await browser.newPage({
+    locale: 'pt-PT',
+    // own IP: the register limit (10/h per IP) is shared by every spec without one
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.206' },
+  });
   await page.goto('register');
   await page.getByLabel('Nome').fill('Rows Tester');
   await page.getByLabel('Email').fill(email);

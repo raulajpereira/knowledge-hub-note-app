@@ -45,7 +45,11 @@ async function login(page: Page) {
 
 test.beforeAll(async ({ browser }) => {
   const code = /KH-LIC-\d{6}/.exec(cli('codes:create', '--type', 'license', '--plan', 'PRO'))![0];
-  const page = await browser.newPage({ locale: 'pt-PT' });
+  const page = await browser.newPage({
+    locale: 'pt-PT',
+    // own IP: the register limit (10/h per IP) is shared by every spec without one
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.203' },
+  });
   await page.goto('register');
   await page.getByLabel('Nome').fill('Api Tester');
   await page.getByLabel('Email').fill(email);
