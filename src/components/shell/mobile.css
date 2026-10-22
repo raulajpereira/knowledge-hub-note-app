@@ -1,3 +1,15 @@
+/* Space under the phone's status bar (clock, battery). The installed iOS app
+   draws under it (black-translucent): when iOS reports no inset (it does on
+   some launches), assume the tallest status bar so the header stays tappable. */
+:root {
+  --kh-safe-top: env(safe-area-inset-top, 0px);
+}
+@media (display-mode: standalone) and (max-width: 1099.98px) and (pointer: coarse) {
+  :root {
+    --kh-safe-top: max(env(safe-area-inset-top, 0px), 50px);
+  }
+}
+
 /* Phones and tablets (D68). Breakpoints: phone < 768 px, tablet 768–1099 px;
    desktop (≥ 1100 px) is untouched — every rule here sits in one of the two
    media queries below, or styles elements only phones/tablets render
@@ -12,7 +24,7 @@
   .kh-shell__grid {
     grid-template-rows: 52px minmax(0, 1fr) 36px;
     gap: 12px;
-    padding: calc(env(safe-area-inset-top) + 10px) max(14px, env(safe-area-inset-right))
+    padding: calc(var(--kh-safe-top) + 12px) max(14px, env(safe-area-inset-right))
       max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
   }
   /* until hydration the desktop header and sidebar are still in the page */
@@ -137,7 +149,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: calc(env(safe-area-inset-top) + 12px) 12px max(12px, env(safe-area-inset-bottom))
+  padding: calc(var(--kh-safe-top) + 12px) 12px max(12px, env(safe-area-inset-bottom))
     max(12px, env(safe-area-inset-left));
   border-radius: 0 28px 28px 0;
   background: linear-gradient(
@@ -404,7 +416,7 @@
   .kh-shell__grid {
     grid-template-rows: 52px minmax(0, 1fr);
     gap: 10px;
-    padding: calc(env(safe-area-inset-top) + 14px) max(10px, env(safe-area-inset-right))
+    padding: calc(var(--kh-safe-top) + 16px) max(10px, env(safe-area-inset-right))
       calc(var(--kh-bnav-h) + max(8px, env(safe-area-inset-bottom)) + 10px)
       max(10px, env(safe-area-inset-left));
   }
@@ -426,7 +438,7 @@
   }
   /* the assistant panel: full width between the header and the AI button */
   .kh-ai {
-    top: calc(env(safe-area-inset-top) + 8px);
+    top: calc(var(--kh-safe-top) + 8px);
     left: max(8px, env(safe-area-inset-left));
     right: max(8px, env(safe-area-inset-right));
     bottom: calc(var(--kh-bnav-h) + max(8px, env(safe-area-inset-bottom)) + 70px);
