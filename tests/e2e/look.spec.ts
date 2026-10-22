@@ -217,7 +217,7 @@ test('text size is per device: kept on reload, not shown on another device', asy
 
   const other = await browser.newPage({
     locale: 'pt-PT',
-    viewport: { width: 390, height: 844 },
+    viewport: { width: 1440, height: 900 },
     extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.161' },
   });
   await login(other);
