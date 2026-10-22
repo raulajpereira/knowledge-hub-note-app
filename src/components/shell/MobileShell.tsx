@@ -196,8 +196,11 @@ export function NavDrawer({
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
-    panel.current?.querySelector<HTMLElement>('[aria-current="page"]')?.focus() ??
-      panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    // the current page's link, else the first focusable element
+    (
+      panel.current?.querySelector<HTMLElement>('[aria-current="page"]') ??
+      panel.current?.querySelector<HTMLElement>(FOCUSABLE)
+    )?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
