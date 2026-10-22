@@ -4,7 +4,9 @@ import { db } from '@/db/client';
 import { admins, users } from '@/db/schema';
 import { getAuth } from '@/server/auth/request';
 import { getEntitlements } from '@/server/licensing/entitlements';
+import { cookies } from 'next/headers';
 import { getPrefs } from '@/server/prefs';
+import { SIZE_COOKIE, withDeviceSize } from '@/lib/deviceSize';
 import { listAssets } from '@/server/assets';
 import { AppShell } from '@/components/shell/AppShell';
 import type { ShellMe } from '@/components/shell/types';
@@ -47,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     assets,
   };
   return (
-    <AppShell me={me} prefs={prefs}>
+    <AppShell me={me} prefs={withDeviceSize(prefs, (await cookies()).get(SIZE_COOKIE)?.value)}>
       {children}
     </AppShell>
   );

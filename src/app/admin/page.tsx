@@ -2,7 +2,9 @@ import { notFound, redirect } from 'next/navigation';
 import { getAuth } from '@/server/auth/request';
 import { adminOf } from '@/server/admin/guard';
 import { getEntitlements } from '@/server/licensing/entitlements';
+import { cookies } from 'next/headers';
 import { getPrefs } from '@/server/prefs';
+import { SIZE_COOKIE, withDeviceSize } from '@/lib/deviceSize';
 import { listAssets } from '@/server/assets';
 import { AdminShell } from '@/components/admin/AdminShell';
 
@@ -33,7 +35,7 @@ export default async function AdminPage() {
         assets,
         modules: ent.modules,
       }}
-      prefs={prefs}
+      prefs={withDeviceSize(prefs, (await cookies()).get(SIZE_COOKIE)?.value)}
     />
   );
 }

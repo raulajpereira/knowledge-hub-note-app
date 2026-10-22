@@ -2,11 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Prefs } from '@/lib/prefs';
+import { DEVICE_KEYS, isDeviceKey, writeSizeCookie } from '@/lib/deviceSize';
 
 // user_prefs on the client: starts from the server-rendered copy, writes go
 // to the API as a debounced merge-patch, and the latest copy is re-read when
 // the window regains focus — so another device's changes show up
-// ("preferências sincronizadas entre dispositivos").
+// ("preferências sincronizadas entre dispositivos"). Text/interface size are
+// the exception: they stay on this device (lib/deviceSize).
 
 type PrefsValue = {
   prefs: Prefs;
@@ -49,6 +51,17 @@ export function PrefsProvider({ initial, children }: { initial: Prefs; children:
 
   const setPref = useCallback(
     (key: string, value: unknown) => {
+      if (isDeviceKey(key)) {
+        // reset = 100 % on this device, not the account's old value
+        const v = value ?? 1;
+        setPrefs((p) => {
+          if (Object.is(p[key], v)) return p;
+          const next = { ...p, [key]: v };
+          writeSizeCookie(Object.fromEntries(DEVICE_KEYS.map((k) => [k, next[k] as number | undefined])));
+          return next;
+        });
+        return;
+      }
       setPrefs((p) => {
         // the same value again keeps the same object: no re-render, so an effect
         // that sets a pref (and depends on the setter) can't loop
@@ -73,7 +86,16 @@ export function PrefsProvider({ initial, children }: { initial: Prefs; children:
         const r = await fetch(URL_, { credentials: 'same-origin' });
         if (!r.ok) return;
         const { prefs: fresh } = (await r.json()) as { prefs: Prefs };
-        if (!Object.keys(pending.current).length) setPrefs(fresh);
+        if (Object.keys(pending.current).length) return;
+        // this device's sizes aren't on the server
+        setPrefs((p) => {
+          const next = { ...fresh };
+          for (const k of DEVICE_KEYS) {
+            if (p[k] === undefined) delete next[k];
+            else next[k] = p[k];
+          }
+          return next;
+        });
       } catch {
         // offline
       }

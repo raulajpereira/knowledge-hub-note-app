@@ -6,7 +6,7 @@
 }
 @media (display-mode: standalone) and (max-width: 1099.98px) and (pointer: coarse) {
   :root {
-    --kh-safe-top: max(env(safe-area-inset-top, 0px), 50px);
+    --kh-safe-top: calc(max(env(safe-area-inset-top, 0px), 50px) + 10px);
   }
 }
 

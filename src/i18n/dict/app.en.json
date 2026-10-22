@@ -593,7 +593,7 @@
   "settingsSub": "Customize how KnowledgeHub looks.",
   "share": "Share",
   "showT": "Show",
-  "sizeDesc": "Adjust the size of text and app elements.",
+  "sizeDesc": "Adjust the size of text and app elements. Saved on this device only, so phone and computer can differ.",
   "sizeFont": "Text Size",
   "sizeReset": "Reset",
   "sizeTitle": "Size",

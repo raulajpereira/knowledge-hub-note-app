@@ -199,3 +199,30 @@ test('tag colour chosen on the Tags page shows on a notes card', async ({ page }
   await page.locator('[data-sw="auto"]').click();
   await prefIs(page, 'tagColors', undefined);
 });
+
+test('text size is per device: kept on reload, not shown on another device', async ({ page, browser }) => {
+  await login(page);
+  await page.waitForURL(/\/app$/);
+  await page.goto('app/settings');
+  const font = page.getByRole('slider', { name: 'Tamanho do Texto' });
+  await font.fill('1.15');
+  await expect(page.locator('body')).toHaveCSS('font-size-adjust', '0.598');
+  await page.reload();
+  await expect(page.locator('body')).toHaveCSS('font-size-adjust', '0.598');
+  await expect(font).toHaveValue('1.15');
+  // nothing written to the account
+  const r = await page.request.get('api/v1/me/prefs');
+  expect(((await r.json()) as { prefs: Record<string, unknown> }).prefs.fontScale).toBeUndefined();
+
+  const other = await browser.newPage({
+    locale: 'pt-PT',
+    viewport: { width: 390, height: 844 },
+    extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.161' },
+  });
+  await login(other);
+  await other.waitForURL(/\/app$/);
+  await other.goto('app/settings');
+  await expect(other.getByRole('slider', { name: 'Tamanho do Texto' })).toHaveValue('1');
+  await expect(other.locator('body')).not.toHaveCSS('font-size-adjust', '0.598');
+  await other.close();
+});
