@@ -360,3 +360,64 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── Phones (D69): the preview takes the screen, the frame fills the width ── */
+@media (max-width: 767.98px) {
+  .kh-em[data-ld] .kh-ar-import,
+  .kh-em[data-ld] .kh-ar-new {
+    width: 46px;
+    height: 46px;
+  }
+  .kh-ar-item {
+    min-height: 56px;
+  }
+  .kh-ar > .kh-em-read > .kh-ar-main {
+    padding: 14px 12px 16px;
+    gap: 12px;
+  }
+  .kh-ar .kh-ar-head {
+    gap: 8px 6px;
+  }
+  .kh-ar .kh-ar-titles {
+    min-width: 0;
+  }
+  /* the preview right under the title and actions; tags and links after it */
+  .kh-ar .kh-ar-stage {
+    order: 1;
+  }
+  .kh-ar .kh-ar-meta {
+    order: 2;
+  }
+  .kh-ar .kh-ar-cx {
+    order: 3;
+  }
+  .kh-ar .kh-ar-title {
+    font-size: 20px;
+  }
+  .kh-ar .kh-ar-seg {
+    flex: 1 1 100%;
+    margin-right: 0;
+  }
+  .kh-ar .kh-ar-seg button {
+    flex: 1;
+    height: 38px;
+  }
+  .kh-ar .kh-ar-stamp {
+    flex-basis: 100%;
+  }
+  .kh-ar .kh-ar-stage {
+    flex: 1 0 72dvh !important;
+    min-height: 72dvh;
+    border-radius: 18px;
+  }
+  .kh-ar .kh-ar-code {
+    font-size: 13px;
+  }
+  .kh-ar-hist__row {
+    min-height: 52px;
+  }
+  .kh-ar-hist__row button {
+    height: 40px;
+    padding: 0 16px;
+  }
+}

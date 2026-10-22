@@ -305,3 +305,85 @@
   font-weight: 600;
   color: var(--ink);
 }
+
+/* ── Phones (D69): each item a two-line card ──────────────────────────── */
+@media (max-width: 767.98px) {
+  .kh-tr {
+    border-radius: 24px;
+  }
+  .kh-tr__head {
+    padding: 14px 14px 10px;
+    gap: 8px;
+  }
+  .kh-tr__titles {
+    flex-basis: 100%;
+  }
+  .kh-tr__title {
+    font-size: 22px;
+  }
+  .kh-tr__search {
+    flex: 1 1 100%;
+    width: auto;
+    height: 46px;
+  }
+  .kh-tr__search input {
+    font-size: 16px;
+  }
+  .kh-tr__btn {
+    flex: 1;
+    height: 46px;
+  }
+  .kh-tr__chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .kh-tr-chip {
+    flex: none;
+    height: 38px;
+  }
+  .kh-tr__scroll {
+    padding: 0 10px 16px;
+  }
+  .kh-tr__table {
+    min-width: 0;
+  }
+  .kh-tr__th {
+    display: none;
+  }
+  .kh-tr__row {
+    grid-template-columns: 34px auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'ck t t acts'
+      'ck kind left acts';
+    gap: 4px 10px;
+    padding: 10px 10px 10px 12px;
+  }
+  .kh-tr__row .kh-tr__ck {
+    grid-area: ck;
+    width: 26px;
+    height: 26px;
+  }
+  .kh-tr__row > span:nth-child(2) {
+    grid-area: kind;
+  }
+  .kh-tr__row > .kh-tr__t {
+    grid-area: t;
+    font-weight: 600;
+  }
+  .kh-tr__row > .kh-tr__at {
+    display: none;
+  }
+  .kh-tr__row > .kh-tr__left {
+    grid-area: left;
+  }
+  .kh-tr__row > .kh-tr__acts {
+    grid-area: acts;
+  }
+  .kh-tr__acts button {
+    width: 44px;
+    height: 44px;
+  }
+}

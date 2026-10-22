@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { usePersistentState } from '@/components/ui';
+import { usePersistentState, useViewport } from '@/components/ui';
+import { BackBar, usePhoneBack } from '@/components/content/MobilePane';
 import { useShell } from '@/components/shell/ShellContext';
 import { useI18n } from '@/i18n/client';
 import { BrandTab } from './BrandTab';
@@ -81,18 +82,28 @@ export function SettingsView() {
       (x.module === 'mg_*' ? [...modules].some((m) => m.startsWith('mg_')) : modules.has(x.module)),
   );
   const [saved, setTab] = usePersistentState<TabId>('setTab', 'look');
+  // phones: the tabs are a list, a tab opens as its own page with ← (D69)
+  const vp = useViewport();
+  const [paneOpen, setPaneOpen] = useState(false);
+  const closePane = usePhoneBack(paneOpen, () => setPaneOpen(false));
   // a link may open a given tab (e.g. ?tab=ai from the assistant) — read once:
   // setTab changes with every pref write, and re-reading the URL each time
   // would set the tab again and again (the page froze on ?tab=…)
   const fromUrl = useRef(false);
   useEffect(() => {
     const want = new URLSearchParams(window.location.search).get('tab');
-    if (!fromUrl.current && want && TABS.some((x) => x.id === want)) setTab(want as TabId);
+    if (!fromUrl.current && want && TABS.some((x) => x.id === want)) {
+      setTab(want as TabId);
+      setPaneOpen(true);
+    }
     fromUrl.current = true;
     // …also while Definições is already open (the bell's "Definições de notificações")
     const onTab = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
-      if (TABS.some((x) => x.id === id)) setTab(id as TabId);
+      if (TABS.some((x) => x.id === id)) {
+        setTab(id as TabId);
+        setPaneOpen(true);
+      }
     };
     window.addEventListener('kh:settings-tab', onTab);
     return () => window.removeEventListener('kh:settings-tab', onTab);
@@ -126,22 +137,30 @@ export function SettingsView() {
   };
 
   return (
-    <section className="kh-set">
-      <div className="kh-set__grid" style={{ gridTemplateColumns: `min(${w}px, 45%) minmax(0,1fr)` }}>
-        <div
-          className="kh-set__handle"
-          style={{ left: `calc(min(${w}px, 45%) - 7px)` }}
-          title={t('resize')}
-          onPointerDown={onDown}
-          onDoubleClick={resetNavW}
-          role="separator"
-          aria-orientation="vertical"
-        >
+    <section className="kh-set" data-pane={vp === 'phone' ? (paneOpen ? 'detail' : 'list') : undefined}>
+      <div
+        className="kh-set__grid"
+        style={{
+          gridTemplateColumns:
+            vp === 'tablet' ? `min(${w}px, 220px) minmax(0,1fr)` : `min(${w}px, 45%) minmax(0,1fr)`,
+        }}
+      >
+        {vp === 'desktop' && (
           <div
-            className="kh-handle__bar"
-            style={dragW !== null ? { background: 'rgb(var(--w) / .75)' } : undefined}
-          />
-        </div>
+            className="kh-set__handle"
+            style={{ left: `calc(min(${w}px, 45%) - 7px)` }}
+            title={t('resize')}
+            onPointerDown={onDown}
+            onDoubleClick={resetNavW}
+            role="separator"
+            aria-orientation="vertical"
+          >
+            <div
+              className="kh-handle__bar"
+              style={dragW !== null ? { background: 'rgb(var(--w) / .75)' } : undefined}
+            />
+          </div>
+        )}
         <nav className="kh-set__nav" data-zs="">
           <div style={{ padding: '0 10px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: '-.02em' }}>
@@ -166,7 +185,10 @@ export function SettingsView() {
                 role="tab"
                 className="kh-set__tab"
                 aria-selected={x.id === tab}
-                onClick={() => setTab(x.id)}
+                onClick={() => {
+                  setTab(x.id);
+                  setPaneOpen(true);
+                }}
               >
                 <svg
                   width="17"
@@ -182,11 +204,28 @@ export function SettingsView() {
                   dangerouslySetInnerHTML={{ __html: x.icon }}
                 />
                 <span style={{ flex: 1 }}>{t(x.label)}</span>
+                {vp === 'phone' && (
+                  <svg
+                    className="kh-set__chev"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                )}
               </button>
             ))}
           </div>
         </nav>
         <div className="kh-set__body" data-zs="">
+          {vp === 'phone' && <BackBar onBack={closePane} title={t('settings')} />}
           <div className="kh-set__inner" role="tabpanel">
             <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-.02em' }}>{t(current.label)}</div>
             {tab === 'look' && <LookTab />}

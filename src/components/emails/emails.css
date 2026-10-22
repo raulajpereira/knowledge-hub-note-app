@@ -545,9 +545,10 @@
   flex: none;
 }
 
-/* narrow screens: the list column stacks above the reader, still one card */
+/* narrow screens: the list column stacks above the reader, still one card
+   (the pages with their own phone/tablet layout — data-ld — are below) */
 @media (max-width: 900px) {
-  .kh-em.kh-page-card {
+  .kh-em.kh-page-card:not([data-ld]) {
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
   }
@@ -558,5 +559,123 @@
   .kh-em-side {
     border-right: 0;
     border-bottom: 1px solid var(--kh-divider);
+  }
+}
+
+/* ── Phones and tablets (D69): Emails, Ficheiros, Artefactos ─────────────── */
+@media (max-width: 1099.98px) {
+  /* the folders open from the "Pastas" toggle (a sheet) */
+  .kh-em[data-ld] > .kh-em-side > .kh-em-folders {
+    display: none;
+  }
+  .kh-em-mfolders {
+    flex: none;
+    padding: 0 14px 10px;
+  }
+  .kh-em-fsheet .kh-em-folders {
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+    border: 0;
+  }
+  .kh-em-fsheet .kh-em-folder {
+    height: 50px;
+  }
+  .kh-em-fsheet .kh-em-folder button:not(.kh-rowbtn) {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-em-fsheet .kh-em-folder .kh-rowbtn {
+    flex: 1;
+    width: auto;
+    height: 100%;
+    justify-content: flex-start;
+    color: inherit;
+  }
+  .kh-em-fsheet .kh-em-newfolder :is(input, button) {
+    height: 44px;
+  }
+  .kh-em-fsheet .kh-em-newfolder button.kh-ar-newshared {
+    width: 44px;
+  }
+  .kh-em[data-ld] .kh-em-filters button {
+    height: 36px;
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-em[data-ld].kh-page-card {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .kh-em[data-ld] > .kh-em-side {
+    border-right: 0;
+  }
+  /* one pane at a time (data-pane from the URL); before hydration: the list */
+  .kh-em[data-ld]:not([data-pane='detail']) > .kh-em-read,
+  .kh-em[data-ld][data-pane='detail'] > .kh-em-side {
+    display: none;
+  }
+  .kh-em[data-ld] .kh-em-top {
+    padding: 12px 12px 10px;
+  }
+  .kh-em[data-ld] .kh-em-filters {
+    padding: 0 12px;
+  }
+  .kh-em[data-ld] .kh-em-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 12px 10px 16px;
+  }
+  .kh-em[data-ld] .kh-em-item {
+    min-height: 56px;
+  }
+  .kh-em[data-ld] .kh-em-act {
+    width: 44px;
+    height: 44px;
+  }
+  /* the detail scrolls as one page: header, message, notes */
+  .kh-em[data-ld] > .kh-em-read {
+    overflow: auto;
+  }
+  .kh-em[data-ld] .kh-em-read__in {
+    flex: none;
+  }
+  .kh-em[data-ld] .kh-em-head {
+    padding: 14px 16px 16px;
+    gap: 12px;
+  }
+  .kh-em[data-ld] .kh-em-subject {
+    flex-basis: 100%;
+    font-size: 20px;
+  }
+  .kh-em[data-ld] .kh-em-acts {
+    flex-wrap: wrap;
+  }
+  .kh-em[data-ld] .kh-em-meta {
+    font-size: 13px;
+  }
+  .kh-em[data-ld] .kh-em-bar {
+    gap: 8px;
+  }
+  .kh-em-select,
+  .kh-em[data-ld] .kh-em-att {
+    height: 40px;
+  }
+  .kh-em-att {
+    max-width: 100%;
+  }
+  .kh-em[data-ld] .kh-em-seg button {
+    height: 34px;
+  }
+  .kh-em[data-ld] .kh-em-frame {
+    flex: none;
+    height: 62dvh;
+    min-height: 320px;
+  }
+  .kh-em[data-ld] .kh-em-notes {
+    padding: 14px 16px 24px;
+  }
+  .kh-em[data-ld] .kh-em-notes textarea {
+    height: 110px;
+    font-size: 16px;
   }
 }

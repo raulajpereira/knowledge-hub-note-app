@@ -242,3 +242,46 @@
 :root[data-theme='light'] :is(.kh-tg__dot, .kh-tg__sw) {
   background-color: var(--tg-fg-on);
 }
+
+/* ── Phones (D69) ─────────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+  .kh-tg {
+    border-radius: 24px;
+  }
+  .kh-tg__head {
+    padding: 14px 14px 12px;
+  }
+  .kh-tg__titles {
+    flex-basis: 100%;
+  }
+  .kh-tg__title {
+    font-size: 22px;
+  }
+  .kh-tg__search {
+    flex: 1 1 100%;
+    width: auto;
+    height: 46px;
+  }
+  .kh-tg__search input {
+    font-size: 16px;
+  }
+  .kh-tg__scroll {
+    padding: 0 10px 16px;
+  }
+  /* columns sized by each row: no header row */
+  .kh-tg__th {
+    display: none;
+  }
+  .kh-tg__row {
+    grid-template-columns: minmax(0, 1fr) auto 44px 44px;
+    gap: 6px;
+  }
+  .kh-tg__row {
+    min-height: 58px;
+    padding: 4px 6px 4px 12px;
+  }
+  .kh-tg__sw {
+    width: 40px;
+    height: 40px;
+  }
+}

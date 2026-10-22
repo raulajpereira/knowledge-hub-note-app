@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useViewport } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
 
@@ -51,6 +51,42 @@ export function useListDetail(param: string) {
     go,
     back,
   };
+}
+
+/**
+ * The same Back behaviour for a pane that is not in the URL (an open vault
+ * entry, a Definições tab): while `open` on a phone there is one extra history
+ * entry (same URL and router state), so Android's Back closes the pane instead
+ * of leaving the page. Returns the ← handler.
+ */
+export function usePhoneBack(open: boolean, onClose: () => void) {
+  const phone = useViewport() === 'phone';
+  const pushed = useRef(false);
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    if (!phone || !open) return;
+    window.history.pushState(window.history.state, '');
+    pushed.current = true;
+    const onPop = () => {
+      if (!pushed.current) return;
+      pushed.current = false;
+      close.current();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [phone, open]);
+  // closed in the page (not by Back): drop the extra entry again
+  useEffect(() => {
+    if (!open && pushed.current) {
+      pushed.current = false;
+      window.history.back();
+    }
+  }, [open]);
+  return useCallback(() => {
+    if (pushed.current) window.history.back();
+    else close.current();
+  }, []);
 }
 
 const Chev = ({ d }: { d: string }) => (

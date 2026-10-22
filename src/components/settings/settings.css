@@ -400,6 +400,30 @@
   text-transform: uppercase;
   font-family: var(--font-mono);
 }
+/* phone: the name gets its own line, the actions go to a second one (↑ ↓ replace the grip) */
+@media (max-width: 767.98px) {
+  .kh-navrow {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding: 6px 8px;
+  }
+  .kh-navrow__grip {
+    display: none;
+  }
+  .kh-navrow__in {
+    flex: 1 1 60%;
+    height: 40px;
+    font-size: 16px;
+  }
+  .kh-navrow__nest {
+    margin-left: auto;
+    height: 36px;
+  }
+  .kh-navrow__icon {
+    width: 40px;
+    height: 40px;
+  }
+}
 /* News sources */
 .kh-feed {
   display: flex;
@@ -624,5 +648,85 @@
   }
   .kh-nf__preview {
     text-align: left;
+  }
+}
+
+/* ── Phones and tablets (D69): the tabs are a list, each tab its own page ── */
+@media (max-width: 1099.98px) {
+  .kh-set__inner {
+    padding: 24px 22px 48px;
+  }
+  .kh-set__tiles,
+  .kh-set__fonts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-set {
+    border-radius: 24px;
+  }
+  .kh-set__grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* one pane at a time; before hydration: the list */
+  .kh-set[data-pane='detail'] .kh-set__nav,
+  .kh-set:not([data-pane='detail']) .kh-set__body {
+    display: none;
+  }
+  .kh-set__nav {
+    border-right: 0;
+    padding: 18px 12px;
+  }
+  .kh-set__tab {
+    height: 54px;
+    font-size: 15px;
+  }
+  .kh-set__chev {
+    flex: none;
+    opacity: 0.6;
+  }
+  .kh-set__tab[aria-selected='true'] {
+    background: transparent;
+    border-color: transparent;
+  }
+  .kh-set__inner {
+    padding: 16px 14px 40px;
+    gap: 16px;
+  }
+  .kh-set__card {
+    padding: 16px 14px;
+    border-radius: 22px;
+  }
+  .kh-set__tiles,
+  .kh-set__fonts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* forms in one column (also Aparência's photo sliders and Notícias' new-feed row) */
+  .kh-set__row,
+  .kh-set__inner div[style*='repeat(2'],
+  .kh-set__inner div[style*='1.7fr'] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .kh-set__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kh-nf__row {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+  .kh-nf__lbl {
+    flex: 1 1 200px;
+  }
+  .kh-set__row {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .kh-set__ghost,
+  .kh-set__solid {
+    min-height: 44px;
+  }
+  .kh-set__inner :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+    font-size: 16px;
   }
 }

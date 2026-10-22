@@ -480,22 +480,108 @@
   font-size: 15px;
 }
 
-@media (max-width: 900px) {
-  .kh-vc {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
-  }
-  .kh-vc > .kh-handle {
-    display: none;
-  }
-  .kh-vc-list {
-    border-right: 0;
-    border-bottom: 1px solid var(--kh-divider);
-  }
-}
 .kh-vc-field__row {
   flex-wrap: wrap;
 }
 .kh-vc-field__row > .kh-vc-lbl {
   margin-right: auto;
+}
+
+/* ── Phones and tablets (D69) ─────────────────────────────────────────── */
+@media (max-width: 1099.98px) {
+  .kh-vc-detail {
+    padding: 22px 22px 28px;
+  }
+}
+@media (max-width: 767.98px) {
+  /* one pane at a time (data-pane from the URL's ?v=): the list with the
+     record button under it (thumb reach), or the recording */
+  .kh-vc.kh-page-card {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .kh-vc[data-pane='detail'].kh-page-card {
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .kh-vc[data-pane='detail'] > .kh-vc-list,
+  .kh-vc:not([data-pane='detail']) .kh-vc-pane,
+  .kh-vc[data-pane='detail'] .kh-vc-rec:not([data-live]) {
+    display: none;
+  }
+  .kh-vc-list {
+    border-right: 0;
+    padding: 12px 12px 8px;
+  }
+  .kh-vc-filters button {
+    height: 38px;
+  }
+  .kh-vc-item {
+    min-height: 60px;
+  }
+  .kh-vc-rec {
+    gap: 10px;
+    /* room on the right for the floating AI button */
+    padding: 12px 64px 14px 14px;
+    border-top: 1px solid var(--kh-divider);
+    border-bottom: 0;
+  }
+  .kh-vc-rec__head {
+    display: none;
+  }
+  .kh-vc-rec__btns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* no screen audio on phones: only the microphone */
+  .kh-vc-rec__btns:not(.kh-vc-rec__btns--rec) > .kh-vc-btn:not(.kh-vc-btn--main) {
+    display: none;
+  }
+  .kh-vc-btn {
+    height: 60px;
+    font-size: 16px;
+  }
+  .kh-vc-rec__btns--rec .kh-vc-btn--ghost {
+    height: 60px;
+  }
+  .kh-vc-rec__time > div:last-child {
+    font-size: 24px;
+  }
+  .kh-vc-detail {
+    padding: 16px 14px 28px;
+    gap: 18px;
+  }
+  .kh-vc-title {
+    font-size: 20px;
+  }
+  .kh-vc-round {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-vc-player {
+    padding: 14px;
+  }
+  .kh-vc-wave {
+    height: 76px;
+  }
+  .kh-vc-ctrl {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .kh-vc-skip {
+    width: 52px;
+    height: 52px;
+    font-size: 14px;
+  }
+  .kh-vc-play {
+    width: 64px;
+    height: 64px;
+  }
+  .kh-vc-speed {
+    height: 44px;
+  }
+  .kh-vc-copy {
+    height: 40px;
+  }
+  .kh-vc-text {
+    font-size: 16px;
+  }
 }

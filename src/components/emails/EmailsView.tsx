@@ -1,16 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Sheet, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
 import { useWhen } from '@/components/content/useWhen';
+import { BackBar, FoldersButton, useListDetail } from '@/components/content/MobilePane';
 import './emails.css';
 
 // Emails — ZNotes.dc.html `isMail`: import Outlook .msg / .eml files (parsed
@@ -102,7 +103,6 @@ export function EmailsView() {
   const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
-  const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
   const { focus, modules } = useShell();
@@ -125,15 +125,19 @@ export function EmailsView() {
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notesPending = useRef<{ id: string; v: string } | null>(null);
   const activeId = sp.get('m');
+  // phones: list → email (D69); tablets: the folders in a sheet
+  const md = useListDetail('m');
+  const mdGo = md.go;
+  const [foldersOpen, setFoldersOpen] = useState(false);
 
   const open = useCallback(
     (id: string | null) => {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('m', id);
       else next.delete('m');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, sp, mdGo],
   );
 
   const load = useCallback(
@@ -270,7 +274,8 @@ export function EmailsView() {
     const idx = list.findIndex((x) => x.id === full.id);
     const rest = list.filter((x) => x.id !== full.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== full.id));
-    open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
   };
   const addFolder = async () => {
@@ -321,13 +326,90 @@ export function EmailsView() {
   const who = (n: string, e: string) => (n && e ? `${n} <${e}>` : n || e || '—');
   const doc = useMemo(() => (full ? bodyDoc(full, view === 'orig') : ''), [full, view]);
   const listW = liveList ?? cols.list ?? COL_DEFAULTS.list;
+  const pickFolder = (id: string) => {
+    setFolder(id);
+    setFoldersOpen(false);
+  };
+  const folders$ = (
+    <div className="kh-em-folders">
+      {[{ id: 'all', name: t('m_all'), top: true }, ...folders].map((f) => {
+        const top = 'top' in f;
+        const n = top ? all.length : all.filter((m) => m.folderId === f.id).length;
+        return (
+          <div
+            key={f.id}
+            className="kh-em-folder"
+            data-on={folder === f.id || undefined}
+            data-top={top || undefined}
+            onClick={() => pickFolder(f.id)}
+            onDragOver={(e) => dragId && e.preventDefault()}
+            onDrop={(e) => {
+              if (!dragId) return;
+              e.preventDefault();
+              e.stopPropagation();
+              void patch(dragId, { folderId: top ? null : f.id });
+              setDragId(null);
+            }}
+          >
+            <Svg d={I.folder} s={17} />
+            <button
+              type="button"
+              className="kh-rowbtn kh-em-folder__name"
+              aria-current={folder === f.id || undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                pickFolder(f.id);
+              }}
+            >
+              {f.name}
+            </button>
+            {!top && (
+              <button
+                type="button"
+                title={t('del')}
+                aria-label={`${t('del')} ${f.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void removeFolder(f as Folder);
+                }}
+              >
+                <Svg d={I.x} s={14} />
+              </button>
+            )}
+            <span className="kh-em-count">{n}</span>
+          </div>
+        );
+      })}
+      <div className="kh-em-newfolder">
+        <input
+          value={newFolder}
+          maxLength={80}
+          placeholder={t('a_folderPh')}
+          aria-label={t('a_folderPh')}
+          onChange={(e) => setNewFolder(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
+        />
+        <button type="button" onClick={() => void addFolder()}>
+          + {t('newFolder')}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div
       className="kh-em kh-page-card"
-      style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
+      data-ld=""
+      data-pane={md.pane}
+      style={{
+        gridTemplateColumns: md.compact
+          ? `${Math.min(listW, 300)}px minmax(0,1fr)`
+          : focus
+            ? 'minmax(0,1fr)'
+            : `${listW}px minmax(0,1fr)`,
+      }}
     >
-      {!focus && (
+      {!focus && !md.compact && (
         <ColHandle
           style={{ left: listW }}
           value={listW}
@@ -338,7 +420,7 @@ export function EmailsView() {
           onReset={() => setCols({ ...cols, list: COL_DEFAULTS.list })}
         />
       )}
-      {!focus && (
+      {(!focus || md.compact) && (
         <div
           className="kh-em-side"
           onDragOver={(e) => {
@@ -387,69 +469,16 @@ export function EmailsView() {
               {msg.text}
             </div>
           )}
-          <div className="kh-em-folders">
-            {[{ id: 'all', name: t('m_all'), top: true }, ...folders].map((f) => {
-              const top = 'top' in f;
-              const n = top ? all.length : all.filter((m) => m.folderId === f.id).length;
-              return (
-                <div
-                  key={f.id}
-                  className="kh-em-folder"
-                  data-on={folder === f.id || undefined}
-                  data-top={top || undefined}
-                  onClick={() => setFolder(f.id)}
-                  onDragOver={(e) => dragId && e.preventDefault()}
-                  onDrop={(e) => {
-                    if (!dragId) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void patch(dragId, { folderId: top ? null : f.id });
-                    setDragId(null);
-                  }}
-                >
-                  <Svg d={I.folder} s={17} />
-                  <button
-                    type="button"
-                    className="kh-rowbtn kh-em-folder__name"
-                    aria-current={folder === f.id || undefined}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFolder(f.id);
-                    }}
-                  >
-                    {f.name}
-                  </button>
-                  {!top && (
-                    <button
-                      type="button"
-                      title={t('del')}
-                      aria-label={`${t('del')} ${f.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void removeFolder(f as Folder);
-                      }}
-                    >
-                      <Svg d={I.x} s={14} />
-                    </button>
-                  )}
-                  <span className="kh-em-count">{n}</span>
-                </div>
-              );
-            })}
-            <div className="kh-em-newfolder">
-              <input
-                value={newFolder}
-                maxLength={80}
-                placeholder={t('a_folderPh')}
-                aria-label={t('a_folderPh')}
-                onChange={(e) => setNewFolder(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
+          {md.compact ? (
+            <div className="kh-em-mfolders">
+              <FoldersButton
+                label={folder === 'all' ? t('m_all') : (folders.find((f) => f.id === folder)?.name ?? '')}
+                onClick={() => setFoldersOpen(true)}
               />
-              <button type="button" onClick={() => void addFolder()}>
-                + {t('newFolder')}
-              </button>
             </div>
-          </div>
+          ) : (
+            folders$
+          )}
           <div className="kh-em-filters">
             {(
               [
@@ -518,6 +547,7 @@ export function EmailsView() {
       )}
 
       <section className="kh-em-read">
+        {md.phone && activeId && <BackBar onBack={md.back} title={full?.subject ?? ''} />}
         {full ? (
           <div className="kh-em-read__in">
             <div className="kh-em-head">
@@ -669,6 +699,17 @@ export function EmailsView() {
           </div>
         )}
       </section>
+      {md.compact && (
+        <Sheet
+          open={foldersOpen}
+          onClose={() => setFoldersOpen(false)}
+          title={t('mob_folders')}
+          closeLabel={t('i_close')}
+          className="kh-em-fsheet"
+        >
+          {folders$}
+        </Sheet>
+      )}
     </div>
   );
 }

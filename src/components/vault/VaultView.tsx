@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { useConfirm, usePersistentState, useToast, useViewport } from '@/components/ui';
 import { ColHandle } from '@/components/content/ColHandle';
+import { BackButton, usePhoneBack } from '@/components/content/MobilePane';
 import { refreshCounts } from '@/components/shell/counts';
 import {
   KDF,
@@ -633,6 +634,9 @@ export function VaultView() {
     })
     .sort((a, b) => Number(b.e.fav) - Number(a.e.fav) || a.e.name.localeCompare(b.e.name));
   const a = items.find((x) => x.id === active) ?? null;
+  // phones: the list or the open entry, full screen, Back closes it (D69)
+  const vp = useViewport();
+  const closePane = usePhoneBack(!!a, () => setActive(null));
   const A = a ? info(a.e) : null;
   const ageTxt = (d: number) => (d <= 0 ? t('p_today') : t('p_daysAgo').replace('{n}', String(d)));
   const fmtD = (ts: number | null) => (ts ? new Date(ts).toLocaleDateString(t('locale')) : t('p_never'));
@@ -755,7 +759,7 @@ export function VaultView() {
   const panelW = livePanel ?? panel;
 
   return (
-    <section className="kh-pw kh-page-card">
+    <section className="kh-pw kh-page-card" data-pane={vp === 'phone' ? (a ? 'detail' : 'list') : undefined}>
       <div className="kh-pw-main">
         <div className="kh-pw-head">
           <div className="kh-pw-title">
@@ -934,17 +938,20 @@ export function VaultView() {
 
       {a && A && (
         <>
-          <ColHandle
-            style={{ right: panelW }}
-            value={panelW}
-            limits={PANEL.lim}
-            dir={-1}
-            onLive={setLivePanel}
-            onDone={setPanel}
-            onReset={() => setPanel(PANEL.def)}
-          />
+          {vp === 'desktop' && (
+            <ColHandle
+              style={{ right: panelW }}
+              value={panelW}
+              limits={PANEL.lim}
+              dir={-1}
+              onLive={setLivePanel}
+              onDone={setPanel}
+              onReset={() => setPanel(PANEL.def)}
+            />
+          )}
           <aside className="kh-pw-panel" style={{ width: panelW }}>
             <div className="kh-pw-ph">
+              {vp === 'phone' && <BackButton onBack={closePane} />}
               <span className="kh-pw-av kh-pw-av--lg" style={{ background: avc(a.e.name || '?') }}>
                 {(a.e.name || '?').trim()[0]!.toUpperCase()}
               </span>

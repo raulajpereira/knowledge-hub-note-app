@@ -1218,3 +1218,157 @@
   line-height: 1.4;
   color: rgb(var(--t) / calc(0.7 * var(--t-k)));
 }
+
+/* ── Phones and tablets (D69) ─────────────────────────────────────────── */
+@media (max-width: 1099.98px) {
+  /* tablets: list and entry side by side, the table without URL / age */
+  .kh-pw-panel {
+    width: min(400px, 50%) !important;
+  }
+  .kh-pw-table {
+    min-width: 0;
+    --kh-pw-cols: 36px minmax(120px, 2fr) minmax(100px, 1.4fr) 104px;
+  }
+  .kh-pw-th > :nth-child(4),
+  .kh-pw-th > :nth-child(6),
+  .kh-pw-tr > .kh-pw-host,
+  .kh-pw-tr > .kh-pw-age {
+    display: none;
+  }
+  .kh-pw-icon {
+    width: 40px;
+    height: 40px;
+  }
+}
+@media (max-width: 767.98px) {
+  .kh-pw-lock {
+    padding: 12px;
+    border-radius: 24px;
+  }
+  .kh-pw-lock__card {
+    padding: 24px 18px 20px;
+  }
+  .kh-pw-lock__in input {
+    height: 52px;
+    font-size: 16px;
+  }
+  .kh-pw-lock__in button {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-pw-lock__btn {
+    height: 52px;
+  }
+  .kh-pw-lock__forgot {
+    min-height: 44px;
+  }
+  /* one pane at a time: the list, or the open entry full screen */
+  .kh-pw[data-pane='detail'] > .kh-pw-main {
+    display: none;
+  }
+  .kh-pw-panel {
+    width: 100% !important;
+    max-width: none;
+    border-left: 0;
+  }
+  .kh-pw-head {
+    padding: 14px 14px 10px;
+    gap: 8px;
+  }
+  .kh-pw-title {
+    flex-basis: 100%;
+  }
+  .kh-pw-title > div:first-child {
+    font-size: 22px;
+  }
+  .kh-pw-search {
+    flex: 1 1 100%;
+    width: auto;
+    height: 46px;
+  }
+  .kh-pw-search input {
+    font-size: 16px;
+  }
+  .kh-pw-sec {
+    flex: 1;
+    height: 46px;
+  }
+  .kh-pw-round,
+  .kh-pw-new {
+    height: 46px;
+  }
+  .kh-pw-round {
+    width: 46px;
+  }
+  .kh-pw-health {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0 14px 10px;
+  }
+  /* the health cards as compact rows: label · number */
+  .kh-pw-hc {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 12px;
+    border-radius: 16px;
+  }
+  .kh-pw-hc > span:first-child {
+    min-width: 0;
+  }
+  .kh-pw-hc > span:last-child {
+    font-size: 18px;
+  }
+  .kh-pw-folders {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 14px 10px;
+  }
+  .kh-pw-folders > * {
+    flex: none;
+  }
+  .kh-pw-scroll {
+    padding: 0 10px 16px;
+  }
+  .kh-pw-table {
+    --kh-pw-cols: 36px minmax(0, 1fr) auto;
+  }
+  .kh-pw-th {
+    display: none;
+  }
+  .kh-pw-tr {
+    min-height: 60px;
+  }
+  .kh-pw-tr > .kh-pw-user {
+    display: none;
+  }
+  .kh-pw-stcol .kh-pw-bars {
+    display: none;
+  }
+  /* the entry: big copy buttons */
+  .kh-pw-ph {
+    padding: 10px 12px 10px 8px;
+    gap: 8px;
+  }
+  .kh-pw-ph > .kh-pw-icon--dim {
+    display: none;
+  }
+  .kh-pw-ph .kh-pw-av--lg {
+    display: none;
+  }
+  .kh-pw-icon {
+    width: 48px;
+    height: 48px;
+  }
+  .kh-pw-edit {
+    height: 44px;
+    padding: 0 16px;
+  }
+  .kh-pw-in input,
+  .kh-pw-in textarea {
+    font-size: 16px;
+  }
+}

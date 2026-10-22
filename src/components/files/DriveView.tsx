@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { ShareButton } from '@/components/share/ShareButton';
 import { FolderShareDialog } from '@/components/share/FolderShareDialog';
 import { sharedConfirm, useSharedFolders, type SharedFolder } from '@/components/share/useSharedFolders';
@@ -20,11 +20,13 @@ import {
   previewKind,
   type PreviewKind,
 } from '@/lib/drive';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { Sheet, useConfirm, usePersistentState, useToast, useViewport } from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
+import { driveUpload } from './driveUpload';
+import { BackBar, FoldersButton, useListDetail } from '@/components/content/MobilePane';
 import '../emails/emails.css';
 import '../artifacts/artifacts.css';
 import './files.css';
@@ -118,7 +120,6 @@ export function DriveView() {
   const { t, lang } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
-  const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
   const { focus } = useShell();
@@ -142,15 +143,19 @@ export function DriveView() {
   const folder = gone ? 'all' : folder0;
   const shId = folder.startsWith(SH) ? folder.slice(SH.length) : undefined;
   const curShared = shId ? sh.folders.find((x) => x.id === shId) : undefined;
+  // phones: list → preview (D69); tablets: the folders in a sheet
+  const md = useListDetail('f');
+  const mdGo = md.go;
+  const [foldersOpen, setFoldersOpen] = useState(false);
 
   const open = useCallback(
     (id: string | null) => {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('f', id);
       else next.delete('f');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, sp, mdGo],
   );
 
   const load = useCallback(() => {
@@ -217,36 +222,13 @@ export function DriveView() {
     const key = `${Date.now()}-${Math.random()}`;
     const setUp = (p: Partial<Up>) => setUps((cur) => cur.map((u) => (u.key === key ? { ...u, ...p } : u)));
     setUps((cur) => [...cur, { key, name: file.name, size: file.size, sent: 0 }]);
-    let uploadId: string | null = null;
     try {
-      const s = await api<{ uploadId: string; partSize: number; parts: number }>('/drive/uploads', {
-        name: file.name,
-        size: file.size,
-        mime: file.type || undefined,
-        ...target,
-      });
-      uploadId = s.uploadId;
-      for (let n = 1; n <= s.parts; n++) {
-        const chunk = file.slice((n - 1) * s.partSize, n * s.partSize);
-        const res = await fetch(`${BASE}/api/v1/drive/uploads/${s.uploadId}/${n}`, {
-          method: 'PUT',
-          body: chunk,
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/octet-stream' },
-        });
-        if (!res.ok) {
-          const d = (await res.json().catch(() => ({}))) as { error?: { code?: string } };
-          throw { code: d.error?.code ?? 'internal', status: res.status };
-        }
-        setUp({ sent: Math.min(file.size, n * s.partSize) });
-      }
-      const { file: f } = await api<{ file: DFile }>(`/drive/uploads/${s.uploadId}`, {});
+      const f = await driveUpload<DFile>(file, target, (sent) => setUp({ sent }));
       setItems((cur) => [f, ...(cur ?? [])]);
       if (target.sharedFolderId) setShItems((cur) => [f, ...(cur ?? [])]);
       setUps((cur) => cur.filter((u) => u.key !== key));
       return f;
     } catch (e) {
-      if (uploadId) void api(`/drive/uploads/${uploadId}`, undefined, 'DELETE').catch(() => {});
       setUps((cur) => cur.filter((u) => u.key !== key));
       fail(e);
       return null;
@@ -337,7 +319,8 @@ export function DriveView() {
     }
     setItems((cur) => cur && cur.filter((x) => x.id !== active.id));
     setShItems((cur) => cur && cur.filter((x) => x.id !== active.id));
-    open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
   };
   const rename = () => {
@@ -397,13 +380,141 @@ export function DriveView() {
   const isDefault =
     !limits ||
     (limits.quota === FILES_QUOTA_MB * 1024 * 1024 && limits.maxFile === FILES_MAX_MB * 1024 * 1024);
+  const pickFolder = (id: string) => {
+    setFolder(id);
+    setFoldersOpen(false);
+  };
+  const folderLabel =
+    folder === 'all'
+      ? t('fl_all')
+      : (folders.find((f) => f.id === folder)?.name ?? curShared?.name ?? t('fl_all'));
+  const folders$ = (
+    <div className="kh-em-folders kh-ar-folders">
+      {(
+        [
+          { id: 'all', name: t('fl_all'), top: true },
+          ...folders,
+          ...sh.folders.filter((x) => !x.folderId).map((x) => ({ id: SH + x.id, name: x.name, shared: x })),
+        ] as Array<{ id: string; name: string; top?: true; shared?: SharedFolder }>
+      ).map((f) => {
+        const top = !!f.top;
+        const shf = f.shared;
+        const linked = !top && !shf ? linkedOf(f.id) : undefined;
+        const marked = !!shf || (!!linked && linked.members.length > 0 && !linked.paused);
+        const n = top
+          ? all.length
+          : shf
+            ? shId === shf.id && shItems
+              ? shItems.length
+              : all.filter((a) => a.sharedFolderId === shf.id).length
+            : all.filter((a) => a.folderId === f.id).length;
+        const tip =
+          shf && !shf.mine ? t('sh_sharedBy').replace('{who}', shf.owner?.name ?? '') : t('sh_shared');
+        return (
+          <div
+            key={f.id}
+            className="kh-em-folder"
+            data-on={folder === f.id || undefined}
+            data-top={top || undefined}
+            onClick={() => pickFolder(f.id)}
+            onDragOver={(e) => dragId && e.preventDefault()}
+            onDrop={(e) => {
+              if (!dragId) return;
+              e.preventDefault();
+              e.stopPropagation();
+              if (!shf || shf.mine || shf.perm === 'edit') void dropOn(dragId, f.id);
+              setDragId(null);
+            }}
+          >
+            <Svg d={I.folder} s={17} />
+            {marked && (
+              <span className="kh-sh-mark" role="img" title={tip} aria-label={tip}>
+                <Svg d={I.share} s={13} />
+              </span>
+            )}
+            <button
+              type="button"
+              className="kh-rowbtn kh-em-folder__name"
+              aria-current={folder === f.id || undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                pickFolder(f.id);
+              }}
+            >
+              {f.name}
+            </button>
+            {!top && sh.canShare && (!shf || shf.mine) && (
+              <button
+                type="button"
+                title={t('sh_fpTitle')}
+                aria-label={`${t('sh_fpTitle')} ${f.name}`}
+                style={marked || shf ? { color: 'oklch(calc(.86 * var(--lk)) .13 150)' } : undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFs(shf ? { sharedId: shf.id } : { folderId: f.id, title: f.name });
+                }}
+              >
+                <Svg d={I.share} s={14} />
+              </button>
+            )}
+            {!top && !shf && (
+              <button
+                type="button"
+                title={t('del')}
+                aria-label={`${t('del')} ${f.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void removeFolder(f as Folder);
+                }}
+              >
+                <Svg d={I.x} s={14} />
+              </button>
+            )}
+            <span className="kh-em-count">{n}</span>
+          </div>
+        );
+      })}
+      <div className="kh-em-newfolder">
+        <input
+          value={newFolder}
+          maxLength={80}
+          placeholder={t('a_folderPh')}
+          aria-label={t('a_folderPh')}
+          onChange={(e) => setNewFolder(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
+        />
+        <button type="button" onClick={() => void addFolder()}>
+          + {t('newFolder')}
+        </button>
+        {sh.canShare && (
+          <button
+            type="button"
+            className="kh-ar-newshared"
+            title={t('sh_newSharedTip')}
+            aria-label={t('sh_newSharedTip')}
+            onClick={() => setFs({})}
+          >
+            <Svg d={I.share} s={16} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div
       className="kh-em kh-fl kh-page-card"
-      style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
+      data-ld=""
+      data-pane={md.pane}
+      style={{
+        gridTemplateColumns: md.compact
+          ? `${Math.min(listW, 300)}px minmax(0,1fr)`
+          : focus
+            ? 'minmax(0,1fr)'
+            : `${listW}px minmax(0,1fr)`,
+      }}
     >
-      {!focus && (
+      {!focus && !md.compact && (
         <ColHandle
           style={{ left: listW }}
           value={listW}
@@ -414,7 +525,7 @@ export function DriveView() {
           onReset={() => setCols({ ...cols, list: COL_DEFAULTS.list })}
         />
       )}
-      {!focus && (
+      {(!focus || md.compact) && (
         <div className="kh-em-side">
           <div className="kh-em-top">
             <label className="kh-em-search">
@@ -464,118 +575,13 @@ export function DriveView() {
                 .replace('{max}', fmtBytes(limits?.maxFile ?? FILES_MAX_MB * 1024 * 1024, lang))}
             </div>
           </div>
-          <div className="kh-em-folders kh-ar-folders">
-            {(
-              [
-                { id: 'all', name: t('fl_all'), top: true },
-                ...folders,
-                ...sh.folders
-                  .filter((x) => !x.folderId)
-                  .map((x) => ({ id: SH + x.id, name: x.name, shared: x })),
-              ] as Array<{ id: string; name: string; top?: true; shared?: SharedFolder }>
-            ).map((f) => {
-              const top = !!f.top;
-              const shf = f.shared;
-              const linked = !top && !shf ? linkedOf(f.id) : undefined;
-              const marked = !!shf || (!!linked && linked.members.length > 0 && !linked.paused);
-              const n = top
-                ? all.length
-                : shf
-                  ? shId === shf.id && shItems
-                    ? shItems.length
-                    : all.filter((a) => a.sharedFolderId === shf.id).length
-                  : all.filter((a) => a.folderId === f.id).length;
-              const tip =
-                shf && !shf.mine ? t('sh_sharedBy').replace('{who}', shf.owner?.name ?? '') : t('sh_shared');
-              return (
-                <div
-                  key={f.id}
-                  className="kh-em-folder"
-                  data-on={folder === f.id || undefined}
-                  data-top={top || undefined}
-                  onClick={() => setFolder(f.id)}
-                  onDragOver={(e) => dragId && e.preventDefault()}
-                  onDrop={(e) => {
-                    if (!dragId) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!shf || shf.mine || shf.perm === 'edit') void dropOn(dragId, f.id);
-                    setDragId(null);
-                  }}
-                >
-                  <Svg d={I.folder} s={17} />
-                  {marked && (
-                    <span className="kh-sh-mark" role="img" title={tip} aria-label={tip}>
-                      <Svg d={I.share} s={13} />
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="kh-rowbtn kh-em-folder__name"
-                    aria-current={folder === f.id || undefined}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFolder(f.id);
-                    }}
-                  >
-                    {f.name}
-                  </button>
-                  {!top && sh.canShare && (!shf || shf.mine) && (
-                    <button
-                      type="button"
-                      title={t('sh_fpTitle')}
-                      aria-label={`${t('sh_fpTitle')} ${f.name}`}
-                      style={marked || shf ? { color: 'oklch(calc(.86 * var(--lk)) .13 150)' } : undefined}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFs(shf ? { sharedId: shf.id } : { folderId: f.id, title: f.name });
-                      }}
-                    >
-                      <Svg d={I.share} s={14} />
-                    </button>
-                  )}
-                  {!top && !shf && (
-                    <button
-                      type="button"
-                      title={t('del')}
-                      aria-label={`${t('del')} ${f.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void removeFolder(f as Folder);
-                      }}
-                    >
-                      <Svg d={I.x} s={14} />
-                    </button>
-                  )}
-                  <span className="kh-em-count">{n}</span>
-                </div>
-              );
-            })}
-            <div className="kh-em-newfolder">
-              <input
-                value={newFolder}
-                maxLength={80}
-                placeholder={t('a_folderPh')}
-                aria-label={t('a_folderPh')}
-                onChange={(e) => setNewFolder(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
-              />
-              <button type="button" onClick={() => void addFolder()}>
-                + {t('newFolder')}
-              </button>
-              {sh.canShare && (
-                <button
-                  type="button"
-                  className="kh-ar-newshared"
-                  title={t('sh_newSharedTip')}
-                  aria-label={t('sh_newSharedTip')}
-                  onClick={() => setFs({})}
-                >
-                  <Svg d={I.share} s={16} />
-                </button>
-              )}
+          {md.compact ? (
+            <div className="kh-em-mfolders">
+              <FoldersButton label={folderLabel} onClick={() => setFoldersOpen(true)} />
             </div>
-          </div>
+          ) : (
+            folders$
+          )}
           <section
             className="kh-em-list kh-fl-list"
             aria-label={t('nav_files')}
@@ -653,6 +659,7 @@ export function DriveView() {
       )}
 
       <section className="kh-em-read">
+        {md.phone && activeId && <BackBar onBack={md.back} title={active?.name ?? ''} />}
         {active ? (
           <div className="kh-ar-main kh-fl-main">
             <div className="kh-ar-head">
@@ -737,6 +744,17 @@ export function DriveView() {
           </div>
         )}
       </section>
+      {md.compact && (
+        <Sheet
+          open={foldersOpen}
+          onClose={() => setFoldersOpen(false)}
+          title={t('mob_folders')}
+          closeLabel={t('i_close')}
+          className="kh-em-fsheet"
+        >
+          {folders$}
+        </Sheet>
+      )}
       {fs && (
         <FolderShareDialog
           kind="files"
@@ -792,6 +810,8 @@ function Preview({ f }: { f: DFile }) {
   const [err, setErr] = useState(false);
   const buf = useRef<ArrayBuffer | null>(null);
   const big = (kind === 'docx' || kind === 'xlsx') && f.size > OFFICE_PREVIEW_MAX;
+  // phone browsers (Android) do not show a PDF inside a page: it opens in the system's viewer
+  const phone = useViewport() === 'phone';
 
   const readSheet = useCallback(async (at: number, names?: string[]) => {
     const { default: readXlsx, readSheetNames } = await import('read-excel-file');
@@ -845,6 +865,21 @@ function Preview({ f }: { f: DFile }) {
   if (kind === 'none') return none(t('fl_noPreview'));
   if (big) return none(t('fl_tooBigPreview'));
   if (err) return none(t('fl_previewFail'));
+  if (kind === 'pdf' && phone)
+    return (
+      <div className="kh-fl-stage kh-fl-nopv">
+        <span className="kh-fl-badge kh-fl-badge--lg" style={{ background: tintOf(f.name) }}>
+          pdf
+        </span>
+        <p>{t('fl_pdfPhone')}</p>
+        <a className="kh-fl-dl" href={raw(f.id)} target="_blank" rel="noopener noreferrer">
+          <Svg d={I.open} /> {t('fl_openPdf')}
+        </a>
+        <a className="kh-fl-dl kh-fl-dl--ghost" href={raw(f.id, true)} download={f.name}>
+          <Svg d={I.down} /> {t('fl_download')} · {fmtBytes(f.size, lang)}
+        </a>
+      </div>
+    );
   if (kind === 'pdf') return <iframe className="kh-fl-stage kh-fl-pdf" src={raw(f.id)} title={f.name} />;
   if (kind === 'image')
     return (

@@ -1,18 +1,27 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { ShareButton } from '@/components/share/ShareButton';
 import { FolderShareDialog } from '@/components/share/FolderShareDialog';
 import { sharedConfirm, useSharedFolders, type SharedFolder } from '@/components/share/useSharedFolders';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
-import { Popover, useConfirm, usePersistentState, useToast, TagInput, useTagStyle } from '@/components/ui';
+import {
+  Popover,
+  Sheet,
+  useConfirm,
+  usePersistentState,
+  useToast,
+  TagInput,
+  useTagStyle,
+} from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
+import { BackBar, FoldersButton, useListDetail } from '@/components/content/MobilePane';
 import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
 import '../emails/emails.css';
@@ -83,7 +92,6 @@ export function ArtifactsView() {
   const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
-  const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
   const { focus } = useShell();
@@ -113,15 +121,19 @@ export function ArtifactsView() {
   const folder = gone ? 'all' : folder0;
   const shId = folder.startsWith(SH) ? folder.slice(SH.length) : undefined;
   const curShared = shId ? sh.folders.find((x) => x.id === shId) : undefined;
+  // phones: list → preview (D69); tablets: the folders in a sheet
+  const md = useListDetail('a');
+  const mdGo = md.go;
+  const [foldersOpen, setFoldersOpen] = useState(false);
 
   const open = useCallback(
     (id: string | null) => {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('a', id);
       else next.delete('a');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, sp, mdGo],
   );
 
   useEffect(() => {
@@ -268,7 +280,8 @@ export function ArtifactsView() {
     const rest = list.filter((x) => x.id !== full.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== full.id));
     setShItems((cur) => cur && cur.filter((x) => x.id !== full.id));
-    open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
   };
   const addFolder = async () => {
@@ -349,13 +362,160 @@ export function ArtifactsView() {
   const code = full ? (draft ?? full.html) : '';
   const dirty = !!full && draft !== null && draft !== full.html;
   const listW = liveList ?? cols.list ?? COL_DEFAULTS.list;
+  const versions$ = full && (
+    <>
+      {full.versions
+        .map((v, i) => ({ ...v, n: i + 1 }))
+        .reverse()
+        .map((v) => (
+          <div key={v.id} className="kh-ar-hist__row" data-current={v.current || undefined}>
+            <span>v{v.n}</span>
+            <span>{fmtStamp(v.createdAt)}</span>
+            {v.current ? (
+              <span className="kh-ar-hist__cur">{t('a_current')}</span>
+            ) : ro ? null : (
+              <button type="button" onClick={() => void restore(v.id)}>
+                {t('a_restore')}
+              </button>
+            )}
+          </div>
+        ))}
+    </>
+  );
+  const pickFolder = (id: string) => {
+    setFolder(id);
+    setFoldersOpen(false);
+  };
+  const folderLabel =
+    folder === 'all'
+      ? t('a_all')
+      : (folders.find((f) => f.id === folder)?.name ?? curShared?.name ?? t('a_all'));
+  const folders$ = (
+    <div className="kh-em-folders kh-ar-folders">
+      {(
+        [
+          { id: 'all', name: t('a_all'), top: true },
+          ...folders,
+          ...sh.folders.filter((x) => !x.folderId).map((x) => ({ id: SH + x.id, name: x.name, shared: x })),
+        ] as Array<Folder & { top?: true; shared?: SharedFolder }>
+      ).map((f) => {
+        const top = !!f.top;
+        const shf = f.shared;
+        const linked = !top && !shf ? linkedOf(f.id) : undefined;
+        const marked = !!shf || (!!linked && linked.members.length > 0 && !linked.paused);
+        const n = top
+          ? all.length
+          : shf
+            ? shId === shf.id && shItems
+              ? shItems.length
+              : all.filter((a) => a.sharedFolderId === shf.id).length
+            : all.filter((a) => a.folderId === f.id).length;
+        const tip =
+          shf && !shf.mine ? t('sh_sharedBy').replace('{who}', shf.owner?.name ?? '') : t('sh_shared');
+        return (
+          <div
+            key={f.id}
+            className="kh-em-folder"
+            data-on={folder === f.id || undefined}
+            data-top={top || undefined}
+            onClick={() => pickFolder(f.id)}
+            onDragOver={(e) => dragId && e.preventDefault()}
+            onDrop={(e) => {
+              if (!dragId) return;
+              e.preventDefault();
+              if (!shf || shf.mine || shf.perm === 'edit') void dropOn(dragId, f.id);
+              setDragId(null);
+            }}
+          >
+            <Svg d={I.folder} s={17} />
+            {marked && (
+              <span className="kh-sh-mark" role="img" title={tip} aria-label={tip}>
+                <Svg d={I.share} s={13} />
+              </span>
+            )}
+            <button
+              type="button"
+              className="kh-rowbtn kh-em-folder__name"
+              aria-current={folder === f.id || undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                pickFolder(f.id);
+              }}
+            >
+              {f.name}
+            </button>
+            {!top && sh.canShare && (!shf || shf.mine) && (
+              <button
+                type="button"
+                title={t('sh_fpTitle')}
+                aria-label={`${t('sh_fpTitle')} ${f.name}`}
+                style={marked || shf ? { color: 'oklch(calc(.86 * var(--lk)) .13 150)' } : undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFs(shf ? { sharedId: shf.id } : { folderId: f.id, title: f.name });
+                }}
+              >
+                <Svg d={I.share} s={14} />
+              </button>
+            )}
+            {!top && !shf && (
+              <button
+                type="button"
+                title={t('del')}
+                aria-label={`${t('del')} ${f.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void removeFolder(f as Folder);
+                }}
+              >
+                <Svg d={I.x} s={14} />
+              </button>
+            )}
+            <span className="kh-em-count">{n}</span>
+          </div>
+        );
+      })}
+      <div className="kh-em-newfolder">
+        <input
+          value={newFolder}
+          maxLength={80}
+          placeholder={t('a_folderPh')}
+          aria-label={t('a_folderPh')}
+          onChange={(e) => setNewFolder(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
+        />
+        <button type="button" onClick={() => void addFolder()}>
+          + {t('newFolder')}
+        </button>
+        {sh.canShare && (
+          <button
+            type="button"
+            className="kh-ar-newshared"
+            title={t('sh_newSharedTip')}
+            aria-label={t('sh_newSharedTip')}
+            onClick={() => setFs({})}
+          >
+            <Svg d={I.share} s={16} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div
-      className="kh-em kh-page-card"
-      style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
+      className="kh-em kh-ar kh-page-card"
+      data-ld=""
+      data-pane={md.pane}
+      style={{
+        gridTemplateColumns: md.compact
+          ? `${Math.min(listW, 300)}px minmax(0,1fr)`
+          : focus
+            ? 'minmax(0,1fr)'
+            : `${listW}px minmax(0,1fr)`,
+      }}
     >
-      {!focus && (
+      {!focus && !md.compact && (
         <ColHandle
           style={{ left: listW }}
           value={listW}
@@ -366,7 +526,7 @@ export function ArtifactsView() {
           onReset={() => setCols({ ...cols, list: COL_DEFAULTS.list })}
         />
       )}
-      {!focus && (
+      {(!focus || md.compact) && (
         <div className="kh-em-side">
           <div className="kh-em-top">
             <label className="kh-em-search">
@@ -401,117 +561,13 @@ export function ArtifactsView() {
               <Svg d={I.plus} s={16} />
             </button>
           </div>
-          <div className="kh-em-folders kh-ar-folders">
-            {(
-              [
-                { id: 'all', name: t('a_all'), top: true },
-                ...folders,
-                ...sh.folders
-                  .filter((x) => !x.folderId)
-                  .map((x) => ({ id: SH + x.id, name: x.name, shared: x })),
-              ] as Array<Folder & { top?: true; shared?: SharedFolder }>
-            ).map((f) => {
-              const top = !!f.top;
-              const shf = f.shared;
-              const linked = !top && !shf ? linkedOf(f.id) : undefined;
-              const marked = !!shf || (!!linked && linked.members.length > 0 && !linked.paused);
-              const n = top
-                ? all.length
-                : shf
-                  ? shId === shf.id && shItems
-                    ? shItems.length
-                    : all.filter((a) => a.sharedFolderId === shf.id).length
-                  : all.filter((a) => a.folderId === f.id).length;
-              const tip =
-                shf && !shf.mine ? t('sh_sharedBy').replace('{who}', shf.owner?.name ?? '') : t('sh_shared');
-              return (
-                <div
-                  key={f.id}
-                  className="kh-em-folder"
-                  data-on={folder === f.id || undefined}
-                  data-top={top || undefined}
-                  onClick={() => setFolder(f.id)}
-                  onDragOver={(e) => dragId && e.preventDefault()}
-                  onDrop={(e) => {
-                    if (!dragId) return;
-                    e.preventDefault();
-                    if (!shf || shf.mine || shf.perm === 'edit') void dropOn(dragId, f.id);
-                    setDragId(null);
-                  }}
-                >
-                  <Svg d={I.folder} s={17} />
-                  {marked && (
-                    <span className="kh-sh-mark" role="img" title={tip} aria-label={tip}>
-                      <Svg d={I.share} s={13} />
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="kh-rowbtn kh-em-folder__name"
-                    aria-current={folder === f.id || undefined}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFolder(f.id);
-                    }}
-                  >
-                    {f.name}
-                  </button>
-                  {!top && sh.canShare && (!shf || shf.mine) && (
-                    <button
-                      type="button"
-                      title={t('sh_fpTitle')}
-                      aria-label={`${t('sh_fpTitle')} ${f.name}`}
-                      style={marked || shf ? { color: 'oklch(calc(.86 * var(--lk)) .13 150)' } : undefined}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFs(shf ? { sharedId: shf.id } : { folderId: f.id, title: f.name });
-                      }}
-                    >
-                      <Svg d={I.share} s={14} />
-                    </button>
-                  )}
-                  {!top && !shf && (
-                    <button
-                      type="button"
-                      title={t('del')}
-                      aria-label={`${t('del')} ${f.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void removeFolder(f as Folder);
-                      }}
-                    >
-                      <Svg d={I.x} s={14} />
-                    </button>
-                  )}
-                  <span className="kh-em-count">{n}</span>
-                </div>
-              );
-            })}
-            <div className="kh-em-newfolder">
-              <input
-                value={newFolder}
-                maxLength={80}
-                placeholder={t('a_folderPh')}
-                aria-label={t('a_folderPh')}
-                onChange={(e) => setNewFolder(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void addFolder()}
-              />
-              <button type="button" onClick={() => void addFolder()}>
-                + {t('newFolder')}
-              </button>
-              {sh.canShare && (
-                <button
-                  type="button"
-                  className="kh-ar-newshared"
-                  title={t('sh_newSharedTip')}
-                  aria-label={t('sh_newSharedTip')}
-                  onClick={() => setFs({})}
-                >
-                  <Svg d={I.share} s={16} />
-                </button>
-              )}
+          {md.compact ? (
+            <div className="kh-em-mfolders">
+              <FoldersButton label={folderLabel} onClick={() => setFoldersOpen(true)} />
             </div>
-          </div>
+          ) : (
+            folders$
+          )}
           <section className="kh-em-list kh-ar-list" aria-label={t('nav_artifacts')}>
             {list.map((a) => (
               <div
@@ -561,6 +617,7 @@ export function ArtifactsView() {
       )}
 
       <section className="kh-em-read">
+        {md.phone && activeId && <BackBar onBack={md.back} title={full?.title ?? ''} />}
         {full ? (
           <div className="kh-ar-main">
             <div className="kh-ar-head">
@@ -675,7 +732,7 @@ export function ArtifactsView() {
                 >
                   <Svg d={I.hist} />
                 </button>
-                {histOpen && (
+                {histOpen && !md.phone && (
                   <Popover
                     anchor={histBtn}
                     onClose={() => setHistOpen(false)}
@@ -687,23 +744,19 @@ export function ArtifactsView() {
                     aria-label={t('a_history')}
                   >
                     <div className="kh-ar-hist__t">{t('a_history')}</div>
-                    {full.versions
-                      .map((v, i) => ({ ...v, n: i + 1 }))
-                      .reverse()
-                      .map((v) => (
-                        <div key={v.id} className="kh-ar-hist__row" data-current={v.current || undefined}>
-                          <span>v{v.n}</span>
-                          <span>{fmtStamp(v.createdAt)}</span>
-                          {v.current ? (
-                            <span className="kh-ar-hist__cur">{t('a_current')}</span>
-                          ) : ro ? null : (
-                            <button type="button" onClick={() => void restore(v.id)}>
-                              {t('a_restore')}
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                    {versions$}
                   </Popover>
+                )}
+                {md.phone && (
+                  <Sheet
+                    open={histOpen}
+                    onClose={() => setHistOpen(false)}
+                    title={t('a_history')}
+                    closeLabel={t('i_close')}
+                    className="kh-ar-hsheet"
+                  >
+                    {versions$}
+                  </Sheet>
                 )}
               </div>
               {!ro && (
@@ -815,6 +868,17 @@ export function ArtifactsView() {
           <div className="kh-em-none">{t('a_noActive')}</div>
         )}
       </section>
+      {md.compact && (
+        <Sheet
+          open={foldersOpen}
+          onClose={() => setFoldersOpen(false)}
+          title={t('mob_folders')}
+          closeLabel={t('i_close')}
+          className="kh-em-fsheet"
+        >
+          {folders$}
+        </Sheet>
+      )}
       {fs && (
         <FolderShareDialog
           kind="artifacts"

@@ -364,3 +364,62 @@
   line-height: 1.5;
   color: rgb(var(--t) / calc(0.86 * var(--t-k)));
 }
+
+/* ── Phones (D69): one pane; the preview fills the screen ─────────────────── */
+@media (max-width: 767.98px) {
+  .kh-fl .kh-fl-up {
+    width: 48px;
+    height: 48px;
+  }
+  .kh-fl .kh-fl-quota {
+    margin: 0 12px 10px;
+    padding: 10px 12px;
+  }
+  .kh-fl-list {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .kh-fl-item {
+    min-height: 60px;
+  }
+  .kh-fl > .kh-em-read > .kh-fl-main {
+    padding: 12px 12px 16px;
+    gap: 12px;
+    overflow: auto;
+  }
+  .kh-fl-titles {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+  .kh-fl-name {
+    font-size: 19px;
+  }
+  .kh-fl-acts {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+  .kh-fl-main > .kh-fl-stage {
+    flex: 1 0 auto;
+    min-height: 62dvh;
+    border-radius: 16px;
+  }
+  .kh-fl-main > .kh-fl-media {
+    padding: 8px;
+  }
+  .kh-fl-main > .kh-fl-media img,
+  .kh-fl-main > .kh-fl-media video {
+    max-height: 62dvh;
+  }
+  .kh-fl-text pre {
+    padding: 12px;
+    font-size: 12px;
+  }
+  .kh-fl-dl {
+    height: 48px;
+  }
+}
+.kh-fl-dl--ghost {
+  background: rgb(var(--w) / 0.12);
+  color: var(--ink);
+  border: 1px solid rgb(var(--w) / 0.2);
+}

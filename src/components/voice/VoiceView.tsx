@@ -10,6 +10,7 @@ import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
+import { BackBar, useListDetail } from '@/components/content/MobilePane';
 import { Connections } from '@/components/content/Connections';
 import { useDraft } from '@/components/content/useDraft';
 import { useWhen } from '@/components/content/useWhen';
@@ -119,7 +120,14 @@ type RecSession = {
 };
 
 /** Prototype vStartRec / vFinishRec, uploading the recording when it stops. */
-function Recorder({ onSaved }: { onSaved: (v: Voice) => void }) {
+function Recorder({
+  onSaved,
+  autoStart,
+}: {
+  onSaved: (v: Voice) => void;
+  /** start recording from the microphone right away (the phone's "+" › Nota de voz: ?rec=1) */
+  autoStart?: () => void;
+}) {
   const { t } = useI18n();
   const toast = useToast();
   const [kind, setKind] = useState<Kind | null>(null);
@@ -244,8 +252,19 @@ function Recorder({ onSaved }: { onSaved: (v: Voice) => void }) {
     setLive([]);
   };
 
+  // ?rec=1: once, then the page drops the parameter (autoStart)
+  const auto = useRef(autoStart);
+  useEffect(() => {
+    const done = auto.current;
+    if (!done) return;
+    auto.current = undefined;
+    done();
+    void start('mic');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  }, []);
+
   return (
-    <div className="kh-vc-rec">
+    <div className="kh-vc-rec" data-live={kind ? '' : undefined}>
       {!kind ? (
         <>
           <div className="kh-vc-rec__head">
@@ -633,16 +652,26 @@ export function VoiceView() {
   const [q, setQ] = useState('');
   const [items, setItems] = useState<Voice[] | null>(null);
   const activeId = sp.get('v');
+  // phones: list (+ the record button) → recording (D69)
+  const md = useListDetail('v');
+  const mdGo = md.go;
+  const [autoRec] = useState(() => sp.get('rec') === '1');
 
   const open = useCallback(
     (id: string | null) => {
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('v', id);
       else next.delete('v');
-      router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+      next.delete('rec');
+      mdGo(`${path}${next.size ? `?${next}` : ''}`, id);
     },
-    [path, router, sp],
+    [path, sp, mdGo],
   );
+  const dropRec = useCallback(() => {
+    const next = new URLSearchParams(window.location.search);
+    next.delete('rec');
+    router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+  }, [path, router]);
 
   useEffect(() => {
     api<{ voice: Voice[] }>('/voice')
@@ -666,8 +695,9 @@ export function VoiceView() {
   useEffect(() => {
     if (!items) return;
     if (activeId && !active) open(null);
-    else if (!activeId && list[0]) open(list[0].id);
-  }, [items, activeId, active, list, open]);
+    // phones show the list instead
+    else if (!activeId && list[0] && !md.phone && !autoRec) open(list[0].id);
+  }, [items, activeId, active, list, open, md.phone, autoRec]);
 
   const patch = async (id: string, p: Partial<Voice>) => {
     setItems((cur) => cur && cur.map((x) => (x.id === id ? { ...x, ...p } : x)));
@@ -697,7 +727,8 @@ export function VoiceView() {
     const idx = list.findIndex((x) => x.id === active.id);
     const rest = list.filter((x) => x.id !== active.id);
     setItems((cur) => cur && cur.filter((x) => x.id !== active.id));
-    open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
+    if (md.phone) md.back();
+    else open(rest[Math.min(idx, rest.length - 1)]?.id ?? null);
     refreshCounts();
   };
 
@@ -706,9 +737,16 @@ export function VoiceView() {
   return (
     <div
       className="kh-vc kh-page-card"
-      style={{ gridTemplateColumns: focus ? 'minmax(0,1fr)' : `${listW}px minmax(0,1fr)` }}
+      data-pane={md.pane}
+      style={{
+        gridTemplateColumns: md.compact
+          ? `${Math.min(listW, 300)}px minmax(0,1fr)`
+          : focus
+            ? 'minmax(0,1fr)'
+            : `${listW}px minmax(0,1fr)`,
+      }}
     >
-      {!focus && (
+      {!focus && !md.compact && (
         <ColHandle
           style={{ left: listW }}
           value={listW}
@@ -719,7 +757,7 @@ export function VoiceView() {
           onReset={() => setCols({ ...cols, list: COL_DEFAULTS.list })}
         />
       )}
-      {!focus && (
+      {(!focus || md.compact) && (
         <section className="kh-vc-list">
           <label className="kh-vc-search">
             <svg
@@ -796,6 +834,7 @@ export function VoiceView() {
       )}
       <div className="kh-vc-right">
         <Recorder
+          autoStart={autoRec ? dropRec : undefined}
           onSaved={(v) => {
             setItems((cur) => [v, ...(cur ?? [])]);
             if (filter !== 'all' && filter !== v.kind) setFilter('all');
@@ -804,6 +843,7 @@ export function VoiceView() {
           }}
         />
         <section className="kh-vc-pane">
+          {md.phone && activeId && <BackBar onBack={md.back} title={active?.title ?? ''} />}
           {active ? (
             <Detail
               key={active.id}

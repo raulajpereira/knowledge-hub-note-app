@@ -10,6 +10,7 @@ import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { isoD } from '@/lib/calendar';
 import { notesApi } from '@/components/notes/notesApi';
+import { captureStamp, createCaptureNote } from '@/components/notes/captureNote';
 import { AvatarFace } from './Avatar';
 import { refreshCounts, useCounts } from './counts';
 import { Icon, NavIcon } from './icons';
@@ -41,6 +42,39 @@ const Burger = () => (
     <path d="M4 17h16" />
   </svg>
 );
+const Camera = () => (
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+    <circle cx="12" cy="12.5" r="3.5" />
+  </svg>
+);
+const Gallery = () => (
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+    <circle cx="9" cy="10" r="1.6" />
+    <path d="M20.5 16l-5-5-8 8.5" />
+  </svg>
+);
 const Plus = ({ size = 24 }: { size?: number }) => (
   <svg
     width={size}
@@ -63,6 +97,7 @@ function usePageTitle(): string | null {
   const seg = usePathname().split('/')[2];
   if (!seg) return t('nav_home');
   if (seg === 'settings') return t('settings');
+  if (seg === 'share') return t('shr_short');
   if (seg === 'trash' || seg === 'whiteboard') return t(`nav_${seg}`);
   if (seg === 'news') return 'SAP News';
   const id = idFromSegment(seg);
@@ -407,6 +442,33 @@ function QuickCapture({ open, onClose }: { open: boolean; onClose: () => void })
   const router = useRouter();
   const { modules } = useShell();
   const [busy, setBusy] = useState(false);
+  const camera = useRef<HTMLInputElement>(null);
+  const gallery = useRef<HTMLInputElement>(null);
+
+  // "Foto": a new note with the picture (camera or gallery), then it opens
+  const photo = async (file: File | undefined) => {
+    if (!file || busy) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ message: t('mob_photoBad'), tone: 'error' });
+      return;
+    }
+    setBusy(true);
+    try {
+      const { id, failed } = await createCaptureNote({
+        title: `${t('mob_photoTitle')} ${captureStamp()}`,
+        images: [file],
+      });
+      if (failed) toast({ message: t('mob_photoFail'), tone: 'error' });
+      router.push(`/app/notes?n=${id}`);
+      refreshCounts();
+      onClose();
+    } catch (e) {
+      const limit = isApiFailure(e) && e.code === 'limit_reached';
+      toast({ message: t(limit ? 'ne_limit' : 'ne_saveFail'), tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // the same create calls as the pages' own "+" buttons; then the item opens
   const make = async (kind: 'note' | 'task' | 'meeting') => {
@@ -441,6 +503,14 @@ function QuickCapture({ open, onClose }: { open: boolean; onClose: () => void })
 
   const rows = [
     { m: 'notes', icon: 'notes', label: t('mob_newNote'), go: () => void make('note') },
+    { m: 'notes', id: 'photo', icon: <Camera />, label: t('mob_photo'), go: () => camera.current?.click() },
+    {
+      m: 'notes',
+      id: 'gallery',
+      icon: <Gallery />,
+      label: t('mob_photoGallery'),
+      go: () => gallery.current?.click(),
+    },
     { m: 'tasks', icon: 'tasks', label: t('mob_newTask'), go: () => void make('task') },
     {
       m: 'voice',
@@ -448,7 +518,8 @@ function QuickCapture({ open, onClose }: { open: boolean; onClose: () => void })
       label: t('mob_newVoice'),
       go: () => {
         onClose();
-        router.push('/app/voice');
+        // the page starts recording from the microphone right away
+        router.push('/app/voice?rec=1');
       },
     },
     { m: 'meetings', icon: 'meetings', label: t('mob_newMeeting'), go: () => void make('meeting') },
@@ -458,13 +529,50 @@ function QuickCapture({ open, onClose }: { open: boolean; onClose: () => void })
     <Sheet open={open} onClose={onClose} title={t('mob_capture')} closeLabel={t('i_close')}>
       <div className="kh-qc" aria-busy={busy || undefined}>
         {rows.map((r) => (
-          <button key={r.m} type="button" className="kh-qc__item" disabled={busy} onClick={r.go}>
+          <button
+            key={'id' in r ? r.id : r.m}
+            type="button"
+            className="kh-qc__item"
+            disabled={busy}
+            onClick={r.go}
+          >
             <span className="kh-qc__icon">
-              <NavIcon id={r.icon} size={22} />
+              {typeof r.icon === 'string' ? <NavIcon id={r.icon} size={22} /> : r.icon}
             </span>
             <span>{r.label}</span>
           </button>
         ))}
+        {modules.has('notes') && (
+          <>
+            <input
+              ref={camera}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              aria-label={t('mob_photo')}
+              data-testid="qc-camera"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                void photo(f);
+              }}
+            />
+            <input
+              ref={gallery}
+              type="file"
+              accept="image/*"
+              hidden
+              aria-label={t('mob_photoGallery')}
+              data-testid="qc-gallery"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                void photo(f);
+              }}
+            />
+          </>
+        )}
       </div>
     </Sheet>
   );
