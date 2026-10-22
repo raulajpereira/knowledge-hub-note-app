@@ -10,6 +10,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'KnowledgeHub',
   description: 'Notes, tasks, SAP and team management in one calm place.',
+  // installed on iOS: the app draws under the status bar (clock, battery) —
+  // the background reaches the top; the shell pads with safe-area-inset-top
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'KnowledgeHub' },
 };
 
 export async function generateViewport(): Promise<Viewport> {

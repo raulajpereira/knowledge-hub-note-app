@@ -1,3 +1,5 @@
+import { StatusBarColor } from './useStatusBarColor';
+
 // App background: warm gradient + four blurred colour blobs (ZNotes root),
 // or the user's photo with a dim layer. Presets from the prototype `AMB`.
 // The light theme lays a pale veil over either (.kh-ambient::after) and dims
@@ -39,6 +41,7 @@ export function AmbientBackground({ ambient = 'Areia', photoUrl, dim = 20, blur 
   const a = AMBIENTS[ambient];
   return (
     <div className="kh-ambient" style={{ background: a.base }} aria-hidden="true">
+      <StatusBarColor photoUrl={photoUrl} dim={dim} top={a.base.match(/#[0-9a-f]{6}/i)![0]} blob={a.b1} />
       {photoUrl ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- signed, user-provided URL */}
