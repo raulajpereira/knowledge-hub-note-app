@@ -12,7 +12,7 @@
   .kh-shell__grid {
     grid-template-rows: 52px minmax(0, 1fr) 36px;
     gap: 12px;
-    padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+    padding: calc(env(safe-area-inset-top) + 10px) max(14px, env(safe-area-inset-right))
       max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
   }
   /* until hydration the desktop header and sidebar are still in the page */
@@ -137,7 +137,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom))
+  padding: calc(env(safe-area-inset-top) + 12px) 12px max(12px, env(safe-area-inset-bottom))
     max(12px, env(safe-area-inset-left));
   border-radius: 0 28px 28px 0;
   background: linear-gradient(
@@ -404,7 +404,7 @@
   .kh-shell__grid {
     grid-template-rows: 52px minmax(0, 1fr);
     gap: 10px;
-    padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+    padding: calc(env(safe-area-inset-top) + 14px) max(10px, env(safe-area-inset-right))
       calc(var(--kh-bnav-h) + max(8px, env(safe-area-inset-bottom)) + 10px)
       max(10px, env(safe-area-inset-left));
   }
@@ -426,7 +426,7 @@
   }
   /* the assistant panel: full width between the header and the AI button */
   .kh-ai {
-    top: max(8px, env(safe-area-inset-top));
+    top: calc(env(safe-area-inset-top) + 8px);
     left: max(8px, env(safe-area-inset-left));
     right: max(8px, env(safe-area-inset-right));
     bottom: calc(var(--kh-bnav-h) + max(8px, env(safe-area-inset-bottom)) + 70px);
