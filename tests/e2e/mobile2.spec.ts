@@ -126,6 +126,9 @@ test('Emails: list → email → back (button and browser Back), folders in a sh
 test('Ficheiros: upload → full-screen preview → back', async ({ page }) => {
   await login(page);
   await page.goto('app/files');
+  // the list (or its empty state) only renders once the page is live: a file
+  // set before React hydrates never reaches onChange
+  await expect(page.locator('.kh-fl-empty, .kh-fl-item').first()).toBeVisible();
   await page
     .locator('.kh-fl-up input')
     .setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: PNG });
