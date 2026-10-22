@@ -189,9 +189,12 @@ export function MgProjects({ mg }: { mg: Mg }) {
   );
   if (!sel)
     return (
-      <Split page="mg_projects" list={side}>
+      <>
+        <Split page="mg_projects" list={side} param="pj">
+          {null}
+        </Split>
         {dialog}
-      </Split>
+      </>
     );
 
   const set = (k: keyof MgProject, num?: boolean) => (v: string) =>
@@ -257,8 +260,8 @@ export function MgProjects({ mg }: { mg: Mg }) {
     </select>
   );
 
-  return (
-    <Split page="mg_projects" list={side}>
+  const split = (
+    <Split page="mg_projects" list={side} param="pj" backTitle={`${sel.code} · ${sel.name}`}>
       <div style={css('display:flex;flex-direction:column;gap:18px;padding:24px 26px 30px;')}>
         <div style={css('display:flex;align-items:flex-start;gap:14px;min-width:0;')}>
           <div style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;')}>
@@ -460,6 +463,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
             {sel.phases.map((ph, i) => (
               <div
                 key={i}
+                className="mg-phrow"
                 style={css(
                   'display:grid;grid-template-columns:10px minmax(120px,1fr) minmax(110px,150px) minmax(110px,150px) 28px;align-items:center;gap:8px;',
                 )}
@@ -616,8 +620,14 @@ export function MgProjects({ mg }: { mg: Mg }) {
           )}
         </div>
       </div>
-      {dialog}
     </Split>
+  );
+  // the new-project dialog is a portal: outside the Split, so it opens over the list on phones too
+  return (
+    <>
+      {split}
+      {dialog}
+    </>
   );
 }
 

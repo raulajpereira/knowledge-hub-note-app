@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { wLbl, wLblY, type MgData, type MgTs } from '@/lib/mg';
 import { mgL } from '@/lib/mgText';
 import { usePersistentState } from '@/components/ui';
+import { useI18n } from '@/i18n/client';
 import { CHEV, OPT, css } from './css';
 import { Av, Glass, Split, uid } from './ui';
 import type { Mg } from './store';
@@ -193,7 +194,12 @@ export function MgTime({ mg }: { mg: Mg }) {
     }
     const subAll = [...allP].filter((pid) => stOf(pid) === 'Submetido').length;
     summary = tr(`${groups.length} grupos · ${allP.size} pessoas · ${subAll} de ${allP.size} submetidos`);
-    const gcols = `minmax(240px,1.6fr) repeat(${N}, minmax(64px,1fr)) repeat(3, 88px) 104px`;
+    // phones (D71): a narrow sticky first column, the rest slides inside the box
+    const nameW = mg.vp === 'phone' ? 136 : 240;
+    const gcols =
+      mg.vp === 'phone'
+        ? `136px repeat(${N}, minmax(56px,1fr)) repeat(3, 64px) 84px`
+        : `minmax(240px,1.6fr) repeat(${N}, minmax(64px,1fr)) repeat(3, 88px) 104px`;
     const head = [...cols, tr('Total'), tr('Planeado'), tr('Desvio'), tr('Submetidos')];
     const gLabel = tr({ project: 'Projeto', client: 'Cliente', role: 'Função', team: 'Equipa' }[VM] ?? '');
     const cellsOf = (cs: Array<{ t: string; c: string }>, kid?: boolean) =>
@@ -214,7 +220,15 @@ export function MgTime({ mg }: { mg: Mg }) {
           'flex:1;min-height:0;overflow:auto;margin:12px;border-radius:22px;background:rgb(var(--d) / calc(.18 * var(--d-k)));border:1px solid rgb(var(--w) / .1);',
         )}
       >
-        <div role="treegrid" aria-label={L(48)} style={css(`min-width:${240 + N * 64 + 3 * 88 + 104}px;`)}>
+        <div
+          role="treegrid"
+          aria-label={L(48)}
+          style={css(
+            mg.vp === 'phone'
+              ? `min-width:${nameW + N * 56 + 3 * 64 + 84}px;`
+              : `min-width:${240 + N * 64 + 3 * 88 + 104}px;`,
+          )}
+        >
           <div
             role="row"
             style={css(
@@ -330,7 +344,7 @@ export function MgTime({ mg }: { mg: Mg }) {
                         <span
                           role="rowheader"
                           style={css(
-                            `position:sticky;left:0;z-index:1;height:100%;display:flex;align-items:center;gap:9px;padding:0 14px 0 44px;min-width:0;${STICKY}`,
+                            `position:sticky;left:0;z-index:1;height:100%;display:flex;align-items:center;gap:9px;padding:0 14px 0 ${mg.vp === 'phone' ? 18 : 44}px;min-width:0;${STICKY}`,
                           )}
                         >
                           <Av
@@ -400,6 +414,7 @@ export function MgTime({ mg }: { mg: Mg }) {
         style={css(
           'flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:20px 22px 14px;border-bottom:1px solid rgb(var(--w) / .1);',
         )}
+        className="mg-tshead"
       >
         <div style={css('display:flex;flex-direction:column;gap:3px;margin-right:auto;min-width:0;')}>
           <h1 style={css('margin:0;font-size:26px;font-weight:600;letter-spacing:-.02em;')}>
@@ -487,6 +502,10 @@ function PersonSheet({
 }) {
   const { tr, lang } = mg;
   const L = (i: number) => mgL(i, lang);
+  const { t } = useI18n();
+  const phone = mg.vp === 'phone';
+  // phones: the day being filled in (today on a weekday of the shown week, else Monday)
+  const [day, setDay] = useState(() => Math.min(4, (new Date().getDay() + 6) % 7));
   const list = (
     <div
       style={css(
@@ -531,7 +550,7 @@ function PersonSheet({
   );
   if (!sel)
     return (
-      <Split page="mg_time" list={list} bare>
+      <Split page="mg_time" list={list} bare param="p">
         {null}
       </Split>
     );
@@ -553,7 +572,7 @@ function PersonSheet({
   const addOpts = mg.PJ.filter((p) => !ids.includes(p.id));
   const st = e.status;
   return (
-    <Split page="mg_time" list={list} bare>
+    <Split page="mg_time" list={list} bare param="p" backTitle={sel.name}>
       <div style={css('display:flex;flex-direction:column;gap:16px;padding:24px 26px 30px;')}>
         <div style={css('display:flex;flex-wrap:wrap;align-items:center;gap:12px;')}>
           <div style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;')}>
@@ -584,29 +603,31 @@ function PersonSheet({
             {locked ? L(42) : tr('Submeter Semana')}
           </button>
         </div>
-        <div
-          style={css(
-            'border-radius:20px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--d) / calc(.16 * var(--d-k)));overflow:auto;',
-          )}
-        >
-          <div role="table" aria-label={`${L(48)} · ${sel.name}`} style={css('min-width:640px;')}>
+        {phone ? (
+          // phones (D71): one day at a time — a 44 px field per project for that day
+          <div style={css('display:flex;flex-direction:column;gap:10px;')}>
             <div
-              role="row"
-              style={css(
-                `display:grid;grid-template-columns:${TSGRID};align-items:center;height:42px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.2 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));border-bottom:1px solid rgb(var(--w) / .16);font-size:12px;font-weight:600;color:rgb(var(--t) / calc(.85 * var(--t-k)));`,
-              )}
+              role="tablist"
+              aria-label={t('mob_day')}
+              style={css('display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;')}
             >
-              <span role="columnheader" style={css('padding:0 14px;')}>
-                {L(49)}
-              </span>
-              {days.map((d) => (
-                <span key={d} role="columnheader" style={css('text-align:center;')}>
-                  {d}
-                </span>
+              {days.map((d, i) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="tab"
+                  aria-selected={day === i}
+                  onClick={() => setDay(i)}
+                  style={css(
+                    `min-height:52px;padding:4px 2px;border-radius:14px;border:1px solid ${day === i ? 'var(--ink)' : 'rgb(var(--w) / .14)'};background:${day === i ? 'var(--ink)' : 'rgb(var(--w) / .06)'};color:${day === i ? 'var(--ink-inv)' : 'var(--ink)'};font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;`,
+                  )}
+                >
+                  <span>{d}</span>
+                  <span style={css("font-family:'Geist Mono',monospace;font-size:11.5px;opacity:.8;")}>
+                    {dayT[i]}h
+                  </span>
+                </button>
               ))}
-              <span role="columnheader" style={css('text-align:center;')}>
-                {L(50)}
-              </span>
             </div>
             {ids.map((pr) => {
               const pj = mg.pjById[pr]!;
@@ -615,93 +636,180 @@ function PersonSheet({
               return (
                 <div
                   key={pr}
-                  role="row"
                   style={css(
-                    `display:grid;grid-template-columns:${TSGRID};align-items:center;min-height:46px;border-bottom:1px solid rgb(var(--w) / .07);`,
+                    'display:flex;align-items:center;gap:10px;min-height:60px;padding:8px 10px 8px 14px;border-radius:16px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--w) / .06);',
                   )}
                 >
                   <span
-                    role="rowheader"
-                    style={css('display:flex;align-items:center;gap:8px;padding:0 14px;min-width:0;')}
-                  >
+                    style={css(`width:4px;height:30px;flex:none;border-radius:999px;background:${pj.color};`)}
+                  />
+                  <span style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;')}>
+                    <span style={css("font-family:'Geist Mono',monospace;font-size:13.5px;font-weight:600;")}>
+                      {pj.code}
+                    </span>
                     <span
                       style={css(
-                        `width:4px;height:22px;flex:none;border-radius:999px;background:${pj.color};`,
+                        'font-size:12px;color:rgb(var(--t) / calc(.65 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
                       )}
-                    />
-                    <span style={css('min-width:0;display:flex;flex-direction:column;')}>
-                      <span
-                        style={css("font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;")}
-                      >
-                        {pj.code}
-                      </span>
-                      <span
-                        style={css(
-                          'font-size:11.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
-                        )}
-                      >
-                        {pj.name} {L(51)} {a ? a.hours : 0}h
-                      </span>
+                    >
+                      {pj.name} {L(51)} {a ? a.hours : 0}h · {r.reduce((x, y) => x + (+y || 0), 0)}h
                     </span>
                   </span>
-                  {r.map((v, i) => (
-                    <span key={i} role="cell" style={{ display: 'contents' }}>
-                      <input
-                        type="number"
-                        min={0}
-                        max={24}
-                        step={0.5}
-                        className="mg-in"
-                        aria-label={`${pj.code} · ${days[i]}`}
-                        value={v || ''}
-                        disabled={locked}
-                        onChange={(ev) => setCell(pr, i)(ev.target.value)}
-                        style={css(
-                          "justify-self:center;width:58px;height:32px;padding:0 6px;border-radius:9px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--d) / calc(.2 * var(--d-k)));color:var(--ink);font-family:'Geist Mono',monospace;font-size:13px;text-align:center;outline:none;box-sizing:border-box;",
-                        )}
-                      />
-                    </span>
-                  ))}
-                  <span
-                    role="cell"
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={24}
+                    step={0.5}
+                    className="mg-in"
+                    aria-label={`${pj.code} · ${days[day]}`}
+                    value={r[day] || ''}
+                    disabled={locked}
+                    onChange={(ev) => setCell(pr, day)(ev.target.value)}
                     style={css(
-                      "text-align:center;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;",
+                      "width:76px;height:44px;flex:none;padding:0 8px;border-radius:12px;border:1px solid rgb(var(--w) / .16);background:rgb(var(--d) / calc(.2 * var(--d-k)));color:var(--ink);font-family:'Geist Mono',monospace;text-align:center;outline:none;box-sizing:border-box;",
                     )}
-                  >
-                    {r.reduce((x, y) => x + (+y || 0), 0)}h
-                  </span>
+                  />
                 </div>
               );
             })}
             <div
-              role="row"
               style={css(
-                `display:grid;grid-template-columns:${TSGRID};align-items:center;height:42px;background:rgb(var(--w) / .06);font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;`,
+                "display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 14px;border-radius:14px;background:rgb(var(--w) / .06);font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;",
               )}
             >
-              <span style={css('padding:0 14px;font-family:inherit;')}>
+              <span>
                 {L(52)} {cap}h
               </span>
-              {dayT.map((v, i) => (
-                <span
-                  key={i}
-                  style={css(
-                    `text-align:center;color:${v > 8 ? 'oklch(calc(.84 * var(--lk)) .13 30)' : 'var(--ink)'};`,
-                  )}
-                >
-                  {v}h
-                </span>
-              ))}
               <span
                 style={css(
-                  `text-align:center;color:${tot > cap ? 'oklch(calc(.84 * var(--lk)) .13 30)' : tot >= cap * 0.9 ? 'oklch(calc(.86 * var(--lk)) .13 150)' : 'var(--ink)'};`,
+                  `color:${tot > cap ? 'oklch(calc(.84 * var(--lk)) .13 30)' : tot >= cap * 0.9 ? 'oklch(calc(.86 * var(--lk)) .13 150)' : 'var(--ink)'};`,
                 )}
               >
                 {tot}h
               </span>
             </div>
           </div>
-        </div>
+        ) : (
+          <div
+            style={css(
+              'border-radius:20px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--d) / calc(.16 * var(--d-k)));overflow:auto;',
+            )}
+          >
+            <div role="table" aria-label={`${L(48)} · ${sel.name}`} style={css('min-width:640px;')}>
+              <div
+                role="row"
+                style={css(
+                  `display:grid;grid-template-columns:${TSGRID};align-items:center;height:42px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.2 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));border-bottom:1px solid rgb(var(--w) / .16);font-size:12px;font-weight:600;color:rgb(var(--t) / calc(.85 * var(--t-k)));`,
+                )}
+              >
+                <span role="columnheader" style={css('padding:0 14px;')}>
+                  {L(49)}
+                </span>
+                {days.map((d) => (
+                  <span key={d} role="columnheader" style={css('text-align:center;')}>
+                    {d}
+                  </span>
+                ))}
+                <span role="columnheader" style={css('text-align:center;')}>
+                  {L(50)}
+                </span>
+              </div>
+              {ids.map((pr) => {
+                const pj = mg.pjById[pr]!;
+                const r = e.rows[pr] ?? [0, 0, 0, 0, 0];
+                const a = pl.find((x) => x.project === pr);
+                return (
+                  <div
+                    key={pr}
+                    role="row"
+                    style={css(
+                      `display:grid;grid-template-columns:${TSGRID};align-items:center;min-height:46px;border-bottom:1px solid rgb(var(--w) / .07);`,
+                    )}
+                  >
+                    <span
+                      role="rowheader"
+                      style={css('display:flex;align-items:center;gap:8px;padding:0 14px;min-width:0;')}
+                    >
+                      <span
+                        style={css(
+                          `width:4px;height:22px;flex:none;border-radius:999px;background:${pj.color};`,
+                        )}
+                      />
+                      <span style={css('min-width:0;display:flex;flex-direction:column;')}>
+                        <span
+                          style={css("font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;")}
+                        >
+                          {pj.code}
+                        </span>
+                        <span
+                          style={css(
+                            'font-size:11.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                          )}
+                        >
+                          {pj.name} {L(51)} {a ? a.hours : 0}h
+                        </span>
+                      </span>
+                    </span>
+                    {r.map((v, i) => (
+                      <span key={i} role="cell" style={{ display: 'contents' }}>
+                        <input
+                          type="number"
+                          min={0}
+                          max={24}
+                          step={0.5}
+                          className="mg-in"
+                          aria-label={`${pj.code} · ${days[i]}`}
+                          value={v || ''}
+                          disabled={locked}
+                          onChange={(ev) => setCell(pr, i)(ev.target.value)}
+                          style={css(
+                            "justify-self:center;width:58px;height:32px;padding:0 6px;border-radius:9px;border:1px solid rgb(var(--w) / .12);background:rgb(var(--d) / calc(.2 * var(--d-k)));color:var(--ink);font-family:'Geist Mono',monospace;font-size:13px;text-align:center;outline:none;box-sizing:border-box;",
+                          )}
+                        />
+                      </span>
+                    ))}
+                    <span
+                      role="cell"
+                      style={css(
+                        "text-align:center;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;",
+                      )}
+                    >
+                      {r.reduce((x, y) => x + (+y || 0), 0)}h
+                    </span>
+                  </div>
+                );
+              })}
+              <div
+                role="row"
+                style={css(
+                  `display:grid;grid-template-columns:${TSGRID};align-items:center;height:42px;background:rgb(var(--w) / .06);font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:600;`,
+                )}
+              >
+                <span style={css('padding:0 14px;font-family:inherit;')}>
+                  {L(52)} {cap}h
+                </span>
+                {dayT.map((v, i) => (
+                  <span
+                    key={i}
+                    style={css(
+                      `text-align:center;color:${v > 8 ? 'oklch(calc(.84 * var(--lk)) .13 30)' : 'var(--ink)'};`,
+                    )}
+                  >
+                    {v}h
+                  </span>
+                ))}
+                <span
+                  style={css(
+                    `text-align:center;color:${tot > cap ? 'oklch(calc(.84 * var(--lk)) .13 30)' : tot >= cap * 0.9 ? 'oklch(calc(.86 * var(--lk)) .13 150)' : 'var(--ink)'};`,
+                  )}
+                >
+                  {tot}h
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         {!locked && (
           <select
             value=""

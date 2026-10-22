@@ -130,6 +130,7 @@ function MgSettings() {
           {areas.map((a, i) => (
             <div
               key={a.k}
+              className="mg-arearow"
               style={css(
                 `display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) 80px 28px;align-items:center;gap:8px;min-height:44px;padding:5px 8px 5px 10px;border-top:1px solid ${i ? 'rgb(var(--w) / .07)' : 'transparent'};`,
               )}
@@ -175,7 +176,10 @@ function MgSettings() {
             </div>
           ))}
         </div>
-        <div style={css('display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) auto;gap:8px;')}>
+        <div
+          className="mg-areanew"
+          style={css('display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) auto;gap:8px;')}
+        >
           <input
             className="mg-in"
             value={nA}

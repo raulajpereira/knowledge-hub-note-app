@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { usePersistentState } from '@/components/ui';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePersistentState, useViewport } from '@/components/ui';
+import { BackBar } from '@/components/content/MobilePane';
 import { mgIni, wLbl, wLblY, type MgPerson } from '@/lib/mg';
 import { CHEV, OPT, css } from './css';
 import type { Mg } from './store';
@@ -43,6 +45,8 @@ export function Split({
   children,
   tip = 'Arraste para ajustar · duplo clique repõe',
   bare,
+  param,
+  backTitle,
 }: {
   page: string;
   def?: number;
@@ -51,7 +55,12 @@ export function Split({
   tip?: string;
   /** inside another glass section (Timesheets): no glass of its own */
   bare?: boolean;
+  /** the URL param of the open item: phones show the list or (with it) the detail; tablets float the detail */
+  param?: string;
+  /** title of the "← Voltar" bar of the detail (phones/tablets) */
+  backTitle?: React.ReactNode;
 }) {
+  const vp = useViewport();
   const [cols, setCols] = usePersistentState<Record<string, number>>('mg.cols', {});
   const [live, setLive] = useState<number | null>(null);
   const ref = useRef<HTMLElement>(null);
@@ -80,6 +89,12 @@ export function Split({
     window.addEventListener('pointermove', mv);
     window.addEventListener('pointerup', up);
   };
+  if (vp !== 'desktop' && param)
+    return (
+      <MSplit phone={vp === 'phone'} param={param} list={list} bare={bare} backTitle={backTitle}>
+        {children}
+      </MSplit>
+    );
   return (
     <section
       ref={ref}
@@ -118,6 +133,69 @@ export function Split({
         {list}
       </div>
       <div style={css('min-height:0;min-width:0;overflow:auto;')}>{children}</div>
+    </section>
+  );
+}
+
+/**
+ * Split on phones and tablets (D71): phones show the list, or the open item
+ * (its param in the URL — mg.nav pushes it, so the browser's/Android's Back
+ * returns to the list) under a "← Voltar" bar; tablets keep the list and float
+ * the item over it from the right.
+ */
+function MSplit({
+  phone,
+  param,
+  list,
+  bare,
+  backTitle,
+  children,
+}: {
+  phone: boolean;
+  param: string;
+  list: React.ReactNode;
+  bare?: boolean;
+  backTitle?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const sp = useSearchParams();
+  const router = useRouter();
+  const path = usePathname();
+  const id = sp.get(param);
+  // opened from this list (a history entry to go back to) or straight from a link
+  const fromList = useRef(!id);
+  useEffect(() => {
+    if (!id) fromList.current = true;
+  }, [id]);
+  const back = () => {
+    if (fromList.current) {
+      router.back();
+      return;
+    }
+    const next = new URLSearchParams(sp.toString());
+    next.delete(param);
+    router.replace(`${path}${next.size ? `?${next}` : ''}`, { scroll: false });
+  };
+  const open = !!id && children !== null && children !== undefined;
+  const detail = open && (
+    <div className={phone ? 'mg-mdetail' : 'mg-mpanel'}>
+      <BackBar onBack={back} title={backTitle} />
+      {children}
+    </div>
+  );
+  return (
+    <section
+      className="mg-msplit"
+      data-pane={open ? 'detail' : 'list'}
+      style={css(
+        `${bare ? 'position:relative;flex:1;min-height:0;' : GLASS}display:flex;flex-direction:column;`,
+      )}
+    >
+      {!bare && <div style={BLUR} />}
+      {(!phone || !open) && (
+        <div style={css('flex:1;min-height:0;display:flex;flex-direction:column;min-width:0;')}>{list}</div>
+      )}
+      {detail}
     </section>
   );
 }
@@ -210,6 +288,7 @@ export function TeamBar({ mg, manageOn }: { mg: Mg; manageOn?: boolean }) {
   ];
   return (
     <div
+      className="mg-teambar"
       style={css('flex-shrink:0;display:flex;align-items:center;gap:10px;margin-bottom:12px;min-width:0;')}
     >
       <div
@@ -297,6 +376,7 @@ export function Dialog({
   return createPortal(
     <div
       onClick={onClose}
+      className="mg-dlgwrap"
       style={css(
         'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;',
       )}
@@ -314,6 +394,7 @@ export function Dialog({
         aria-modal="true"
         aria-label={label}
         tabIndex={-1}
+        className="mg-dlg"
         onClick={(e) => e.stopPropagation()}
         style={css(
           `position:relative;${s}background:linear-gradient(180deg,rgb(var(--sf) / calc(.22 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 40px)) saturate(170%);border:1px solid rgb(var(--w) / .28);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 30px 70px rgb(0 0 0 / calc(.25 * var(--sh-k)));color:var(--ink);outline:none;line-height:normal;`,

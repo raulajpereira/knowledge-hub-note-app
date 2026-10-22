@@ -18,7 +18,7 @@ import {
   type MgPerson,
 } from '@/lib/mg';
 import { mgTr } from '@/lib/mgText';
-import { usePersistentState, useToast } from '@/components/ui';
+import { usePersistentState, useToast, useViewport } from '@/components/ui';
 
 // The Management screens keep the prototype's single data set: `upd(fn)`
 // changes a copy, the difference with what the server has becomes a batch of
@@ -130,6 +130,8 @@ export function useMg() {
   const router = useRouter();
   const [team, setTeam] = usePersistentState<string>('mg.team', 'all');
   const tr = useCallback((s: string) => mgTr(s, lang), [lang]);
+  /** phone / tablet / desktop (D71): phones consult, the big editing tools stay on larger screens */
+  const vp = useViewport();
   const m = useMemo(() => {
     const W = mgWeeks();
     const { wk, wi, dIso } = W;
@@ -294,6 +296,6 @@ export function useMg() {
     [router],
   );
   const confirmTr = useCallback((s: string) => window.confirm(tr(s)), [tr]);
-  return { D, upd, setAll, local, lang, tr, nav, team, setTeam, cf: confirmTr, ...m };
+  return { D, upd, setAll, local, lang, tr, nav, team, setTeam, cf: confirmTr, vp, ...m };
 }
 export type Mg = ReturnType<typeof useMg>;

@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { AmbientBackground } from '@/components/ui';
+import { AmbientBackground, useViewport } from '@/components/ui';
+import { BackBar } from '@/components/content/MobilePane';
 import { Logo } from '@/components/brand/Logo';
 import { useI18n } from '@/i18n/client';
 import { effectivePrefs, type Prefs } from '@/lib/prefs';
@@ -14,6 +15,7 @@ import { LockScreen } from '@/components/shell/LockScreen';
 import { PrefsProvider, usePrefsContext } from '@/components/shell/PrefsProvider';
 import '@/components/shell/fonts';
 import '@/components/shell/shell.css';
+import '@/components/shell/mobile.css';
 import { useA } from './ui';
 import { adminApi } from '@/lib/client/api';
 import { Overview } from './Overview';
@@ -193,7 +195,16 @@ function Console({ me }: { me: AdminMe }) {
   const asked = (sp.get('s') ?? 'overview') as Section;
   const sec: Section = SEC_AREA[asked] && visible(asked) ? asked : 'overview';
 
+  const vp = useViewport();
+  const compact = vp !== 'desktop';
+  const phone = vp === 'phone';
+  const [navOpen, setNavOpen] = useState(false);
   const [drawerNode, setDrawerNode] = useState<React.ReactNode | null>(null);
+  const closeNav = useCallback(() => setNavOpen(false), []);
+  const closeDrawer = useCallback(() => setDrawerNode(null), []);
+  // phones: the menu and the drawer each take one history entry, so Android's Back closes them
+  const backNav = useHistoryPane(phone && navOpen, closeNav);
+  const backDrawer = useHistoryPane(phone && drawerNode !== null, closeDrawer);
   // badge: plan requests still to handle
   const [pendingReq, setPendingReq] = useState(0);
   useEffect(() => {
@@ -209,11 +220,15 @@ function Console({ me }: { me: AdminMe }) {
   }, [sec, sp, me.totp, can]);
   const go = useCallback(
     (s: Section, extra: Record<string, string> = {}) => {
+      // the page changes: the extra history entries of the menu/drawer stay behind
+      backNav.forget();
+      backDrawer.forget();
+      setNavOpen(false);
       setDrawerNode(null);
       const next = new URLSearchParams({ s, ...extra });
       router.push(`${path}?${next}`, { scroll: false });
     },
-    [path, router],
+    [path, router, backNav, backDrawer],
   );
 
   const [locked, setLocked] = useState(false);
@@ -297,6 +312,69 @@ function Console({ me }: { me: AdminMe }) {
     ? `min(${navW}px, 22%) minmax(280px,1fr) min(${drW}px, 40%)`
     : `min(${navW}px, 30%) minmax(320px,1fr)`;
   const role = ROLES[me.role];
+  // the console's own navigation: the left column (desktop) or the menu drawer (phones/tablets)
+  const navBody = (
+    <>
+      <div className="kh-ad-brand">
+        <Logo size={36} showWordmark={false} />
+        <div>
+          <div className="kh-ad-brand__name">
+            Knowledge<b>Hub</b>
+          </div>
+          <div className="kh-ad-brand__sub">Administration Console</div>
+        </div>
+      </div>
+      {NAV.map(([group, items]) => {
+        const shown = items.filter(visible);
+        if (!shown.length) return null;
+        return (
+          <div key={group ?? 'top'} style={{ display: 'contents' }}>
+            {group && <div className="kh-ad-group">{A(group)}</div>}
+            {shown.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className="kh-ad-item"
+                aria-current={sec === s ? 'page' : undefined}
+                onClick={() => go(s)}
+              >
+                <Svg d={ICONS[s]} />
+                <span>{A(SEC_TITLE[s][0])}</span>
+                {s === 'requests' && pendingReq > 0 && <span className="kh-ad-badge">{pendingReq}</span>}
+              </button>
+            ))}
+          </div>
+        );
+      })}
+      <Link className="kh-ad-me" href="/app" title={A('Abrir app')}>
+        <span style={{ position: 'relative' }}>
+          <AvatarFace name={me.name} photoV={me.assets.avatar} size={42} fontSize={14} />
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              right: 0,
+              bottom: 0,
+              width: 11,
+              height: 11,
+              borderRadius: '50%',
+              background: 'oklch(0.78 0.15 150)',
+              border: '2px solid rgba(40,30,25,.9)',
+            }}
+          />
+        </span>
+        <span className="kh-ad-me__txt">
+          <span className="kh-ad-me__name">{me.name}</span>
+          <span className="kh-ad-role" style={{ background: role[2] }}>
+            {A(role[0])}
+          </span>
+        </span>
+        <span className="kh-ad-me__go" aria-hidden="true">
+          <Svg d='<path d="M7 17L17 7"/><path d="M8 7h9v9"/>' s={15} sw={2} />
+        </span>
+      </Link>
+    </>
+  );
 
   return (
     <Ctx.Provider value={api}>
@@ -326,85 +404,35 @@ function Console({ me }: { me: AdminMe }) {
             </div>
           </div>
         ) : (
-          <div className="kh-ad__grid" style={{ gridTemplateColumns: cols }}>
-            <aside className="kh-ad-glass kh-ad-nav" aria-label={A('Consola de Administração')}>
-              <div className="kh-ad-brand">
-                <Logo size={36} showWordmark={false} />
-                <div>
-                  <div className="kh-ad-brand__name">
-                    Knowledge<b>Hub</b>
-                  </div>
-                  <div className="kh-ad-brand__sub">Administration Console</div>
-                </div>
-              </div>
-              {NAV.map(([group, items]) => {
-                const shown = items.filter(visible);
-                if (!shown.length) return null;
-                return (
-                  <div key={group ?? 'top'} style={{ display: 'contents' }}>
-                    {group && <div className="kh-ad-group">{A(group)}</div>}
-                    {shown.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        className="kh-ad-item"
-                        aria-current={sec === s ? 'page' : undefined}
-                        onClick={() => go(s)}
-                      >
-                        <Svg d={ICONS[s]} />
-                        <span>{A(SEC_TITLE[s][0])}</span>
-                        {s === 'requests' && pendingReq > 0 && (
-                          <span className="kh-ad-badge">{pendingReq}</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                );
-              })}
-              <Link className="kh-ad-me" href="/app" title={A('Abrir app')}>
-                <span style={{ position: 'relative' }}>
-                  <AvatarFace name={me.name} photoV={me.assets.avatar} size={42} fontSize={14} />
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      bottom: 0,
-                      width: 11,
-                      height: 11,
-                      borderRadius: '50%',
-                      background: 'oklch(0.78 0.15 150)',
-                      border: '2px solid rgba(40,30,25,.9)',
-                    }}
-                  />
+          <div
+            className="kh-ad__grid"
+            data-m={compact ? vp : undefined}
+            style={compact ? undefined : { gridTemplateColumns: cols }}
+          >
+            {compact ? (
+              <header className="kh-ad-mhead">
+                <button
+                  type="button"
+                  className="kh-ad-mbtn"
+                  aria-label={t('mob_menu')}
+                  title={t('mob_menu')}
+                  aria-expanded={navOpen}
+                  aria-controls="kh-ad-navdrawer"
+                  onClick={() => setNavOpen(true)}
+                >
+                  <Svg d='<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>' s={20} sw={2} />
+                </button>
+                <span className="kh-ad-mhead__t">
+                  <Logo size={30} showWordmark={false} />
+                  <span>{A(SEC_TITLE[sec][0])}</span>
                 </span>
-                <span className="kh-ad-me__txt">
-                  <span className="kh-ad-me__name">{me.name}</span>
-                  <span className="kh-ad-role" style={{ background: role[2] }}>
-                    {A(role[0])}
-                  </span>
-                </span>
-                <span className="kh-ad-me__go" aria-hidden="true">
-                  <Svg d='<path d="M7 17L17 7"/><path d="M8 7h9v9"/>' s={15} sw={2} />
-                </span>
-              </Link>
-            </aside>
-            <div
-              className="kh-ad-handle"
-              style={{ position: 'absolute', left: `calc(14px + min(${navW}px, ${open ? 22 : 30}%) + 7px)` }}
-              title={A('Arraste para ajustar · duplo clique repõe')}
-              data-drag={dragging === 'nav' || undefined}
-              onPointerDown={startDrag('nav')}
-              onDoubleClick={() => setNavW(NAV_W)}
-              role="separator"
-              aria-orientation="vertical"
-            >
-              <span />
-            </div>
-            <main className="kh-ad-glass kh-ad-main">
-              <div className="kh-ad-top">
-                <Link className="kh-ad-pill" href="/app">
-                  {A('Voltar à App')}
+                <Link
+                  className="kh-ad-mbtn"
+                  href="/app"
+                  aria-label={A('Voltar à App')}
+                  title={A('Voltar à App')}
+                >
+                  <Svg d='<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>' s={19} />
                 </Link>
                 <button
                   type="button"
@@ -418,7 +446,49 @@ function Console({ me }: { me: AdminMe }) {
                     s={17}
                   />
                 </button>
-              </div>
+              </header>
+            ) : (
+              <>
+                <aside className="kh-ad-glass kh-ad-nav" aria-label={A('Consola de Administração')}>
+                  {navBody}
+                </aside>
+                <div
+                  className="kh-ad-handle"
+                  style={{
+                    position: 'absolute',
+                    left: `calc(14px + min(${navW}px, ${open ? 22 : 30}%) + 7px)`,
+                  }}
+                  title={A('Arraste para ajustar · duplo clique repõe')}
+                  data-drag={dragging === 'nav' || undefined}
+                  onPointerDown={startDrag('nav')}
+                  onDoubleClick={() => setNavW(NAV_W)}
+                  role="separator"
+                  aria-orientation="vertical"
+                >
+                  <span />
+                </div>
+              </>
+            )}
+            <main className="kh-ad-glass kh-ad-main">
+              {!compact && (
+                <div className="kh-ad-top">
+                  <Link className="kh-ad-pill" href="/app">
+                    {A('Voltar à App')}
+                  </Link>
+                  <button
+                    type="button"
+                    className="kh-ad-lock"
+                    title={A('Bloquear')}
+                    aria-label={A('Bloquear')}
+                    onClick={() => setLock(true)}
+                  >
+                    <Svg
+                      d='<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'
+                      s={17}
+                    />
+                  </button>
+                </div>
+              )}
               {sec === 'overview' && <Overview />}
               {(sec === 'packs' || sec === 'inds') &&
                 (sp.get('u') && sp.get('c') ? (
@@ -434,28 +504,40 @@ function Console({ me }: { me: AdminMe }) {
               {sec === 'codes' && <Codes />}
               {sec === 'audit' && <Audit />}
             </main>
-            {open && (
-              <>
-                <div
-                  className="kh-ad-handle"
-                  style={{ position: 'absolute', right: `calc(14px + min(${drW}px, 40%) + 1px)` }}
-                  title={A('Arraste para ajustar · duplo clique repõe')}
-                  data-drag={dragging === 'dr' || undefined}
-                  onPointerDown={startDrag('dr')}
-                  onDoubleClick={() => setDrW(DRAWER_W)}
-                  role="separator"
-                  aria-orientation="vertical"
-                >
-                  <span />
-                </div>
-                <aside className="kh-ad-glass kh-ad-drawer" aria-label={t('ui_close')}>
+            {open &&
+              (compact ? (
+                // phones: the drawer is the page (← Voltar); tablets: it floats over the section
+                <aside className="kh-ad-glass kh-ad-drawer kh-ad-drawer--m" aria-label={t('ui_close')}>
+                  {phone && <BackBar onBack={backDrawer.back} />}
                   {drawerNode}
                 </aside>
-              </>
-            )}
+              ) : (
+                <>
+                  <div
+                    className="kh-ad-handle"
+                    style={{ position: 'absolute', right: `calc(14px + min(${drW}px, 40%) + 1px)` }}
+                    title={A('Arraste para ajustar · duplo clique repõe')}
+                    data-drag={dragging === 'dr' || undefined}
+                    onPointerDown={startDrag('dr')}
+                    onDoubleClick={() => setDrW(DRAWER_W)}
+                    role="separator"
+                    aria-orientation="vertical"
+                  >
+                    <span />
+                  </div>
+                  <aside className="kh-ad-glass kh-ad-drawer" aria-label={t('ui_close')}>
+                    {drawerNode}
+                  </aside>
+                </>
+              ))}
           </div>
         )}
       </div>
+      {compact && me.totp && (
+        <AdminNavDrawer open={navOpen} onClose={backNav.back}>
+          {navBody}
+        </AdminNavDrawer>
+      )}
       {locked && (
         <LockScreen
           name={me.name}
@@ -465,6 +547,137 @@ function Console({ me }: { me: AdminMe }) {
         />
       )}
     </Ctx.Provider>
+  );
+}
+
+/**
+ * Phones (D71, as `usePhoneBack` of D69): while `open` there is one extra
+ * history entry, so Android's/iOS's Back closes the pane instead of leaving the
+ * console. `back` is the ← / ✕ handler; `forget` is for a navigation that
+ * closes the pane itself (the entry then stays behind as a plain step back).
+ */
+function useHistoryPane(open: boolean, onClose: () => void) {
+  const pushed = useRef(false);
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    window.history.pushState(window.history.state, '');
+    pushed.current = true;
+    const onPop = () => {
+      if (!pushed.current) return;
+      pushed.current = false;
+      close.current();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [open]);
+  // closed in the page (not by Back): drop the extra entry again
+  useEffect(() => {
+    if (!open && pushed.current) {
+      pushed.current = false;
+      window.history.back();
+    }
+  }, [open]);
+  return useMemo(
+    () => ({
+      back: () => {
+        if (pushed.current) window.history.back();
+        else close.current();
+      },
+      forget: () => {
+        pushed.current = false;
+      },
+    }),
+    [],
+  );
+}
+
+const FOCUSABLE =
+  'button:not([disabled]),[href],input:not([disabled]),select,[tabindex]:not([tabindex="-1"])';
+
+/** Phones and tablets: the console's navigation as an off-canvas drawer (the app's kh-navdrawer look). */
+function AdminNavDrawer({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const { t } = useI18n();
+  const panel = useRef<HTMLDivElement>(null);
+  const x0 = useRef<number | null>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    (
+      panel.current?.querySelector<HTMLElement>('[aria-current="page"]') ??
+      panel.current?.querySelector<HTMLElement>(FOCUSABLE)
+    )?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeRef.current();
+      } else if (e.key === 'Tab' && panel.current) {
+        const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+        if (!items.length) return;
+        const first = items[0]!;
+        const last = items[items.length - 1]!;
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      previous?.focus?.();
+    };
+  }, [open]);
+  return (
+    <div
+      id="kh-ad-navdrawer"
+      className="kh-navdrawer kh-ad-navdrawer"
+      data-open={open || undefined}
+      aria-hidden={!open || undefined}
+      inert={!open || undefined}
+    >
+      <div className="kh-navdrawer__dim" onClick={onClose} />
+      <div
+        ref={panel}
+        className="kh-navdrawer__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('mob_menu')}
+        onTouchStart={(e) => {
+          x0.current = e.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(e) => {
+          const x = e.changedTouches[0]?.clientX;
+          if (x0.current !== null && x !== undefined && x0.current - x > 60) onClose();
+          x0.current = null;
+        }}
+      >
+        <button
+          type="button"
+          className="kh-ad-mbtn kh-ad-navdrawer__x"
+          aria-label={t('mob_closeMenu')}
+          title={t('mob_closeMenu')}
+          onClick={onClose}
+        >
+          <Svg d='<path d="M6 6l12 12"/><path d="M18 6L6 18"/>' s={18} sw={2} />
+        </button>
+        {children}
+      </div>
+    </div>
   );
 }
 

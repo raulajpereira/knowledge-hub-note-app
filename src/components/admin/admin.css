@@ -730,3 +730,323 @@ select.kh-ad-input option {
     justify-content: flex-end;
   }
 }
+
+/* ── Phones and tablets (D71): compact header, the navigation in a drawer,
+   the right-hand drawer floating (tablet) or as the page (phone). The
+   elements below only exist on those screens; desktop (≥ 1100 px) is untouched. ── */
+.kh-ad-mhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.kh-ad-mbtn {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--w) / 0.2);
+  background: rgb(var(--w) / 0.1);
+  backdrop-filter: blur(var(--kh-blur-btn, 16px)) saturate(150%);
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+.kh-ad-mhead .kh-ad-lock {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+.kh-ad-mhead__t {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.kh-ad-mhead__t > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-ad-navdrawer .kh-navdrawer__panel {
+  gap: 2px;
+  overflow-y: auto;
+  color: var(--ink);
+}
+.kh-ad-navdrawer .kh-ad-brand {
+  padding: 4px 56px 14px 8px;
+}
+.kh-ad-navdrawer__x {
+  position: absolute;
+  top: calc(var(--kh-safe-top) + 12px);
+  right: 12px;
+  z-index: 2;
+}
+.kh-ad-navdrawer .kh-ad-item {
+  height: 48px;
+  font-size: 15px;
+}
+.kh-ad-navdrawer .kh-ad-me {
+  margin-top: 14px;
+}
+
+@media (max-width: 1099.98px) {
+  .kh-ad {
+    height: calc(100dvh / var(--ui-scale, 1));
+  }
+  .kh-ad__grid[data-m] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 52px minmax(0, 1fr);
+    gap: 12px;
+    padding: calc(var(--kh-safe-top) + 12px) max(14px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  }
+  .kh-ad-gate {
+    padding: calc(var(--kh-safe-top) + 16px) 16px max(16px, env(safe-area-inset-bottom));
+  }
+  .kh-ad-title {
+    padding-right: 0;
+  }
+  .kh-ad-drawer--m {
+    position: absolute;
+    z-index: 20;
+    top: calc(var(--kh-safe-top) + 12px + 52px + 12px);
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    width: min(480px, calc(100% - 28px));
+    box-sizing: border-box;
+    background:
+      linear-gradient(
+        180deg,
+        rgb(var(--sf) / calc(0.3 * var(--sf-k))),
+        rgb(var(--sf) / calc(0.2 * var(--sf-k)))
+      ),
+      rgb(var(--d) / calc(0.42 * var(--d-k)));
+    backdrop-filter: blur(40px) saturate(160%);
+    border-color: rgb(var(--w) / 0.24);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 30px 70px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
+    animation: kh-ad-slide 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .kh-ad-btn {
+    min-height: 40px;
+  }
+  .kh-ad-chip {
+    height: 40px;
+    padding: 0 15px;
+  }
+  .kh-ad-x {
+    width: 44px;
+    height: 44px;
+  }
+  .kh-ad-input {
+    height: 44px;
+  }
+}
+@keyframes kh-ad-slide {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .kh-ad__grid[data-m] {
+    gap: 10px;
+    padding: calc(var(--kh-safe-top) + 16px) max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+  /* the section scrolls as one page (header, tools and the cards) */
+  .kh-ad__grid[data-m] .kh-ad-main {
+    border-radius: 24px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .kh-ad__grid[data-m] .kh-ad-body {
+    flex: none;
+    overflow: visible;
+    padding: 0 12px 16px;
+  }
+  .kh-ad-head {
+    padding: 16px 14px 10px;
+  }
+  .kh-ad-title h1 {
+    font-size: 23px;
+  }
+  .kh-ad-tools {
+    padding: 0 14px 12px;
+  }
+  .kh-ad-search {
+    flex: 1 1 100%;
+    width: 100%;
+    height: 44px;
+  }
+  /* filter chips: one row that slides sideways */
+  .kh-ad-tools > [role='group'] {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    width: 100%;
+    scrollbar-width: none;
+  }
+  .kh-ad-tools > [role='group']::-webkit-scrollbar {
+    display: none;
+  }
+  .kh-ad-tools > .kh-ad-btn {
+    margin-left: 0 !important;
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+  .kh-ad-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+  .kh-ad-mrr__v {
+    font-size: 36px;
+  }
+  .kh-ad-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .kh-ad-kpi__v {
+    font-size: 24px;
+  }
+  .kh-ad-att {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+  }
+  .kh-ad-att > :nth-child(4) {
+    display: none;
+  }
+  /* the drawer is the page: ← Voltar on top, the content scrolls under it */
+  .kh-ad-drawer--m {
+    position: fixed;
+    inset: 0;
+    z-index: 160;
+    width: auto;
+    gap: 14px;
+    padding: var(--kh-safe-top) max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+    border: 0;
+    border-radius: 0;
+    /* a page of its own: the section under it must not show through */
+    background:
+      linear-gradient(
+        180deg,
+        rgb(var(--sf) / calc(0.3 * var(--sf-k))),
+        rgb(var(--sf) / calc(0.2 * var(--sf-k)))
+      ),
+      rgb(var(--d) / calc(0.42 * var(--d-k)));
+    backdrop-filter: blur(40px) saturate(160%);
+    animation: kh-ad-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .kh-ad-drawer--m > .kh-mback {
+    margin: 0 calc(-1 * max(16px, env(safe-area-inset-right))) 0
+      calc(-1 * max(16px, env(safe-area-inset-left)));
+    padding-top: 8px;
+  }
+  .kh-ad-drawer--m .kh-ad-x {
+    display: none;
+  }
+  /* …and the section under it steps away (only the background shows through the glass) */
+  .kh-ad__grid[data-m]:has(> .kh-ad-drawer--m) > :not(.kh-ad-drawer--m) {
+    visibility: hidden;
+  }
+  .kh-ad-drawer__foot > .kh-ad-btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+}
+@keyframes kh-ad-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kh-ad-drawer--m {
+    animation: none;
+  }
+}
+
+/* Table rows as cards on phones (Table in ui.tsx) */
+.kh-ad-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kh-ad-crd {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.07);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+.kh-ad-crd[data-click] {
+  cursor: pointer;
+}
+.kh-ad-crd[data-click]:active {
+  background: rgb(var(--w) / 0.14);
+}
+.kh-ad-crd__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 14px;
+}
+.kh-ad-crd__head .kh-ad-td__main {
+  font-size: 15px;
+}
+.kh-ad-crd__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+.kh-ad-crd__f {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+.kh-ad-crd__f > dt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgb(var(--t) / calc(0.58 * var(--t-k)));
+}
+.kh-ad-crd__f > dd {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kh-ad-crd__f--row > dd {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.kh-ad-crd__f--wide {
+  grid-column: 1 / -1;
+}
+.kh-ad-crd .kh-ad-btn--sm {
+  min-width: 40px !important;
+  height: 40px;
+}

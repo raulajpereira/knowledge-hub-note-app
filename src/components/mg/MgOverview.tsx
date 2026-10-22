@@ -126,7 +126,10 @@ export function MgOverview({ mg }: { mg: Mg }) {
           'flex:1;min-height:0;overflow:auto;padding:0 24px 24px;display:flex;flex-direction:column;gap:16px;',
         )}
       >
-        <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;')}>
+        <div
+          className="mg-kpis"
+          style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;')}
+        >
           {kpis.map((k) => (
             <div
               key={k.label}

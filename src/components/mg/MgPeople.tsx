@@ -245,7 +245,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
 
   if (!sel)
     return (
-      <Split page="mg_people" list={side}>
+      <Split page="mg_people" list={side} param="p">
         {null}
       </Split>
     );
@@ -267,7 +267,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
     { v: '__new', l: tr('+ Novo nível…') },
   ];
   return (
-    <Split page="mg_people" list={side}>
+    <Split page="mg_people" list={side} param="p" backTitle={sel.name}>
       <div style={css('display:flex;flex-direction:column;gap:18px;padding:24px 26px 30px;')}>
         <div style={css('display:flex;align-items:center;gap:16px;min-width:0;')}>
           <PersonPhoto mg={mg} p={sel} size={56} fs={19} tc={t.tc} />
@@ -330,7 +330,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
         {/* two columns of blocks (one on narrow screens) */}
         <div
           style={css(
-            'display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;align-items:start;',
+            'display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px;align-items:start;',
           )}
         >
           <div style={css('display:flex;flex-direction:column;gap:12px;min-width:0;')}>

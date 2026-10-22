@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { mgL } from '@/lib/mgText';
+import { useI18n } from '@/i18n/client';
 import { css } from './css';
 import { Av, Glass } from './ui';
 import type { Mg } from './store';
@@ -19,7 +20,12 @@ export function MgSkills({ mg }: { mg: Mg }) {
   const rows = P.filter((p) => !qq || `${p.name} ${p.role}`.toLowerCase().includes(qq)).sort(
     (a, b) => a.area.localeCompare(b.area) || b.level - a.level,
   );
-  const grid = `260px repeat(${SKL.length}, minmax(92px,1fr))`;
+  // phones (D71): consult only — a narrow sticky name column, cells not clickable
+  const phone = mg.vp === 'phone';
+  const { t } = useI18n();
+  const grid = phone
+    ? `128px repeat(${SKL.length}, minmax(72px,1fr))`
+    : `260px repeat(${SKL.length}, minmax(92px,1fr))`;
   const cycle = (pid: string, k: string) =>
     mg.upd((d) => {
       const x = d.people.find((y) => y.id === pid)!;
@@ -58,6 +64,11 @@ export function MgSkills({ mg }: { mg: Mg }) {
             </span>
           ))}
         </div>
+        {phone && (
+          <span className="mg-mnote" role="note" title={t('mob_editOnDesktopHint')}>
+            {t('mob_editOnDesktop')}
+          </span>
+        )}
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -73,7 +84,15 @@ export function MgSkills({ mg }: { mg: Mg }) {
           'flex:1;min-height:0;overflow:auto;margin:0 12px 12px;border-radius:22px;background:rgb(var(--d) / calc(.18 * var(--d-k)));border:1px solid rgb(var(--w) / .1);',
         )}
       >
-        <div role="table" aria-label={L(19)} style={css(`min-width:${260 + SKL.length * 92}px;width:100%;`)}>
+        <div
+          role="table"
+          aria-label={L(19)}
+          style={css(
+            phone
+              ? `min-width:${128 + SKL.length * 72}px;width:100%;`
+              : `min-width:${260 + SKL.length * 92}px;width:100%;`,
+          )}
+        >
           <div
             role="row"
             style={css(
@@ -116,12 +135,14 @@ export function MgSkills({ mg }: { mg: Mg }) {
                 onClick={() => mg.nav('mg_people', { p: p.id })}
                 onKeyDown={(e) => e.key === 'Enter' && mg.nav('mg_people', { p: p.id })}
                 style={css(
-                  `position:sticky;left:0;z-index:1;height:100%;display:flex;align-items:center;gap:12px;padding:0 20px;min-width:0;cursor:pointer;${HEAD_BG}`,
+                  phone
+                    ? `position:sticky;left:0;z-index:1;height:100%;display:flex;align-items:center;gap:8px;padding:0 8px 0 10px;min-width:0;cursor:pointer;${HEAD_BG}`
+                    : `position:sticky;left:0;z-index:1;height:100%;display:flex;align-items:center;gap:12px;padding:0 20px;min-width:0;cursor:pointer;${HEAD_BG}`,
                 )}
               >
                 <Av
                   p={p}
-                  size={34}
+                  size={phone ? 26 : 34}
                   fs={9.5}
                   tc={mg.tOf(p).tc}
                   s="box-shadow:0 0 0 2px rgb(var(--w) / .12);"
@@ -147,9 +168,10 @@ export function MgSkills({ mg }: { mg: Mg }) {
                       title={tip}
                       aria-label={tip}
                       className="mg-hb"
-                      onClick={() => cycle(p.id, k)}
+                      onClick={phone ? undefined : () => cycle(p.id, k)}
+                      aria-disabled={phone || undefined}
                       style={css(
-                        `width:80px;height:26px;border-radius:8px;border:1px solid ${l ? 'rgb(var(--w) / .18)' : 'rgb(var(--w) / .07)'};background:${LVC[l] ?? 'transparent'};color:var(--ink);font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`,
+                        `width:${phone ? 62 : 80}px;height:26px;border-radius:8px;border:1px solid ${l ? 'rgb(var(--w) / .18)' : 'rgb(var(--w) / .07)'};background:${LVC[l] ?? 'transparent'};color:var(--ink);font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`,
                       )}
                     >
                       {LV[l] || ''}

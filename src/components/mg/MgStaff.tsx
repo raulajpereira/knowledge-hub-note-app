@@ -163,7 +163,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
   );
   if (!sel)
     return (
-      <Split page="mg_staff" list={side}>
+      <Split page="mg_staff" list={side} param="r">
         {null}
       </Split>
     );
@@ -203,9 +203,9 @@ export function MgStaff({ mg }: { mg: Mg }) {
   const lvlOpts = [{ v: '0', l: tr('Qualquer nível') }, ...lvIdx.map((l) => ({ v: String(l), l: LV[l]! }))];
 
   return (
-    <Split page="mg_staff" list={side}>
+    <Split page="mg_staff" list={side} param="r" backTitle={title(sel)}>
       <div style={css('display:flex;flex-direction:column;gap:18px;padding:24px 26px 30px;')}>
-        <div style={css('display:flex;align-items:center;gap:12px;')}>
+        <div className="mg-mwrap" style={css('display:flex;align-items:center;gap:12px;')}>
           <div style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;')}>
             <span style={css('font-size:24px;font-weight:600;letter-spacing:-.02em;')}>{title(sel)}</span>
             <span style={css('font-size:13px;color:rgb(var(--t) / calc(.7 * var(--t-k)));')}>

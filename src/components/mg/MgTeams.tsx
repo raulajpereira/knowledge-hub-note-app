@@ -218,7 +218,10 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
 
   return (
     <Glass label={t.name}>
-      <div style={css('flex-shrink:0;display:flex;align-items:center;gap:14px;padding:20px 24px 16px;')}>
+      <div
+        className="mg-tmhead"
+        style={css('flex-shrink:0;display:flex;align-items:center;gap:14px;padding:20px 24px 16px;')}
+      >
         <button
           type="button"
           className="mg-h14"
@@ -279,6 +282,7 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
         )}
       </div>
       <div
+        className="mg-mbody"
         style={css(
           'flex:1;min-height:0;overflow:auto;padding:0 24px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;align-items:start;',
         )}

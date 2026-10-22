@@ -226,7 +226,9 @@ export function Plans() {
                     )}
                   </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div
+                  style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}
+                >
                   <NumberField
                     label={A('Preço mensal (€)')}
                     value={p.price}
@@ -287,7 +289,9 @@ export function Plans() {
                       <span style={{ fontSize: 13.5, fontWeight: 600 }}>{A('Limites de criação')}</span>
                       <span className="kh-ad-td__sub">{A('vazio = sem limite')}</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    <div
+                      style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}
+                    >
                       {LIMITS.map(([k, l]) => (
                         <NumberField
                           key={k}
@@ -389,7 +393,7 @@ export function Plans() {
                           <div
                             style={{
                               display: 'grid',
-                              gridTemplateColumns: '1fr 1fr',
+                              gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                               gap: '4px 12px',
                               padding: '0 12px 10px 40px',
                             }}

@@ -112,7 +112,7 @@ export function MgClients({ mg }: { mg: Mg }) {
 
   if (!sel)
     return (
-      <Split page="mg_clients" list={list}>
+      <Split page="mg_clients" list={list} param="c">
         {null}
       </Split>
     );
@@ -130,7 +130,7 @@ export function MgClients({ mg }: { mg: Mg }) {
     ['Pessoas esta semana', String(Object.keys(tm).length)],
   ];
   return (
-    <Split page="mg_clients" list={list}>
+    <Split page="mg_clients" list={list} param="c" backTitle={sel.name}>
       <div style={css('display:flex;flex-direction:column;gap:18px;padding:24px 26px 30px;')}>
         <div style={css('display:flex;align-items:center;gap:14px;')}>
           <span

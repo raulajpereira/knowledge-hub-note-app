@@ -1200,5 +1200,8 @@
   "fl_openPdf": "Open PDF",
   "shr_short": "Share",
   "cl_nodes": "Structure",
-  "lm_zoom": "Map zoom"
+  "lm_zoom": "Map zoom",
+  "mob_editOnDesktop": "Edit on a computer",
+  "mob_editOnDesktopHint": "On a phone this view is read-only. To allocate, drag or bulk-edit, use a computer.",
+  "mob_day": "Day"
 }

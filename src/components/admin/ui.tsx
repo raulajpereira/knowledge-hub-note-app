@@ -2,6 +2,7 @@
 
 import { cloneElement, useId } from 'react';
 import { useI18n } from '@/i18n/client';
+import { useViewport } from '@/components/ui';
 
 // Building blocks of the Admin Console (prototype table, chips, drawer).
 
@@ -142,6 +143,48 @@ export function Table<T>({
   label: string;
 }) {
   const { A } = useA();
+  const phone = useViewport() === 'phone';
+  // phones (D71): one card per row — the first column on top, the others as label + value
+  if (phone)
+    return (
+      <div className="kh-ad-cards" role="list" aria-label={label}>
+        {rows.map((r) => (
+          <div
+            key={rowKey(r)}
+            className="kh-ad-crd"
+            role="listitem"
+            data-click={onRow ? '' : undefined}
+            tabIndex={onRow ? 0 : undefined}
+            onClick={onRow ? () => onRow(r) : undefined}
+            onKeyDown={
+              onRow
+                ? (e) => {
+                    if (e.key === 'Enter' && e.target === e.currentTarget) onRow(r);
+                  }
+                : undefined
+            }
+          >
+            <div className="kh-ad-crd__head">{cols[0]?.cell(r)}</div>
+            <dl className="kh-ad-crd__grid">
+              {cols.slice(1).map((c, i) => {
+                const v = c.cell(r);
+                if (v === null || v === undefined || v === false || v === '') return null;
+                return (
+                  <div
+                    key={i}
+                    className={`kh-ad-crd__f${c.row ? ' kh-ad-crd__f--row' : ''}${c.label ? '' : ' kh-ad-crd__f--wide'}`}
+                  >
+                    {c.label && <dt>{c.label}</dt>}
+                    <dd>{v}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </div>
+        ))}
+        {!rows.length && <div className="kh-ad-empty">{empty ?? A('Sem resultados.')}</div>}
+      </div>
+    );
   return (
     <div className="kh-ad-table" role="table" aria-label={label}>
       <div className="kh-ad-table__in" style={{ ['--min-w' as string]: `${minW}px` }}>

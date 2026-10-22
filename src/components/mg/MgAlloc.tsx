@@ -5,9 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { isAvailable, mgIso, mgMonday, wLbl, wLblY, type MgAlloc as Alloc } from '@/lib/mg';
 import { mgL } from '@/lib/mgText';
-import { usePersistentState } from '@/components/ui';
+import { Sheet, usePersistentState } from '@/components/ui';
+import { useI18n } from '@/i18n/client';
 import { css } from './css';
-import { Av, Glass, Sel } from './ui';
+import { Av, Glass, PersonPop, Sel } from './ui';
 import type { Mg } from './store';
 
 const W0 = -4;
@@ -15,6 +16,9 @@ const N = 20;
 const GRID = '260px repeat(20,minmax(54px,1fr)) 104px';
 // Grelha Semanal / Dias: wider cells, room for the project of each allocation
 const GRID_CELLS = '260px repeat(20,minmax(108px,1fr)) 104px';
+// phones (D71): a narrow sticky name column, the grid slides inside its box
+const GRID_M = '128px repeat(20,minmax(48px,1fr)) 64px';
+const GRID_CELLS_M = '128px repeat(20,minmax(96px,1fr)) 64px';
 const CHIP_H = 19;
 const STICKY =
   'background:linear-gradient(90deg,rgb(var(--sf) / calc(.09 * var(--sf-k))),rgb(var(--sf) / calc(.05 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 28px)) saturate(150%);border-right:1px solid rgb(var(--w) / .1);';
@@ -81,6 +85,10 @@ export function MgAlloc({ mg }: { mg: Mg }) {
   const [pop, setPop] = useState<Pop | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [moved, setMoved] = useState(false);
+  // phones: consult only — a bar opens the person's summary
+  const phone = mg.vp === 'phone';
+  const { t } = useI18n();
+  const [pp, setPP] = useState<string | null>(null);
   const want = useSearchParams().get('mode');
   useEffect(() => {
     if (want === 'heat' || want === 'day' || want === 'timeline') setMode(want);
@@ -153,7 +161,13 @@ export function MgAlloc({ mg }: { mg: Mg }) {
   };
 
   const isDay = mode === 'day';
-  const grid = mode === 'timeline' ? GRID : GRID_CELLS;
+  const grid = phone
+    ? mode === 'timeline'
+      ? GRID_M
+      : GRID_CELLS_M
+    : mode === 'timeline'
+      ? GRID
+      : GRID_CELLS;
   const weeks = Array.from({ length: N }, (_, i) => {
     if (isDay) {
       const w = Math.floor(i / 5);
@@ -212,9 +226,10 @@ export function MgAlloc({ mg }: { mg: Mg }) {
   };
 
   return (
-    <div style={css('flex:1;min-height:0;min-width:0;display:flex;gap:14px;')}>
+    <div className="mg-alwrap" style={css('flex:1;min-height:0;min-width:0;display:flex;gap:14px;')}>
       <Glass s="min-width:0;" label={L(23)}>
         <div
+          className="mg-altools"
           style={css(
             'flex-shrink:0;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;padding:22px 24px 14px;',
           )}
@@ -275,32 +290,42 @@ export function MgAlloc({ mg }: { mg: Mg }) {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            disabled={!P.length || !mg.PJ.length}
-            onClick={() =>
-              openM({
-                // the first person who can be allocated (Inativo / Suspenso are not offered)
-                person: (rows.find(isAvailable) ?? P.find(isAvailable) ?? rows[0] ?? P[0]!).id,
-                project: alProj !== 'all' ? alProj : mg.PJ[0]!.id,
-                from: wk(0),
-                to: wk(8),
-                hours: 16,
-              })
-            }
-            style={css(
-              'white-space:nowrap;height:36px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
-            )}
-          >
-            {L(36)}
-          </button>
+          {phone ? (
+            <span className="mg-mnote" role="note" title={t('mob_editOnDesktopHint')}>
+              {t('mob_editOnDesktop')}
+            </span>
+          ) : (
+            <button
+              type="button"
+              disabled={!P.length || !mg.PJ.length}
+              onClick={() =>
+                openM({
+                  // the first person who can be allocated (Inativo / Suspenso are not offered)
+                  person: (rows.find(isAvailable) ?? P.find(isAvailable) ?? rows[0] ?? P[0]!).id,
+                  project: alProj !== 'all' ? alProj : mg.PJ[0]!.id,
+                  from: wk(0),
+                  to: wk(8),
+                  hours: 16,
+                })
+              }
+              style={css(
+                'white-space:nowrap;height:36px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:13px;font-weight:600;cursor:pointer;',
+              )}
+            >
+              {L(36)}
+            </button>
+          )}
         </div>
         <div
           style={css(
             'flex:1;min-height:0;overflow:auto;margin:0 12px 12px;border-radius:22px;background:rgb(var(--d) / calc(.16 * var(--d-k)));border:1px solid rgb(var(--w) / .1);',
           )}
         >
-          <div style={css(`min-width:${mode === 'timeline' ? 1400 : 2524}px;`)}>
+          <div
+            style={css(
+              `min-width:${phone ? (mode === 'timeline' ? 1152 : 2112) : mode === 'timeline' ? 1400 : 2524}px;`,
+            )}
+          >
             <div
               style={css(
                 `position:sticky;top:0;z-index:4;display:grid;grid-template-columns:${grid};height:58px;background:linear-gradient(180deg,rgb(var(--sf) / calc(.18 * var(--sf-k))),rgb(var(--sf) / calc(.1 * var(--sf-k))));backdrop-filter:blur(var(--glass-blur-user, 30px)) saturate(160%);border-bottom:1px solid rgb(var(--w) / .14);`,
@@ -308,7 +333,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
             >
               <span
                 style={css(
-                  `position:sticky;left:0;z-index:2;display:flex;align-items:center;padding:0 20px;font-size:12.5px;font-weight:600;color:rgb(var(--t) / calc(.85 * var(--t-k)));${STICKY}`,
+                  `position:sticky;left:0;z-index:2;display:flex;align-items:center;padding:0 ${phone ? 12 : 20}px;font-size:12.5px;font-weight:600;color:rgb(var(--t) / calc(.85 * var(--t-k)));${STICKY}`,
                 )}
               >
                 {L(26)}
@@ -411,10 +436,16 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                     onKeyDown={(e) => e.key === 'Enter' && mg.nav('mg_people', { p: p.id })}
                     className="mg-alname"
                     style={css(
-                      `position:sticky;left:0;z-index:3;display:flex;align-items:center;gap:12px;padding:0 20px;min-width:0;cursor:pointer;${STICKY}`,
+                      phone
+                        ? `position:sticky;left:0;z-index:3;display:flex;align-items:center;gap:8px;padding:0 8px 0 10px;min-width:0;cursor:pointer;${STICKY}`
+                        : `position:sticky;left:0;z-index:3;display:flex;align-items:center;gap:12px;padding:0 20px;min-width:0;cursor:pointer;${STICKY}`,
                     )}
                   >
-                    <Av p={p} size={34} fs={12} tc={tm.tc} s="box-shadow:0 0 0 2px rgb(var(--w) / .12);" />
+                    {phone ? (
+                      <Av p={p} size={26} fs={10} tc={tm.tc} />
+                    ) : (
+                      <Av p={p} size={34} fs={12} tc={tm.tc} s="box-shadow:0 0 0 2px rgb(var(--w) / .12);" />
+                    )}
                     <span style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;')}>
                       <span
                         style={css(
@@ -456,25 +487,29 @@ export function MgAlloc({ mg }: { mg: Mg }) {
                           type="button"
                           className="mg-albar"
                           title={`${pj?.code} ${pj?.name}${a.fn ? ` · ${a.fn}` : ''} · ${tr(`${a.hours}h/sem`)} · ${wLblY(a.from)} → ${wLblY(a.to)}`}
-                          onClick={() => !moved && openM({ ...a })}
+                          onClick={() => (phone ? setPP(p.id) : !moved && openM({ ...a }))}
                           style={css(
                             `position:absolute;top:${12 + ln * 36}px;height:28px;left:calc(${((f - W0) / N) * 100}% + 4px);width:calc(${((t - f + 1) / N) * 100}% - 8px);border-radius:9px;border:0;background:${pj?.color ?? 'rgb(var(--w) / .3)'};box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 8px rgb(0 0 0 / calc(.18 * var(--sh-k)));color:#1f1a16;font:inherit;padding:0 10px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;cursor:pointer;box-sizing:border-box;`,
                           )}
                         >
-                          <span
-                            onPointerDown={dragEdge(a, 'from')}
-                            title="⇠"
-                            style={css(
-                              'position:absolute;left:0;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:9px 0 0 9px;background:rgb(var(--d) / calc(.12 * var(--d-k)));touch-action:none;',
-                            )}
-                          />
-                          <span
-                            onPointerDown={dragEdge(a, 'to')}
-                            title="⇢"
-                            style={css(
-                              'position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:0 9px 9px 0;background:rgb(var(--d) / calc(.12 * var(--d-k)));touch-action:none;',
-                            )}
-                          />
+                          {!phone && (
+                            <span
+                              onPointerDown={dragEdge(a, 'from')}
+                              title="⇠"
+                              style={css(
+                                'position:absolute;left:0;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:9px 0 0 9px;background:rgb(var(--d) / calc(.12 * var(--d-k)));touch-action:none;',
+                              )}
+                            />
+                          )}
+                          {!phone && (
+                            <span
+                              onPointerDown={dragEdge(a, 'to')}
+                              title="⇢"
+                              style={css(
+                                'position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:0 9px 9px 0;background:rgb(var(--d) / calc(.12 * var(--d-k)));touch-action:none;',
+                              )}
+                            />
+                          )}
                           <span
                             style={css(
                               "font-family:'Geist Mono',monospace;font-size:11.5px;font-weight:700;",
@@ -594,6 +629,7 @@ export function MgAlloc({ mg }: { mg: Mg }) {
         />
       )}
       {pop && mg.pById[pop.pid] && <CellPop mg={mg} c={pop} onClose={() => setPop(null)} />}
+      {pp && <PersonPop mg={mg} pid={pp} a0={0} b0={3} onClose={() => setPP(null)} />}
     </div>
   );
 }
@@ -605,6 +641,52 @@ function CellPop({ mg, c, onClose }: { mg: Mg; c: Pop; onClose: () => void }) {
   const cov = D.allocs.filter((a) => a.person === p.id && mg.inW(a, c.w));
   const key = isD ? dIso(c.w, c.di!) : wk(c.w);
   const fld = isD ? 'dov' : 'ovr';
+  // phones (D71): the cell's projects and hours in a sheet, to read (overrides are edited on a computer)
+  if (mg.vp === 'phone')
+    return (
+      <Sheet open onClose={onClose} title={p.name} closeLabel={tr('Fechar')}>
+        <div style={css('display:flex;flex-direction:column;gap:10px;padding-bottom:6px;')}>
+          <span style={css('font-size:13px;color:rgb(var(--t) / calc(.8 * var(--t-k)));')}>
+            {isD ? key.split('-').reverse().join('/') : tr(`Semana de ${wLblY(key)}`)}
+          </span>
+          {cov.map((a) => {
+            const pj = mg.pjById[a.project];
+            return (
+              <div
+                key={a.id}
+                style={css(
+                  'display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:14px;background:rgb(var(--w) / .07);border:1px solid rgb(var(--w) / .12);',
+                )}
+              >
+                <span
+                  style={css(`width:10px;height:10px;flex:none;border-radius:50%;background:${pj?.color};`)}
+                />
+                <span style={css('flex:1;min-width:0;display:flex;flex-direction:column;')}>
+                  <span style={css("font-family:'Geist Mono',monospace;font-size:13.5px;font-weight:600;")}>
+                    {pj?.code}
+                  </span>
+                  <span
+                    style={css(
+                      'font-size:12px;color:rgb(var(--t) / calc(.7 * var(--t-k)));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+                    )}
+                  >
+                    {pj?.name}
+                  </span>
+                </span>
+                <span style={css("font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;")}>
+                  {isD ? mg.aDay(a, c.w, c.di!) : mg.aWeek(a, c.w)} {tr(isD ? 'h/dia' : 'h/sem')}
+                </span>
+              </div>
+            );
+          })}
+          {!cov.length && (
+            <span style={css('font-size:13px;color:rgb(var(--t) / calc(.75 * var(--t-k)));')}>
+              {tr('Sem alocações neste período.')}
+            </span>
+          )}
+        </div>
+      </Sheet>
+    );
   return createPortal(
     <>
       <div onClick={onClose} style={css('position:fixed;inset:0;z-index:200;')} />
@@ -795,6 +877,7 @@ function AllocPanel({
   return (
     <aside
       aria-label={title}
+      className="mg-alpanel"
       style={css(
         `position:relative;isolation:isolate;flex:none;width:min(${width}px, 55%);min-height:0;display:flex;flex-direction:column;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,rgb(var(--sf) / calc(.14 * var(--sf-k))),rgb(var(--sf) / calc(.05 * var(--sf-k))));border:1px solid rgb(var(--w) / .16);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);color:var(--ink);`,
       )}
