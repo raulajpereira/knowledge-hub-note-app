@@ -21,7 +21,7 @@ import { usePref } from '@/components/shell/PrefsProvider';
 import { useI18n } from '@/i18n/client';
 import { WeatherHours, Ico, WindArrow } from './WeatherHours';
 import { WeatherPicker } from './WeatherPicker';
-import { WxFx, WxIcon, condKind, wxBg } from './weatherArt';
+import { WxIcon, WxSky, condKind } from './weatherArt';
 import { ICON, dayTime, deg, duration, fill, hm, hourLabel, weekday, type TempUnit } from './weatherFmt';
 
 const LISBOA: WeatherLoc = { lat: 38.72, lon: -9.14, city: 'Lisboa', region: 'Portugal' };
@@ -183,13 +183,7 @@ export function WeatherCard() {
     ...(d.sunset ? [{ time: d.sunset, rise: false }] : []),
   ]);
 
-  const sky = (
-    <div className="kh-wx__sky">
-      <div style={{ position: 'absolute', inset: 0, background: wxBg(kind, isDay), opacity: 0.75 }} />
-      <WxFx kind={kind} isDay={isDay} />
-      <div style={{ position: 'absolute', inset: 0, background: 'rgb(var(--d) / calc(.12 * var(--d-k)))' }} />
-    </div>
-  );
+  const sky = <WxSky cond={now?.cond ?? 'cloudy'} isDay={isDay} paused={full} scale={phone ? 0.6 : 1} />;
   const placeChip = (ref: React.RefObject<HTMLButtonElement | null>, at: 'banner' | 'full') => (
     <button
       ref={ref}
@@ -226,13 +220,7 @@ export function WeatherCard() {
   // the full forecast, shown in the popup
   const detail = (
     <div ref={fullRef} className="kh-wxd" data-testid="weather-full" data-kind={kind}>
-      <div className="kh-wx__sky">
-        <div style={{ position: 'absolute', inset: 0, background: wxBg(kind, isDay), opacity: 0.75 }} />
-        <WxFx kind={kind} isDay={isDay} />
-        <div
-          style={{ position: 'absolute', inset: 0, background: 'rgb(var(--d) / calc(.12 * var(--d-k)))' }}
-        />
-      </div>
+      <WxSky cond={now?.cond ?? 'cloudy'} isDay={isDay} scale={phone ? 0.6 : 1} />
       <div className="kh-wx__body">
         <div className="kh-wx__head">
           {placeChip(fullPlaceRef, 'full')}

@@ -74,9 +74,93 @@
     transform: translateX(6%);
   }
 }
+/* weather effects: transforms and opacity only (compositor), each particle
+   moving around its scattered spot so a still frame looks the same */
+@keyframes kh-wx-fall {
+  from {
+    transform: translate3d(calc(var(--wx-fall) * 0.09), calc(var(--wx-fall) * -0.5), 0)
+      rotate(var(--tilt, 11deg));
+  }
+  to {
+    transform: translate3d(calc(var(--wx-fall) * -0.09), calc(var(--wx-fall) * 0.5), 0)
+      rotate(var(--tilt, 11deg));
+  }
+}
+@keyframes kh-wx-snow {
+  0% {
+    transform: translate3d(0, calc(var(--wx-fall) * -0.5), 0);
+  }
+  25% {
+    transform: translate3d(var(--sway, 10px), calc(var(--wx-fall) * -0.25), 0);
+  }
+  50% {
+    transform: translate3d(0, 0, 0);
+  }
+  75% {
+    transform: translate3d(calc(var(--sway, 10px) * -1), calc(var(--wx-fall) * 0.25), 0);
+  }
+  100% {
+    transform: translate3d(0, calc(var(--wx-fall) * 0.5), 0);
+  }
+}
+@keyframes kh-wx-drift {
+  from {
+    transform: translate3d(calc(-100cqw - 100%), 0, 0);
+  }
+  to {
+    transform: translate3d(calc(100cqw + 100%), 0, 0);
+  }
+}
+/* a rare, soft double flash */
+@keyframes kh-wx-flash {
+  0%,
+  60%,
+  64.5%,
+  100% {
+    opacity: 0;
+  }
+  61% {
+    opacity: 0.42;
+  }
+  62% {
+    opacity: 0.08;
+  }
+  63% {
+    opacity: 0.3;
+  }
+}
+.kh-wxfx {
+  --wx-fall: 420px;
+}
+/* particles travel past the edges: paint containment clips them reliably,
+   also when the browser composites them on their own layers */
+.kh-wx__sky,
+.kh-wxfx {
+  contain: paint;
+}
+@container (max-width: 520px) {
+  .kh-wxfx {
+    --wx-fall: 700px;
+  }
+}
+.kh-wxd .kh-wxfx {
+  --wx-fall: 860px;
+}
+:root[data-theme='light'] .kh-wxfx {
+  --wx-drop: oklch(0.5 0.11 245 / 0.65);
+  --wx-flake: oklch(0.62 0.05 245 / 0.8);
+}
+/* off-screen, hidden tab, banner under the popup: everything stops */
+.kh-wx__sky[data-paused] * {
+  animation-play-state: paused !important;
+}
 @media (prefers-reduced-motion: reduce) {
-  .kh-wx * {
+  :is(.kh-wx, .kh-wxd) * {
     animation: none !important;
+  }
+  /* the still picture of a storm has no flash */
+  .kh-wxfx__flash {
+    display: none;
   }
 }
 
@@ -1764,6 +1848,27 @@ button.kh-wx__chip {
 /* ── Weather banner on Início (compact; opens the full forecast in a popup) ── */
 .kh-wxb {
   transition: border-color 0.15s;
+}
+/* the banner's sun and moon sit in its empty middle, not behind the hours */
+@container (min-width: 700px) {
+  .kh-wxb .kh-wxfx__moon {
+    right: auto !important;
+    left: 47%;
+  }
+  .kh-wxb .kh-wxfx__glow {
+    right: auto !important;
+    left: calc(48% - 120px);
+  }
+  .kh-wxb .kh-wxfx__rays {
+    right: auto !important;
+    left: calc(48% - 250px);
+  }
+}
+.kh-wxb > .kh-wx__sky {
+  width: 100%;
+  height: 100%;
+  mask-image: linear-gradient(90deg, #000 35%, rgb(0 0 0 / 0.45) 100%);
+  mask-composite: add;
 }
 .kh-wxb:hover {
   border-color: rgb(var(--w) / 0.3);

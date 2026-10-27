@@ -124,6 +124,9 @@ test('weather banner → popup: now, warnings, hours, a day, details; keyboard',
   const full = page.getByTestId('weather-full');
   await expect(full.getByText('Próximas 48 horas')).toBeVisible();
   await expect(full.getByText('Sensação 18°').first()).toBeVisible();
+  // the banner's sky stops animating under the popup; the popup's sky animates
+  await expect(banner.locator('.kh-wx__sky')).toHaveAttribute('data-paused', '');
+  await expect(full.locator('.kh-wx__sky')).not.toHaveAttribute('data-paused', '');
   await expect(full.getByText('Dados: MET Norway')).toBeVisible();
   await expect(full.getByText('Avisos: IPMA')).toBeVisible();
 
@@ -229,4 +232,24 @@ test('weather: error and retry on the banner; phone sheet opens a day inline', a
   await expect(full.getByRole('region', { name: 'Horas de Amanhã' })).toBeVisible();
   await expect(full.getByText('Próximas 48 horas')).toBeVisible();
   await ctx.close();
+});
+
+test('weather sky: rain falls; still with reduced motion', async ({ browser }) => {
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    const ctx = await browser.newContext({ locale: 'pt-PT', serviceWorkers: 'block', reducedMotion });
+    const page = await ctx.newPage();
+    const wx = JSON.parse(WX) as { now: { cond: string } };
+    wx.now.cond = 'heavyrain';
+    await page.route(/\/api\/v1\/weather\?/, (r) =>
+      r.fulfill({ contentType: 'application/json', body: JSON.stringify(wx) }),
+    );
+    await login(page);
+    const sky = page.getByTestId('weather').locator('.kh-wx__sky');
+    await expect(sky).toHaveAttribute('data-cond', 'heavyrain');
+    await expect(sky.locator('.kh-wxfx__drop').first()).toBeAttached();
+    const running = await sky.evaluate((el) => el.getAnimations({ subtree: true }).length);
+    if (reducedMotion === 'reduce') expect(running).toBe(0);
+    else expect(running).toBeGreaterThan(50);
+    await ctx.close();
+  }
 });
