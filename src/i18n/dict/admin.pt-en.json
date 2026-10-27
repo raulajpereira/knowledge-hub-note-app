@@ -240,7 +240,6 @@
   "Reativou utilizador": "Reactivated user",
   "Receita recorrente mensal (MRR)": "Monthly recurring revenue (MRR)",
   "Recursos": "Resources",
-  "Reenviar convite": "Resend invite",
   "Reenviou convite": "Resent invite",
   "Registo": "Signed up",
   "Remove a conta e todos os dados deste utilizador. Não pode ser desfeito.": "Removes the account and all of this user's data. This cannot be undone.",
@@ -388,5 +387,7 @@
   "Tamanho máximo por ficheiro (MB)": "Largest file (MB)",
   "Em uso": "In use",
   "Limites de ficheiros guardados.": "File limits saved.",
-  "O código deixa de aceitar novos registos. Quem já entrou com ele mantém o acesso e nada é apagado.": "The code stops accepting new sign-ups. Whoever already joined with it keeps access and nothing is deleted."
+  "O código deixa de aceitar novos registos. Quem já entrou com ele mantém o acesso e nada é apagado.": "The code stops accepting new sign-ups. Whoever already joined with it keeps access and nothing is deleted.",
+  "Reenviar confirmação": "Resend confirmation",
+  "Email de confirmação reenviado.": "Confirmation email resent."
 }

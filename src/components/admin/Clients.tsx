@@ -1084,9 +1084,11 @@ export function UserPage({
               <button
                 type="button"
                 className="kh-ad-btn"
-                onClick={() => void run(() => adminApi(`/users/${userId}/resend`, {}), 'Convite reenviado.')}
+                onClick={() =>
+                  void run(() => adminApi(`/users/${userId}/resend`, {}), 'Email de confirmação reenviado.')
+                }
               >
-                {A('Reenviar convite')}
+                {A('Reenviar confirmação')}
               </button>
             ) : (
               <button
