@@ -1760,3 +1760,189 @@ button.kh-wx__chip {
   font-size: 13px;
   line-height: 1.45;
 }
+
+/* ── Weather banner on Início (compact; opens the full forecast in a popup) ── */
+.kh-wxb {
+  transition: border-color 0.15s;
+}
+.kh-wxb:hover {
+  border-color: rgb(var(--w) / 0.3);
+}
+.kh-wxb__open {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.kh-wxb__open:hover {
+  background: rgb(var(--w) / 0.04);
+}
+.kh-wxb__open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* only the place chip and "try again" take clicks; the rest opens the popup */
+.kh-wxb__body {
+  position: relative;
+  z-index: 4;
+  pointer-events: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 28px;
+  padding: 16px 20px;
+}
+.kh-wxb__body :is(.kh-wx__place, .kh-wxb__live) {
+  pointer-events: auto;
+}
+.kh-wxb__left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+.kh-wxb .kh-wx__temp {
+  font-size: 52px;
+}
+.kh-wxb__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kh-wxb__chips .kh-wx__chip b {
+  font-family: var(--font-mono);
+  margin-right: 4px;
+}
+.kh-wx__chip[data-always][data-sumlevel='yellow'] {
+  background: oklch(0.82 0.15 95 / 0.32);
+  border-color: oklch(0.82 0.15 95 / 0.6);
+}
+.kh-wx__chip[data-always][data-sumlevel='orange'] {
+  background: oklch(0.72 0.17 55 / 0.36);
+  border-color: oklch(0.72 0.17 55 / 0.65);
+}
+.kh-wx__chip[data-always][data-sumlevel='red'] {
+  background: oklch(0.6 0.21 27 / 0.4);
+  border-color: oklch(0.6 0.21 27 / 0.7);
+}
+.kh-wxb__right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.kh-wxb__hours {
+  display: flex;
+  gap: 2px;
+  padding: 6px 4px;
+  border-radius: 18px;
+  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.12);
+}
+.kh-wxb__hours > span {
+  width: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.kh-wxb__hours small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgb(var(--w) / 0.78);
+}
+.kh-wxb__hours b {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 650;
+}
+.kh-wxb__hours i {
+  min-height: 13px;
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: oklch(calc(0.84 * var(--lk)) 0.11 235);
+}
+.kh-wxb__hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 4px;
+  font-size: 12.5px;
+  color: rgb(var(--w) / 0.85);
+}
+.kh-wxb__more {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-left: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+  color: var(--ink-hi);
+}
+.kh-wxb__msg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-hi);
+}
+@container (max-width: 700px) {
+  .kh-wxb__right {
+    width: 100%;
+  }
+  .kh-wxb__hours {
+    justify-content: space-between;
+  }
+}
+@container (max-width: 420px) {
+  .kh-wxb__hours > span:nth-child(n + 6),
+  .kh-wxb__opt {
+    display: none;
+  }
+  .kh-wxb__hours > span {
+    width: 50px;
+  }
+}
+
+/* the popup: the full forecast, edge to edge under the sky */
+.kh-modal.kh-wxm {
+  position: relative;
+  width: min(1160px, 100%);
+  padding: 0;
+  gap: 0;
+}
+.kh-wxm > .kh-modal__head {
+  position: relative;
+  z-index: 3;
+  padding: 18px 22px 0;
+}
+.kh-wxd {
+  container-type: inline-size;
+  min-width: 0;
+}
+.kh-wxd > .kh-wx__body {
+  padding: 12px 22px 18px;
+}
+.kh-modal.kh-sheet-panel.kh-wxm--sheet {
+  width: 100%;
+  height: calc(100dvh - env(safe-area-inset-top) - 16px);
+  max-height: none;
+  padding: 26px 0 calc(8px + env(safe-area-inset-bottom));
+}
+.kh-wxm--sheet > .kh-modal__head {
+  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+}
+.kh-wxm--sheet .kh-wxd > .kh-wx__body {
+  padding: 10px max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left));
+}

@@ -96,81 +96,108 @@ async function login(page: Page) {
   await page.waitForURL(/\/app$/);
 }
 
-test('weather card: now, warnings, hours, a day, details', async ({ page }) => {
+const OPEN = /^Abrir a previsão completa de /;
+
+test('weather banner → popup: now, warnings, hours, a day, details; keyboard', async ({ page }) => {
   await mockWeather(page);
   await login(page);
-  const card = page.getByTestId('weather');
-  await expect(card.getByText('Próximas 48 horas')).toBeVisible();
-  await expect(card.locator('.kh-wx__temp')).toHaveText('20°');
-  await expect(card.getByText('Pouco nublado').first()).toBeVisible();
-  await expect(card.getByText('Sensação 18°').first()).toBeVisible();
-  await expect(card.getByText('Dados: MET Norway')).toBeVisible();
-  await expect(card.getByText('Avisos: IPMA')).toBeVisible();
+  const banner = page.getByTestId('weather');
+  // the compact banner on Início
+  await expect(banner.locator('.kh-wx__temp')).toHaveText('20°');
+  await expect(banner.getByText('Pouco nublado')).toBeVisible();
+  await expect(banner.getByText('3 avisos')).toBeVisible();
+  await expect(banner.getByText('Previsão completa')).toBeVisible();
+  await expect(banner.getByText('Próximas 48 horas')).toHaveCount(0);
+
+  // keyboard: the banner is a button; Enter opens, Esc closes, focus comes back
+  const open = banner.getByRole('button', { name: OPEN });
+  await open.focus();
+  await page.keyboard.press('Enter');
+  const dlg = page.getByRole('dialog', { name: 'Meteorologia' });
+  await expect(dlg).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dlg).toHaveCount(0);
+  await expect(open).toBeFocused();
+  await page.keyboard.press(' ');
+  await expect(dlg).toBeVisible();
+
+  const full = page.getByTestId('weather-full');
+  await expect(full.getByText('Próximas 48 horas')).toBeVisible();
+  await expect(full.getByText('Sensação 18°').first()).toBeVisible();
+  await expect(full.getByText('Dados: MET Norway')).toBeVisible();
+  await expect(full.getByText('Avisos: IPMA')).toBeVisible();
 
   // IPMA warnings: chips, then the panel with the details
-  await expect(card.getByRole('button', { name: /Agitação marítima · Laranja/ })).toBeVisible();
-  await card.getByRole('button', { name: '3 avisos' }).click();
-  await expect(card.getByText('Avisos IPMA · Lisboa')).toBeVisible();
-  await expect(card.getByText(/Ondas de sudoeste/)).toBeVisible();
+  await expect(full.getByRole('button', { name: /Agitação marítima · Laranja/ })).toBeVisible();
+  await full.getByRole('button', { name: '3 avisos' }).click();
+  await expect(full.getByText('Avisos IPMA · Lisboa')).toBeVisible();
+  await expect(full.getByText(/Ondas de sudoeste/)).toBeVisible();
 
   // an hour's details
-  await card.getByRole('button', { name: /^16h, 20°/ }).click();
-  await expect(card.locator('.kh-wx__hourinfo')).toContainText('Rajadas até');
+  await full.getByRole('button', { name: /^16h, 20°/ }).click();
+  await expect(full.locator('.kh-wx__hourinfo')).toContainText('Rajadas até');
 
-  // a day: its hours take the place of the next 48 hours (wide card)
-  await card.getByRole('button', { name: /^Amanhã: Chuva/ }).click();
-  await expect(card.getByText('Horas de Amanhã')).toBeVisible();
-  await expect(card.getByRole('group', { name: 'Horas de Amanhã' })).toBeVisible();
-  await card.getByRole('button', { name: 'Fechar o dia' }).click();
-  await expect(card.getByText('Próximas 48 horas')).toBeVisible();
+  // a day: its hours take the place of the next 48 hours (wide popup)
+  await full.getByRole('button', { name: /^Amanhã: Chuva/ }).click();
+  await expect(full.getByText('Horas de Amanhã')).toBeVisible();
+  await expect(full.getByRole('group', { name: 'Horas de Amanhã' })).toBeVisible();
+  await full.getByRole('button', { name: 'Fechar o dia' }).click();
+  await expect(full.getByText('Próximas 48 horas')).toBeVisible();
 
   // details tiles, kept hidden after a reload
-  await expect(card.getByText('Índice UV')).toBeVisible();
-  await card.getByRole('button', { name: 'Menos detalhes' }).click();
-  await expect(card.getByText('Índice UV')).toHaveCount(0);
+  await expect(full.getByText('Índice UV')).toBeVisible();
+  await full.getByRole('button', { name: 'Menos detalhes' }).click();
+  await expect(full.getByText('Índice UV')).toHaveCount(0);
   await page.waitForTimeout(1200);
   await page.reload();
-  await expect(card.getByText('Próximas 48 horas')).toBeVisible();
-  await expect(card.getByText('Índice UV')).toHaveCount(0);
-  await card.getByRole('button', { name: 'Mais detalhes' }).click();
-  await expect(card.getByText('Índice UV')).toBeVisible();
+  await banner.getByRole('button', { name: OPEN }).click();
+  await expect(full.getByText('Próximas 48 horas')).toBeVisible();
+  await expect(full.getByText('Índice UV')).toHaveCount(0);
+  await full.getByRole('button', { name: 'Mais detalhes' }).click();
+  await expect(full.getByText('Índice UV')).toBeVisible();
+  await dlg.getByRole('button', { name: 'Fechar', exact: true }).click();
+  await expect(dlg).toHaveCount(0);
 });
 
-test('weather card: location picker, °F, kept after reload', async ({ page }) => {
+test('weather: location picker from the banner and the popup, °F, kept after reload', async ({ page }) => {
   const asked = await mockWeather(page);
   await login(page);
-  const card = page.getByTestId('weather');
-  await expect(card.getByText('Próximas 48 horas')).toBeVisible();
-  await card
-    .getByRole('button', { name: /Lisboa/ })
-    .first()
-    .click();
-  const dlg = page.getByRole('dialog', { name: 'Localização' });
-  await dlg.getByPlaceholder('Procurar cidade ou vila…').fill('Porto');
-  await dlg.getByRole('button', { name: 'Procurar', exact: true }).click();
-  await dlg.getByRole('button', { name: /Porto Santo/ }).click();
-  await expect(dlg).toHaveCount(0);
-  await expect(card.locator('.kh-wx__place')).toContainText('Porto Santo');
+  const banner = page.getByTestId('weather');
+  await expect(banner.locator('.kh-wx__temp')).toHaveText('20°');
+  await banner.locator('.kh-wx__place').click();
+  const picker = page.getByRole('dialog', { name: 'Localização' });
+  await picker.getByPlaceholder('Procurar cidade ou vila…').fill('Porto');
+  await picker.getByRole('button', { name: 'Procurar', exact: true }).click();
+  await picker.getByRole('button', { name: /Porto Santo/ }).click();
+  await expect(picker).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Meteorologia' })).toHaveCount(0); // the chip doesn't open the popup
+  await expect(banner.locator('.kh-wx__place')).toContainText('Porto Santo');
   await expect.poll(() => asked.at(-1)).toBe('33.0612,-16.3403');
 
-  await card.locator('.kh-wx__place').click();
-  await expect(dlg.getByText('Recentes')).toBeVisible();
-  await dlg.getByRole('radio', { name: '°F' }).click();
+  // inside the popup too
+  await banner.getByRole('button', { name: OPEN }).click();
+  const full = page.getByTestId('weather-full');
+  await full.locator('.kh-wx__place').click();
+  await expect(picker.getByText('Recentes')).toBeVisible();
+  await picker.getByRole('radio', { name: '°F' }).click();
   await page.keyboard.press('Escape');
-  await expect(card.locator('.kh-wx__temp')).toHaveText('68°');
+  await expect(picker).toHaveCount(0);
+  await expect(full.locator('.kh-wx__temp')).toHaveText('68°');
+  await page.keyboard.press('Escape');
+  await expect(banner.locator('.kh-wx__temp')).toHaveText('68°');
 
   await page.waitForTimeout(1200);
   await page.reload();
-  await expect(card.locator('.kh-wx__place')).toContainText('Porto Santo');
-  await expect(card.locator('.kh-wx__temp')).toHaveText('68°');
+  await expect(banner.locator('.kh-wx__place')).toContainText('Porto Santo');
+  await expect(banner.locator('.kh-wx__temp')).toHaveText('68°');
   // back to Lisboa / °C for the other tests
-  await card.locator('.kh-wx__place').click();
-  await dlg.getByRole('radio', { name: '°C' }).click();
-  await dlg.getByRole('button', { name: /Lisboa/ }).click();
-  await expect(card.locator('.kh-wx__place')).toContainText('Lisboa');
+  await banner.locator('.kh-wx__place').click();
+  await picker.getByRole('radio', { name: '°C' }).click();
+  await picker.getByRole('button', { name: /Lisboa/ }).click();
+  await expect(banner.locator('.kh-wx__place')).toContainText('Lisboa');
 });
 
-test('weather card: error state, retry; phone layout opens a day inline', async ({ browser }) => {
+test('weather: error and retry on the banner; phone sheet opens a day inline', async ({ browser }) => {
   const ctx = await browser.newContext({
     locale: 'pt-PT',
     timezoneId: 'Europe/Lisbon',
@@ -182,18 +209,24 @@ test('weather card: error state, retry; phone layout opens a day inline', async 
   const page = await ctx.newPage();
   await mockWeather(page, 502);
   await login(page);
-  const card = page.getByTestId('weather');
-  await expect(card.getByRole('alert')).toContainText('Não foi possível obter a meteorologia.');
+  const banner = page.getByTestId('weather');
+  await expect(banner.getByRole('alert')).toContainText('Não foi possível obter a meteorologia.');
   await page.unroute(/\/api\/v1\/weather\?/);
   await mockWeather(page);
-  await card.getByRole('button', { name: 'Tentar de novo' }).click();
-  await expect(card.getByText('Próximas 48 horas')).toBeVisible();
+  await banner.getByRole('button', { name: 'Tentar de novo' }).click();
+  await expect(banner.locator('.kh-wx__temp')).toHaveText('20°');
 
-  // phone: one warnings chip for all, the day opens inside the list
-  await expect(card.getByRole('button', { name: /Agitação marítima/ })).toBeHidden();
-  await expect(card.getByRole('button', { name: '3 avisos' })).toBeVisible();
-  await card.getByRole('button', { name: /^Amanhã: Chuva/ }).click();
-  await expect(card.getByRole('region', { name: 'Horas de Amanhã' })).toBeVisible();
-  await expect(card.getByText('Próximas 48 horas')).toBeVisible();
+  // phone: a full-height sheet; one warnings chip for all; the day opens inside the list
+  await banner.getByRole('button', { name: OPEN }).tap();
+  const sheet = page.getByRole('dialog', { name: 'Meteorologia' });
+  await expect(sheet).toHaveClass(/kh-sheet-panel/);
+  const box = (await sheet.boundingBox())!;
+  expect(box.height).toBeGreaterThan(780);
+  const full = page.getByTestId('weather-full');
+  await expect(full.getByRole('button', { name: /Agitação marítima/ })).toBeHidden();
+  await expect(full.getByRole('button', { name: '3 avisos' })).toBeVisible();
+  await full.getByRole('button', { name: /^Amanhã: Chuva/ }).click();
+  await expect(full.getByRole('region', { name: 'Horas de Amanhã' })).toBeVisible();
+  await expect(full.getByText('Próximas 48 horas')).toBeVisible();
   await ctx.close();
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { usePersistentState } from '@/components/ui';
+import { Modal, Sheet, usePersistentState, useViewport } from '@/components/ui';
 import { api } from '@/lib/client/api';
 import type { WeatherLoc } from '@/lib/prefs';
 import {
@@ -22,7 +22,7 @@ import { useI18n } from '@/i18n/client';
 import { WeatherHours, Ico, WindArrow } from './WeatherHours';
 import { WeatherPicker } from './WeatherPicker';
 import { WxFx, WxIcon, condKind, wxBg } from './weatherArt';
-import { ICON, dayTime, deg, duration, fill, hm, weekday, type TempUnit } from './weatherFmt';
+import { ICON, dayTime, deg, duration, fill, hm, hourLabel, weekday, type TempUnit } from './weatherFmt';
 
 const LISBOA: WeatherLoc = { lat: 38.72, lon: -9.14, city: 'Lisboa', region: 'Portugal' };
 const REFRESH_MS = 30 * 60 * 1000;
@@ -82,18 +82,23 @@ export function WeatherCard() {
   const [openDay, setOpenDay] = useState<string | null>(null);
   const [showWarn, setShowWarn] = useState(false);
   const [wide, setWide] = useState(false);
-  const placeRef = useRef<HTMLButtonElement>(null);
-  const cardRef = useRef<HTMLElement>(null);
+  const [full, setFull] = useState(false);
+  const phone = useViewport() === 'phone';
+  // the picker opens under the place chip it was opened from (banner or popup)
+  const bannerPlaceRef = useRef<HTMLButtonElement>(null);
+  const fullPlaceRef = useRef<HTMLButtonElement>(null);
+  const [pickerAt, setPickerAt] = useState<'banner' | 'full'>('banner');
+  const ro = useRef<ResizeObserver | null>(null);
   const k = locKey(loc);
 
-  // the 7-day list sits beside the hours from 860 px (home.css): a day's hours
-  // then take the hours' place instead of opening inside the narrow list
-  useEffect(() => {
-    const el = cardRef.current;
+  // in the popup the 9-day list sits beside the hours from 860 px (home.css):
+  // a day's hours then take the hours' place instead of opening in the list
+  const fullRef = useCallback((el: HTMLDivElement | null) => {
+    ro.current?.disconnect();
+    ro.current = null;
     if (!el) return;
-    const ro = new ResizeObserver(() => setWide(el.clientWidth >= 860));
-    ro.observe(el);
-    return () => ro.disconnect();
+    ro.current = new ResizeObserver(() => setWide(el.clientWidth >= 860));
+    ro.current.observe(el);
   }, []);
 
   const load = useCallback(() => {
@@ -178,14 +183,49 @@ export function WeatherCard() {
     ...(d.sunset ? [{ time: d.sunset, rise: false }] : []),
   ]);
 
-  return (
-    <section
-      ref={cardRef}
-      className="kh-wx"
-      data-testid="weather"
-      data-kind={kind}
-      aria-label={`${t('wx_loc')}: ${loc.city}`}
+  const sky = (
+    <div className="kh-wx__sky">
+      <div style={{ position: 'absolute', inset: 0, background: wxBg(kind, isDay), opacity: 0.75 }} />
+      <WxFx kind={kind} isDay={isDay} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgb(var(--d) / calc(.12 * var(--d-k)))' }} />
+    </div>
+  );
+  const placeChip = (ref: React.RefObject<HTMLButtonElement | null>, at: 'banner' | 'full') => (
+    <button
+      ref={ref}
+      type="button"
+      className="kh-wx__place"
+      aria-haspopup="dialog"
+      aria-expanded={picker && pickerAt === at}
+      title={t('wx_change')}
+      onClick={() => {
+        setPickerAt(at);
+        setPicker((v) => !(v && pickerAt === at));
+      }}
     >
+      <Ico d={ICON.pin} />
+      <span className="kh-wx__ell">
+        {loc.city}
+        {loc.region && <small> · {loc.region.split(',').slice(-1)[0]!.trim()}</small>}
+      </span>
+      <span style={{ opacity: 0.7, display: 'flex' }}>
+        <Ico d={ICON.chevron} size={11} sw={2.6} />
+      </span>
+    </button>
+  );
+  const warnChip =
+    warns && warns.length > 0 ? (
+      <span className="kh-wx__chip" data-sumlevel={warns[0]!.level} data-always="">
+        <span className="kh-wx__dot" style={{ color: LEVEL_COLOR[warns[0]!.level] }} />
+        {warns.length === 1
+          ? `${warns[0]!.type === 'other' ? warns[0]!.name : t(`wx_w_${warns[0]!.type}`)} · ${t(`wx_lvl_${warns[0]!.level}`)}`
+          : fill(t('wx_warnN'), { n: warns.length })}
+      </span>
+    ) : null;
+
+  // the full forecast, shown in the popup
+  const detail = (
+    <div ref={fullRef} className="kh-wxd" data-testid="weather-full" data-kind={kind}>
       <div className="kh-wx__sky">
         <div style={{ position: 'absolute', inset: 0, background: wxBg(kind, isDay), opacity: 0.75 }} />
         <WxFx kind={kind} isDay={isDay} />
@@ -195,24 +235,7 @@ export function WeatherCard() {
       </div>
       <div className="kh-wx__body">
         <div className="kh-wx__head">
-          <button
-            ref={placeRef}
-            type="button"
-            className="kh-wx__place"
-            aria-haspopup="dialog"
-            aria-expanded={picker}
-            title={t('wx_change')}
-            onClick={() => setPicker((v) => !v)}
-          >
-            <Ico d={ICON.pin} />
-            <span className="kh-wx__ell">
-              {loc.city}
-              {loc.region && <small> · {loc.region.split(',').slice(-1)[0]!.trim()}</small>}
-            </span>
-            <span style={{ opacity: 0.7, display: 'flex' }}>
-              <Ico d={ICON.chevron} size={11} sw={2.6} />
-            </span>
-          </button>
+          {placeChip(fullPlaceRef, 'full')}
           <button
             type="button"
             className="kh-wx__iconbtn"
@@ -363,9 +386,124 @@ export function WeatherCard() {
           )}
         </div>
       </div>
+    </div>
+  );
+
+  const close = () => {
+    setFull(false);
+    setPicker(false);
+  };
+  return (
+    <section
+      className="kh-wx kh-wxb"
+      data-testid="weather"
+      data-kind={kind}
+      aria-label={`${t('wx_loc')}: ${loc.city}`}
+    >
+      {sky}
+      <button
+        type="button"
+        className="kh-wxb__open"
+        aria-haspopup="dialog"
+        aria-expanded={full}
+        aria-label={fill(t('wx_open'), { c: loc.city })}
+        onClick={() => setFull(true)}
+      />
+      <div className="kh-wxb__body">
+        <div className="kh-wxb__left">
+          {placeChip(bannerPlaceRef, 'banner')}
+          {!wx ? (
+            status === 'err' ? (
+              <div className="kh-wxb__msg" role="alert">
+                <Ico d={ICON.warn} size={14} />
+                {online ? t('wx_err') : fill(t('wx_offline'), { t: '—' })}
+                <button type="button" className="kh-wx__chip kh-wxb__live" onClick={load}>
+                  {t('wx_retry')}
+                </button>
+              </div>
+            ) : (
+              <div className="kh-wxb__msg" aria-busy="true">
+                <span className="kh-wx__sk" style={{ width: 200, height: 48 }} />
+                <span className="kh-wx__sk" style={{ width: 140, height: 14 }} />
+              </div>
+            )
+          ) : (
+            <>
+              <div className="kh-wx__hero kh-wxb__hero">
+                <span className="kh-wx__heroicon">
+                  <WxIcon cond={now!.cond} day={isDay} size={52} />
+                </span>
+                <div className="kh-wx__temp">{deg(now!.t, unit)}</div>
+                <div className="kh-wx__cond">
+                  <b>{t(`wx_k_${now!.cond}`)}</b>
+                  <span>{fill(t('wx_feelsLike'), { n: deg(now!.feels, unit) })}</span>
+                </div>
+              </div>
+              <div className="kh-wxb__chips">
+                {d0 && (
+                  <span className="kh-wx__chip">
+                    {t('wx_max')} <b style={{ color: tempInk(d0.max) }}>{deg(d0.max, unit)}</b>
+                    {t('wx_min')} <b style={{ color: tempInk(d0.min) }}>{deg(d0.min, unit)}</b>
+                  </span>
+                )}
+                <span className="kh-wx__chip kh-wxb__opt">
+                  <Ico d={ICON.wind} size={12} />
+                  <b>{now!.wind}</b>km/h
+                </span>
+                {warnChip}
+              </div>
+            </>
+          )}
+        </div>
+        {wx && (
+          <div className="kh-wxb__right">
+            <div className="kh-wxb__hours" aria-hidden="true">
+              {wx.hours.slice(0, 6).map((h, i) => (
+                <span key={h.time}>
+                  <small>{i === 0 ? t('wx_now') : hourLabel(h.time, lang, wx.tz)}</small>
+                  <WxIcon cond={h.cond} day={h.day} size={26} />
+                  <b style={{ color: tempInk(h.t) }}>{deg(h.t, unit)}</b>
+                  <i>{h.pop !== null && h.pop >= 20 ? `${h.pop}%` : ''}</i>
+                </span>
+              ))}
+            </div>
+            <div className="kh-wxb__hint">
+              <Ico d={ICON.umbrella} size={13} />
+              <span className="kh-wx__ell">{rainLine(wx.hours, wx.tz, t, lang)}</span>
+              <span className="kh-wxb__more">
+                {t('wx_full')}
+                <Ico d={ICON.right} size={12} sw={2.4} />
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+      {full &&
+        (phone ? (
+          <Sheet
+            open
+            onClose={close}
+            title={t('wx_title')}
+            closeLabel={t('ui_close')}
+            className="kh-wxm kh-wxm--sheet"
+          >
+            {detail}
+          </Sheet>
+        ) : (
+          <Modal
+            open
+            onClose={close}
+            title={t('wx_title')}
+            closeLabel={t('ui_close')}
+            size="lg"
+            className="kh-wxm"
+          >
+            {detail}
+          </Modal>
+        ))}
       {picker && (
         <WeatherPicker
-          anchor={placeRef}
+          anchor={pickerAt === 'full' ? fullPlaceRef : bannerPlaceRef}
           current={loc}
           recent={recent}
           unit={unit}
