@@ -735,7 +735,7 @@ function Inspector({
           ×
         </button>
       )}
-      <Connections type="note" id={note.id} transports />
+      <Connections type="note" id={note.id} transports files />
       <div className="kh-nt-insp__card kh-nt-insp__card--details">
         <div className="kh-nt-insp__h">{t('details')}</div>
         {[

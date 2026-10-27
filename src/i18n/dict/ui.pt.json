@@ -1203,5 +1203,11 @@
   "lm_zoom": "Zoom do mapa",
   "mob_editOnDesktop": "Editar no computador",
   "mob_editOnDesktopHint": "No telemóvel esta vista é só de consulta. Para alocar, arrastar ou editar em lote use o computador.",
-  "mob_day": "Dia"
+  "mob_day": "Dia",
+  "cf_title": "Ficheiros",
+  "cf_empty": "Nenhum ficheiro ligado.",
+  "cf_ph": "Pesquisar ficheiros para ligar…",
+  "fl_linkedTo": "Ligado a",
+  "fl_linkedEmpty": "Ainda não está ligado a notas, tarefas ou reuniões.",
+  "fl_linkPh": "Pesquisar notas, tarefas ou reuniões…"
 }

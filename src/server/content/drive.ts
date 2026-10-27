@@ -9,7 +9,7 @@ import {
   HeadObjectCommand,
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
-import { driveFiles, sharedFolders, users } from '@/db/schema';
+import { driveFiles, itemLinks, sharedFolders, users } from '@/db/schema';
 import { env } from '@/lib/env';
 import { s3 } from '@/lib/storage';
 import { redis } from '@/lib/redis';
@@ -397,7 +397,15 @@ export async function purgeDriveFilesTx(tx: Tx, ids: string[]) {
   const rs = await tx
     .delete(driveFiles)
     .where(and(inArray(driveFiles.id, ids), sql`${driveFiles.deletedAt} is not null`))
-    .returning({ key: driveFiles.storageKey });
+    .returning({ id: driveFiles.id, key: driveFiles.storageKey });
+  // their "Ligações" go with them (links are per user, like the files)
+  const gone = rs.map((r) => r.id);
+  if (gone.length)
+    await tx
+      .delete(itemLinks)
+      .where(
+        sql`(${itemLinks.aType} = 'file' and ${inArray(itemLinks.aId, gone)}) or (${itemLinks.bType} = 'file' and ${inArray(itemLinks.bId, gone)})`,
+      );
   removeFilesAfterCommit(
     tx,
     rs.map((r) => r.key),

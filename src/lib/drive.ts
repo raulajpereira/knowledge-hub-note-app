@@ -65,6 +65,26 @@ export function inlineType(name: string): string | null {
   return null;
 }
 
+/** a colour per kind of file, for the badge in the list */
+const KIND_TINT: Record<PreviewKind, string> = {
+  pdf: 'oklch(0.62 0.17 25)',
+  image: 'oklch(0.62 0.13 300)',
+  video: 'oklch(0.6 0.13 340)',
+  audio: 'oklch(0.62 0.12 200)',
+  text: 'oklch(0.55 0.03 60)',
+  docx: 'oklch(0.55 0.13 255)',
+  xlsx: 'oklch(0.58 0.13 150)',
+  none: 'oklch(0.5 0.02 60)',
+};
+const officeTint = (name: string) => {
+  const e = extOf(name);
+  if (['doc', 'docx', 'odt', 'rtf'].includes(e)) return KIND_TINT.docx;
+  if (['xls', 'xlsx', 'xlsm', 'ods', 'csv'].includes(e)) return KIND_TINT.xlsx;
+  if (['ppt', 'pptx', 'odp'].includes(e)) return 'oklch(0.62 0.15 45)';
+  if (['zip', 'rar', '7z', 'gz', 'tar'].includes(e)) return 'oklch(0.6 0.1 80)';
+  return null;
+};
+export const tintOf = (name: string) => officeTint(name) ?? KIND_TINT[previewKind(name)];
 /** Office/other files read in the browser for preview are fetched as bytes. */
 export const fetchedForPreview = (k: PreviewKind) => k === 'docx' || k === 'xlsx' || k === 'text';
 

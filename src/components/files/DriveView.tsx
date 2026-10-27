@@ -18,13 +18,14 @@ import {
   fmtBytes,
   inlineType,
   previewKind,
-  type PreviewKind,
+  tintOf,
 } from '@/lib/drive';
 import { Sheet, useConfirm, usePersistentState, useToast, useViewport } from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
+import { Connections } from '@/components/content/Connections';
 import { driveUpload } from './driveUpload';
 import { BackBar, FoldersButton, useListDetail } from '@/components/content/MobilePane';
 import '../emails/emails.css';
@@ -87,26 +88,6 @@ const I = {
   file: '<path d="M7 3h7l5 5v13H7z"></path><path d="M14 3v5h5"></path>',
 };
 
-/** a colour per kind of file, for the badge in the list */
-const KIND_TINT: Record<PreviewKind, string> = {
-  pdf: 'oklch(0.62 0.17 25)',
-  image: 'oklch(0.62 0.13 300)',
-  video: 'oklch(0.6 0.13 340)',
-  audio: 'oklch(0.62 0.12 200)',
-  text: 'oklch(0.55 0.03 60)',
-  docx: 'oklch(0.55 0.13 255)',
-  xlsx: 'oklch(0.58 0.13 150)',
-  none: 'oklch(0.5 0.02 60)',
-};
-const officeTint = (name: string) => {
-  const e = extOf(name);
-  if (['doc', 'docx', 'odt', 'rtf'].includes(e)) return KIND_TINT.docx;
-  if (['xls', 'xlsx', 'xlsm', 'ods', 'csv'].includes(e)) return KIND_TINT.xlsx;
-  if (['ppt', 'pptx', 'odp'].includes(e)) return 'oklch(0.62 0.15 45)';
-  if (['zip', 'rar', '7z', 'gz', 'tar'].includes(e)) return 'oklch(0.6 0.1 80)';
-  return null;
-};
-const tintOf = (name: string) => officeTint(name) ?? KIND_TINT[previewKind(name)];
 const raw = (id: string, dl = false) => `${BASE}/api/v1/drive/${id}/raw${dl ? '?dl=1' : ''}`;
 const langFor = (name: string) => {
   const e = extOf(name);
@@ -736,6 +717,8 @@ export function DriveView() {
             {(previewKind(active.name) === 'image' || previewKind(active.name) === 'pdf') && (
               <OcrText key={`ocr-${active.id}`} id={active.id} />
             )}
+            {/* "Ligado a": the notes, tasks and meetings linked to the file (links are the owner's) */}
+            {active.mine && <Connections key={`cx-${active.id}`} type="file" id={active.id} variant="box" />}
           </div>
         ) : (
           <div className="kh-em-none kh-fl-none">

@@ -171,7 +171,8 @@
 
 /* ── Preview ─────────────────────────────────────────────────────────────── */
 .kh-fl-main {
-  overflow: hidden;
+  /* scrolls only when "Ligado a" (and its search results) don't fit under the preview */
+  overflow: hidden auto;
 }
 .kh-fl-titles {
   flex: 1 1 320px;

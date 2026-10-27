@@ -1051,7 +1051,7 @@ export function MeetingsView() {
               </div>
             </div>
 
-            <Connections key={`${act.id}:${linksKey}`} type="meeting" id={act.id} variant="section" />
+            <Connections key={`${act.id}:${linksKey}`} type="meeting" id={act.id} variant="section" files />
           </div>
         ) : (
           <div className="kh-em-none">{items && !all.length ? t('mt_empty') : t('mt_noActive')}</div>

@@ -20,6 +20,7 @@ import {
   sapObjects,
   sapFnRecords,
   sapNotes,
+  sharedFolders,
   tasks,
   vaultItems,
   voiceNotes,
@@ -1278,6 +1279,8 @@ const LINKABLE = {
   voice: { table: voiceNotes, title: voiceNotes.title, at: voiceNotes.createdAt },
   issue: { table: issues, title: issues.title, at: issues.createdAt },
   meeting: { table: meetings, title: meetings.title, at: meetings.createdAt },
+  // Ficheiros: the caller's own files (links are owner-only, like every other type)
+  file: { table: driveFiles, title: driveFiles.name, at: driveFiles.updatedAt },
   artifact: { table: artifacts, title: artifacts.title, at: artifacts.updatedAt },
   code: { table: sapObjects, title: sapObjects.name, at: sapObjects.updatedAt },
   transport: { table: sapTransports, title: sapTransports.trkorr, at: sapTransports.createdAt },
@@ -1300,10 +1303,19 @@ async function assertOwned(tx: Tx, ref: ItemRef) {
   if (!r) throw new ApiError(404, 'not_found');
 }
 
-/** Extra text per linked item: SAP object type, or the transport description and stage. */
+/** Extra text per linked item: SAP object type, the transport description and stage, or a file's folder and size. */
 async function linkDetails(tx: Tx, type: LinkType, ids: string[]) {
-  const out = new Map<string, { sub: string; stage?: LinkStage }>();
+  const out = new Map<string, { sub: string; stage?: LinkStage; size?: number }>();
   if (!ids.length) return out;
+  if (type === 'file') {
+    const rs = await tx
+      .select({ id: driveFiles.id, size: driveFiles.size, folder: folders.name, shared: sharedFolders.name })
+      .from(driveFiles)
+      .leftJoin(folders, eq(folders.id, driveFiles.folderId))
+      .leftJoin(sharedFolders, eq(sharedFolders.id, driveFiles.sharedFolderId))
+      .where(inArray(driveFiles.id, ids));
+    for (const r of rs) out.set(r.id, { sub: r.shared ?? r.folder ?? '', size: Number(r.size) });
+  }
   if (type === 'code') {
     const rs = await tx
       .select({ id: sapObjects.id, type: sapObjects.type, desc: sapObjects.description })
@@ -1347,7 +1359,7 @@ export async function linksOf(auth: AuthContext, ref: ItemRef) {
     const others = rows.map((r) =>
       r.aType === ref.type && r.aId === ref.id ? { type: r.bType, id: r.bId } : { type: r.aType, id: r.aId },
     );
-    const found = new Map<string, { title: string; sub?: string; stage?: LinkStage }>();
+    const found = new Map<string, { title: string; sub?: string; stage?: LinkStage; size?: number }>();
     for (const [type, L] of Object.entries(LINKABLE)) {
       const ids = others.filter((o) => o.type === type).map((o) => o.id);
       if (!ids.length) continue;
@@ -1380,6 +1392,7 @@ export async function linkCandidates(
       sub: string;
       at: string;
       stage?: LinkStage;
+      size?: number;
     }> = [];
     for (const type of types) {
       const L = LINKABLE[type];
@@ -1429,7 +1442,7 @@ export async function linkCandidates(
       .filter((x) => {
         const n = (per.get(x.type) ?? 0) + 1;
         per.set(x.type, n);
-        return n <= (x.type === ref.type ? 6 : 3);
+        return n <= (x.type === ref.type ? 6 : x.type === 'file' ? 8 : 3);
       })
       .slice(0, 24);
   });
