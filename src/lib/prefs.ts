@@ -149,6 +149,8 @@ export const WeatherLoc = z.object({
   lat: z.number().min(-90).max(90),
   lon: z.number().min(-180).max(180),
   city: z.string().max(80),
+  /** district/state and country, shown under the name in the picker */
+  region: z.string().max(120).optional(),
   manual: z.boolean().optional(),
 });
 export type WeatherLoc = z.infer<typeof WeatherLoc>;

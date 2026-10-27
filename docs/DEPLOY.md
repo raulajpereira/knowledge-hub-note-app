@@ -53,6 +53,12 @@ Valores a preencher no `.env`:
   `INBOUND_IMAP_USER`, `INBOUND_IMAP_PASSWORD`, `INBOUND_ADDRESS`. Vazios = a funcionalidade fica escondida.
 - `SUPERADMIN_EMAIL=raul.a.j.pereira@gmail.com`
 - `SUPERADMIN_NAME`
+- Meteorologia no Início (opcional): `WEATHER_USER_AGENT` — os termos da MET Norway e do Nominatim
+  pedem um User-Agent que identifique a aplicação com um contacto; vazio = `KnowledgeHub/2.0 (+<origem do
+  APP_URL>)`. Pode juntar um email de contacto (ex. `KnowledgeHub/2.0 (+https://knowledge-hub.cloud;
+  ops@…)`). Sem chaves. A VPS precisa de HTTPS de saída para `api.met.no`, `api.ipma.pt`,
+  `nominatim.openstreetmap.org` e, como alternativa, `api.open-meteo.com` / `geocoding-api.open-meteo.com`.
+  `WEATHER_TEST_BASE_URL` é só para testes (nunca em produção).
 - Pesquisa semântica / OCR (opcional, §6c): `SEMANTIC_SEARCH=on|off`, `OCR=on|off`, `EMBED_MODEL`,
   `EMBED_IDLE_MIN`, `OCR_MAX_MB`, `OCR_MAX_PAGES` (os valores por omissão servem; `EMBED_URL`,
   `EMBED_HOST` e `MODEL_CACHE_DIR` são definidos pelo `docker-compose.yml`).

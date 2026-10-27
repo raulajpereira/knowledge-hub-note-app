@@ -5,3 +5,5 @@ dist/
 node_modules/
 package-lock.json
 *.tmp.mjs
+# recorded-format provider responses, kept as served
+tests/fixtures/

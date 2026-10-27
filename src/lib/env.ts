@@ -121,6 +121,18 @@ export const serverEnvSchema = z.object({
   OCR_MAX_MB: z.coerce.number().min(1).max(200).default(15),
   OCR_MAX_PAGES: z.coerce.number().int().min(1).max(200).default(20),
 
+  // Weather on Início (MET Norway, IPMA warnings, OpenStreetMap Nominatim;
+  // Open-Meteo as fallback). Their terms ask for an identifying User-Agent with
+  // a contact: by default "KnowledgeHub/2.0 (+<APP_URL origin>)"; set this to
+  // add an email, e.g. "KnowledgeHub/2.0 (+https://example.org; ops@example.org)".
+  WEATHER_USER_AGENT: z.preprocess((v) => (v === '' ? undefined : v), z.string().max(200).optional()),
+  // Tests only: every weather/geocoding call goes to this local fake
+  // (tests/stubs/fakeWeather.mjs). Loopback only, like AI_TEST_BASE_URL.
+  WEATHER_TEST_BASE_URL: z
+    .url()
+    .refine((u) => isLoopback(u), 'must be a loopback address (tests only)')
+    .optional(),
+
   // Tests only: every OpenAI-compatible AI call goes to this local fake.
   // Never set in production — and only a loopback address is accepted, so a
   // stray value can't send people's AI keys anywhere.

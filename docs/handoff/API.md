@@ -36,7 +36,7 @@ Convenção: `/api/v1/...`, JSON, sessão por cookie, erros `{ error: { code, me
 - `POST /share/links` {itemType, itemId, password?, expiresAt?} · `DELETE /share/links/:id` · `GET /p/:token` (pública)
 - `/share/folders` (+ members: POST invite, PATCH perm/pause, DELETE) · `POST /share/folders/:id/accept`
 - `/news/sources?scope=sap|footer` · `GET /news?scope=` (cache servidor) · `/news/saved`
-- `GET /weather?lat&lon` ou `?city=` (proxy Open-Meteo com cache)
+- `GET /weather?lat&lon` (MET Norway + avisos IPMA em Portugal; Open-Meteo como alternativa; cache Redis), `GET /weather/geocode?q=` (Nominatim, até 6 locais), `GET /weather/reverse?lat&lon` (nome da localidade)
 
 ## Pedidos de plano (sem faturação na app)
 - `GET /plans` (público) · `POST /plan-requests` {planId | modules[], seats, cycle, notes} → notifica administradores por email e aparece na Admin Console

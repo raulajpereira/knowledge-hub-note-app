@@ -1,51 +1,27 @@
-// Weather visuals 1:1 from the prototype (wxKind, wxLabelKey, WX_ICON, WX_BG, wxFxEl).
+// Weather visuals from the prototype (WX_ICON, WX_BG, wxFxEl), extended with
+// night, showers, light/heavy rain and sleet icons for the richer conditions.
 import type { CSSProperties, ReactElement } from 'react';
+import type { Cond } from '@/lib/weather';
 
 export type WxKind = 'clear' | 'partly' | 'cloudy' | 'fog' | 'rain' | 'snow' | 'storm';
 
-export const wxKind = (c: number): WxKind =>
-  c === 0 || c === 1
+/** Condition → the animated sky it gets. */
+export const condKind = (c: Cond): WxKind =>
+  c === 'clear' || c === 'fair'
     ? 'clear'
-    : c === 2
+    : c === 'partly'
       ? 'partly'
-      : c === 3
-        ? 'cloudy'
-        : c === 45 || c === 48
-          ? 'fog'
-          : (c >= 51 && c <= 67) || (c >= 80 && c <= 82)
-            ? 'rain'
-            : (c >= 71 && c <= 77) || c === 85 || c === 86
-              ? 'snow'
-              : c >= 95
-                ? 'storm'
-                : 'cloudy';
+      : c === 'fog'
+        ? 'fog'
+        : c === 'lightrain' || c === 'rain' || c === 'heavyrain' || c === 'showers'
+          ? 'rain'
+          : c === 'sleet' || c === 'snow'
+            ? 'snow'
+            : c === 'storm'
+              ? 'storm'
+              : 'cloudy';
 
-export const wxLabelKey = (c: number) =>
-  c === 0
-    ? 'c0'
-    : c === 1
-      ? 'c1'
-      : c === 2
-        ? 'c2'
-        : c === 3
-          ? 'c3'
-          : c === 45 || c === 48
-            ? 'c45'
-            : c >= 51 && c <= 57
-              ? 'c51'
-              : c === 65 || c === 67 || c === 82
-                ? 'c65'
-                : c >= 61 && c <= 67
-                  ? 'c61'
-                  : (c >= 71 && c <= 77) || c === 85 || c === 86
-                    ? 'c71'
-                    : c >= 80 && c <= 82
-                      ? 'c80'
-                      : c >= 95
-                        ? 'c95'
-                        : 'c3';
-
-const WX_ICON: Record<WxKind, string> = (() => {
+const ICONS = (() => {
   const sun = (cx: number, cy: number, rr: number) =>
     '<g stroke="#ffd36b" stroke-width="1.6" stroke-linecap="round">' +
     [0, 45, 90, 135, 180, 225, 270, 315]
@@ -57,41 +33,110 @@ const WX_ICON: Record<WxKind, string> = (() => {
       })
       .join('') +
     `</g><circle cx="${cx}" cy="${cy}" r="${rr}" fill="url(#wxs)"></circle>`;
+  const moon = (dx = 0, dy = 0, k = 1) =>
+    `<path transform="translate(${dx} ${dy}) scale(${k})" d="M20.5 8.2a9.6 9.6 0 1 0 7.3 14.6A7.8 7.8 0 0 1 20.5 8.2z" fill="url(#wxm)"></path>`;
   const cloud = (fill: string, dx = 0, dy = 0) =>
     `<path transform="translate(${dx} ${dy})" d="M9 26h15.5a5.5 5.5 0 0 0 .6-10.97A7.5 7.5 0 0 0 10.6 13.2 6.4 6.4 0 0 0 9 26z" fill="${fill}"></path>`;
   const defs =
-    '<defs><linearGradient id="wxs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe89a"></stop><stop offset="1" stop-color="#ffb347"></stop></linearGradient><linearGradient id="wxc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"></stop><stop offset="1" stop-color="#dfe7f2"></stop></linearGradient><linearGradient id="wxd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9e1ec"></stop><stop offset="1" stop-color="#9eabbf"></stop></linearGradient></defs>';
-  const drops = (c: string) =>
-    `<g stroke="${c}" stroke-width="2" stroke-linecap="round"><line x1="12.5" y1="26" x2="11" y2="30.5"></line><line x1="17.5" y1="27" x2="16" y2="31.5"></line><line x1="22.5" y1="26" x2="21" y2="30.5"></line></g>`;
-  return {
-    clear: defs + sun(18, 18, 7),
-    partly: defs + sun(13, 13, 5.5) + cloud('url(#wxc)', 3, 2),
-    cloudy: defs + cloud('url(#wxd)', 5, -3) + cloud('url(#wxc)', 0, 2),
-    fog:
-      defs +
-      cloud('url(#wxc)', 0, -3) +
-      '<g stroke="#e8eef6" stroke-width="2" stroke-linecap="round"><line x1="7" y1="28" x2="29" y2="28"></line><line x1="10" y1="32.5" x2="26" y2="32.5"></line></g>',
-    rain: defs + cloud('url(#wxd)', 0, -3) + drops('#8ec5ff'),
-    snow:
-      defs +
-      cloud('url(#wxc)', 0, -3) +
-      '<g fill="#ffffff"><circle cx="12" cy="27.5" r="1.6"></circle><circle cx="17" cy="30" r="1.6"></circle><circle cx="22" cy="27.5" r="1.6"></circle></g>',
-    storm:
-      defs +
-      cloud('url(#wxd)', 0, -3) +
-      '<path d="M19 23l-4 6.5h3.6L16.5 35l6-8h-3.8l2.3-4z" fill="#ffd36b"></path>',
+    '<defs><linearGradient id="wxs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe89a"></stop><stop offset="1" stop-color="#ffb347"></stop></linearGradient><linearGradient id="wxm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffbe8"></stop><stop offset="1" stop-color="#e3dcc4"></stop></linearGradient><linearGradient id="wxc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"></stop><stop offset="1" stop-color="#dfe7f2"></stop></linearGradient><linearGradient id="wxd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9e1ec"></stop><stop offset="1" stop-color="#9eabbf"></stop></linearGradient></defs>';
+  const drop = (x: number, y: number) => `<line x1="${x}" y1="${y}" x2="${x - 1.5}" y2="${y + 4.5}"></line>`;
+  const drops = (xs: Array<[number, number]>, c = '#8ec5ff') =>
+    `<g stroke="${c}" stroke-width="2" stroke-linecap="round">${xs.map(([x, y]) => drop(x, y)).join('')}</g>`;
+  const flakes = (xs: Array<[number, number]>) =>
+    `<g fill="#ffffff">${xs.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6"></circle>`).join('')}</g>`;
+  const R3: Array<[number, number]> = [
+    [12.5, 26],
+    [17.5, 27],
+    [22.5, 26],
+  ];
+  const small = (d: string) => `<g transform="translate(4 4) scale(.78)">${d}</g>`;
+  const body = (c: Cond, day: boolean) => {
+    const light = day ? sun(13, 13, 5.5) : moon(-5, -3, 0.82);
+    switch (c) {
+      case 'clear':
+        return day ? sun(18, 18, 7) : moon(-1, 0);
+      case 'fair':
+        return day
+          ? sun(16, 16, 6.5) + small(cloud('url(#wxc)', 14, 12))
+          : moon(-1, -1) + small(cloud('url(#wxc)', 14, 12));
+      case 'partly':
+        return light + cloud('url(#wxc)', 3, 2);
+      case 'cloudy':
+        return cloud('url(#wxd)', 5, -3) + cloud('url(#wxc)', 0, 2);
+      case 'fog':
+        return (
+          cloud('url(#wxc)', 0, -3) +
+          '<g stroke="#e8eef6" stroke-width="2" stroke-linecap="round"><line x1="7" y1="28" x2="29" y2="28"></line><line x1="10" y1="32.5" x2="26" y2="32.5"></line></g>'
+        );
+      case 'lightrain':
+        return (
+          cloud('url(#wxc)', 0, -3) +
+          drops([
+            [14.5, 26],
+            [21, 26.5],
+          ])
+        );
+      case 'rain':
+        return cloud('url(#wxd)', 0, -3) + drops(R3);
+      case 'heavyrain':
+        return (
+          cloud('url(#wxd)', 0, -3) +
+          drops(
+            [
+              [10.5, 26],
+              [15, 27.5],
+              [19.5, 26],
+              [24, 27.5],
+            ],
+            '#6fb2ff',
+          )
+        );
+      case 'showers':
+        return (
+          light +
+          cloud('url(#wxc)', 3, -1) +
+          drops([
+            [15.5, 27],
+            [21.5, 27.5],
+          ])
+        );
+      case 'sleet':
+        return (
+          cloud('url(#wxc)', 0, -3) +
+          drops([
+            [13, 26],
+            [21, 26],
+          ]) +
+          flakes([[17, 29.5]])
+        );
+      case 'snow':
+        return (
+          cloud('url(#wxc)', 0, -3) +
+          flakes([
+            [12, 27.5],
+            [17, 30],
+            [22, 27.5],
+          ])
+        );
+      case 'storm':
+        return (
+          cloud('url(#wxd)', 0, -3) +
+          '<path d="M19 23l-4 6.5h3.6L16.5 35l6-8h-3.8l2.3-4z" fill="#ffd36b"></path>'
+        );
+    }
   };
+  return (c: Cond, day: boolean) => defs + body(c, day);
 })();
 
-export function WxIcon({ code, size = 44 }: { code: number; size?: number }) {
+export function WxIcon({ cond, day = true, size = 44 }: { cond: Cond; day?: boolean; size?: number }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 36 36"
-      style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,.18))' }}
+      style={{ flex: 'none', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,.18))' }}
       aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: WX_ICON[wxKind(code)] }}
+      dangerouslySetInnerHTML={{ __html: ICONS(cond, day) }}
     />
   );
 }
@@ -269,39 +314,4 @@ export function WxFx({ kind, isDay }: { kind: WxKind; isDay: boolean }) {
         />,
       );
   return <div style={{ position: 'absolute', inset: 0, zIndex: 1, overflow: 'hidden' }}>{kids}</div>;
-}
-
-export type Alert = [text: string, tone: 'purple' | 'blue' | 'amber' | 'red'];
-export const ALERT_BG = {
-  purple: 'oklch(0.55 0.18 300 / .55)',
-  blue: 'oklch(0.55 0.14 245 / .55)',
-  amber: 'oklch(0.7 0.16 70 / .6)',
-  red: 'oklch(0.6 0.2 25 / .6)',
-} as const;
-
-type Daily = {
-  weather_code: number[];
-  precipitation_sum: number[];
-  wind_gusts_10m_max: number[];
-  temperature_2m_max: number[];
-  temperature_2m_min: number[];
-  uv_index_max?: number[];
-};
-
-/** Warnings derived from the forecast (prototype `alerts`). */
-export function wxAlerts(dl: Daily, gustsNow: number, t: (k: string) => string): Alert[] {
-  const out: Alert[] = [];
-  const cs = [dl.weather_code[0] ?? 0, dl.weather_code[1] ?? 0];
-  if (cs.some((c) => c >= 95)) out.push([t('wx_a_storm'), 'purple']);
-  if ((dl.precipitation_sum[0] ?? 0) >= 20 || (dl.precipitation_sum[1] ?? 0) >= 20)
-    out.push([t('wx_a_rain'), 'blue']);
-  const gust = Math.max(dl.wind_gusts_10m_max[0] ?? 0, gustsNow || 0);
-  if (gust >= 60) out.push([`${t('wx_a_wind')} · ${Math.round(gust)} km/h`, 'amber']);
-  if ((dl.temperature_2m_max[0] ?? 0) >= 35)
-    out.push([`${t('wx_a_heat')} · ${Math.round(dl.temperature_2m_max[0]!)}°`, 'red']);
-  if ((dl.temperature_2m_min[0] ?? 99) <= 0) out.push([t('wx_a_cold'), 'blue']);
-  if (cs.some((c) => (c >= 71 && c <= 77) || c === 85 || c === 86)) out.push([t('wx_a_snow'), 'blue']);
-  if ((dl.uv_index_max?.[0] ?? 0) >= 8)
-    out.push([`${t('wx_a_uv')} · ${Math.round(dl.uv_index_max![0]!)}`, 'amber']);
-  return out;
 }

@@ -40,6 +40,7 @@
     "@huggingface/transformers": "^4.3.1",
     "@kenjiuno/msgreader": "^1.28.0",
     "@node-rs/argon2": "^2.2.2",
+    "@photostructure/tz-lookup": "^11.7.0",
     "@tesseract.js-data/eng": "^1.0.0",
     "@tesseract.js-data/por": "^1.0.0",
     "@tiptap/extension-code-block": "^3.31.4",
