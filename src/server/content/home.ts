@@ -15,6 +15,7 @@ import {
 } from '@/db/schema';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser } from './tenant';
+import { openTicketsTx, type HomeTicket } from './tickets';
 
 // Data for the Início cards (prototype isHome): only what the plan includes.
 
@@ -56,6 +57,8 @@ export type HomeData = {
     qas: boolean;
     createdAt: string;
   }>;
+  /** Tickets abertos: the open tickets (not Resolvido / Fechado / Cancelado). */
+  tickets?: HomeTicket[];
   /** Transações Favoritas: the user's favourite transactions. */
   tcodes?: Array<{ id: string; code: string; module: string; description: string }>;
   /** Acesso Rápido SAP: the user's favourite systems (enough to build the .sap shortcut). */
@@ -126,6 +129,7 @@ export async function homeData(auth: AuthContext, modules: ReadonlySet<string>):
         .from(issues)
         .where(and(isNull(issues.deletedAt), sql`${issues.status} <> 'done'`))
         .limit(2000)) as NonNullable<HomeData['issues']>;
+    if (modules.has('tickets')) out.tickets = await openTicketsTx(tx);
     if (modules.has('emails')) {
       const rows = await tx
         .select({

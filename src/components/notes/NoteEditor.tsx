@@ -190,8 +190,8 @@ export function useNoteEditor({
         const store = imagesRef.current;
         if (!src || store.stored.test(src) || pending.current.has(src)) return;
         pending.current.add(src);
-        // data: URLs and the app's own stored images (copied from a note / a meeting record) are uploaded again
-        const own = /^\/api\/v1\/(meetings\/)?files\/[0-9a-f-]{36}$/.test(src);
+        // data: URLs and the app's own stored images (copied from a note / a meeting record / a ticket) are uploaded again
+        const own = /^\/api\/v1\/(meetings\/|tickets\/)?files\/[0-9a-f-]{36}$/.test(src);
         const job =
           src.startsWith('data:image/') || own
             ? fetch(own ? `${BASE}${src}` : src, { credentials: 'same-origin' })

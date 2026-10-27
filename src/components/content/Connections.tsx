@@ -18,7 +18,7 @@ import './content.css';
 // itself the card reads "Ligado a" (its notes, tasks and meetings).
 
 export type ItemType =
-  'note' | 'task' | 'voice' | 'issue' | 'meeting' | 'file' | 'artifact' | 'code' | 'transport' | 'sapnote';
+  'note' | 'task' | 'voice' | 'issue' | 'meeting' | 'file' | 'artifact' | 'code' | 'transport' | 'sapnote' | 'ticket';
 type Stage = 'mod' | 'rel' | 'qas' | 'prd' | 'junk';
 type Link = { type: ItemType; id: string; title: string; sub?: string; stage?: Stage; size?: number };
 /** cx: "Ligações" · tr: "Ordens de Transporte" · file: "Ficheiros" */
@@ -36,6 +36,7 @@ export const ITEM_DOT: Record<ItemType, string> = {
   code: 'oklch(0.84 0.1 245)',
   transport: 'oklch(0.82 0.11 210)',
   sapnote: 'oklch(0.8 0.13 20)',
+  ticket: 'oklch(0.78 0.12 262)',
 };
 const ITEM_KIND: Record<ItemType, string> = {
   note: 'k_note',
@@ -48,6 +49,7 @@ const ITEM_KIND: Record<ItemType, string> = {
   code: 'k_code',
   transport: 'k_tr',
   sapnote: 'k_sapnote',
+  ticket: 'k_ticket',
 };
 /** Prototype trStage: badge text and colour. */
 const STAGE: Record<Stage, [string, string]> = {
@@ -69,6 +71,7 @@ export const itemHref = (type: ItemType, id: string) =>
     transport: `/app/transports?o=${id}`,
     sapnote: `/app/sapnotes?n=${id}`,
     note: `/app/notes?n=${id}`,
+    ticket: `/app/tickets?k=${id}`,
   })[type];
 
 export function Connections({

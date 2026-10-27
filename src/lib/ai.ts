@@ -112,4 +112,5 @@ export const AI_SOURCE_HREF: Record<string, (id: string) => string> = {
   code: (id) => `/app/codelib?o=${id}`,
   transport: (id) => `/app/transports?o=${id}`,
   file: (id) => `/app/files?f=${id}`,
+  ticket: (id) => `/app/tickets?k=${id}`,
 };

@@ -36,6 +36,7 @@ import {
 } from './homeModel';
 import { fmtT, pomo, usePomodoro } from './pomodoro';
 import { WeatherCard } from './WeatherCard';
+import { TicketsHomeCard, type HomeTicket } from '@/components/tickets/TicketsHomeCard';
 import './home.css';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
@@ -71,6 +72,7 @@ type HomeData = {
     pinned: Array<{ id: string; subject: string }>;
   };
   tcodes?: Array<{ id: string; code: string; module: string; description: string }>;
+  tickets?: HomeTicket[];
   transports?: Array<{
     id: string;
     trkorr: string;
@@ -334,7 +336,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           size:
             type === 'today'
               ? 'L'
-              : ['tasks', 'deadlines', 'transports', 'issues'].includes(type)
+              : ['tasks', 'deadlines', 'transports', 'issues', 'tickets'].includes(type)
                 ? 'M'
                 : 'S',
         },
@@ -967,6 +969,8 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           </>
         );
       }
+      case 'tickets':
+        return <TicketsHomeCard items={data.tickets ?? []} />;
       case 'transports': {
         const trs = data.transports ?? [];
         const stOf = (x: (typeof trs)[number]) => (!x.released ? 'mod' : x.qas ? 'qas' : 'rel');
@@ -1268,6 +1272,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
     systems: data.systems?.length ?? 0,
     qnotes: 0,
     emails: data.emails?.starred.length ?? 0,
+    tickets: data.tickets?.length ?? 0,
   };
   const catalog = HOME_TYPES.filter(
     (k) => widgetAllowed(k, modules) && !home.widgets.some((w) => w.type === k),

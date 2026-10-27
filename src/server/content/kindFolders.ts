@@ -6,10 +6,10 @@ import type { AuthContext } from '@/server/auth/session';
 import { asUser, type Tx } from './tenant';
 
 // Flat folders of a page (as in Notes and Artifacts), private to their owner
-// (RLS): Ficheiros, Registos Reuniões. Removing a folder keeps its items
+// (RLS): Ficheiros, Registos Reuniões, Tickets. Removing a folder keeps its items
 // (they go to "no folder" through the ON DELETE SET NULL of their folder_id).
 
-export type FolderKind = 'files' | 'meetings';
+export type FolderKind = 'files' | 'meetings' | 'tickets';
 export type KindFolder = { id: string; name: string; color: string };
 
 const COLORS = ['#7fb0ff', '#7fd0a7', '#f0c36d', '#d39bff', '#ff9f8a', '#7fd6e0'];

@@ -60,6 +60,7 @@ export const trashItems = z.object({
           'code',
           'fn',
           'sapnote',
+          'ticket',
         ]),
         id: z.uuid(),
       }),
@@ -77,6 +78,7 @@ export const LINK_TYPES = [
   'code',
   'transport',
   'sapnote',
+  'ticket',
 ] as const;
 export const itemRef = z.object({
   type: z.enum(LINK_TYPES),
@@ -95,4 +97,5 @@ export const moduleOfType = (type: (typeof LINK_TYPES)[number]) =>
     code: 'codelib',
     transport: 'transports',
     sapnote: 'sapnotes',
+    ticket: 'tickets',
   })[type];
