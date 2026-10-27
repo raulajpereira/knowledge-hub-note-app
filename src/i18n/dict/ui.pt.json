@@ -1412,5 +1412,8 @@
   "wx_later": "Horas seguintes",
   "wx_closeDay": "Fechar o dia",
   "wx_windTile": "Vento",
-  "wx_humTile": "Humidade"
+  "wx_humTile": "Humidade",
+  "wx_open": "Abrir a previsão completa de {c}",
+  "wx_full": "Previsão completa",
+  "wx_title": "Meteorologia"
 }

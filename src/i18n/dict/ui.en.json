@@ -1412,5 +1412,8 @@
   "wx_later": "Later hours",
   "wx_closeDay": "Close the day",
   "wx_windTile": "Wind",
-  "wx_humTile": "Humidity"
+  "wx_humTile": "Humidity",
+  "wx_open": "Open the full forecast for {c}",
+  "wx_full": "Full forecast",
+  "wx_title": "Weather"
 }
