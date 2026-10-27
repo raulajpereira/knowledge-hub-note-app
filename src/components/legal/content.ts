@@ -193,7 +193,7 @@ const privacy: Record<Lang, LegalDoc> = {
       {
         h: '4. Subcontratantes e transferências',
         p: [
-          'Hostinger (alojamento do servidor, base de dados e ficheiros num centro de dados na União Europeia, e envio de email). Quando ativado, Cloudflare Turnstile para o desafio anti-robô no início de sessão. O serviço consulta ainda, a partir do nosso servidor e sem dados pessoais, a previsão do tempo (Open-Meteo) e verifica se uma nova palavra-passe consta de fugas conhecidas (Have I Been Pwned, só com parte do hash).',
+          'Hostinger (alojamento do servidor, base de dados e ficheiros num centro de dados na União Europeia, e envio de email). Quando ativado, Cloudflare Turnstile para o desafio anti-robô no início de sessão. O serviço consulta ainda, a partir do nosso servidor e sem identificar a pessoa, a previsão do tempo (MET Norway; avisos do IPMA; Open-Meteo como alternativa — só com as coordenadas do local escolhido, arredondadas a cerca de 1 km) e a pesquisa de localidades (OpenStreetMap Nominatim, só com o nome procurado ou essas coordenadas), e verifica se uma nova palavra-passe consta de fugas conhecidas (Have I Been Pwned, só com parte do hash).',
           'Os dados ficam na União Europeia. Se algum subcontratante tratar dados fora do Espaço Económico Europeu, fá-lo com as garantias exigidas pelo RGPD.',
         ],
       },
@@ -258,7 +258,7 @@ const privacy: Record<Lang, LegalDoc> = {
       {
         h: '4. Processors and transfers',
         p: [
-          'Hostinger (hosting of the server, database and files in a data centre in the European Union, and email delivery). When enabled, Cloudflare Turnstile for the anti-bot challenge at sign-in. From our server and without personal data, the service also fetches the weather forecast (Open-Meteo) and checks whether a new password appears in known breaches (Have I Been Pwned, with only part of the hash).',
+          'Hostinger (hosting of the server, database and files in a data centre in the European Union, and email delivery). When enabled, Cloudflare Turnstile for the anti-bot challenge at sign-in. From our server and without identifying anyone, the service also fetches the weather forecast (MET Norway; IPMA warnings; Open-Meteo as a fallback — only with the chosen place’s coordinates, rounded to about 1 km) and looks up places (OpenStreetMap Nominatim, only with the searched name or those coordinates), and checks whether a new password appears in known breaches (Have I Been Pwned, with only part of the hash).',
           'Data stays in the European Union. If a processor handles data outside the European Economic Area, it does so with the safeguards required by the GDPR.',
         ],
       },

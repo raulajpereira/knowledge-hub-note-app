@@ -7,12 +7,12 @@ import { geocode } from '@/server/weather';
 
 const Q = z.object({ q: z.string().trim().min(1).max(80), lang: z.enum(['pt', 'en']).default('pt') });
 
-/** GET /weather/geocode?q=Porto — city name → coordinates (Open-Meteo geocoding). */
+/** GET /weather/geocode?q=Porto — city name → up to 6 places (OpenStreetMap Nominatim, cached). */
 export const GET = handler(async (req) => {
   const auth = await requireAuth();
   if (!(await allow(`geo:${auth.user.id}`, 30, 600))) throw new ApiError(429, 'too_many_requests');
   const q = Q.parse(Object.fromEntries(req.nextUrl.searchParams));
-  const r = await geocode(q.q, q.lang);
-  if (!r) throw new ApiError(404, 'city_not_found');
-  return json(r);
+  const places = await geocode(q.q, q.lang);
+  if (!places.length) throw new ApiError(404, 'city_not_found');
+  return json({ places });
 });

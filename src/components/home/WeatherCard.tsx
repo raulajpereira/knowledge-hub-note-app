@@ -1,120 +1,191 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { api, isApiFailure } from '@/lib/client/api';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { usePersistentState } from '@/components/ui';
+import { api } from '@/lib/client/api';
 import type { WeatherLoc } from '@/lib/prefs';
+import {
+  compass,
+  tempColor,
+  tempGradient,
+  tempInk,
+  uvBand,
+  wxAlerts,
+  type Wx,
+  type WxDay,
+  type WxHour,
+  type WxNow,
+  type WxWarning,
+} from '@/lib/weather';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useI18n } from '@/i18n/client';
-import { ALERT_BG, WxFx, WxIcon, wxAlerts, wxBg, wxKind, wxLabelKey } from './weatherArt';
+import { WeatherHours, Ico, WindArrow } from './WeatherHours';
+import { WeatherPicker } from './WeatherPicker';
+import { WxFx, WxIcon, condKind, wxBg } from './weatherArt';
+import { ICON, dayTime, deg, duration, fill, hm, weekday, type TempUnit } from './weatherFmt';
 
-type Forecast = {
-  current: {
-    temperature_2m: number;
-    apparent_temperature: number;
-    relative_humidity_2m: number;
-    weather_code: number;
-    wind_speed_10m: number;
-    wind_gusts_10m: number;
-    is_day: number;
-  };
-  daily: {
-    time: string[];
-    weather_code: number[];
-    temperature_2m_max: number[];
-    temperature_2m_min: number[];
-    precipitation_sum: number[];
-    precipitation_probability_max: number[];
-    wind_gusts_10m_max: number[];
-    uv_index_max: number[];
-  };
-};
-
-const LISBOA: WeatherLoc = { lat: 38.72, lon: -9.14, city: 'Lisboa' };
+const LISBOA: WeatherLoc = { lat: 38.72, lon: -9.14, city: 'Lisboa', region: 'Portugal' };
 const REFRESH_MS = 30 * 60 * 1000;
-const svg = (d: string, size = 13, sw = 2) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={sw}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{ flex: 'none' }}
-    aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
-);
+const CACHE_KEY = 'kh.wx.v2';
+const LEVEL_COLOR = {
+  yellow: 'oklch(0.85 0.16 95)',
+  orange: 'oklch(0.74 0.17 55)',
+  red: 'oklch(0.62 0.22 27)',
+};
+const UV_SCALE =
+  'linear-gradient(90deg,oklch(0.75 0.15 145),oklch(0.85 0.16 95) 30%,oklch(0.75 0.17 55) 55%,oklch(0.62 0.22 27) 78%,oklch(0.6 0.2 310))';
 
-/** Weather card (prototype wx*), data from /api/v1/weather (Open-Meteo through our server). */
+type Cached = { k: string; wx: Wx };
+const locKey = (l: WeatherLoc) => `${l.lat.toFixed(2)},${l.lon.toFixed(2)}`;
+
+function readCache(k: string): Wx | null {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY) ?? 'null') as Cached | null;
+    return c?.k === k ? c.wx : null;
+  } catch {
+    return null;
+  }
+}
+function writeCache(k: string, wx: Wx) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ k, wx } satisfies Cached));
+  } catch {
+    // storage full / private mode: just no offline copy
+  }
+}
+
+/** "Chuva a partir das 15h" — when the rain starts or stops in the next 12 hours. */
+function rainLine(hours: WxHour[], tz: string, t: (k: string) => string, lang: 'pt' | 'en') {
+  const next = hours.filter((h) => h.step === 1).slice(0, 12);
+  if (!next.length) return null;
+  const wet = (h: WxHour) => h.mm >= 0.1 && (h.pop === null || h.pop >= 30);
+  if (wet(next[0]!)) {
+    const dry = next.findIndex((h) => !wet(h));
+    return dry < 0 ? t('wx_rainOn') : fill(t('wx_rainUntil'), { t: hm(next[dry]!.time, lang, tz) });
+  }
+  const w = next.find(wet);
+  return w ? fill(t('wx_rainFrom'), { t: hm(w.time, lang, tz) }) : t('wx_dry');
+}
+
+/** Weather card on Início: MET Norway forecast (+ IPMA warnings) through /api/v1/weather. */
 export function WeatherCard() {
   const { t, lang } = useI18n();
   const [loc, setLoc] = usePref<WeatherLoc>('weatherLoc', LISBOA);
-  const [wx, setWx] = useState<Forecast | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ok' | 'err' | 'notfound'>('loading');
-  const [editing, setEditing] = useState(false);
-  const [city, setCity] = useState('');
+  const [recent, setRecent] = usePersistentState<WeatherLoc[]>('wxRecent', []);
+  const [unit, setUnit] = usePersistentState<TempUnit>('wxUnit', 'C');
+  const [details, setDetails] = usePersistentState<boolean>('wxDetails', true);
+  const [wx, setWx] = useState<Wx | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ok' | 'err'>('loading');
+  const [busy, setBusy] = useState(false);
+  const [online, setOnline] = useState(true);
+  const [picker, setPicker] = useState(false);
+  const [openDay, setOpenDay] = useState<string | null>(null);
+  const [showWarn, setShowWarn] = useState(false);
+  const [wide, setWide] = useState(false);
+  const placeRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  const k = locKey(loc);
+
+  // the 7-day list sits beside the hours from 860 px (home.css): a day's hours
+  // then take the hours' place instead of opening inside the narrow list
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setWide(el.clientWidth >= 860));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const load = useCallback(() => {
-    api<Forecast>(`/weather?lat=${loc.lat}&lon=${loc.lon}`)
+    setBusy(true);
+    api<Wx>(`/weather?lat=${loc.lat}&lon=${loc.lon}`)
       .then((r) => {
         setWx(r);
         setStatus('ok');
+        writeCache(k, r);
       })
-      .catch(() => setStatus('err'));
-  }, [loc.lat, loc.lon]);
+      .catch(() => setStatus((s) => (s === 'ok' ? 'ok' : 'err')))
+      .finally(() => setBusy(false));
+  }, [loc.lat, loc.lon, k]);
 
   useEffect(() => {
+    const c = readCache(k);
+    setWx(c);
+    setStatus(c ? 'ok' : 'loading');
+    setOpenDay(null);
     load();
     const id = setInterval(load, REFRESH_MS);
-    return () => clearInterval(id);
+    const vis = () => {
+      if (document.visibilityState !== 'visible') return;
+      const at = Date.parse(readCache(k)?.fetchedAt ?? '');
+      if (!(Date.now() - at < 15 * 60 * 1000)) load();
+    };
+    document.addEventListener('visibilitychange', vis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', vis);
+    };
+  }, [k, load]);
+
+  useEffect(() => {
+    const up = () => {
+      setOnline(true);
+      load();
+    };
+    const down = () => setOnline(false);
+    setOnline(navigator.onLine);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => {
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', down);
+    };
   }, [load]);
 
-  const setCityByName = async (name: string) => {
-    try {
-      const g = await api<WeatherLoc>(`/weather/geocode?lang=${lang}&q=${encodeURIComponent(name)}`);
-      setLoc({ ...g, manual: true });
-      setEditing(false);
-      setCity('');
-    } catch (e) {
-      setStatus(isApiFailure(e) && e.code === 'city_not_found' ? 'notfound' : 'err');
-    }
-  };
-  const useGeo = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        setLoc({
-          lat: +p.coords.latitude.toFixed(3),
-          lon: +p.coords.longitude.toFixed(3),
-          city: t('wx_myLoc'),
-        });
-        setEditing(false);
-      },
-      () => setStatus('err'),
-      { timeout: 10000, maximumAge: 600000 },
+  const pick = (l: WeatherLoc) => {
+    setLoc(l);
+    setPicker(false);
+    setRecent(
+      // the new place first, the one it replaces next (to go back to it)
+      [l, loc, ...recent]
+        .filter(
+          (r, i, all) => all.findIndex((x) => x.city === r.city && Math.abs(x.lat - r.lat) < 0.01) === i,
+        )
+        .slice(0, 5)
+        .map(({ manual: _m, ...r }) => r),
     );
   };
 
-  const cur = wx?.current;
-  const dl = wx?.daily;
-  const code = cur ? cur.weather_code : 3;
-  const isDay = cur ? Boolean(cur.is_day) : true;
-  const kind = wxKind(code);
-  const alerts = dl && cur ? wxAlerts(dl, cur.wind_gusts_10m, t) : [];
-  const msg =
-    status === 'err' ? t('wx_err') : status === 'notfound' ? t('wx_notFound') : cur ? t('wx_src') : '';
-  const DN =
-    lang === 'en'
-      ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-      : ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-  const lo = dl ? Math.min(...dl.temperature_2m_min) : 0;
-  const hi = dl ? Math.max(...dl.temperature_2m_max) : 1;
-  const sp = Math.max(1, hi - lo);
+  const now = wx?.now;
+  const kind = condKind(now?.cond ?? 'cloudy');
+  const isDay = now?.day ?? true;
+  const d0 = wx?.days[0];
+  const at = wx ? (wx.updatedAt ?? wx.fetchedAt) : null;
+  const updLine = !wx
+    ? ''
+    : !online
+      ? fill(t('wx_offline'), { t: hm(wx.fetchedAt, lang) })
+      : wx.stale
+        ? fill(t('wx_stale'), { t: hm(at!, lang) })
+        : fill(t('wx_updated'), { t: hm(at!, lang) });
+  const warns = wx?.warnings ?? null;
+  const derived = wx && !warns ? wxAlerts(wx.days, wx.now) : [];
+  const openDayObj = wx?.days.find((d) => d.date === openDay) ?? null;
+  const dayName = (d: WxDay, i: number) =>
+    i === 0 ? t('wx_today') : i === 1 ? t('wx_tomorrow') : weekday(d.date, lang, true);
+  const sun = (wx?.days ?? []).flatMap((d) => [
+    ...(d.sunrise ? [{ time: d.sunrise, rise: true }] : []),
+    ...(d.sunset ? [{ time: d.sunset, rise: false }] : []),
+  ]);
 
   return (
-    <div className="kh-wx" data-testid="weather">
+    <section
+      ref={cardRef}
+      className="kh-wx"
+      data-testid="weather"
+      data-kind={kind}
+      aria-label={`${t('wx_loc')}: ${loc.city}`}
+    >
       <div className="kh-wx__sky">
         <div style={{ position: 'absolute', inset: 0, background: wxBg(kind, isDay), opacity: 0.75 }} />
         <WxFx kind={kind} isDay={isDay} />
@@ -122,195 +193,556 @@ export function WeatherCard() {
           style={{ position: 'absolute', inset: 0, background: 'rgb(var(--d) / calc(.12 * var(--d-k)))' }}
         />
       </div>
-      <div className="kh-wx__grid">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 13,
-              fontWeight: 500,
-              color: 'rgb(var(--w) / .9)',
-              minWidth: 0,
-            }}
+      <div className="kh-wx__body">
+        <div className="kh-wx__head">
+          <button
+            ref={placeRef}
+            type="button"
+            className="kh-wx__place"
+            aria-haspopup="dialog"
+            aria-expanded={picker}
+            title={t('wx_change')}
+            onClick={() => setPicker((v) => !v)}
           >
-            {svg(
-              '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle>',
-            )}
-            {editing ? (
-              <>
-                <input
-                  className="kh-wx__in"
-                  autoFocus
-                  value={city}
-                  placeholder={t('wx_cityPh')}
-                  aria-label={t('wx_cityPh')}
-                  onChange={(e) => setCity(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && city.trim()) void setCityByName(city.trim());
-                    if (e.key === 'Escape') setEditing(false);
-                  }}
-                />
-                <button
-                  type="button"
-                  className="kh-wx__geo"
-                  title={t('wx_useGeo')}
-                  aria-label={t('wx_useGeo')}
-                  onClick={useGeo}
-                >
-                  {svg(
-                    '<circle cx="12" cy="12" r="3.5"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path>',
-                  )}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="kh-wx__city"
-                title={t('wx_change')}
-                onClick={() => setEditing(true)}
-              >
-                <span
-                  style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                >
-                  {loc.city}
-                </span>
-                <span style={{ opacity: 0.7, display: 'flex' }}>
-                  {svg('<path d="M6 9l6 6 6-6"></path>', 10, 2.6)}
-                </span>
-              </button>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-            <span style={{ flex: 'none', display: 'flex' }}>
-              <WxIcon code={code} size={52} />
+            <Ico d={ICON.pin} />
+            <span className="kh-wx__ell">
+              {loc.city}
+              {loc.region && <small> · {loc.region.split(',').slice(-1)[0]!.trim()}</small>}
             </span>
-            <div
-              className="kh-mono"
-              style={{
-                fontSize: 56,
-                fontWeight: 600,
-                letterSpacing: '-.04em',
-                lineHeight: 1,
-                color: 'var(--ink-hi)',
-              }}
-            >
-              {cur ? `${Math.round(cur.temperature_2m)}°` : '—'}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-              <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink-hi)' }}>
-                {cur ? t(wxLabelKey(code)) : status === 'err' ? t('wx_err') : t('wx_loading')}
-              </span>
-              <span style={{ fontSize: 12.5, color: 'rgb(var(--w) / .85)' }}>
-                {cur ? `${t('wx_feels')}${Math.round(cur.apparent_temperature)}°` : ''}
-              </span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            <span className="kh-wx__chip">
-              {t('wx_hl')}
-              <b>
-                {dl
-                  ? `${Math.round(dl.temperature_2m_max[0]!)}° / ${Math.round(dl.temperature_2m_min[0]!)}°`
-                  : '—'}
-              </b>
+            <span style={{ opacity: 0.7, display: 'flex' }}>
+              <Ico d={ICON.chevron} size={11} sw={2.6} />
             </span>
-            <span className="kh-wx__chip">
-              {t('wx_hum')}
-              <b>{cur ? `${cur.relative_humidity_2m}%` : '—'}</b>
-            </span>
-            <span className="kh-wx__chip">
-              {t('wx_wind')}
-              <b>{cur ? `${Math.round(cur.wind_speed_10m)} km/h` : '—'}</b>
-            </span>
-          </div>
-          {alerts.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {alerts.map(([text, tone]) => (
-                <span
-                  key={text}
-                  className="kh-wx__chip"
-                  style={{
-                    fontWeight: 600,
-                    color: 'var(--ink-hi)',
-                    background: ALERT_BG[tone],
-                    borderColor: 'rgb(var(--w) / .35)',
-                  }}
-                >
-                  {svg(
-                    '<path d="M12 3l10 18H2z"></path><path d="M12 10v5"></path><path d="M12 18h.01"></path>',
-                    12,
-                    2.2,
-                  )}
-                  {text}
-                </span>
-              ))}
-            </div>
-          )}
-          {msg && <div style={{ fontSize: 11.5, color: 'rgb(var(--w) / .75)' }}>{msg}</div>}
+          </button>
+          <button
+            type="button"
+            className="kh-wx__iconbtn"
+            style={{ marginLeft: 'auto' }}
+            aria-label={t('wx_refresh')}
+            title={t('wx_refresh')}
+            data-spin={busy}
+            onClick={load}
+          >
+            <Ico d={ICON.refresh} size={14} />
+          </button>
         </div>
-        <div className="kh-wx__days">
-          {dl?.time.map((d, i) => {
-            const mn = dl.temperature_2m_min[i]!;
-            const mx = dl.temperature_2m_max[i]!;
-            const pp = dl.precipitation_probability_max?.[i] ?? 0;
-            return (
-              <div key={d} className="kh-wx__day">
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    textTransform: 'capitalize',
-                    color: 'var(--ink-hi)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {i === 0 ? t('wx_today') : DN[new Date(`${d}T12:00:00`).getDay()]}
-                </span>
-                <span style={{ display: 'flex', justifyContent: 'center' }}>
-                  <WxIcon code={dl.weather_code[i]!} size={28} />
-                </span>
-                <span className="kh-mono" style={{ fontSize: 11.5, color: '#cfe4ff', whiteSpace: 'nowrap' }}>
-                  {pp >= 20 ? `${pp}%` : ''}
-                </span>
-                <span
-                  style={{
-                    position: 'relative',
-                    height: 5,
-                    borderRadius: 999,
-                    background: 'rgb(var(--w) / .18)',
-                  }}
-                >
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      bottom: 0,
-                      left: `${(((mn - lo) / sp) * 100).toFixed(1)}%`,
-                      width: `${Math.max(6, ((mx - mn) / sp) * 100).toFixed(1)}%`,
-                      borderRadius: 999,
-                      background: 'linear-gradient(90deg,#9fd0ff,#ffd48a)',
-                    }}
-                  />
-                </span>
-                <span
-                  className="kh-mono"
-                  style={{ fontSize: 12.5, textAlign: 'right', color: 'rgb(var(--w) / .75)' }}
-                >
-                  {Math.round(mn)}°
-                </span>
-                <span
-                  className="kh-mono"
-                  style={{ fontSize: 13.5, fontWeight: 600, textAlign: 'right', color: 'var(--ink-hi)' }}
-                >
-                  {Math.round(mx)}°
-                </span>
+
+        {!wx ? (
+          status === 'err' ? (
+            <div className="kh-wx__err" role="alert">
+              <Ico d={ICON.warn} size={16} />
+              <span style={{ flex: 1 }}>{online ? t('wx_err') : fill(t('wx_offline'), { t: '—' })}</span>
+              <button type="button" className="kh-wx__chip" onClick={load}>
+                {t('wx_retry')}
+              </button>
+            </div>
+          ) : (
+            <Skeleton label={t('wx_loading')} />
+          )
+        ) : (
+          <>
+            <div className="kh-wx__main" data-details={details}>
+              <div className="kh-wx__now">
+                <div className="kh-wx__hero">
+                  <span className="kh-wx__heroicon">
+                    <WxIcon cond={now!.cond} day={isDay} size={68} />
+                  </span>
+                  <div className="kh-wx__temp" style={{ textShadow: `0 0 28px ${tempColor(now!.t)}55` }}>
+                    {deg(now!.t, unit)}
+                  </div>
+                  <div className="kh-wx__cond">
+                    <b>{t(`wx_k_${now!.cond}`)}</b>
+                    <span>{fill(t('wx_feelsLike'), { n: deg(now!.feels, unit) })}</span>
+                    {d0 && (
+                      <span className="kh-wx__hl">
+                        <span>
+                          {t('wx_max')} <b style={{ color: tempInk(d0.max) }}>{deg(d0.max, unit)}</b>
+                        </span>
+                        <span>
+                          {t('wx_min')} <b style={{ color: tempInk(d0.min) }}>{deg(d0.min, unit)}</b>
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="kh-wx__summary">
+                  <span style={{ color: 'oklch(calc(.84 * var(--lk)) .11 235)', display: 'flex' }}>
+                    <Ico d={ICON.umbrella} size={15} />
+                  </span>
+                  {rainLine(wx.hours, wx.tz, t, lang)}
+                </div>
+                {(warns?.length || derived.length) > 0 && (
+                  <div className="kh-wx__chips">
+                    {warns?.length ? (
+                      <WarnChips warns={warns} open={showWarn} onToggle={() => setShowWarn((v) => !v)} />
+                    ) : (
+                      derived.map((a) => (
+                        <span key={a.key} className="kh-wx__chip" data-derived="true" title={t('wx_derived')}>
+                          <Ico d={ICON.warn} size={12} sw={2.2} />
+                          {t(`wx_a_${a.key}`)}
+                          {a.value !== undefined && a.key !== 'storm' && a.key !== 'snow'
+                            ? ` · ${a.key === 'heat' || a.key === 'cold' ? deg(a.value, unit) : a.key === 'wind' ? `${a.value} km/h` : a.key === 'rain' ? `${a.value} mm` : a.value}`
+                            : ''}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
-            );
-          })}
+
+              <div
+                style={{ gridArea: 'hours', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}
+              >
+                {showWarn && warns && warns.length > 0 && (
+                  <WarnPanel warns={warns} area={wx.warnArea} tz={wx.tz} />
+                )}
+                {wide && openDayObj ? (
+                  <DayPanel
+                    day={openDayObj}
+                    tz={wx.tz}
+                    unit={unit}
+                    label={dayName(openDayObj, wx.days.indexOf(openDayObj))}
+                    onClose={() => setOpenDay(null)}
+                  />
+                ) : (
+                  <>
+                    <h3 className="kh-wx__label">{t('wx_next48')}</h3>
+                    <WeatherHours
+                      hours={wx.hours}
+                      tz={wx.tz}
+                      unit={unit}
+                      sun={sun}
+                      label={t('wx_next48')}
+                      nowFirst
+                    />
+                  </>
+                )}
+              </div>
+
+              <Week
+                wx={wx}
+                unit={unit}
+                openDay={openDay}
+                inline={!wide}
+                name={dayName}
+                onOpen={(d) => setOpenDay(openDay === d ? null : d)}
+              />
+              {details && <Tiles wx={wx} unit={unit} />}
+            </div>
+          </>
+        )}
+
+        <div className="kh-wx__foot">
+          {updLine && (
+            <span className="kh-wx__upd" data-tone={!online || wx?.stale ? 'warn' : undefined} role="status">
+              {updLine}
+            </span>
+          )}
+          {wx?.source === 'openmeteo' ? (
+            <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">
+              {t('wx_srcOm')}
+            </a>
+          ) : (
+            <a
+              href="https://www.met.no/en/free-meteorological-data/Licensing-and-crediting"
+              target="_blank"
+              rel="noreferrer"
+              title="The Norwegian Meteorological Institute (MET Norway), CC BY 4.0"
+            >
+              {t('wx_srcMet')}
+            </a>
+          )}
+          {warns && (
+            <a href="https://www.ipma.pt/pt/otempo/prev-sam/" target="_blank" rel="noreferrer">
+              {t('wx_srcIpma')}
+            </a>
+          )}
+          {wx && (
+            <button type="button" aria-expanded={details} onClick={() => setDetails(!details)}>
+              {details ? t('wx_less') : t('wx_more')}
+            </button>
+          )}
         </div>
       </div>
+      {picker && (
+        <WeatherPicker
+          anchor={placeRef}
+          current={loc}
+          recent={recent}
+          unit={unit}
+          onUnit={setUnit}
+          onPick={pick}
+          onClose={() => setPicker(false)}
+        />
+      )}
+    </section>
+  );
+}
+
+function Skeleton({ label }: { label: string }) {
+  return (
+    <div className="kh-wx__main" aria-busy="true" aria-label={label}>
+      <div className="kh-wx__now">
+        <div className="kh-wx__sk" style={{ width: 240, height: 72 }} />
+        <div className="kh-wx__sk" style={{ width: 180, height: 16 }} />
+      </div>
+      <div style={{ gridArea: 'hours' }} className="kh-wx__sk">
+        <div style={{ height: 170 }} />
+      </div>
+      <div style={{ gridArea: 'week' }} className="kh-wx__sk">
+        <div style={{ height: 250 }} />
+      </div>
     </div>
+  );
+}
+
+function WarnChips({ warns, open, onToggle }: { warns: WxWarning[]; open: boolean; onToggle: () => void }) {
+  const { t } = useI18n();
+  // one chip per type, at its highest level (the list is sorted by severity)
+  const top = warns.filter((w, i) => warns.findIndex((x) => x.type === w.type && x.name === w.name) === i);
+  return (
+    <>
+      {top.slice(0, 3).map((w) => (
+        <button
+          key={`${w.type}${w.name}`}
+          type="button"
+          className="kh-wx__chip"
+          data-level={w.level}
+          data-each={warns.length > 1 ? '' : undefined}
+          aria-expanded={open}
+          onClick={onToggle}
+        >
+          <span className="kh-wx__dot" style={{ color: LEVEL_COLOR[w.level] }} />
+          {w.type === 'other' ? w.name : t(`wx_w_${w.type}`)} · {t(`wx_lvl_${w.level}`)}
+        </button>
+      ))}
+      {warns.length > 1 && (
+        <button
+          type="button"
+          className="kh-wx__chip"
+          data-sum=""
+          data-sumlevel={warns[0]!.level}
+          aria-expanded={open}
+          onClick={onToggle}
+        >
+          <Ico d={ICON.warn} size={12} sw={2.2} />
+          {fill(t('wx_warnN'), { n: warns.length })}
+          <Ico d={ICON.chevron} size={10} sw={2.6} />
+        </button>
+      )}
+    </>
+  );
+}
+
+function WarnPanel({ warns, area, tz }: { warns: WxWarning[]; area: string | null; tz: string }) {
+  const { t, lang } = useI18n();
+  return (
+    <div className="kh-wx__warns">
+      <h3>{fill(t('wx_warnTitle'), { a: area ?? '' })}</h3>
+      {warns.map((w, i) => (
+        <div key={i} className="kh-wx__warn" style={{ '--lvl': LEVEL_COLOR[w.level] } as React.CSSProperties}>
+          <span>
+            <b>{w.type === 'other' ? w.name : t(`wx_w_${w.type}`)}</b> · {t(`wx_lvl_${w.level}`)} ·{' '}
+            {dayTime(w.start, lang, tz)} – {dayTime(w.end, lang, tz)}
+          </span>
+          {w.text && <span>{w.text}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Week({
+  wx,
+  unit,
+  openDay,
+  inline,
+  name: longName,
+  onOpen,
+}: {
+  wx: Wx;
+  unit: TempUnit;
+  openDay: string | null;
+  /** open the day's hours inside the list (narrow card) */
+  inline: boolean;
+  name: (d: WxDay, i: number) => string;
+  onOpen: (date: string) => void;
+}) {
+  const { t, lang } = useI18n();
+  const lo = Math.min(...wx.days.map((d) => d.min), wx.now.t);
+  const hi = Math.max(...wx.days.map((d) => d.max), wx.now.t);
+  const sp = Math.max(1, hi - lo);
+  const pc = (v: number) => `${(((v - lo) / sp) * 100).toFixed(1)}%`;
+  const name = (d: WxDay, i: number) =>
+    i === 0 ? t('wx_today') : i === 1 ? t('wx_tomorrow') : weekday(d.date, lang);
+  return (
+    <div className="kh-wx__week">
+      <h3 className="kh-wx__label">{fill(t('wx_days'), { n: wx.days.length })}</h3>
+      <div className="kh-wx__days">
+        {wx.days.map((d, i) => {
+          const open = openDay === d.date;
+          return (
+            <Fragment key={d.date}>
+              <button
+                type="button"
+                className="kh-wx__day"
+                aria-expanded={open}
+                aria-label={`${name(d, i)}: ${t(`wx_k_${d.cond}`)}, ${deg(d.min, unit)} – ${deg(d.max, unit)}${d.pop !== null ? `, ${d.pop}%` : ''}`}
+                onClick={() => onOpen(d.date)}
+              >
+                <span className="kh-wx__dname">{name(d, i)}</span>
+                <WxIcon cond={d.cond} size={28} />
+                <span className="kh-wx__dpop">{d.pop !== null && d.pop >= 20 ? `${d.pop}%` : ''}</span>
+                <span className="kh-wx__dmin">{deg(d.min, unit)}</span>
+                <span className="kh-wx__range">
+                  <span
+                    style={{
+                      left: pc(d.min),
+                      width: `max(8px, ${pc(lo + d.max - d.min)})`,
+                      background: tempGradient(d.min, d.max),
+                    }}
+                  />
+                  {i === 0 && <i style={{ left: pc(Math.min(Math.max(wx.now.t, d.min), d.max)) }} />}
+                </span>
+                <span className="kh-wx__dmax" style={{ color: tempInk(d.max) }}>
+                  {deg(d.max, unit)}
+                </span>
+              </button>
+              {open && inline && <DayPanel day={d} tz={wx.tz} unit={unit} label={longName(d, i)} />}
+            </Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DayPanel({
+  day,
+  tz,
+  unit,
+  label,
+  onClose,
+}: {
+  day: WxDay;
+  tz: string;
+  unit: TempUnit;
+  label: string;
+  onClose?: () => void;
+}) {
+  const { t, lang } = useI18n();
+  const sun = [
+    ...(day.sunrise ? [{ time: day.sunrise, rise: true }] : []),
+    ...(day.sunset ? [{ time: day.sunset, rise: false }] : []),
+  ];
+  return (
+    <div
+      className="kh-wx__dpanel"
+      data-wide={onClose ? '' : undefined}
+      role="region"
+      aria-label={fill(t('wx_dayHours'), { d: label })}
+    >
+      {onClose && (
+        <h3 className="kh-wx__label">
+          {fill(t('wx_dayHours'), { d: label })}
+          <button type="button" className="kh-wx__close" onClick={onClose} aria-label={t('wx_closeDay')}>
+            ×
+          </button>
+        </h3>
+      )}
+      <WeatherHours
+        hours={day.hours}
+        tz={tz}
+        unit={unit}
+        sun={sun}
+        label={fill(t('wx_dayHours'), { d: label })}
+      />
+      <div className="kh-wx__dstats">
+        <span>
+          <Ico d={ICON.umbrella} size={12} /> <b>{day.mm} mm</b>
+          {day.pop !== null ? ` · ${day.pop}%` : ''}
+        </span>
+        <span>
+          <Ico d={ICON.wind} size={12} /> <b>{day.wind} km/h</b>
+          {day.gust !== null ? ` · ${fill(t('wx_gusts'), { n: `${day.gust} km/h` })}` : ''}
+        </span>
+        {day.uv !== null && (
+          <span>
+            UV <b>{Math.round(day.uv)}</b> · {t(`wx_uv${uvBand(day.uv)}`)}
+          </span>
+        )}
+        {day.sunrise && day.sunset && (
+          <span>
+            <Ico d={ICON.sun} size={12} /> <b>{hm(day.sunrise, lang, tz)}</b> –{' '}
+            <b>{hm(day.sunset, lang, tz)}</b>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Tiles({ wx, unit }: { wx: Wx; unit: TempUnit }) {
+  const { t, lang } = useI18n();
+  const n: WxNow = wx.now;
+  const d0 = wx.days[0];
+  const tz = wx.tz;
+  const later = wx.hours.find((h) => Date.parse(h.time) >= Date.parse(n.time) + 3 * 3600_000);
+  const trend =
+    n.pres === null || later?.pres == null
+      ? null
+      : later.pres - n.pres > 1
+        ? 'wx_presUp'
+        : later.pres - n.pres < -1
+          ? 'wx_presDown'
+          : 'wx_presSteady';
+  const mm24 = Math.round(wx.hours.slice(0, 24).reduce((s, h) => s + h.mm, 0) * 10) / 10;
+  const strong = (n.gust ?? n.wind) >= 50;
+  const rise = d0?.sunrise ? Date.parse(d0.sunrise) : null;
+  const set = d0?.sunset ? Date.parse(d0.sunset) : null;
+  const nowMs = Date.parse(wx.fetchedAt);
+  const sunPos = rise && set ? Math.min(1, Math.max(0, (nowMs - rise) / (set - rise))) : null;
+  const uv = d0?.uv ?? null;
+  return (
+    <div className="kh-wx__tiles">
+      <div className="kh-wx__tile">
+        <span>
+          <Ico d={ICON.wind} size={12} />
+          {t('wx_windTile')}
+        </span>
+        <div className="kh-wx__tilerow">
+          <b style={strong ? { color: 'oklch(calc(.86 * var(--lk)) .14 70)' } : undefined}>
+            {n.wind}
+            <small>km/h</small>
+          </b>
+          {n.dir !== null && <Compass dir={n.dir} />}
+        </div>
+        <span>
+          {n.dir !== null ? fill(t('wx_windFrom'), { d: compass(n.dir, lang) }) : ''}
+          {n.gust !== null ? ` · ${fill(t('wx_gusts'), { n: n.gust })}` : ''}
+        </span>
+      </div>
+      {n.hum !== null && (
+        <div className="kh-wx__tile">
+          <span>
+            <Ico d={ICON.hum} size={12} />
+            {t('wx_humTile')}
+          </span>
+          <b>
+            {n.hum}
+            <small>%</small>
+          </b>
+          {n.dew !== null && <span>{fill(t('wx_dew'), { n: deg(n.dew, unit) })}</span>}
+          <span className="kh-wx__meter">
+            <span style={{ width: `${n.hum}%`, background: 'oklch(0.72 0.12 235)' }} />
+          </span>
+        </div>
+      )}
+      {uv !== null && (
+        <div className="kh-wx__tile">
+          <span>
+            <Ico d={ICON.uv} size={12} />
+            {t('wx_uv')}
+          </span>
+          <b>
+            {Math.round(uv)}
+            <small>{t(`wx_uv${uvBand(uv)}`)}</small>
+          </b>
+          <span>{t('wx_uvPeak')}</span>
+          <span className="kh-wx__meter" style={{ background: UV_SCALE }}>
+            <i style={{ left: `${Math.min(100, (uv / 11) * 100)}%` }} />
+          </span>
+        </div>
+      )}
+      {n.pres !== null && (
+        <div className="kh-wx__tile">
+          <span>
+            <Ico d={ICON.gauge} size={12} />
+            {t('wx_pres')}
+          </span>
+          <b>
+            {n.pres}
+            <small>hPa</small>
+          </b>
+          {trend && <span>{t(trend)}</span>}
+        </div>
+      )}
+      {d0?.sunrise && d0.sunset && (
+        <div className="kh-wx__tile">
+          <span>
+            <Ico d={ICON.sun} size={12} />
+            {t('wx_sun')}
+          </span>
+          <div className="kh-wx__tilerow">
+            <b style={{ fontSize: 18 }}>
+              {hm(d0.sunrise, lang, tz)}
+              <small>↑</small>
+            </b>
+            <b style={{ fontSize: 18 }}>
+              {hm(d0.sunset, lang, tz)}
+              <small>↓</small>
+            </b>
+          </div>
+          <SunArc pos={sunPos} />
+          <span>{fill(t('wx_daylight'), { n: duration(set! - rise!) })}</span>
+        </div>
+      )}
+      {d0 && (
+        <div className="kh-wx__tile">
+          <span>
+            <Ico d={ICON.umbrella} size={12} />
+            {t('wx_precip')}
+          </span>
+          <b style={{ color: d0.mm > 0 ? 'oklch(calc(.84 * var(--lk)) .11 235)' : undefined }}>
+            {d0.mm}
+            <small>mm</small>
+          </b>
+          <span>{fill(t('wx_precip24'), { n: mm24 })}</span>
+          {d0.pop !== null && d0.pop >= 10 && <span>{fill(t('wx_popMax'), { n: d0.pop })}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Compass({ dir }: { dir: number }) {
+  return (
+    <span
+      style={{
+        position: 'relative',
+        width: 40,
+        height: 40,
+        flex: 'none',
+        borderRadius: '50%',
+        border: '1px solid rgb(var(--w) / .3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--ink-hi)',
+      }}
+      aria-hidden="true"
+    >
+      <span style={{ position: 'absolute', top: 1, fontSize: 8, fontWeight: 700, opacity: 0.7 }}>N</span>
+      <WindArrow dir={dir} size={18} />
+    </span>
+  );
+}
+
+function SunArc({ pos }: { pos: number | null }) {
+  const W = 120;
+  const H = 30;
+  // half-ellipse from sunrise (left) to sunset (right); the dot is the sun now
+  const x = pos === null ? null : 6 + pos * (W - 12);
+  const y = pos === null ? null : H - 2 - Math.sin(pos * Math.PI) * (H - 8);
+  return (
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      <path
+        d={`M6 ${H - 2} Q ${W / 2} ${-H + 12} ${W - 6} ${H - 2}`}
+        fill="none"
+        stroke="rgb(var(--w) / .35)"
+        strokeDasharray="3 3"
+      />
+      <line x1="0" x2={W} y1={H - 2} y2={H - 2} stroke="rgb(var(--w) / .25)" />
+      {x !== null && y !== null && pos! > 0 && pos! < 1 && <circle cx={x} cy={y} r="4" fill="#ffc861" />}
+    </svg>
   );
 }

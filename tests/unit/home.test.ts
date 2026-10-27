@@ -14,7 +14,6 @@ import {
   withRows,
   type Widget,
 } from '@/components/home/homeModel';
-import { wxAlerts, wxKind, wxLabelKey } from '@/components/home/weatherArt';
 import { DOMAIN_RE, iconType } from '@/server/favicon';
 
 describe('dashboard layout', () => {
@@ -176,39 +175,6 @@ describe('dashboard rows', () => {
       parsePrefsPatch({ home: { widgets: [], rows: [['a', 'b', 'c', 'd', 'e', 'f', 'g']] } }),
     ).toThrow(ZodError);
     expect(() => parsePrefsPatch({ home: { widgets: [], rows: [['<x>']] } })).toThrow(ZodError);
-  });
-});
-
-describe('weather', () => {
-  it('maps WMO codes like the prototype', () => {
-    expect([0, 2, 3, 45, 61, 73, 81, 95].map(wxKind)).toEqual([
-      'clear',
-      'partly',
-      'cloudy',
-      'fog',
-      'rain',
-      'snow',
-      'rain',
-      'storm',
-    ]);
-    expect(wxLabelKey(65)).toBe('c65');
-    expect(wxLabelKey(53)).toBe('c51');
-  });
-  it('derives alerts from the forecast', () => {
-    const t = (k: string) => k;
-    const a = wxAlerts(
-      {
-        weather_code: [95, 3],
-        precipitation_sum: [25, 0],
-        wind_gusts_10m_max: [70, 0],
-        temperature_2m_max: [36, 20],
-        temperature_2m_min: [-1, 5],
-        uv_index_max: [9],
-      },
-      10,
-      t,
-    ).map(([x]) => x.split(' ·')[0]);
-    expect(a).toEqual(['wx_a_storm', 'wx_a_rain', 'wx_a_wind', 'wx_a_heat', 'wx_a_cold', 'wx_a_uv']);
   });
 });
 
