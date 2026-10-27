@@ -16,6 +16,7 @@ import { refreshCounts, useCounts } from './counts';
 import { Icon, NavIcon } from './icons';
 import { idFromSegment, isKnownItem } from './nav';
 import { NotificationBell } from './NotificationBell';
+import { HeaderSearch } from '@/components/search/HeaderSearch';
 import { useShell } from './ShellContext';
 import { Sidebar } from './Sidebar';
 
@@ -98,6 +99,7 @@ function usePageTitle(): string | null {
   if (!seg) return t('nav_home');
   if (seg === 'settings') return t('settings');
   if (seg === 'share') return t('shr_short');
+  if (seg === 'search') return t('gs_title');
   if (seg === 'trash' || seg === 'whiteboard') return t(`nav_${seg}`);
   if (seg === 'news') return 'SAP News';
   const id = idFromSegment(seg);
@@ -160,31 +162,12 @@ export function MobileHeader({ onMenu, menuOpen }: { onMenu: () => void; menuOpe
         <AvatarFace name={me.user.name} photoV={me.assets.avatar} size={38} fontSize={13} />
       </button>
       {searching && (
-        <label className="kh-hdr__search kh-hdr__glass kh-hdr__msearch">
-          <span style={{ display: 'flex', opacity: 0.65 }}>
-            <Icon name="search" size={16} sw={2} />
-          </span>
-          <input
-            ref={input}
-            type="search"
-            name="kh-search"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            data-1p-ignore=""
-            data-lpignore="true"
-            data-bwignore=""
-            data-form-type="other"
-            enterKeyHint="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setSearching(false);
-              else if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-            }}
-            placeholder={t('search')}
-            aria-label={t('search')}
-          />
+        <HeaderSearch
+          className="kh-hdr__search kh-hdr__glass kh-hdr__msearch"
+          inputRef={input}
+          mobile
+          onClose={() => setSearching(false)}
+        >
           <button
             type="button"
             className="kh-hdr__mclose"
@@ -197,7 +180,7 @@ export function MobileHeader({ onMenu, menuOpen }: { onMenu: () => void; menuOpe
           >
             <Icon name="close" size={16} sw={2.2} />
           </button>
-        </label>
+        </HeaderSearch>
       )}
     </header>
   );

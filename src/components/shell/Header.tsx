@@ -11,6 +11,7 @@ import { useShell } from './ShellContext';
 import { useCounts } from './counts';
 import { TcodesPopup } from '@/components/sap/TcodesPopup';
 import { NotificationBell } from './NotificationBell';
+import { HeaderSearch } from '@/components/search/HeaderSearch';
 
 function useClock(lang: string) {
   // Client-only (server and browser clocks differ → no hydration mismatch).
@@ -31,7 +32,7 @@ function useClock(lang: string) {
 export function Header({ onActivity, activityOpen }: { onActivity: () => void; activityOpen: boolean }) {
   const { t, lang } = useI18n();
   const [tcOpen, setTcOpen] = useState(false);
-  const { modules, me, focus, toggleFocus, lock, query, setQuery } = useShell();
+  const { modules, me, focus, toggleFocus, lock } = useShell();
   const counts = useCounts();
   const path = usePathname();
   const { clock, date } = useClock(lang);
@@ -58,27 +59,7 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
         )}
       </Link>
 
-      <label className="kh-hdr__search kh-hdr__glass">
-        <span style={{ display: 'flex', opacity: 0.65 }}>
-          <Icon name="search" size={16} sw={2} />
-        </span>
-        {/* a search box, not a login field: browsers and password managers must not fill it */}
-        <input
-          type="search"
-          name="kh-search"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          data-1p-ignore=""
-          data-lpignore="true"
-          data-bwignore=""
-          data-form-type="other"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t('search')}
-          aria-label={t('search')}
-        />
-      </label>
+      <HeaderSearch className="kh-hdr__search kh-hdr__glass" />
 
       {modules.has('tcodes') && (
         <button

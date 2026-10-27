@@ -27,6 +27,7 @@ import {
 } from '@/db/schema';
 import { vecLiteral } from '@/server/search/embedClient';
 import { SEM_MAX_DIST } from '@/server/search/semantic';
+import { foldMatch } from '@/server/search/foldSql';
 import { purgeEmailsTx } from './emails';
 import { purgeArtifactsTx } from './artifacts';
 import { purgeSnippetsTx } from './snippets';
@@ -263,14 +264,15 @@ export function noteConds(q: NoteFilter) {
     );
   if (q.fav) conds.push(eq(notes.favorite, true));
   if (q.search) {
-    const like = `%${q.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    // accents and case aside: "reuniao" finds "Reunião"
+    const w = q.search;
     conds.push(
       or(
-        ilike(notes.title, like),
-        ilike(notes.contentText, like),
-        sql`array_to_string(${notes.tags}, ' ') ilike ${like}`,
+        foldMatch(notes.title, w),
+        foldMatch(notes.contentText, w),
+        foldMatch(sql`array_to_string(${notes.tags}, ' ')`, w),
         // text recognised in the note's images (OCR)
-        sql`exists (select 1 from ocr_texts o where o.parent_type = 'note' and o.parent_id = ${notes.id} and o.text ilike ${like})`,
+        sql`exists (select 1 from ocr_texts o where o.parent_type = 'note' and o.parent_id = ${notes.id} and ${foldMatch(sql`o.text`, w)})`,
       )!,
     );
   }

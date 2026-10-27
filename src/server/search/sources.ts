@@ -48,6 +48,8 @@ export type Kind = {
   alive: SQL;
   /** the tenant-wide SAP library has no owner */
   owned: boolean;
+  /** plan module that gates it in the global search (default: GLOBAL_MODULE_OF in global.ts) */
+  module?: string;
 };
 
 /** Recognised text of an item's images / PDFs ('' when none). */

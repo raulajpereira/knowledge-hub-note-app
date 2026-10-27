@@ -1203,5 +1203,19 @@
   "lm_zoom": "Map zoom",
   "mob_editOnDesktop": "Edit on a computer",
   "mob_editOnDesktopHint": "On a phone this view is read-only. To allocate, drag or bulk-edit, use a computer.",
-  "mob_day": "Day"
+  "mob_day": "Day",
+  "gs_title": "Search",
+  "gs_results": "Search results",
+  "gs_loading": "Searching…",
+  "gs_none": "No results for “{q}”",
+  "gs_noneBody": "Try another word, or just its first letters.",
+  "gs_error": "Search failed. Please try again.",
+  "gs_all": "See all results for “{q}”",
+  "gs_seeAll": "See all",
+  "gs_showAll": "Show all {n}",
+  "gs_hint": "Type what you are looking for: notes, tasks, meetings, emails, files, SAP… across every module.",
+  "gs_count1": "1 result for “{q}”",
+  "gs_countN": "{n} results for “{q}”",
+  "gs_filter": "Filter by module",
+  "gs_everything": "All"
 }
