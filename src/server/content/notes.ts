@@ -23,7 +23,6 @@ import {
   sharedFolders,
   tasks,
   tickets,
-  vaultItems,
   voiceNotes,
   embeddings,
 } from '@/db/schema';
@@ -1603,11 +1602,7 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .where(isNull(emails.deletedAt));
       return r?.n ?? 0;
     });
-  if (modules.has('passwords'))
-    out.passwords = await asUser(auth, async (tx) => {
-      const [r] = await tx.select({ n: sql<number>`count(*)::int` }).from(vaultItems);
-      return r?.n ?? 0;
-    });
+  // Passwords shows no count in the menu (user's choice)
   return out;
 }
 
