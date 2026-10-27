@@ -44,7 +44,7 @@ export const folders = pgTable(
     tenantId: tenantId(),
     ownerId: ownerId(),
     kind: text('kind', {
-      enum: ['notes', 'tasks', 'artifacts', 'passwords', 'emails', 'api', 'files', 'meetings'],
+      enum: ['notes', 'tasks', 'artifacts', 'passwords', 'emails', 'api', 'files', 'meetings', 'tickets'],
     }).notNull(),
     name: text('name').notNull(),
     color: text('color').notNull(),
@@ -60,7 +60,7 @@ export const folders = pgTable(
     index('folders_parent_idx').on(t.parentId),
     check(
       'folders_kind_chk',
-      sql`${t.kind} in ('notes','tasks','artifacts','passwords','emails','api','files','meetings')`,
+      sql`${t.kind} in ('notes','tasks','artifacts','passwords','emails','api','files','meetings','tickets')`,
     ),
     check('folders_name_len', sql`char_length(${t.name}) between 1 and 80`),
   ],

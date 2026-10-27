@@ -36,6 +36,7 @@ export const WIDGET_MODULE: Record<HomeType, string | null> = {
   systems: 'systems',
   qnotes: 'notes',
   emails: 'emails',
+  tickets: 'tickets',
 };
 
 export const widgetAllowed = (type: HomeType, modules: ReadonlySet<string>) => {
@@ -70,6 +71,8 @@ export const HOME_ICONS: Record<HomeType, string> = {
     '<rect x="4" y="4" width="16" height="7" rx="2"></rect><rect x="4" y="13" width="16" height="7" rx="2"></rect>',
   qnotes: '<path d="M5 4h14v11l-5 5H5z"></path><path d="M14 20v-5h5"></path>',
   emails: '<rect x="3" y="5" width="18" height="14" rx="2.5"></rect><path d="M4 7l8 6 8-6"></path>',
+  tickets:
+    '<path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"></path><path d="M14 6v2"></path><path d="M14 11v2"></path><path d="M14 16v2"></path>',
 };
 
 export const QUICK_DEF = ['tasks', 'notes', 'issues', 'voice', 'emails', 'artifacts'];
@@ -104,6 +107,7 @@ export const WIDGET_PAGE: Partial<Record<HomeType, string>> = {
   issues: 'issues',
   systems: 'systems',
   emails: 'emails',
+  tickets: 'tickets',
 };
 
 export type PackedRow = { items: Array<{ w: Widget; index: number; f: number }> };

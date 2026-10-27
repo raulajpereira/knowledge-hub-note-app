@@ -87,6 +87,7 @@ export const HOME_TYPES = [
   'systems',
   'qnotes',
   'emails',
+  'tickets',
 ] as const;
 export type HomeType = (typeof HOME_TYPES)[number];
 export const HOME_SIZES = ['S', 'M', 'L', 'XL'] as const;

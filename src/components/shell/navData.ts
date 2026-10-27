@@ -31,6 +31,8 @@ export const NAV_ICON_PATHS: Record<string, string> = {
     '<path d="M2 7h11v9H2z"></path><path d="M13 10h4l3 3v3h-7"></path><circle cx="6" cy="17.5" r="1.8"></circle><circle cx="17" cy="17.5" r="1.8"></circle>',
   sapnotes:
     '<path d="M6 3h9l4 4v14H6z"></path><path d="M14 3v5h5"></path><path d="M9.5 16.5l1.5-5 1.5 3 1.5-2 1 4"></path>',
+  tickets:
+    '<path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"></path><path d="M14 6v2"></path><path d="M14 11v2"></path><path d="M14 16v2"></path>',
   tags: '<path d="M3 12V4h8l10 10-8 8z"></path><circle cx="7.5" cy="8.5" r="1.3"></circle>',
   mg_overview:
     '<rect x="3" y="3" width="7" height="9" rx="2"></rect><rect x="14" y="3" width="7" height="5" rx="2"></rect><rect x="14" y="12" width="7" height="9" rx="2"></rect><rect x="3" y="16" width="7" height="5" rx="2"></rect>',
@@ -213,6 +215,11 @@ export const NAV_DEFAULT = [
   {
     type: 'item',
     id: 'sapnotes',
+    nested: true,
+  },
+  {
+    type: 'item',
+    id: 'tickets',
     nested: true,
   },
   {

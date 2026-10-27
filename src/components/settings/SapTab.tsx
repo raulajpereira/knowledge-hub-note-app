@@ -2,11 +2,24 @@
 
 import { usePersistentState } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
+import { useShell } from '@/components/shell/ShellContext';
+import { TicketTypesCard } from '@/components/tickets/TicketTypes';
 import '@/components/sap/sap.css';
 
 // Definições › SAP GUI (prototype `sg`): logon language and start transaction
-// written into every .sap shortcut the SAP Systems screen downloads.
+// written into every .sap shortcut the SAP Systems screen downloads; with
+// Tickets, the list of ticket types too.
 export function SapTab() {
+  const { modules } = useShell();
+  return (
+    <>
+      <SapGuiCard />
+      {modules.has('tickets') && <TicketTypesCard />}
+    </>
+  );
+}
+
+function SapGuiCard() {
   const { t } = useI18n();
   const [lang, setLang] = usePersistentState<string>('sap.lang', '');
   const [tx, setTx] = usePersistentState<string>('sap.tx', '');

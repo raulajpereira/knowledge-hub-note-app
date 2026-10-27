@@ -28,7 +28,7 @@ export function SharingTab() {
   const { modules } = useShell();
   const { folders } = useSharedFolders();
   const own = folders.filter((f) => f.mine);
-  const kinds = (['notes', 'tasks', 'artifacts', 'files'] as const).filter((k) => modules.has(k));
+  const kinds = (['notes', 'tasks', 'artifacts', 'files', 'tickets'] as const).filter((k) => modules.has(k));
   const [nKind, setNKind] = useState<ShareKind>(kinds[0] ?? 'notes');
   const [nName, setNName] = useState('');
   const [people, setPeople] = useState<Person[]>([]);

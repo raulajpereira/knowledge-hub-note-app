@@ -20,7 +20,7 @@ import { folders } from './content';
 
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
-export const SHARE_KINDS = ['notes', 'tasks', 'artifacts', 'files'] as const;
+export const SHARE_KINDS = ['notes', 'tasks', 'artifacts', 'files', 'tickets'] as const;
 export type ShareKind = (typeof SHARE_KINDS)[number];
 
 /** A read-only public link to a note or an artifact (token ≥ 128 bits, stored hashed). */
@@ -82,7 +82,7 @@ export const sharedFolders = pgTable(
   (t) => [
     index('shared_folders_owner_idx').on(t.ownerId, t.kind),
     uniqueIndex('shared_folders_folder_uq').on(t.folderId),
-    check('shared_folders_kind_chk', sql`${t.kind} in ('notes','tasks','artifacts','files')`),
+    check('shared_folders_kind_chk', sql`${t.kind} in ('notes','tasks','artifacts','files','tickets')`),
     check('shared_folders_name_len', sql`char_length(${t.name}) between 1 and 80`),
   ],
 );

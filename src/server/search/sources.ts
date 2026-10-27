@@ -11,6 +11,7 @@ import {
   sapTransports,
   snippets,
   tasks,
+  tickets,
   voiceNotes,
 } from '@/db/schema';
 
@@ -32,6 +33,7 @@ export const ITEM_TYPES = [
   'code',
   'transport',
   'file',
+  'ticket',
 ] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
@@ -165,6 +167,16 @@ export const KINDS: Kind[] = [
     body: sql`${driveFiles.name} || ' ' || ${ocr('file', driveFiles.id)}`,
     at: driveFiles.updatedAt,
     alive: isNull(driveFiles.deletedAt)!,
+    owned: true,
+  },
+  {
+    type: 'ticket',
+    table: tickets,
+    id: tickets.id,
+    title: sql`${tickets.number} || ' · ' || ${tickets.summary}`,
+    body: sql`${tickets.number} || ' ' || ${tickets.summary} || ' [' || ${tickets.status} || '] ' || ${tickets.clientName} || ' ' || ${tickets.responsibleName} || ' ' || ${tickets.parentNumber} || ' ' || ${tickets.parentSummary} || ' ' || ${tickets.notesText}`,
+    at: tickets.updatedAt,
+    alive: isNull(tickets.deletedAt)!,
     owned: true,
   },
 ];

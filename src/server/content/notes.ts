@@ -21,6 +21,7 @@ import {
   sapFnRecords,
   sapNotes,
   tasks,
+  tickets,
   vaultItems,
   voiceNotes,
   embeddings,
@@ -39,6 +40,7 @@ import { countRecords, purgeRecordsTx } from './functional';
 import { purgeSapNotesTx } from './sapNotes';
 import { countSaved } from '@/server/news/saved';
 import { purgeApiRequestsTx } from './apiPlayground';
+import { countOpenTickets, purgeTicketsTx } from './tickets';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
 import { s3 } from '@/lib/storage';
@@ -517,7 +519,8 @@ export type TrashKind =
   | 'transport'
   | 'code'
   | 'fn'
-  | 'sapnote';
+  | 'sapnote'
+  | 'ticket';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -572,6 +575,14 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       })
       .from(sapNotes)
       .where(isNotNull(sapNotes.deletedAt));
+    const tks = await tx
+      .select({
+        id: tickets.id,
+        title: sql<string>`(${tickets.number} || ' · ' || ${tickets.summary})`,
+        deletedAt: tickets.deletedAt,
+      })
+      .from(tickets)
+      .where(isNotNull(tickets.deletedAt));
     const cls = await tx
       .select({ id: sapObjects.id, title: sapObjects.name, deletedAt: sapObjects.deletedAt })
       .from(sapObjects)
@@ -642,6 +653,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...sns.map((x) => ({
         id: x.id,
         kind: 'sapnote' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...tks.map((x) => ({
+        id: x.id,
+        kind: 'ticket' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -780,6 +798,8 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
       await tx.update(sapObjects).set({ deletedAt: null }).where(inArray(sapObjects.id, clIds));
     const snIds = items.filter((i) => i.kind === 'sapnote').map((i) => i.id);
     if (snIds.length) await tx.update(sapNotes).set({ deletedAt: null }).where(inArray(sapNotes.id, snIds));
+    const tkIds = items.filter((i) => i.kind === 'ticket').map((i) => i.id);
+    if (tkIds.length) await tx.update(tickets).set({ deletedAt: null }).where(inArray(tickets.id, tkIds));
     const aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
     if (aIds.length) await tx.update(artifacts).set({ deletedAt: null }).where(inArray(artifacts.id, aIds));
     const iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
@@ -883,6 +903,7 @@ export async function purgeTrash(
     let clIds: string[];
     let fnIds: string[];
     let snIds: string[];
+    let tkIds: string[];
     let rIds: string[];
     if (items === 'all') {
       rIds = (
@@ -910,6 +931,9 @@ export async function purgeTrash(
         await tx.select({ id: sapFnRecords.id }).from(sapFnRecords).where(isNotNull(sapFnRecords.deletedAt))
       ).map((r) => r.id);
       snIds = (await tx.select({ id: sapNotes.id }).from(sapNotes).where(isNotNull(sapNotes.deletedAt))).map(
+        (r) => r.id,
+      );
+      tkIds = (await tx.select({ id: tickets.id }).from(tickets).where(isNotNull(tickets.deletedAt))).map(
         (r) => r.id,
       );
       sIds = (await tx.select({ id: snippets.id }).from(snippets).where(isNotNull(snippets.deletedAt))).map(
@@ -1021,6 +1045,8 @@ export async function purgeTrash(
             .from(sapNotes)
             .where(and(inArray(sapNotes.id, snIds), isNotNull(sapNotes.deletedAt)))
         ).map((r) => r.id);
+      // purgeTicketsTx re-checks that they are in the Trash
+      tkIds = items.filter((i) => i.kind === 'ticket').map((i) => i.id);
       clIds = items.filter((i) => i.kind === 'code').map((i) => i.id);
       if (clIds.length)
         clIds = (
@@ -1087,6 +1113,7 @@ export async function purgeTrash(
     await purgeObjectsTx(tx, clIds);
     await purgeRecordsTx(tx, fnIds);
     await purgeSapNotesTx(tx, snIds);
+    await purgeTicketsTx(tx, tkIds);
     await purgeApiRequestsTx(tx, rIds);
     if (aIds.length) {
       await unlinkAll(tx, 'artifact', aIds);
@@ -1286,6 +1313,11 @@ const LINKABLE = {
     title: sql<string>`(${sapNotes.number}::text || ' · ' || ${sapNotes.title})`,
     at: sapNotes.updatedAt,
   },
+  ticket: {
+    table: tickets,
+    title: sql<string>`(${tickets.number} || ' · ' || ${tickets.summary})`,
+    at: tickets.updatedAt,
+  },
 } as const;
 export type LinkType = keyof typeof LINKABLE;
 export type LinkStage = 'mod' | 'rel' | 'qas' | 'prd' | 'junk';
@@ -1390,14 +1422,16 @@ export async function linkCandidates(
               ilike(sapTransports.description, like),
               ilike(sapTransports.owner, like),
             )
-          : type === 'code'
-            ? or(
-                ilike(sapObjects.name, like),
-                ilike(sapObjects.description, like),
-                ilike(sapObjects.implementedAt, like),
-                ilike(sapObjects.type, like),
-              )
-            : ilike(L.title, like);
+          : type === 'ticket'
+            ? or(ilike(tickets.number, like), ilike(tickets.summary, like), ilike(tickets.clientName, like))
+            : type === 'code'
+              ? or(
+                  ilike(sapObjects.name, like),
+                  ilike(sapObjects.description, like),
+                  ilike(sapObjects.implementedAt, like),
+                  ilike(sapObjects.type, like),
+                )
+              : ilike(L.title, like);
       const rows = await tx
         .select({ id: L.table.id, title: L.title, at: L.at })
         .from(L.table)
@@ -1528,6 +1562,7 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .where(and(isNull(issues.deletedAt), sql`${issues.status} <> 'done'`));
       return r?.n ?? 0;
     });
+  if (modules.has('tickets')) out.tickets = await asUser(auth, countOpenTickets);
   if (modules.has('files'))
     out.files = await asUser(auth, async (tx) => {
       const [r] = await tx

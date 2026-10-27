@@ -9,7 +9,7 @@ import {
   HeadObjectCommand,
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
-import { driveFiles, sharedFolders, users } from '@/db/schema';
+import { driveFiles, sharedFolders, ticketAttachments, users } from '@/db/schema';
 import { env } from '@/lib/env';
 import { s3 } from '@/lib/storage';
 import { redis } from '@/lib/redis';
@@ -82,8 +82,11 @@ const toFile = (r: Row, me: string): DriveFile => ({
   updatedAt: r.updatedAt.toISOString(),
 });
 
-/** The caller's space: used (own files, Trash included), quota and largest file, in bytes. */
-async function limitsTx(tx: Tx, auth: AuthContext): Promise<DriveLimits> {
+/**
+ * The caller's space: used (own files, Trash included, plus the files they
+ * attached to tickets), quota and largest file, in bytes.
+ */
+export async function limitsTx(tx: Tx, auth: AuthContext): Promise<DriveLimits> {
   const [u] = await tx
     .select({ q: users.filesQuotaMb, m: users.filesMaxMb })
     .from(users)
@@ -92,8 +95,12 @@ async function limitsTx(tx: Tx, auth: AuthContext): Promise<DriveLimits> {
     .select({ used: sql<string>`coalesce(sum(${driveFiles.size}), 0)` })
     .from(driveFiles)
     .where(eq(driveFiles.ownerId, auth.user.id))) as [{ used: string }];
+  const [{ tk }] = (await tx
+    .select({ tk: sql<string>`coalesce(sum(${ticketAttachments.size}), 0)` })
+    .from(ticketAttachments)
+    .where(eq(ticketAttachments.ownerId, auth.user.id))) as [{ tk: string }];
   return {
-    used: Number(used),
+    used: Number(used) + Number(tk),
     quota: (u?.q ?? FILES_QUOTA_MB) * MB,
     maxFile: (u?.m ?? FILES_MAX_MB) * MB,
   };

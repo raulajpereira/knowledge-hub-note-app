@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/client/api';
 import { useShell } from '@/components/shell/ShellContext';
 
-export type ShareKind = 'notes' | 'tasks' | 'artifacts' | 'files';
+export type ShareKind = 'notes' | 'tasks' | 'artifacts' | 'files' | 'tickets';
 export type Member = {
   id: string;
   email: string;

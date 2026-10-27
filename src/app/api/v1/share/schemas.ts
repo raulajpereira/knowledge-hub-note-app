@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const name = z.string().trim().min(1).max(80);
-export const ShareKindZ = z.enum(['notes', 'tasks', 'artifacts', 'files']);
+export const ShareKindZ = z.enum(['notes', 'tasks', 'artifacts', 'files', 'tickets']);
 export const FolderCreate = z
   .object({ kind: ShareKindZ, name, folderId: z.uuid().nullable().optional() })
   .strict();
@@ -24,4 +24,5 @@ export const KIND_MODULE = {
   tasks: 'tasks',
   artifacts: 'artifacts',
   files: 'files',
+  tickets: 'tickets',
 } as const;

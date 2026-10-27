@@ -31,7 +31,8 @@ type Item = {
     | 'transport'
     | 'code'
     | 'fn'
-    | 'sapnote';
+    | 'sapnote'
+    | 'ticket';
   title: string;
   deletedAt: string;
   daysLeft: number;
@@ -55,6 +56,7 @@ const KINDS: Record<Item['kind'], { label: string; icon: string }> = {
   code: { label: 'k_code', icon: 'codelib' },
   fn: { label: 'fn_kind', icon: 'fn_proc' },
   sapnote: { label: 'k_sapnote', icon: 'sapnotes' },
+  ticket: { label: 'k_ticket', icon: 'tickets' },
 };
 
 function Check({ on }: { on: boolean }) {
