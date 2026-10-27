@@ -922,3 +922,82 @@
 .kh-tkt-new .kh-sap-ghost {
   height: 42px;
 }
+
+/* "Novo ticket": a little wider, with bigger fields (like the other create dialogs) */
+.kh-modal.kh-tkt-new {
+  width: min(780px, 100%);
+}
+.kh-tkt-new .kh-tkt-form {
+  gap: 18px;
+}
+.kh-tkt-new .kh-tkt-form__row {
+  gap: 16px;
+}
+.kh-tkt-new .kh-sap-fld {
+  gap: 8px;
+}
+.kh-tkt-new .kh-sap-fld > span {
+  font-size: 12.5px;
+}
+.kh-tkt-new :is(.kh-sap-input, .kh-sap-select) {
+  height: 48px;
+  padding-left: 14px;
+  font-size: 15px;
+  border-radius: 14px;
+}
+.kh-tkt-new .kh-sap-input[data-mono] {
+  font-size: 15px;
+}
+.kh-tkt-new .kh-tkt-pick {
+  align-self: stretch;
+  height: 48px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+.kh-tkt-new .kh-tkt-pick > svg {
+  margin-left: auto;
+}
+.kh-tkt-new .kh-tkt-err {
+  font-size: 13px;
+}
+
+/* with the detail open the table keeps at least about half of the card */
+@media (min-width: 1100px) {
+  .kh-tkt > .kh-sap-panel {
+    max-width: 50%;
+  }
+}
+@media (min-width: 1100px) and (max-width: 1299.98px) {
+  .kh-tkt > .kh-sap-panel {
+    max-width: 42%;
+  }
+}
+/* a narrow column wraps the status / priority chip onto two lines instead of cutting it */
+.kh-table__td.kh-tkt-wrap {
+  white-space: normal;
+  overflow: visible;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.kh-tkt-wrap .kh-tkt-chip {
+  height: auto;
+  min-height: 24px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  white-space: normal;
+  line-height: 1.25;
+  overflow: visible;
+}
+
+/* a narrow detail panel (small desktops, or resized) stacks its two-column fields */
+@media (min-width: 768px) {
+  .kh-tkt > .kh-sap-panel {
+    container-type: inline-size;
+  }
+}
+@container (max-width: 440px) {
+  .kh-tkt-pbody .kh-sap-grid2,
+  .kh-tkt-parent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

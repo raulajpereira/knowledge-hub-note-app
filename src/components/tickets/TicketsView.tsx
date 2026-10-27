@@ -326,41 +326,55 @@ export function TicketsView() {
       key: 'number',
       label: t('tk_numberShort'),
       width: 124,
+      minWidth: 116,
+      minTight: 104,
       sortable: true,
       render: (x) => <span className="kh-tkt-no">{x.number}</span>,
     },
     {
       key: 'summary',
       label: t('tk_summary'),
-      width: 260,
+      width: 280,
+      minWidth: 140,
+      minTight: 110,
       sortable: true,
       render: (x) => <span className="kh-sap-strong">{x.summary}</span>,
     },
     {
       key: 'client',
       label: t('tk_client'),
-      width: 130,
+      width: 140,
+      minWidth: 104,
+      hide: 3,
       sortable: true,
       render: (x) => x.clientName || <span className="kh-tkt-dim">—</span>,
     },
     {
       key: 'prio',
       label: t('tk_priority'),
-      width: 130,
+      width: 150,
+      minWidth: 132,
+      minTight: 110,
+      cellClassName: 'kh-tkt-wrap',
       sortable: true,
       render: (x) => <PrioChip p={x.priority} />,
     },
     {
       key: 'type',
       label: t('tk_type'),
-      width: 140,
+      width: 130,
+      minWidth: 104,
+      hide: 1,
       sortable: true,
       render: (x) => typeName(x.typeId) || <span className="kh-tkt-dim">—</span>,
     },
     {
       key: 'status',
       label: t('tk_status'),
-      width: 170,
+      width: 220,
+      minWidth: 200,
+      minTight: 140,
+      cellClassName: 'kh-tkt-wrap',
       sortable: true,
       render: (x) => <StatusChip s={x.status} />,
     },
@@ -368,10 +382,20 @@ export function TicketsView() {
       key: 'resp',
       label: t('tk_resp'),
       width: 140,
+      minWidth: 128,
+      hide: 2,
       sortable: true,
       render: (x) => x.responsibleName || <span className="kh-tkt-dim">—</span>,
     },
-    { key: 'due', label: t('tk_due'), width: 120, sortable: true, grow: true, render: (x) => <Due x={x} /> },
+    {
+      key: 'due',
+      label: t('tk_due'),
+      width: 116,
+      minWidth: 128,
+      hide: 4,
+      sortable: true,
+      render: (x) => <Due x={x} />,
+    },
   ];
   const card = (x: Ticket, withStatus = true) => (
     <div className="kh-tcard__main">
@@ -718,7 +742,7 @@ export function TicketsView() {
               onSortChange={setSort}
               emptyLabel={emptyLabel}
               resizeLabel={t('resize')}
-              minWidth={1080}
+              fit
               className="kh-tkt-table"
               card={(x) => card(x)}
             />
