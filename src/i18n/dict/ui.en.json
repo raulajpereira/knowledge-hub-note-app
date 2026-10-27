@@ -1314,5 +1314,19 @@
   "tkp_low": "Low",
   "tkp_medium": "Medium",
   "tkp_high": "High",
-  "tkp_very_high": "Very High"
+  "tkp_very_high": "Very High",
+  "gs_title": "Search",
+  "gs_results": "Search results",
+  "gs_loading": "Searching…",
+  "gs_none": "No results for “{q}”",
+  "gs_noneBody": "Try another word, or just its first letters.",
+  "gs_error": "Search failed. Please try again.",
+  "gs_all": "See all results for “{q}”",
+  "gs_seeAll": "See all",
+  "gs_showAll": "Show all {n}",
+  "gs_hint": "Type what you are looking for: notes, tasks, meetings, emails, files, SAP… across every module.",
+  "gs_count1": "1 result for “{q}”",
+  "gs_countN": "{n} results for “{q}”",
+  "gs_filter": "Filter by module",
+  "gs_everything": "All"
 }

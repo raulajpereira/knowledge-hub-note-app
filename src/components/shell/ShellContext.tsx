@@ -11,7 +11,7 @@ export type ShellApi = {
   lock: () => void;
   openAccount: () => void;
   openAbout: () => void;
-  /** Header search box; pages that list items (Notes…) filter with it. */
+  /** Header search box: the global search (HeaderSearch) and the Notes list read it. */
   query: string;
   setQuery: (q: string) => void;
 };

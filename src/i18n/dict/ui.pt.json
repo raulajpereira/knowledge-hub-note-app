@@ -1314,5 +1314,19 @@
   "tkp_low": "Baixa",
   "tkp_medium": "Média",
   "tkp_high": "Alta",
-  "tkp_very_high": "Muito Alta"
+  "tkp_very_high": "Muito Alta",
+  "gs_title": "Pesquisa",
+  "gs_results": "Resultados da pesquisa",
+  "gs_loading": "A pesquisar…",
+  "gs_none": "Sem resultados para “{q}”",
+  "gs_noneBody": "Experimente outra palavra ou só o início dela.",
+  "gs_error": "Não foi possível pesquisar. Tente de novo.",
+  "gs_all": "Ver todos os resultados de “{q}”",
+  "gs_seeAll": "Ver todos",
+  "gs_showAll": "Mostrar os {n}",
+  "gs_hint": "Escreva o que procura: notas, tarefas, reuniões, emails, ficheiros, SAP… em todos os módulos.",
+  "gs_count1": "1 resultado para “{q}”",
+  "gs_countN": "{n} resultados para “{q}”",
+  "gs_filter": "Filtrar por módulo",
+  "gs_everything": "Tudo"
 }
