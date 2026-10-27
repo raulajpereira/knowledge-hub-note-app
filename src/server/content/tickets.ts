@@ -469,6 +469,8 @@ const event = (
   toValue: (v.to ?? '').slice(0, 200),
   body: v.body ?? '',
   authorName: auth.user.name.slice(0, 120),
+  // per row, so changes saved together keep their order (now() is the same for the whole transaction)
+  createdAt: sql`clock_timestamp()`,
 });
 
 export async function createTicket(auth: AuthContext, input: TicketInput): Promise<Ticket> {

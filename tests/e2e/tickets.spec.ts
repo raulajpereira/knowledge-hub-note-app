@@ -114,8 +114,13 @@ test('create, edit, comment, link, Kanban, filter, Trash', async ({ page }) => {
   const col = page.getByRole('group', { name: 'Resolvido' });
   await card.dispatchEvent('dragstart', { dataTransfer: dt });
   await col.dispatchEvent('dragover', { dataTransfer: dt });
+  // the card moves at once; reload only once the change is saved
+  const saved = page.waitForResponse(
+    (r) => /\/api\/v1\/tickets\/[0-9a-f-]+$/.test(r.url()) && r.request().method() !== 'GET',
+  );
   await col.dispatchEvent('drop', { dataTransfer: dt });
   await expect(col.locator('.kh-tkt-kcard')).toHaveCount(1);
+  await saved;
   await page.reload();
   await expect(page.getByRole('group', { name: 'Resolvido' })).toContainText('INC0001');
   await page.getByRole('group', { name: 'Resolvido' }).locator('.kh-tkt-kcard').click();

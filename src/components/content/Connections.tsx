@@ -18,7 +18,17 @@ import './content.css';
 // itself the card reads "Ligado a" (its notes, tasks and meetings).
 
 export type ItemType =
-  'note' | 'task' | 'voice' | 'issue' | 'meeting' | 'file' | 'artifact' | 'code' | 'transport' | 'sapnote' | 'ticket';
+  | 'note'
+  | 'task'
+  | 'voice'
+  | 'issue'
+  | 'meeting'
+  | 'file'
+  | 'artifact'
+  | 'code'
+  | 'transport'
+  | 'sapnote'
+  | 'ticket';
 type Stage = 'mod' | 'rel' | 'qas' | 'prd' | 'junk';
 type Link = { type: ItemType; id: string; title: string; sub?: string; stage?: Stage; size?: number };
 /** cx: "Ligações" · tr: "Ordens de Transporte" · file: "Ficheiros" */

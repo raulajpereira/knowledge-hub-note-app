@@ -42,6 +42,7 @@ export const GLOBAL_MODULE_OF: Record<string, string> = {
   code: 'codelib',
   transport: 'transports',
   file: 'files',
+  ticket: 'tickets',
 };
 
 const EXTRA: Source[] = [

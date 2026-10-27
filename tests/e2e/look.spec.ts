@@ -202,8 +202,8 @@ test('tag colour chosen on the Tags page shows on a notes card', async ({ page }
 
 test('text size is per device: kept on reload, not shown on another device', async ({ page, browser }) => {
   await login(page);
-  // an earlier test made Notas the start page
-  await page.waitForURL(/\/app(\/notes)?$/);
+  // earlier tests change the start page: any page of the app will do
+  await page.waitForURL(/\/app(\/[a-z-]+)?$/);
   await page.goto('app/settings');
   const font = page.getByRole('slider', { name: 'Tamanho do Texto' });
   await font.fill('1.15');
@@ -221,7 +221,7 @@ test('text size is per device: kept on reload, not shown on another device', asy
     extraHTTPHeaders: { 'x-forwarded-for': '198.51.100.161' },
   });
   await login(other);
-  await other.waitForURL(/\/app(\/notes)?$/);
+  await other.waitForURL(/\/app(\/[a-z-]+)?$/);
   await other.goto('app/settings');
   await expect(other.getByRole('slider', { name: 'Tamanho do Texto' })).toHaveValue('1');
   await expect(other.locator('body')).not.toHaveCSS('font-size-adjust', '0.598');
