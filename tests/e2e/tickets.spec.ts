@@ -104,7 +104,11 @@ test('create, edit, comment, link, Kanban, filter, Trash', async ({ page }) => {
   await panel.getByPlaceholder('Pesquisar itens para ligar…').fill('Análise');
   await panel.getByRole('option', { name: /Análise do erro M7/ }).click();
   await expect(panel.locator('.kh-cx__link', { hasText: 'Análise do erro M7' })).toBeVisible();
-  await expect(page.locator('.kh-table__row', { hasText: 'INC0001' })).toContainText('Atlas Seguros');
+  await expect(panel.getByRole('textbox', { name: 'Cliente', exact: true })).toHaveValue('Atlas Seguros');
+  // with the ticket open the table still fits its block (the less important columns step aside)
+  const box = page.locator('.kh-tkt .kh-table');
+  expect(await box.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+  await expect(page.locator('.kh-table__head')).not.toContainText('Tipo');
 
   // Kanban: drag INC0001 to Resolvido → status saved and logged
   await page.getByRole('radio', { name: 'Kanban' }).click();
@@ -151,6 +155,10 @@ test('create, edit, comment, link, Kanban, filter, Trash', async ({ page }) => {
   await expect(row).toHaveCount(0);
   await page.goto('app/tickets');
   await expect(page.locator('.kh-table__row')).toHaveCount(2);
+  // without the detail: every column, fitted to the block, the client shown
+  await expect(page.locator('.kh-table__head')).toContainText('Tipo');
+  expect(await box.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+  await expect(page.locator('.kh-table__row', { hasText: 'INC0001' })).toContainText('Atlas Seguros');
 });
 
 test('phone: tickets as cards, the ticket full-page with Voltar', async ({ browser }) => {
