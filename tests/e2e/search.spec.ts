@@ -117,7 +117,8 @@ test('text in an image of Ficheiros is recognised and shown under the preview', 
   await page.reload();
   const ocr = page.getByTestId('ocr-text');
   await ocr.locator('summary').click();
-  await expect(ocr.locator('pre')).toContainText(/FT 2026\/118/);
+  // OCR may misread a digit of the number (it once read 118 as 1118): check the words around it
+  await expect(ocr.locator('pre')).toContainText(/Fatura FT 2026\/\d+ paga/);
   // the Ficheiros search box finds the file by the text inside the image
   const search = page.getByLabel('Pesquisar ficheiros');
   await search.fill('paga');

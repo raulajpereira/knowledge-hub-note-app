@@ -159,7 +159,8 @@ test('start page: /app opens the chosen page; Início still reachable', async ({
   // clicking Início inside the app shows Início
   await page.locator('aside.kh-aside').getByRole('link', { name: 'Início' }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.locator('.kh-home')).toBeVisible();
+  // Início loads its cards and the weather on the client: give a slow CI runner time
+  await expect(page.locator('.kh-home')).toBeVisible({ timeout: 15_000 });
 
   // after signing in too
   await page.context().clearCookies();
