@@ -1,6 +1,6 @@
 // Weather visuals from the prototype (WX_ICON, WX_BG, wxFxEl), extended with
 // night, showers, light/heavy rain and sleet icons for the richer conditions.
-import type { CSSProperties, ReactElement } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import type { Cond } from '@/lib/weather';
 
 export type WxKind = 'clear' | 'partly' | 'cloudy' | 'fog' | 'rain' | 'snow' | 'storm';
@@ -165,30 +165,86 @@ const wxRnd = (n: number, seed: number) => {
   return out;
 };
 
-/** Animated sky (sun, stars and moon, clouds, rain, lightning, snow, fog). */
-export function WxFx({ kind, isDay }: { kind: WxKind; isDay: boolean }) {
+// How much of each effect a condition gets (rain/snow particle counts and
+// speeds, clouds) — drizzle is light and slow, heavy rain dense and fast.
+const RAIN: Partial<Record<Cond, { n: number; dur: [number, number]; len: [number, number]; op: number }>> = {
+  lightrain: { n: 26, dur: [1.0, 1.5], len: [9, 14], op: 0.5 },
+  showers: { n: 42, dur: [0.75, 1.1], len: [12, 20], op: 0.62 },
+  rain: { n: 64, dur: [0.6, 0.95], len: [14, 24], op: 0.7 },
+  heavyrain: { n: 110, dur: [0.42, 0.62], len: [20, 32], op: 0.82 },
+  storm: { n: 90, dur: [0.45, 0.7], len: [18, 30], op: 0.78 },
+  sleet: { n: 30, dur: [0.8, 1.2], len: [10, 16], op: 0.6 },
+};
+const SNOW: Partial<Record<Cond, number>> = { snow: 46, sleet: 18 };
+const CLOUDS: Partial<Record<Cond, number>> = {
+  fair: 1,
+  partly: 3,
+  cloudy: 5,
+  fog: 3,
+  lightrain: 4,
+  showers: 3,
+  rain: 5,
+  heavyrain: 5,
+  sleet: 4,
+  snow: 4,
+  storm: 5,
+};
+const DARK_CLOUDS = new Set<Cond>(['rain', 'heavyrain', 'storm', 'sleet']);
+
+/**
+ * Animated sky for the current conditions: sun glow and slow rays, stars and
+ * moon at night, drifting clouds, rain (by intensity), snow, sleet (both),
+ * a rare soft lightning flash, fog haze. Only transforms and opacity are
+ * animated (compositor-only); particles sit at scattered positions and move
+ * around them, so with animations off (reduced motion, paused off-screen)
+ * the same picture shows still. `scale` thins the particles on small screens.
+ */
+export function WxFx({ cond, isDay, scale = 1 }: { cond: Cond; isDay: boolean; scale?: number }) {
   const abs: CSSProperties = { position: 'absolute', pointerEvents: 'none' };
   const kids: ReactElement[] = [];
-  if (kind === 'clear' && isDay)
+  const sunny = cond === 'clear' || cond === 'fair' || cond === 'partly';
+  if (sunny && isDay) {
     kids.push(
       <div
         key="sun"
+        className="kh-wxfx__glow"
         style={{
           ...abs,
-          right: '8%',
-          top: -60,
-          width: 220,
-          height: 220,
+          right: '6%',
+          top: -70,
+          width: 240,
+          height: 240,
           borderRadius: '50%',
           background:
-            'radial-gradient(circle, rgba(255,245,200,.95) 0%, rgba(255,215,120,.55) 35%, rgba(255,200,100,0) 70%)',
-          animation: 'zn-pulse 6s ease-in-out infinite',
+            'radial-gradient(circle, rgba(255,245,200,.95) 0%, rgba(255,215,120,.5) 35%, rgba(255,200,100,0) 70%)',
+          opacity: cond === 'partly' ? 0.7 : 1,
+          animation: 'zn-pulse 7s ease-in-out infinite',
+        }}
+      />,
+      <div
+        key="rays"
+        className="kh-wxfx__rays"
+        style={{
+          ...abs,
+          right: 'calc(6% - 130px)',
+          top: -200,
+          width: 500,
+          height: 500,
+          borderRadius: '50%',
+          background:
+            'repeating-conic-gradient(from 0deg, rgba(255,240,200,.22) 0deg 5deg, rgba(255,240,200,0) 5deg 22deg)',
+          maskImage: 'radial-gradient(circle, #000 18%, transparent 62%)',
+          WebkitMaskImage: 'radial-gradient(circle, #000 18%, transparent 62%)',
+          opacity: cond === 'clear' ? 0.6 : 0.38,
+          animation: 'kh-wx-spin 140s linear infinite',
         }}
       />,
     );
-  if (!isDay && (kind === 'clear' || kind === 'partly')) {
-    const R = wxRnd(90, 7);
-    for (let i = 0; i < 30; i++)
+  }
+  if (!isDay && sunny) {
+    const R = wxRnd(120, 7);
+    const n = Math.round((cond === 'partly' ? 22 : 36) * scale);
+    for (let i = 0; i < n; i++)
       kids.push(
         <div
           key={`s${i}`}
@@ -196,18 +252,21 @@ export function WxFx({ kind, isDay }: { kind: WxKind; isDay: boolean }) {
             ...abs,
             left: `${R[i * 3]! * 100}%`,
             top: `${R[i * 3 + 1]! * 90}%`,
-            width: 2,
-            height: 2,
+            width: R[i * 3 + 2]! > 0.8 ? 3 : 2,
+            height: R[i * 3 + 2]! > 0.8 ? 3 : 2,
             borderRadius: '50%',
             background: '#fff',
-            animation: `zn-twinkle ${(2 + R[i * 3 + 2]! * 3).toFixed(2)}s ease-in-out infinite`,
-            animationDelay: `${(-R[i * 3 + 2]! * 4).toFixed(2)}s`,
+            boxShadow: R[i * 3 + 2]! > 0.8 ? '0 0 6px rgba(255,255,255,.8)' : undefined,
+            opacity: 0.7,
+            animation: `zn-twinkle ${(2.4 + R[i * 3 + 2]! * 3.5).toFixed(2)}s ease-in-out infinite`,
+            animationDelay: `${(-R[i * 3 + 2]! * 5).toFixed(2)}s`,
           }}
         />,
       );
     kids.push(
       <div
         key="moon"
+        className="kh-wxfx__moon"
         style={{
           ...abs,
           right: '10%',
@@ -221,97 +280,170 @@ export function WxFx({ kind, isDay }: { kind: WxKind; isDay: boolean }) {
       />,
     );
   }
-  if (['partly', 'cloudy', 'rain', 'storm', 'snow', 'fog'].includes(kind)) {
-    const n = kind === 'partly' ? 3 : 5;
-    const R = wxRnd(n * 3, 11);
-    for (let i = 0; i < n; i++)
+  const nClouds = CLOUDS[cond] ?? 0;
+  if (nClouds) {
+    const R = wxRnd(nClouds * 4, 11);
+    const dark = DARK_CLOUDS.has(cond);
+    for (let i = 0; i < nClouds; i++)
       kids.push(
         <div
           key={`c${i}`}
+          className="kh-wxfx__cloud"
           style={{
             ...abs,
-            left: 0,
-            top: `${R[i * 3]! * 70 - 10}%`,
-            width: 260 + R[i * 3 + 1]! * 200,
-            height: 90 + R[i * 3 + 2]! * 50,
+            left: `${R[i * 4 + 3]! * 90}%`,
+            top: `${R[i * 4]! * 70 - 10}%`,
+            width: 260 + R[i * 4 + 1]! * 200,
+            height: 90 + R[i * 4 + 2]! * 50,
             borderRadius: '50%',
-            background: kind === 'storm' || kind === 'rain' ? 'rgba(40,50,70,.35)' : 'rgba(255,255,255,.35)',
+            background: dark ? 'rgba(40,50,70,.38)' : 'rgba(255,255,255,.34)',
             filter: 'blur(22px)',
-            animation: `zn-cloud ${(38 + R[i * 3 + 1]! * 30).toFixed(1)}s linear infinite`,
-            animationDelay: `${(-R[i * 3 + 2]! * 60).toFixed(1)}s`,
+            animation: `kh-wx-drift ${(60 + R[i * 4 + 1]! * 50).toFixed(1)}s linear infinite`,
+            animationDelay: `${(-R[i * 4 + 2]! * 100).toFixed(1)}s`,
           }}
         />,
       );
   }
-  if (kind === 'rain' || kind === 'storm') {
-    const R = wxRnd(210, 3);
-    for (let i = 0; i < 70; i++)
+  const rain = RAIN[cond];
+  if (rain) {
+    const n = Math.round(rain.n * scale);
+    const R = wxRnd(n * 3, 3);
+    const tilt = cond === 'heavyrain' || cond === 'storm' ? 16 : 11;
+    for (let i = 0; i < n; i++) {
+      const len = rain.len[0] + R[i * 3 + 1]! * (rain.len[1] - rain.len[0]);
+      const dur = rain.dur[0] + R[i * 3 + 2]! * (rain.dur[1] - rain.dur[0]);
       kids.push(
         <div
           key={`r${i}`}
+          className="kh-wxfx__drop"
           style={{
             ...abs,
-            left: `${R[i * 3]! * 104 - 2}%`,
-            top: -30,
-            width: 1.5,
-            transform: 'rotate(12deg)',
-            height: 14 + R[i * 3 + 1]! * 12,
+            left: `${R[i * 3]! * 106 - 3}%`,
+            top: `${R[(i * 3 + 7) % (n * 3)]! * 100}%`,
+            width: cond === 'heavyrain' ? 1.8 : 1.4,
+            height: len,
             borderRadius: 2,
-            background: 'linear-gradient(180deg, rgba(210,230,255,0), rgba(210,230,255,.75))',
-            animation: `zn-rain ${(0.55 + R[i * 3 + 2]! * 0.45).toFixed(2)}s linear infinite`,
-            animationDelay: `${(-R[i * 3 + 1]! * 1.2).toFixed(2)}s`,
+            background: 'linear-gradient(180deg, rgba(210,230,255,0), var(--wx-drop, rgba(210,230,255,.85)))',
+            opacity: rain.op,
+            ['--tilt' as string]: `${tilt}deg`,
+            animation: `kh-wx-fall ${dur.toFixed(2)}s linear infinite`,
+            animationDelay: `${(-R[i * 3 + 1]! * 2).toFixed(2)}s`,
           }}
         />,
       );
+    }
   }
-  if (kind === 'storm')
-    kids.push(
-      <div
-        key="fl"
-        style={{
-          ...abs,
-          inset: 0,
-          background: 'rgba(235,240,255,.9)',
-          animation: 'zn-flash 7s linear infinite',
-        }}
-      />,
-    );
-  if (kind === 'snow') {
-    const R = wxRnd(150, 5);
-    for (let i = 0; i < 50; i++)
+  const nSnow = Math.round((SNOW[cond] ?? 0) * scale);
+  if (nSnow) {
+    const R = wxRnd(nSnow * 3, 5);
+    for (let i = 0; i < nSnow; i++) {
+      const size = 2.5 + R[i * 3 + 1]! * 4;
       kids.push(
         <div
           key={`f${i}`}
+          className="kh-wxfx__flake"
           style={{
             ...abs,
             left: `${R[i * 3]! * 100}%`,
-            top: 0,
-            width: 3 + R[i * 3 + 1]! * 4,
-            height: 3 + R[i * 3 + 1]! * 4,
+            top: `${R[(i * 3 + 5) % (nSnow * 3)]! * 100}%`,
+            width: size,
+            height: size,
             borderRadius: '50%',
-            background: 'rgba(255,255,255,.9)',
-            animation: `zn-snow ${(4 + R[i * 3 + 2]! * 4).toFixed(2)}s linear infinite`,
-            animationDelay: `${(-R[i * 3 + 2]! * 8).toFixed(2)}s`,
+            background: 'var(--wx-flake, rgba(255,255,255,.92))',
+            boxShadow: '0 0 4px rgba(255,255,255,.5)',
+            opacity: 0.55 + R[i * 3 + 2]! * 0.4,
+            ['--sway' as string]: `${(6 + R[i * 3 + 2]! * 14).toFixed(0)}px`,
+            animation: `kh-wx-snow ${(6 + R[i * 3 + 2]! * 6).toFixed(2)}s linear infinite`,
+            animationDelay: `${(-R[i * 3 + 1]! * 12).toFixed(2)}s`,
           }}
         />,
       );
+    }
   }
-  if (kind === 'fog')
-    for (let i = 0; i < 3; i++)
+  if (cond === 'storm')
+    kids.push(
+      <div
+        key="fl"
+        className="kh-wxfx__flash"
+        style={{
+          ...abs,
+          inset: 0,
+          background: 'radial-gradient(120% 90% at 30% 0%, rgba(235,240,255,.85), rgba(235,240,255,.15) 70%)',
+          opacity: 0,
+          animation: 'kh-wx-flash 11s linear infinite',
+          animationDelay: '-3s',
+        }}
+      />,
+    );
+  if (cond === 'fog')
+    for (let i = 0; i < 4; i++)
       kids.push(
         <div
           key={`fg${i}`}
           style={{
             ...abs,
-            left: '-10%',
-            right: '-10%',
-            top: `${20 + i * 25}%`,
-            height: 40,
-            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
-            filter: 'blur(8px)',
-            animation: `zn-fog ${10 + i * 4}s ease-in-out infinite`,
+            left: '-15%',
+            right: '-15%',
+            top: `${12 + i * 22}%`,
+            height: 46,
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.38), transparent)',
+            filter: 'blur(9px)',
+            animation: `zn-fog ${12 + i * 5}s ease-in-out infinite`,
+            animationDelay: `${-i * 3}s`,
           }}
         />,
       );
-  return <div style={{ position: 'absolute', inset: 0, zIndex: 1, overflow: 'hidden' }}>{kids}</div>;
+  return (
+    <div className="kh-wxfx" style={{ position: 'absolute', inset: 0, zIndex: 1, overflow: 'hidden' }}>
+      {kids}
+    </div>
+  );
+}
+
+/**
+ * The card's sky: condition gradient, animated effects, a soft dim so the
+ * text stays readable. Animations pause while the sky is off-screen, the tab
+ * is hidden or `paused` (e.g. the banner under the open popup) — battery.
+ */
+export function WxSky({
+  cond,
+  isDay,
+  paused = false,
+  scale = 1,
+}: {
+  cond: Cond;
+  isDay: boolean;
+  paused?: boolean;
+  scale?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [seen, setSeen] = useState(true);
+  const [shown, setShown] = useState(true);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setSeen(!!e?.isIntersecting));
+    io.observe(el);
+    const vis = () => setShown(document.visibilityState !== 'hidden');
+    vis();
+    document.addEventListener('visibilitychange', vis);
+    return () => {
+      io.disconnect();
+      document.removeEventListener('visibilitychange', vis);
+    };
+  }, []);
+  const kind = condKind(cond);
+  return (
+    <div
+      ref={ref}
+      className="kh-wx__sky"
+      data-cond={cond}
+      data-paused={paused || !seen || !shown ? '' : undefined}
+      aria-hidden="true"
+    >
+      <div style={{ position: 'absolute', inset: 0, background: wxBg(kind, isDay), opacity: 0.75 }} />
+      <WxFx cond={cond} isDay={isDay} scale={scale} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgb(var(--d) / calc(.12 * var(--d-k)))' }} />
+    </div>
+  );
 }
