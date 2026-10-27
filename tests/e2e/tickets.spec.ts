@@ -122,6 +122,8 @@ test('create, edit, comment, link, Kanban, filter, Trash', async ({ page }) => {
   await expect(col.locator('.kh-tkt-kcard')).toHaveCount(1);
   await saved;
   await page.reload();
+  // the Tabela/Kanban choice is saved a moment later than the move: pick Kanban again if needed
+  await page.getByRole('radio', { name: 'Kanban' }).click();
   await expect(page.getByRole('group', { name: 'Resolvido' })).toContainText('INC0001');
   await page.getByRole('group', { name: 'Resolvido' }).locator('.kh-tkt-kcard').click();
   await expect(panel.getByText('mudou o status')).toBeVisible();
