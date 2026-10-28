@@ -13,6 +13,7 @@ import {
   type Zoom,
 } from '@/lib/alloc';
 import { usePersistentState } from '@/components/ui';
+import { OPT } from '../css';
 import type { Mg } from '../store';
 import { AbsencePop, BookingPop, Floating } from './Popovers';
 import { Timeline, type GroupBy, type Nav, type Unit } from './Timeline';
@@ -314,7 +315,7 @@ export function AllocPage({ mg }: { mg: Mg }) {
                 }}
               >
                 {GROUPS.map(([k, l]) => (
-                  <option key={k} value={k} style={{ background: '#2b2c33', color: '#f4f2f0' }}>
+                  <option key={k} value={k} style={OPT}>
                     {tr(l)}
                   </option>
                 ))}
