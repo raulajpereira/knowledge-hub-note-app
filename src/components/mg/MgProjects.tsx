@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MG_PST, MG_RST, mgEur, wLbl, type MgProject } from '@/lib/mg';
+import { MG_PST, MG_RST, mgEur, mgModSkill, wLbl, type MgProject } from '@/lib/mg';
+import { modColor } from '@/lib/sap';
 import { mgL } from '@/lib/mgText';
 import { CHEV, OPT, css } from './css';
 import { Av, Chip, Dialog, Fields, Split, Trash, uid } from './ui';
 import type { Mg } from './store';
-import { useConfirm } from '@/components/ui';
+import { Popover, useConfirm } from '@/components/ui';
+import { ModChips, modChip, ModulePicker, moduleOptions } from './ModulePicker';
 import { useI18n } from '@/i18n/client';
 import { SaveTemplateButton, TemplateButton } from '@/components/templates/Templates';
 import type { ProjectTpl } from '@/lib/templates';
@@ -42,6 +44,7 @@ export function mgNewProject(mg: Mg, p: Partial<MgProject>): MgProject {
       { name: tr('Preparação'), from: wk(0), to: wk(2) },
       { name: tr('Execução'), from: wk(3), to: wk(12) },
     ],
+    modules: [],
     ...p,
   };
 }
@@ -56,11 +59,15 @@ export function MgProjects({ mg }: { mg: Mg }) {
   const L = (i: number) => mgL(i, lang);
   const [q, setQ] = useState('');
   const [stF, setStF] = useState('all');
+  /** module filter ('' = all) */
+  const [modF, setModF] = useState('');
   const [adding, setAdding] = useState(false);
   const qq = q.trim().toLowerCase();
+  const modOpts = moduleOptions(D.projects.flatMap((p) => p.modules ?? []));
   const list = mg.PJ.filter(
     (p) =>
       (stF === 'all' || p.status === stF) &&
+      (!modF || (p.modules ?? []).includes(modF)) &&
       (!qq || [p.code, p.name, mg.cById[p.client]?.name ?? ''].join(' ').toLowerCase().includes(qq)) &&
       mg.inTeamProj(p.id),
   );
@@ -103,6 +110,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
           {['all', 'Ativo', 'Planeado', 'Em risco', 'Concluído'].map((s) => (
             <Chip key={s} on={stF === s} label={tr(s === 'all' ? 'Todos' : s)} onClick={() => setStF(s)} />
           ))}
+          <ModFilter mg={mg} value={modF} onChange={setModF} />
         </div>
       </div>
       <div
@@ -146,6 +154,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                 </span>
               </div>
               <span style={css('font-size:14px;font-weight:600;line-height:1.3;')}>{p.name}</span>
+              <ModChips mods={p.modules ?? []} first={modF} />
               <div
                 style={css(
                   'display:flex;align-items:center;gap:8px;font-size:12px;color:rgb(var(--t) / calc(.64 * var(--t-k)));',
@@ -178,10 +187,12 @@ export function MgProjects({ mg }: { mg: Mg }) {
     <NewProject
       mg={mg}
       cOpts={cOpts}
+      modOpts={modOpts}
       onClose={() => setAdding(false)}
       onCreated={(id) => {
         setAdding(false);
         setStF('all');
+        setModF('');
         setQ('');
         select(id);
       }}
@@ -240,6 +251,13 @@ export function MgProjects({ mg }: { mg: Mg }) {
       a.project === sel.id && wi(a.to) >= -2 && (mg.gTeam === 'all' || mg.pById[a.person]?.team === mg.gTeam),
   );
   const reqs = D.reqs.filter((r) => r.project === sel.id);
+  /** a new resource request asks for the skills of the project's modules (ABAP when none matches) */
+  const reqSkills = [
+    ...new Set((sel.modules ?? []).map((m) => mgModSkill(m, SKN)).filter((k): k is string => !!k)),
+  ]
+    .slice(0, 3)
+    .map((k) => ({ k, l: 2 }));
+  if (!reqSkills.length) reqSkills.push({ k: 'abap', l: 2 });
   const updPh = (i: number, k: 'name' | 'from' | 'to') => (v: string) =>
     mg.upd((d) => {
       d.projects.find((x) => x.id === sel.id)!.phases[i]![k] = v;
@@ -316,6 +334,17 @@ export function MgProjects({ mg }: { mg: Mg }) {
           >
             <Trash />
           </button>
+        </div>
+        <div style={css('display:flex;flex-direction:column;gap:6px;')}>
+          <span style={css('font-size:12px;color:rgb(var(--t) / calc(.68 * var(--t-k)));')}>
+            {tx('mgm_mods')}
+          </span>
+          <ModulePicker
+            label={tx('mgm_mods')}
+            value={sel.modules ?? []}
+            options={modOpts}
+            onChange={(m) => mg.upd((d) => void (d.projects.find((x) => x.id === sel.id)!.modules = m))}
+          />
         </div>
         <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;')}>
           {kpis.map(([l, v, c]) => (
@@ -514,7 +543,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
                       id,
                       team: sel.team,
                       project: sel.id,
-                      skills: [{ k: 'abap', l: 2 }],
+                      skills: reqSkills,
                       hours: 40,
                       maxCost: '',
                       from: wk(1),
@@ -639,15 +668,19 @@ const LT = 'font-size:12px;color:rgb(var(--t) / calc(.75 * var(--t-k)));';
 function NewProject({
   mg,
   cOpts,
+  modOpts,
   onClose,
   onCreated,
 }: {
   mg: Mg;
   cOpts: Array<{ v: string; l: string }>;
+  modOpts: string[];
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
   const { tr, lang, D } = mg;
+  const { t: tx } = useI18n();
+  const [mods, setMods] = useState<string[]>([]);
   const [n, setN] = useState({
     code: '',
     name: '',
@@ -673,7 +706,7 @@ function NewProject({
       return setErr(tr('Email do cliente inválido.'));
     if (n.mode === 'exist' && !n.client) return setErr(tr('Escolha um cliente.'));
     const cid = n.mode === 'new' ? uid() : n.client;
-    const pr = mgNewProject(mg, { code: n.code.trim() || 'NOVO-01', name: nm, client: cid });
+    const pr = mgNewProject(mg, { code: n.code.trim() || 'NOVO-01', name: nm, client: cid, modules: mods });
     mg.upd((d) => {
       if (n.mode === 'new')
         d.clients.unshift({
@@ -732,6 +765,15 @@ function NewProject({
           />
         </label>
         {txt('name', tr('Nome'))}
+      </div>
+      <div style={css(LB)}>
+        <span style={css('display:flex;align-items:baseline;gap:8px;')}>
+          <span style={css(LT)}>{tx('mgm_mods')}</span>
+          <span style={css('font-size:11.5px;color:rgb(var(--t) / calc(.5 * var(--t-k)));')}>
+            {tx('mgm_modsHint')}
+          </span>
+        </span>
+        <ModulePicker label={tx('mgm_mods')} value={mods} options={modOpts} onChange={setMods} />
       </div>
       <div style={css('display:flex;flex-direction:column;gap:8px;')}>
         <span style={css(LT)}>{tr('Cliente')}</span>
@@ -827,5 +869,95 @@ function NewProject({
         </button>
       </div>
     </Dialog>
+  );
+}
+
+/** Projetos › filter by module: the modules the projects use, with how many projects have each. */
+function ModFilter({ mg, value, onChange }: { mg: Mg; value: string; onChange: (m: string) => void }) {
+  const { t } = useI18n();
+  const ref = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const n = new Map<string, number>();
+  for (const p of mg.PJ)
+    if (mg.inTeamProj(p.id)) for (const m of p.modules ?? []) n.set(m, (n.get(m) ?? 0) + 1);
+  const used = moduleOptions(n.keys()).filter((m) => n.has(m));
+  if (!used.length && !value) return null;
+  const pickRow = (m: string, label: React.ReactNode, count?: number) => (
+    <button
+      key={m || '*'}
+      type="button"
+      role="option"
+      aria-selected={value === m}
+      onClick={() => {
+        onChange(m);
+        setOpen(false);
+      }}
+    >
+      {m ? (
+        <span className="mg-modlist__sq" style={{ background: modColor(m) }} aria-hidden />
+      ) : (
+        <span className="mg-modlist__sq" aria-hidden />
+      )}
+      <span className={m ? 'mg-modlist__id' : undefined} style={css('flex:1;')}>
+        {label}
+      </span>
+      {count !== undefined && (
+        <span className="mg-modlist__desc" style={css('flex:none;')}>
+          {count}
+        </span>
+      )}
+      {value === m && (
+        <span className="mg-modlist__tick" aria-hidden>
+          ✓
+        </span>
+      )}
+    </button>
+  );
+  return (
+    <>
+      <button
+        ref={ref}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={value ? `${t('mgm_modFilter')}: ${value}` : t('mgm_modFilter')}
+        onClick={() => setOpen((o) => !o)}
+        style={
+          value
+            ? {
+                ...modChip(value),
+                height: 28,
+                padding: '0 10px',
+                cursor: 'pointer',
+                font: 'inherit',
+                fontSize: 12,
+                fontWeight: 600,
+              }
+            : css(
+                'height:28px;padding:0 10px;display:inline-flex;align-items:center;gap:5px;border-radius:999px;border:1px dashed rgb(var(--w) / .28);background:transparent;color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;',
+              )
+        }
+      >
+        {value || t('mgm_modFilter')}
+        <span aria-hidden style={css('font-size:9px;opacity:.7;')}>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <Popover
+          anchor={ref}
+          align="left"
+          onClose={() => setOpen(false)}
+          className="kh-taglist mg-modlist"
+          width={240}
+          maxHeight={320}
+          role="listbox"
+          aria-label={t('mgm_modFilter')}
+        >
+          {pickRow('', t('mgm_modAll'))}
+          {used.map((m) => pickRow(m, m, n.get(m)))}
+        </Popover>
+      )}
+    </>
   );
 }

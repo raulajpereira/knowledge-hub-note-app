@@ -51,15 +51,55 @@ export const txModules = (used: Iterable<string>) => {
   for (const m of used) if (m && !(m in TX_MODS)) extra.add(m);
   return [...TX_MOD_IDS, ...[...extra].sort((a, b) => a.localeCompare(b))];
 };
+/** Colours of the other modules in SAP_MODULES (not built-in transaction modules). */
+const MOD_C: Record<string, string> = {
+  QM: 'oklch(0.8 0.11 350)',
+  EWM: 'oklch(0.8 0.1 232)',
+  PS: 'oklch(0.83 0.11 82)',
+  CS: 'oklch(0.82 0.1 128)',
+  SF: 'oklch(0.78 0.12 300)',
+  ARIBA: 'oklch(0.8 0.12 12)',
+  BW: 'oklch(0.79 0.1 265)',
+  BTP: 'oklch(0.83 0.1 192)',
+};
 /** Built-ins keep their colour; any other module gets a stable hue from its name. */
 export const modColor = (m: string) => {
-  const c = TX_MODS[m];
+  const c = TX_MODS[m] ?? MOD_C[m];
   if (c) return c;
   if (!m) return 'oklch(0.8 0.02 60)';
   let h = 0x811c9dc5;
   for (let i = 0; i < m.length; i++) h = Math.imul(h ^ m.charCodeAt(i), 0x01000193) >>> 0;
   return `oklch(0.8 0.11 ${h % 360})`;
 };
+
+/**
+ * The SAP modules a project can cover (Management › Projetos): the
+ * transaction modules above plus the Funcional ones (FN_MODULES) and a few
+ * more, in the usual order (finance, logistics, people, technology). Any
+ * other name the tenant types follows the transaction-module rule
+ * (parseTxMod) and gets its colour from modColor.
+ */
+export const SAP_MODULES: Array<[string, { pt: string; en: string }]> = [
+  ['FI', { pt: 'Contabilidade financeira', en: 'Financial accounting' }],
+  ['CO', { pt: 'Controlling', en: 'Controlling' }],
+  ['SD', { pt: 'Vendas e distribuição', en: 'Sales and distribution' }],
+  ['MM', { pt: 'Gestão de materiais', en: 'Materials management' }],
+  ['PP', { pt: 'Planeamento da produção', en: 'Production planning' }],
+  ['QM', { pt: 'Gestão da qualidade', en: 'Quality management' }],
+  ['PM', { pt: 'Manutenção', en: 'Plant maintenance' }],
+  ['WM', { pt: 'Gestão de armazéns', en: 'Warehouse management' }],
+  ['EWM', { pt: 'Extended Warehouse Management', en: 'Extended Warehouse Management' }],
+  ['PS', { pt: 'Sistema de projetos', en: 'Project system' }],
+  ['CS', { pt: 'Serviço ao cliente', en: 'Customer service' }],
+  ['HCM', { pt: 'Recursos humanos', en: 'Human capital management' }],
+  ['SF', { pt: 'SuccessFactors', en: 'SuccessFactors' }],
+  ['ARIBA', { pt: 'Ariba (compras)', en: 'Ariba (procurement)' }],
+  ['BW', { pt: 'BW / Analytics', en: 'BW / Analytics' }],
+  ['BTP', { pt: 'Business Technology Platform', en: 'Business Technology Platform' }],
+  ['ABAP', { pt: 'Desenvolvimento ABAP', en: 'ABAP development' }],
+  ['BC', { pt: 'Basis', en: 'Basis' }],
+];
+export const SAP_MODULE_IDS = SAP_MODULES.map(([m]) => m);
 
 /** The catalogue a tenant starts with: [code, description, module, program, type]. */
 export { TX_CATALOG as TX_SEED } from './sapTcodeCatalog';

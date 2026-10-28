@@ -1415,5 +1415,22 @@
   "wx_humTile": "Humidity",
   "wx_open": "Open the full forecast for {c}",
   "wx_full": "Full forecast",
-  "wx_title": "Weather"
+  "wx_title": "Weather",
+  "mgm_mods": "SAP modules",
+  "mgm_modsHint": "Optional · pick as many as you need",
+  "mgm_modsAdd": "Add modules (FI, MM, SD…)",
+  "mgm_modsMore": "Add more…",
+  "mgm_modRemove": "Remove {x}",
+  "mgm_modOther": "Other module…",
+  "mgm_modOtherPh": "Module name (e.g. TM)",
+  "mgm_modNew": "Add “{x}”",
+  "mgm_modOwn": "Custom module",
+  "mgm_modRule": "Type the name: up to 20 letters, digits, spaces, - or _",
+  "mgm_modExists": "{x} is already chosen",
+  "mgm_modMax": "At most {n} modules",
+  "mgm_modNoMatch": "No module found — use “Other module…” to add one",
+  "mgm_modNone": "No modules",
+  "mgm_modFilter": "Module",
+  "mgm_modAll": "All modules",
+  "mgm_modClear": "Clear module filter"
 }

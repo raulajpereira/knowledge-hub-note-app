@@ -1415,5 +1415,22 @@
   "wx_humTile": "Humidade",
   "wx_open": "Abrir a previsão completa de {c}",
   "wx_full": "Previsão completa",
-  "wx_title": "Meteorologia"
+  "wx_title": "Meteorologia",
+  "mgm_mods": "Módulos SAP",
+  "mgm_modsHint": "Opcional · escolha os que precisar",
+  "mgm_modsAdd": "Adicionar módulos (FI, MM, SD…)",
+  "mgm_modsMore": "Adicionar mais…",
+  "mgm_modRemove": "Remover {x}",
+  "mgm_modOther": "Outro módulo…",
+  "mgm_modOtherPh": "Nome do módulo (ex.: TM)",
+  "mgm_modNew": "Adicionar «{x}»",
+  "mgm_modOwn": "Módulo próprio",
+  "mgm_modRule": "Escreva o nome: até 20 letras, números, espaços, - ou _",
+  "mgm_modExists": "{x} já está escolhido",
+  "mgm_modMax": "Máximo de {n} módulos",
+  "mgm_modNoMatch": "Nenhum módulo encontrado — use «Outro módulo…» para criar um",
+  "mgm_modNone": "Sem módulos",
+  "mgm_modFilter": "Módulo",
+  "mgm_modAll": "Todos os módulos",
+  "mgm_modClear": "Limpar filtro de módulo"
 }

@@ -70,6 +70,7 @@ type Mg = {
     name: string;
     client: string;
     phases: Array<{ name: string }>;
+    modules?: string[];
   }>;
   allocs: Array<{
     id: string;
@@ -282,6 +283,65 @@ test('projects: new project with a new client, phases', async ({ page }) => {
       return [p?.name, d.clients.some((c) => c.name === 'Cliente Projeto E2E'), p?.phases.length];
     })
     .toEqual(['Projeto E2E', true, 3]);
+});
+
+test('projects: SAP modules — two from the list and one of our own, chips, edit and filter', async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto('app/mg-projects');
+  await page.getByRole('button', { name: 'Novo Projeto' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Novo Projeto' });
+  await dlg.getByLabel('Código').fill('E2E-MOD');
+  await dlg.getByLabel('Nome', { exact: true }).fill('Projeto Módulos E2E');
+  const box = dlg.getByRole('combobox', { name: 'Módulos SAP' });
+  await box.click();
+  const list = page.getByRole('listbox', { name: 'Módulos SAP' });
+  // click one, search + Enter for another
+  await list.getByRole('option', { name: /^FI Contabilidade/ }).click();
+  await box.fill('materiais');
+  await box.press('Enter');
+  await expect(list.getByRole('option', { name: /^MM / })).toHaveAttribute('aria-selected', 'true');
+  // "Outro módulo…" adds a name that is not in the list
+  await list.getByRole('option', { name: 'Outro módulo…' }).click();
+  await dlg.getByRole('combobox', { name: 'Nome do módulo (ex.: TM)' }).fill('tm cloud');
+  await page.keyboard.press('Enter');
+  const chips = dlg.getByRole('group', { name: 'Módulos SAP' });
+  await expect(chips.getByRole('button', { name: /^Remover / })).toHaveCount(3);
+  // Escape closes the list, not the dialog; Backspace in the empty box removes the last chip (then re-add it)
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(dlg).toBeVisible();
+  await box.press('Backspace');
+  await expect(chips.getByRole('button', { name: /^Remover / })).toHaveCount(2);
+  await box.press('ArrowDown'); // opens the list again
+  await list.getByRole('option', { name: 'Outro módulo…' }).click();
+  await page.keyboard.type('TM CLOUD');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Escape');
+  await dlg.getByRole('button', { name: 'Criar Projeto' }).click();
+  await expect(dlg).toBeHidden();
+  const mods = async () => (await mgData(page)).projects.find((x) => x.code === 'E2E-MOD')?.modules;
+  await expect.poll(mods).toEqual(['FI', 'MM', 'TM CLOUD']);
+  // shown on the card; edited in the detail
+  const card = page.locator('[role=button][aria-current=true]');
+  await expect(card.getByText('TM CLOUD', { exact: true })).toBeVisible();
+  await page.getByRole('group', { name: 'Módulos SAP' }).getByRole('button', { name: 'Remover FI' }).click();
+  await expect.poll(mods).toEqual(['MM', 'TM CLOUD']);
+  // the module filter lists the modules in use; picking one keeps only its projects
+  await page.getByRole('button', { name: 'Módulo', exact: true }).click();
+  await page
+    .getByRole('listbox', { name: 'Módulo' })
+    .getByRole('option', { name: /^TM CLOUD/ })
+    .click();
+  await expect(page.getByText('E2E-MOD', { exact: true })).toBeVisible();
+  await expect(page.getByText('E2E-01', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Módulo: TM CLOUD' }).click();
+  await page
+    .getByRole('listbox', { name: 'Módulo' })
+    .getByRole('option', { name: 'Todos os módulos' })
+    .click();
+  await expect(page.getByText('E2E-01', { exact: true })).toBeVisible();
 });
 
 test('allocations: new allocation from the panel, weekly override, dashboard and overview', async ({

@@ -105,6 +105,7 @@ export async function loadMg(auth: AuthContext): Promise<MgData> {
         status: p.status,
         manager: n(p.managerId),
         phases: p.phases as MgProject['phases'],
+        modules: p.modules,
       })),
       allocs: al.map((a) => ({
         id: a.id,
@@ -222,6 +223,7 @@ function toRow(c: MgCollection, v: unknown) {
           status: x.status,
           managerId: r('people', x.manager),
           phases: x.phases,
+          modules: x.modules ?? [],
           updatedAt: now,
         },
       };

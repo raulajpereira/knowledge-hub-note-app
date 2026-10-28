@@ -1751,6 +1751,26 @@ describe.skipIf(!enabled)('notes', () => {
         ]),
       ),
     ).toBe('invalid_reference');
+    // SAP modules of a project (0049): sample ones, kept in order, own names allowed; invalid / repeated refused
+    expect(d.projects.find((x) => x.code === 'LUS-S4')?.modules).toEqual([
+      'FI',
+      'CO',
+      'SD',
+      'MM',
+      'ABAP',
+      'BC',
+    ]);
+    const pm = { ...d2.projects[1]!, modules: ['MM', 'FI', 'ARIBA', 'TM CLOUD'] };
+    await mg.applyMgOps(a, [{ op: 'put', c: 'projects', v: pm }]);
+    expect((await mg.loadMg(a)).projects.find((x) => x.id === pm.id)?.modules).toEqual(pm.modules);
+    for (const bad of [['fi'], ['MM', 'MM'], ['A'.repeat(21)], Array.from({ length: 31 }, (_, i) => `M${i}`)])
+      expect(await codeOf(mg.applyMgOps(a, [{ op: 'put', c: 'projects', v: { ...pm, modules: bad } }]))).toBe(
+        'invalid_input',
+      );
+    // a project sent without modules (older screen) is stored with none
+    const { modules: _m, ...noMods } = pm;
+    await mg.applyMgOps(a, [{ op: 'put', c: 'projects', v: noMods }]);
+    expect((await mg.loadMg(a)).projects.find((x) => x.id === pm.id)?.modules).toEqual([]);
     // another tenant's row can't be deleted
     await mg.applyMgOps(a, [{ op: 'del', c: 'projects', id: other.id }]);
     expect((await mg.loadMg(b)).projects.some((x) => x.id === other.id)).toBe(true);

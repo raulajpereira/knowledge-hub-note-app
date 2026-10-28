@@ -2,6 +2,7 @@
 // shared by the client and the server, their validation and the sample data
 // (prototype mgSeed) used by "Repor Dados".
 import { z } from 'zod';
+import { parseTxMod } from './sap';
 
 export const MG_DAY = 86_400_000;
 export const mgMonday = (d: Date) => {
@@ -61,6 +62,22 @@ export const MG_SK: Array<[string, string]> = [
   ['pm', 'Gestão de projeto'],
 ];
 export const MG_SKN: Record<string, string> = Object.fromEntries(MG_SK);
+/** At most this many modules per project. */
+export const MG_PJ_MOD_MAX = 30;
+/** The skill (MG_SK key) a project module asks for, when there is one — for staffing. */
+const MG_MOD_SK: Record<string, string> = {
+  BC: 'basis',
+  WM: 'ewm',
+  FIORI: 'fiori',
+  CPI: 'cpi',
+  PO: 'cpi',
+  RAP: 'rap',
+  S4: 's4',
+};
+export const mgModSkill = (m: string, skills: Record<string, string> = MG_SKN) => {
+  const k = MG_MOD_SK[m] ?? m.toLowerCase();
+  return k in skills ? k : null;
+};
 export const MG_LV = ['', 'Júnior', 'Pleno', 'Sénior', 'Expert'];
 export const MG_LVC = [
   'transparent',
@@ -227,6 +244,8 @@ export type MgProject = {
   status: string;
   manager: string;
   phases: MgPhase[];
+  /** SAP modules the project covers (SAP_MODULES ids or the tenant's own names), in the order picked */
+  modules?: string[];
 };
 export type MgAlloc = {
   id: string;
@@ -359,6 +378,12 @@ export const MgSchemas = {
     status: z.enum(['Ativo', 'Planeado', 'Em risco', 'Concluído']),
     manager: ref,
     phases: z.array(z.strictObject({ name: line(120), from: day, to: day })).max(60),
+    modules: z
+      // stored as typed by parseTxMod: upper case, single spaces
+      .array(z.string().refine((m) => parseTxMod(m) === m))
+      .max(MG_PJ_MOD_MAX)
+      .refine((m) => new Set(m).size === m.length)
+      .optional(),
   }),
   allocs: z.strictObject({
     id: z.uuid(),
@@ -718,6 +743,18 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
       [['abap', 1]],
     ],
   ];
+  // FIORI is not in SAP_MODULES: a module of the tenant's own
+  const MODS: Record<string, string[]> = {
+    p1: ['FI', 'CO', 'SD', 'MM', 'ABAP', 'BC'],
+    p2: ['SD', 'FIORI', 'BTP'],
+    p3: ['FI', 'CO', 'SD', 'MM'],
+    p4: ['EWM', 'MM'],
+    p5: ['SF', 'HCM'],
+    p6: ['BTP', 'ABAP', 'FIORI'],
+    p7: ['BC'],
+    p8: ['SD', 'FI'],
+    p9: ['ABAP'],
+  };
   const allocs: MgAlloc[] = [];
   const load: Record<string, number> = {};
   const addA = (pid: string, proj: string, from: number, to: number, hours: number) => {
@@ -751,6 +788,7 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
     return {
       id: id(k),
       team: '',
+      modules: MODS[k] ?? [],
       code,
       name,
       client: id(client),

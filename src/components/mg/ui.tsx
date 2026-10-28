@@ -362,7 +362,8 @@ export function Dialog({
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus();
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      // a list open inside the dialog (module picker) closes first
+      if (e.key === 'Escape' && !document.querySelector('.kh-popover')) {
         e.stopPropagation();
         onClose();
       }

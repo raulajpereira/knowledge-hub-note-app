@@ -115,6 +115,11 @@ export const mgProjects = pgTable(
     phases: jsonb('phases')
       .notNull()
       .default(sql`'[]'::jsonb`),
+    /** SAP modules of the project ('FI', 'MM', … or the tenant's own names), in the order picked */
+    modules: text('modules')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     ...stamps(),
   },
   (t) => [index('mg_projects_tenant_idx').on(t.tenantId)],
