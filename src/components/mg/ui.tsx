@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { usePersistentState, useViewport } from '@/components/ui';
 import { BackBar } from '@/components/content/MobilePane';
 import { mgIni, wLbl, wLblY, type MgPerson } from '@/lib/mg';
+import { effortLabel, fmtDay } from '@/lib/alloc';
 import { CHEV, OPT, css } from './css';
 import type { Mg } from './store';
 import './mg.css';
@@ -555,12 +556,11 @@ export function PersonPop({
   const p = mg.pById[pid];
   if (!p) return null;
   const { tr } = mg;
-  const cap = +p.cap || 40;
+  const cap = +p.cap || 0;
   const avg = mg.avgLoad(p.id, a0, b0);
-  const b = mg.band(avg, cap);
-  const my = mg.D.allocs
-    .filter((x) => x.person === p.id && mg.wi(x.to) >= 0)
-    .sort((x, y) => x.from.localeCompare(y.from));
+  const pcap = mg.avgCap(p.id, a0, b0);
+  const b = mg.band(avg, pcap);
+  const my = mg.BK.filter((x) => x.person === p.id && x.to >= mg.wk(0));
   const C = [
     'rgb(var(--t) / calc(.6 * var(--t-k)))',
     'oklch(0.86 0.12 85)',
@@ -588,7 +588,7 @@ export function PersonPop({
           </span>
         </div>
         <span style={css(`font-family:'Geist Mono',monospace;font-size:26px;font-weight:700;color:${C};`)}>
-          {Math.round((avg / cap) * 100)}%
+          {pcap ? Math.round((avg / pcap) * 100) : avg ? 100 : 0}%
         </span>
         <button
           type="button"
@@ -610,7 +610,7 @@ export function PersonPop({
           <div style={css('display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;')}>
             {Array.from({ length: 12 }, (_, w) => {
               const hh = mg.loadW(p.id, w);
-              const c = mg.heat(hh, cap);
+              const c = mg.heat(hh, mg.capW(p.id, w));
               return (
                 <div
                   key={w}
@@ -661,11 +661,12 @@ export function PersonPop({
                     <span style={css("font-family:'Geist Mono',monospace;")}>{pj?.code}</span> · {pj?.name}
                   </span>
                   <span style={css('font-size:12.5px;color:rgb(var(--t) / calc(.64 * var(--t-k)));')}>
-                    {wLblY(x.from)} → {wLblY(x.to)}
+                    {fmtDay(x.from)} → {fmtDay(x.to)}
+                    {x.status === 'tentative' && ` · ${tr('tentativo')}`}
                   </span>
                 </span>
                 <span style={css("font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;")}>
-                  {tr(`${x.hours}h/sem`)}
+                  {effortLabel(x, mg.lang)}
                 </span>
               </div>
             );

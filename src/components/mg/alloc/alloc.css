@@ -1,0 +1,1596 @@
+/* Alocações v2 (alloc2): timeline, grid, projects and capacity views, the booking popover. */
+.al-root {
+  --al-u1: oklch(0.85 0.14 85);
+  --al-u2: oklch(0.8 0.15 152);
+  --al-u3: oklch(0.7 0.18 27);
+  --al-hol: oklch(calc(0.86 * var(--lk)) 0.12 30);
+  --al-name: 236px;
+  /* behind the sticky name column (what scrolls under it must not show through) */
+  --al-solid: rgb(64 50 42 / 0.92);
+  position: relative;
+  isolation: isolate;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 30px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgb(var(--sf) / calc(0.12 * var(--sf-k))), rgb(var(--sf) / calc(0.04 * var(--sf-k))));
+  border: 1px solid rgb(var(--w) / 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: var(--ink);
+}
+.al-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  backdrop-filter: blur(var(--glass-blur-user, 34px)) saturate(150%);
+}
+.al-root .mono,
+.al-mono {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+}
+
+/* ── header ─────────────────────────────────────────────────────────────── */
+.al-head {
+  flex: none;
+  padding: 20px 22px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.al-head-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.al-head-row.top {
+  align-items: flex-end;
+}
+.al-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-right: auto;
+  min-width: 0;
+  flex: 1;
+}
+.al-titles h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.al-sub {
+  font-size: 13.5px;
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.12);
+  flex: none;
+}
+.al-seg button {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: rgb(var(--t) / calc(0.78 * var(--t-k)));
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.al-seg button:hover {
+  color: var(--ink);
+}
+.al-seg button[aria-pressed='true'],
+.al-seg button[aria-selected='true'] {
+  background: var(--ink);
+  color: var(--ink-inv);
+}
+.al-pill {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.06);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: none;
+}
+.al-pill:hover {
+  background: rgb(var(--w) / 0.1);
+}
+.al-pill.sm {
+  height: 30px;
+  font-size: 12px;
+  padding: 0 11px;
+}
+.al-pill.on {
+  border-color: rgb(var(--w) / 0.45);
+}
+.al-pill .n {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--ink-inv);
+}
+.al-search {
+  height: 36px;
+  width: 210px;
+  padding: 0 14px 0 34px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--d) / calc(0.22 * var(--d-k))) no-repeat 12px 50% / 14px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  flex: none;
+}
+.al-search:focus {
+  border-color: rgb(var(--w) / 0.4);
+}
+.al-search::placeholder {
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
+}
+.al-btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--ink);
+  color: var(--ink-inv);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: none;
+}
+.al-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.al-btn.ghost {
+  background: rgb(var(--w) / 0.08);
+  color: var(--ink);
+  border: 1px solid rgb(var(--w) / 0.18);
+}
+.al-btn.sm {
+  height: 30px;
+  font-size: 12px;
+  padding: 0 12px;
+}
+.al-btn.danger {
+  background: transparent;
+  color: var(--kh-error-text);
+  border: 1px solid rgb(var(--w) / 0.16);
+}
+.al-range {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.al-legend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+.al-lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
+  white-space: nowrap;
+}
+.al-lg i {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  border-radius: 3px;
+}
+.al-stripe {
+  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.16) 0 4px, transparent 4px 9px);
+}
+.al-lg i.conf {
+  background: oklch(0.8 0.13 50);
+}
+.al-lg i.tent {
+  background: color-mix(in oklch, oklch(0.78 0.12 300) 38%, transparent);
+  border: 1.5px dashed oklch(0.78 0.12 300);
+}
+.al-lg i.abs {
+  background: repeating-linear-gradient(135deg, rgb(var(--w) / 0.3) 0 3px, rgb(var(--w) / 0.08) 3px 7px);
+  border: 1px solid rgb(var(--w) / 0.3);
+}
+.al-lg i.hol {
+  background: repeating-linear-gradient(135deg, rgb(var(--d) / calc(0.6 * var(--d-k))) 0 3px, rgb(var(--d) / calc(0.3 * var(--d-k))) 3px 7px);
+  border: 1px solid oklch(0.75 0.12 30 / 0.6);
+}
+.al-lg i.ph {
+  border: 1.5px dashed rgb(var(--w) / 0.6);
+}
+
+/* ── the well with the timeline / grid ────────────────────────────────────── */
+.al-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+  margin: 0 12px 12px;
+}
+.al-well {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 22px;
+  background: rgb(var(--d) / calc(0.16 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.1);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.al-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+  overscroll-behavior: contain;
+}
+.al-canvas {
+  position: relative;
+}
+.al-hdr {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  background: linear-gradient(180deg, rgb(var(--sf) / calc(0.18 * var(--sf-k))), rgb(var(--sf) / calc(0.1 * var(--sf-k)))),
+    var(--al-solid);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-bottom: 1px solid rgb(var(--w) / 0.12);
+}
+.al-corner {
+  position: sticky;
+  left: 0;
+  z-index: 9;
+  width: var(--al-name);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
+  border-right: 1px solid rgb(var(--w) / 0.1);
+  background: linear-gradient(90deg, rgb(var(--sf) / calc(0.1 * var(--sf-k))), rgb(var(--sf) / calc(0.06 * var(--sf-k)))),
+    var(--al-solid);
+}
+.al-hcol {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 6px;
+  gap: 3px;
+  border-left: 1px solid rgb(var(--w) / 0.05);
+  overflow: visible;
+}
+.al-hcol.newgrp {
+  border-left-color: rgb(var(--w) / 0.16);
+}
+.al-hcol .top {
+  position: absolute;
+  left: 6px;
+  top: 7px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
+  white-space: nowrap;
+}
+.al-hcol .lbl {
+  height: 20px;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgb(var(--t) / calc(0.82 * var(--t-k)));
+  white-space: nowrap;
+}
+.al-hcol.narrow .lbl {
+  font-size: 10.5px;
+  padding: 0 3px;
+}
+.al-hcol.today .lbl {
+  background: var(--ink);
+  color: var(--ink-inv);
+}
+.al-hcol.hol .lbl,
+.al-hcol.hol .sub {
+  color: var(--al-hol);
+}
+.al-hcol.we {
+  background: rgb(var(--d) / calc(0.12 * var(--d-k)));
+}
+.al-hcol .sub {
+  font-size: 9.5px;
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* rows */
+.al-row {
+  position: absolute;
+  left: 0;
+  border-top: 1px solid rgb(var(--w) / 0.07);
+}
+.al-row.hl {
+  background: rgb(var(--w) / 0.05);
+}
+.al-row.drop {
+  background: rgb(var(--w) / 0.1);
+  box-shadow: inset 0 0 0 1.5px rgb(var(--w) / 0.5);
+}
+.al-name {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  width: var(--al-name);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px 0 16px;
+  background: linear-gradient(90deg, rgb(var(--sf) / calc(0.12 * var(--sf-k))), rgb(var(--sf) / calc(0.07 * var(--sf-k)))),
+    var(--al-solid);
+  border-right: 1px solid rgb(var(--w) / 0.1);
+  cursor: pointer;
+}
+.al-name .txt {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.al-name .nm {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-name .rl {
+  font-size: 11.5px;
+  color: rgb(var(--t) / calc(0.68 * var(--t-k)));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-name .badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+.al-pct {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.al-over {
+  font-size: 10px;
+  font-weight: 600;
+  color: oklch(calc(0.82 * var(--lk)) 0.14 30);
+  white-space: nowrap;
+}
+.al-ph-av {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px dashed rgb(var(--w) / 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+  font-size: 15px;
+}
+.al-ph-av.sm {
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+}
+.al-group {
+  position: absolute;
+  left: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid rgb(var(--w) / 0.07);
+  background: rgb(var(--w) / 0.035);
+}
+.al-group .g {
+  position: sticky;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  height: 100%;
+}
+.al-group .g i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.al-group .g .c {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgb(var(--t) / calc(0.45 * var(--t-k)));
+}
+.al-track {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.al-bg {
+  position: absolute;
+  pointer-events: none;
+}
+.al-holcol {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+  background: repeating-linear-gradient(135deg, rgb(var(--d) / calc(0.55 * var(--d-k))) 0 3px, rgb(var(--d) / calc(0.3 * var(--d-k))) 3px 7px);
+  border-left: 1px solid oklch(0.75 0.12 30 / 0.5);
+  border-right: 1px solid oklch(0.75 0.12 30 / 0.5);
+}
+.al-vline {
+  position: absolute;
+  width: 1px;
+  pointer-events: none;
+  background: rgb(var(--w) / 0.1);
+}
+.al-todayline {
+  position: absolute;
+  width: 2px;
+  pointer-events: none;
+  z-index: 4;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+/* bars */
+.al-bar {
+  position: absolute;
+  height: 22px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #24180f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 6px rgb(0 0 0 / calc(0.18 * var(--sh-k)));
+  cursor: grab;
+  z-index: 2;
+  user-select: none;
+  touch-action: none;
+}
+.al-bar .ef {
+  font-weight: 500;
+  opacity: 0.75;
+}
+.al-bar .fn {
+  font-family: Geist, system-ui, sans-serif;
+  font-weight: 500;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-bar .tag {
+  margin-left: auto;
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.al-bar.tent {
+  color: var(--ink);
+  box-shadow: none;
+  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.14) 0 4px, transparent 4px 9px) !important;
+}
+.al-bar.sel {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  z-index: 6;
+}
+.al-bar.ghost {
+  opacity: 0.85;
+  outline: 2px dashed var(--ink);
+  outline-offset: 1px;
+  z-index: 7;
+  pointer-events: none;
+}
+.al-bar.abs {
+  color: var(--ink);
+  border: 1px solid rgb(var(--w) / 0.28);
+  background: repeating-linear-gradient(135deg, rgb(var(--w) / 0.22) 0 3px, rgb(var(--w) / 0.07) 3px 8px);
+  box-shadow: none;
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 11.5px;
+}
+.al-bar .h {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+.al-bar .h::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  width: 3px;
+  border-radius: 2px;
+  background: rgb(0 0 0 / calc(0.25 * var(--sh-k)));
+  opacity: 0;
+}
+.al-bar:hover .h::after,
+.al-bar.sel .h::after {
+  opacity: 1;
+}
+.al-bar .h.l {
+  left: 0;
+}
+.al-bar .h.l::after {
+  left: 2px;
+}
+.al-bar .h.r {
+  right: 0;
+}
+.al-bar .h.r::after {
+  right: 2px;
+}
+.al-sweep {
+  position: absolute;
+  height: 22px;
+  border-radius: 7px;
+  border: 1.5px dashed var(--ink);
+  background: rgb(var(--w) / 0.12);
+  pointer-events: none;
+  z-index: 6;
+}
+.al-sweep.abs {
+  background: repeating-linear-gradient(135deg, rgb(var(--w) / 0.22) 0 3px, rgb(var(--w) / 0.07) 3px 8px);
+}
+.al-tip {
+  position: absolute;
+  z-index: 9;
+  pointer-events: none;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--ink-inv);
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.al-strip {
+  position: absolute;
+  height: 5px;
+  bottom: 5px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+.al-strip.over {
+  box-shadow: 0 0 0 1px oklch(0.75 0.19 27), 0 0 8px oklch(0.7 0.18 27 / 0.7);
+}
+
+/* ── popovers / dialogs ───────────────────────────────────────────────────── */
+.al-pop {
+  position: fixed;
+  z-index: 300;
+  isolation: isolate;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgb(70 56 48 / 0.82), rgb(52 41 35 / 0.86));
+  border: 1px solid rgb(var(--w) / 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 30px 80px rgb(0 0 0 / calc(0.45 * var(--sh-k)));
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+}
+.al-pop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  backdrop-filter: blur(30px) saturate(160%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+}
+:root[data-theme='light'] .al-root {
+  --al-solid: rgb(246 240 234 / 0.94);
+}
+:root[data-theme='light'] .al-pop {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.9), rgb(250 246 242 / 0.92));
+}
+.al-pop-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 6px 16px;
+}
+.al-pop-hd .t {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.al-pop-hd .t b {
+  font-size: 15px;
+  font-weight: 600;
+}
+.al-pop-hd .t span {
+  font-size: 11.5px;
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-x {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.08);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.al-pop-bd {
+  padding: 6px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.al-lbl {
+  font-size: 11.5px;
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.al-in {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--d) / calc(0.25 * var(--d-k)));
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+  color-scheme: dark;
+}
+:root[data-theme='light'] .al-in {
+  color-scheme: light;
+}
+.al-in.mono {
+  font-family: 'Geist Mono', monospace;
+}
+.al-in:focus {
+  border-color: rgb(var(--w) / 0.45);
+}
+select.al-in {
+  appearance: none;
+  padding-right: 30px;
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.al-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.al-eff {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.al-eff label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
+  font-size: 10px;
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+  min-width: 0;
+}
+.al-eff label.on {
+  border-color: var(--ink);
+  background: rgb(var(--w) / 0.1);
+}
+.al-eff input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: 'Geist Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+}
+.al-wd {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.al-wd button {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--w) / 0.2);
+  background: transparent;
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.al-wd button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ink-inv);
+  border-color: var(--ink);
+}
+.al-warn {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: oklch(0.55 0.15 27 / 0.28);
+  border: 1px solid oklch(0.7 0.17 27 / 0.6);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.al-warn.soft {
+  background: oklch(0.6 0.1 70 / 0.22);
+  border-color: oklch(0.8 0.12 75 / 0.5);
+}
+.al-warn .ic {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  background: oklch(0.68 0.2 27);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+.al-warn.soft .ic {
+  background: oklch(0.75 0.14 75);
+  color: #2a1f0e;
+}
+.al-warn a,
+.al-warn button.lk {
+  color: inherit;
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.al-pop-ft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 14px;
+}
+.al-kbd {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  border: 1px solid rgb(var(--w) / 0.22);
+  background: rgb(var(--w) / 0.08);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
+}
+.al-hint {
+  font-size: 11px;
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.al-menu {
+  position: fixed;
+  z-index: 310;
+  min-width: 200px;
+  padding: 6px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgb(70 56 48 / 0.9), rgb(52 41 35 / 0.92));
+  border: 1px solid rgb(var(--w) / 0.2);
+  box-shadow: 0 20px 50px rgb(0 0 0 / calc(0.4 * var(--sh-k)));
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  display: flex;
+  flex-direction: column;
+}
+:root[data-theme='light'] .al-menu {
+  background: rgb(255 255 255 / 0.95);
+}
+.al-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.al-menu button:hover,
+.al-menu button:focus-visible {
+  background: rgb(var(--w) / 0.1);
+  outline: none;
+}
+.al-menu button .k {
+  margin-left: auto;
+}
+.al-menu hr {
+  border: 0;
+  border-top: 1px solid rgb(var(--w) / 0.12);
+  margin: 4px 6px;
+}
+.al-filters {
+  width: 300px;
+  padding: 14px;
+  gap: 12px;
+}
+.al-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.al-chip {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.06);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.al-chip[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ink-inv);
+  border-color: var(--ink);
+}
+.al-chip.red {
+  background: oklch(0.6 0.17 27 / 0.35);
+  border-color: oklch(0.7 0.17 27 / 0.6);
+}
+
+/* ── grid (B) ─────────────────────────────────────────────────────────────── */
+.al-grid {
+  position: relative;
+  outline: none;
+}
+.al-grow {
+  display: flex;
+  position: relative;
+  border-top: 1px solid rgb(var(--w) / 0.07);
+}
+.al-grow.sub {
+  border-top-color: rgb(var(--w) / 0.04);
+}
+.al-gname {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  flex: none;
+  width: 262px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 0 12px;
+  background: linear-gradient(90deg, rgb(var(--sf) / calc(0.12 * var(--sf-k))), rgb(var(--sf) / calc(0.07 * var(--sf-k)))),
+    var(--al-solid);
+  border-right: 1px solid rgb(var(--w) / 0.1);
+  min-width: 0;
+}
+.al-gname .tw {
+  width: 16px;
+  flex: none;
+  border: 0;
+  background: none;
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0;
+}
+.al-gcell {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  border-left: 1px solid rgb(var(--w) / 0.04);
+}
+.al-gcell.we {
+  background: repeating-linear-gradient(135deg, rgb(var(--w) / 0.05) 0 3px, transparent 3px 8px);
+}
+.al-gcell .v {
+  min-width: 46px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 8px rgb(0 0 0 / calc(0.15 * var(--sh-k)));
+}
+.al-gcell .v.none {
+  box-shadow: none;
+  color: rgb(var(--t) / calc(0.35 * var(--t-k)));
+}
+.al-gcell .v.absent {
+  background: repeating-linear-gradient(135deg, rgb(var(--w) / 0.2) 0 3px, rgb(var(--w) / 0.07) 3px 8px);
+  border: 1px solid rgb(var(--w) / 0.25);
+  color: var(--ink);
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 11.5px;
+  box-shadow: none;
+}
+.al-gcell .v.tentv {
+  background: color-mix(in oklch, oklch(0.78 0.12 300) 30%, transparent);
+  border: 1.5px dashed oklch(0.78 0.12 300);
+  color: var(--ink);
+  box-shadow: none;
+  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.12) 0 4px, transparent 4px 9px);
+}
+.al-gcell .plus {
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: rgb(var(--d) / calc(0.35 * var(--d-k)));
+  color: var(--ink);
+}
+.al-gcell.sub {
+  font-weight: 500;
+  color: var(--ink);
+}
+.al-gcell.sub.tent {
+  color: oklch(calc(0.85 * var(--lk)) 0.1 300);
+  text-decoration: underline dashed;
+}
+.al-gcell.sel {
+  background: rgb(var(--w) / 0.12);
+}
+.al-gcell.cur::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 8px;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+}
+.al-gcell .man {
+  position: absolute;
+  right: 4px;
+  top: 3px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-top: 7px solid oklch(0.72 0.17 245);
+}
+.al-gcell .fill {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--accent);
+  border: 1.5px solid var(--ink);
+  cursor: crosshair;
+  z-index: 3;
+}
+.al-gtot {
+  flex: none;
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  background: rgb(var(--d) / calc(0.3 * var(--d-k)));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgb(var(--w) / 0.1);
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+.al-gtot small {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+}
+.al-gedit {
+  position: absolute;
+  z-index: 20;
+  height: 34px;
+  border-radius: 10px;
+  border: 2px solid var(--accent);
+  background: rgb(var(--d) / calc(0.85 * var(--d-k)));
+  color: var(--ink);
+  font-family: 'Geist Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+}
+.al-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 12px 12px;
+  padding: 0 16px;
+  height: 44px;
+  border-radius: 18px;
+  background: rgb(var(--d) / calc(0.16 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.1);
+  overflow: hidden;
+}
+.al-selbar {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgb(70 56 48 / 0.85), rgb(52 41 35 / 0.88));
+  border: 1px solid rgb(var(--w) / 0.2);
+  box-shadow: 0 16px 40px rgb(0 0 0 / calc(0.4 * var(--sh-k)));
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+:root[data-theme='light'] .al-selbar {
+  background: rgb(255 255 255 / 0.94);
+}
+
+/* ── side panels (Quem pode ir?, O que falta decidir) ─────────────────────── */
+.al-side {
+  width: 330px;
+  flex: none;
+  border-radius: 22px;
+  background: rgb(var(--d) / calc(0.16 * var(--d-k)));
+  border: 1px solid rgb(var(--w) / 0.1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.al-side-hd {
+  padding: 14px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid rgb(var(--w) / 0.08);
+}
+.al-side-hd .t {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.al-side-hd b {
+  font-size: 15px;
+  font-weight: 600;
+  margin-right: auto;
+}
+.al-side-hd small {
+  font-size: 11px;
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+}
+.al-side-bd {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.al-cand {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.al-cand.dragging {
+  opacity: 0.4;
+  border-style: dashed;
+}
+.al-cand .r1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.al-cand .r1 .tx {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.al-cand .r1 .tx b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.al-cand .r1 .tx span {
+  font-size: 11.5px;
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-cand .r2 {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+.al-tagk {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 7px;
+  background: rgb(var(--w) / 0.12);
+  white-space: nowrap;
+}
+.al-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 18px;
+}
+.al-spark i {
+  width: 5px;
+  border-radius: 1.5px;
+  display: block;
+}
+.al-dragghost {
+  position: fixed;
+  z-index: 400;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgb(70 56 48 / 0.92), rgb(52 41 35 / 0.94));
+  border: 1px solid rgb(var(--w) / 0.25);
+  box-shadow: 0 14px 36px rgb(0 0 0 / calc(0.45 * var(--sh-k)));
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.al-gap {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+.al-gap .h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.al-gap .h b {
+  font-size: 13.5px;
+}
+.al-gap .h i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.al-gap .h .v {
+  margin-left: auto;
+  font-family: 'Geist Mono', monospace;
+  font-weight: 600;
+}
+
+/* projects (C1) */
+.al-pjhead .al-name {
+  cursor: default;
+}
+.al-budget {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
+  white-space: nowrap;
+}
+.al-budget .bar {
+  position: relative;
+  height: 8px;
+  flex: 1;
+  border-radius: 999px;
+  background: rgb(var(--w) / 0.12);
+  overflow: hidden;
+  min-width: 120px;
+}
+.al-budget .bar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+.al-status {
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* capacity (C2) */
+.al-cap-row {
+  display: flex;
+  border-top: 1px solid rgb(var(--w) / 0.07);
+  height: 92px;
+}
+.al-cap-name {
+  flex: none;
+  width: 170px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-right: 1px solid rgb(var(--w) / 0.1);
+  font-size: 11px;
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
+}
+.al-cap-name b {
+  font-size: 14px;
+  color: var(--ink);
+}
+.al-cap-cell {
+  flex: 1;
+  min-width: 46px;
+  position: relative;
+  border-left: 1px solid rgb(var(--w) / 0.04);
+}
+.al-cap-cell .col {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column-reverse;
+}
+.al-cap-cell .col i {
+  display: block;
+}
+.al-cap-cell .line {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+.al-cap-cell .d {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+}
+
+/* phone (A5 / A6) */
+.al-phone {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px;
+  overflow: auto;
+}
+.al-wkhd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.al-wkhd .t {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.al-wkhd .t b {
+  font-size: 18px;
+}
+.al-wkhd .t span {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+}
+.al-pcard {
+  padding: 12px 12px 10px;
+  border-radius: 20px;
+  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  width: 100%;
+}
+.al-pcard .r1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.al-pcard .r1 .tx {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.al-pcard .r1 .tx b {
+  font-size: 15px;
+}
+.al-pcard .r1 .tx span {
+  font-size: 12px;
+  color: rgb(var(--t) / calc(0.68 * var(--t-k)));
+}
+.al-days {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+.al-days span {
+  border-radius: 9px;
+  padding: 3px 0;
+  text-align: center;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.al-days span small {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.al-mix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
+}
+.al-mix .bar {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  display: flex;
+  overflow: hidden;
+  background: rgb(var(--w) / 0.1);
+}
+.al-phbanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1.5px dashed rgb(var(--w) / 0.35);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+.al-sheet-bk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgb(var(--w) / 0.07);
+  border: 1px solid rgb(var(--w) / 0.12);
+}
+.al-sheet-bk.tent {
+  border: 1.5px dashed oklch(0.75 0.12 300);
+}
+.al-sheet-bk .c {
+  width: 5px;
+  align-self: stretch;
+  border-radius: 999px;
+}
+.al-sheet-bk .tx {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+}
+.al-sheet-bk .tx b {
+  font-family: 'Geist Mono', monospace;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.al-empty {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 13.5px;
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
+}
+
+@media (max-width: 1100px) {
+  .al-root {
+    --al-name: 190px;
+  }
+  .al-legend {
+    display: none;
+  }
+  .al-search {
+    width: 160px;
+  }
+  .al-side {
+    width: 280px;
+  }
+}
+@media (max-width: 760px) {
+  .al-root {
+    border-radius: 24px;
+  }
+  .al-head {
+    padding: 14px 12px 8px;
+  }
+  .al-titles h1 {
+    font-size: 22px;
+  }
+}

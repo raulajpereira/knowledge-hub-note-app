@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MG_RST, isAvailable, wLbl, wLblY, type MgReq } from '@/lib/mg';
 import { mgL } from '@/lib/mgText';
+import { AL_MASK_WK, dnOf, isIsoDay } from '@/lib/alloc';
 import { usePersistentState } from '@/components/ui';
 import { css } from './css';
 import { Av, Chip, PersonPop, Sel, Split, Trash, uid } from './ui';
@@ -182,15 +183,15 @@ export function MgStaff({ mg }: { mg: Mg }) {
       sk.every((s) => (p.skills[s.k] ?? 0) > 0 && (!s.l || p.skills[s.k] === s.l)) &&
       (!maxC || (+p.cost || 0) <= maxC),
   ).map((p) => {
-    const cap = +p.cap || 40;
+    // capacity per week: weekly hours less holidays and absences
+    const wc = Array.from({ length: nW }, (_, i) => mg.capW(p.id, f + i));
+    const cap = Math.round((wc.reduce((x, y) => x + y, 0) / nW) * 10) / 10;
     const wl = Array.from({ length: nW }, (_, i) => mg.loadW(p.id, f + i));
     const load = wl.reduce((x, y) => x + y, 0) / nW;
-    const minFree = Math.max(0, Math.min(...wl.map((x) => cap - x)));
+    const minFree = Math.max(0, Math.min(...wl.map((x, i) => wc[i]! - x)));
     const isAvail = need > 0 ? minFree >= need : minFree > 0;
-    const assigned = D.allocs.some(
-      (x) => x.person === p.id && x.project === sel.project && wi(x.from) <= t && wi(x.to) >= f,
-    );
-    return { p, cap, wl, load, minFree, isAvail, assigned };
+    const assigned = mg.bkIn(p.id, f, t).some((x) => x.project === sel.project);
+    return { p, cap, wc, wl, load, minFree, isAvail, assigned };
   });
   res.sort((x, y) =>
     sort === 'name'
@@ -204,6 +205,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
 
   return (
     <Split page="mg_staff" list={side} param="r" backTitle={title(sel)}>
+      <StaffRange mg={mg} from={wk(f)} to={wk(t)} />
       <div style={css('display:flex;flex-direction:column;gap:18px;padding:24px 26px 30px;')}>
         <div className="mg-mwrap" style={css('display:flex;align-items:center;gap:12px;')}>
           <div style={css('flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;')}>
@@ -393,7 +395,7 @@ export function MgStaff({ mg }: { mg: Mg }) {
           {res.map((r) => {
             const p = r.p;
             const tm = mg.tOf(p);
-            const occ = Math.round((r.load / r.cap) * 100);
+            const occ = r.cap ? Math.round((r.load / r.cap) * 100) : r.load ? 100 : 0;
             const cov = need ? Math.min(1, r.minFree / need) : 1;
             const short = Math.max(0, need - r.minFree);
             return (
@@ -507,9 +509,9 @@ export function MgStaff({ mg }: { mg: Mg }) {
                     {r.wl.slice(0, 26).map((hh, i) => (
                       <span
                         key={i}
-                        title={`${wLbl(wk(f + i))} · ${hh}h / ${r.cap}h`}
+                        title={`${wLbl(wk(f + i))} · ${hh}h / ${r.wc[i]}h`}
                         style={css(
-                          `height:14px;border-radius:4px;background:${hh ? mg.heat(hh, r.cap).bg : 'rgb(var(--w) / .08)'};`,
+                          `height:14px;border-radius:4px;background:${hh ? mg.heat(hh, r.wc[i]!).bg : 'rgb(var(--w) / .08)'};`,
                         )}
                       />
                     ))}
@@ -529,21 +531,35 @@ export function MgStaff({ mg }: { mg: Mg }) {
                     <button
                       type="button"
                       aria-label={`${tr('Alocar')}: ${p.name}`}
-                      onClick={() =>
+                      onClick={() => {
+                        // the request asks hours a week: an h/semana booking over its weeks
+                        mg.AL.change({
+                          bk: [
+                            {
+                              id: uid(),
+                              person: p.id,
+                              project: sel.project,
+                              role: sel.skills.map((s) => mg.SKN[s.k] ?? s.k).join(' / '),
+                              status: 'confirmed',
+                              from: wk(f),
+                              to: mg.dIso(t, 4),
+                              mode: 'hpw',
+                              value: need || 8,
+                              mask: AL_MASK_WK,
+                              hol: false,
+                              note: '',
+                              need: [],
+                              days: {},
+                              ver: '',
+                            },
+                          ],
+                        });
                         mg.upd((d) => {
-                          d.allocs.push({
-                            id: uid(),
-                            person: p.id,
-                            project: sel.project,
-                            from: wk(f),
-                            to: wk(t),
-                            hours: need || 8,
-                          });
                           const rq = d.reqs.find((x) => x.id === sel.id)!;
                           rq.status = 'Preenchido';
                           rq.assigned = p.id;
-                        })
-                      }
+                        });
+                      }}
                       style={css(
                         'height:34px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ink-inv);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
                       )}
@@ -578,4 +594,13 @@ export function MgStaff({ mg }: { mg: Mg }) {
       {pop && <PersonPop mg={mg} pid={pop} a0={f} b0={t} onClose={() => setPop(null)} />}
     </Split>
   );
+}
+
+/** Loads the allocations of the weeks asked (they may be beyond the loaded range). */
+function StaffRange({ mg, from, to }: { mg: Mg; from: string; to: string }) {
+  const ensure = mg.AL.ensure;
+  useEffect(() => {
+    if (isIsoDay(from) && isIsoDay(to)) ensure(dnOf(from), dnOf(to) + 6);
+  }, [ensure, from, to]);
+  return null;
 }

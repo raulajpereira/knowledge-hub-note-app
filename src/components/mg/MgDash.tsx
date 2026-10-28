@@ -36,7 +36,7 @@ type F = {
 // Painel de Alocação (prototype isDash): who is below, within or above
 // capacity in a period, with filters, sort and grouping.
 export function MgDash({ mg }: { mg: Mg }) {
-  const { D, tr, lang, P, LV, SKN, ROLE, lvIdx, wk, wi } = mg;
+  const { D, tr, lang, P, LV, SKN, ROLE, lvIdx, wk } = mg;
   const en = lang === 'en';
   const [Fp, setFp] = usePersistentState<F>('mg.db', {});
   const [q, setQ] = useState('');
@@ -46,7 +46,8 @@ export function MgDash({ mg }: { mg: Mg }) {
   const per = PER[Fl.per ?? ''] ? Fl.per! : 'w0';
   const [a0, b0] = PER[per]!;
   const nW = b0 - a0 + 1;
-  const inPer = (a: { from: string; to: string }) => wi(a.from) <= b0 && wi(a.to) >= a0;
+  const inPer = (a: { from: string; to: string }) => a.from < wk(b0 + 1) && a.to >= wk(a0);
+  const mine = (pid: string) => mg.bkIn(pid, a0, b0).filter((a) => a.status === 'confirmed');
   const qq = q.trim().toLowerCase();
   const rows = P.filter(
     (p) =>
@@ -55,15 +56,15 @@ export function MgDash({ mg }: { mg: Mg }) {
       (!Fl.area || p.area === Fl.area) &&
       (!Fl.lvl || String(p.level) === Fl.lvl) &&
       (!Fl.loc || p.loc === Fl.loc) &&
-      (!Fl.proj || D.allocs.some((a) => a.person === p.id && a.project === Fl.proj && inPer(a))) &&
-      (!Fl.client ||
-        D.allocs.some((a) => a.person === p.id && inPer(a) && mg.pjById[a.project]?.client === Fl.client)),
+      (!Fl.proj || mine(p.id).some((a) => a.project === Fl.proj && inPer(a))) &&
+      (!Fl.client || mine(p.id).some((a) => mg.pjById[a.project]?.client === Fl.client)),
   ).map((p) => {
-    const cap = +p.cap || 40;
+    // capacity of the period: weekly hours less holidays and absences
+    const cap = Math.round(mg.avgCap(p.id, a0, b0) * 10) / 10;
     const avg = mg.avgLoad(p.id, a0, b0);
     const b = mg.band(avg, cap);
     const cat: Cat = b === 3 ? 'over' : b === 2 ? 'ok' : 'below';
-    return { p, cap, avg, pct: Math.round((avg / cap) * 100), cat };
+    return { p, cap, avg, pct: cap ? Math.round((avg / cap) * 100) : avg ? 100 : 0, cat };
   });
   type Row = (typeof rows)[number];
   const vis = rows.filter((r) => !Fl.band || r.cat === Fl.band);
@@ -125,7 +126,7 @@ export function MgDash({ mg }: { mg: Mg }) {
     const p = r.p;
     const tm = mg.tOf(p);
     const c = CAT[r.cat][1];
-    const projs = [...new Set(D.allocs.filter((a) => a.person === p.id && inPer(a)).map((a) => a.project))]
+    const projs = [...new Set(mine(p.id).map((a) => a.project))]
       .map((id) => mg.pjById[id])
       .filter(Boolean);
     return (
@@ -190,7 +191,8 @@ export function MgDash({ mg }: { mg: Mg }) {
                 "font-family:'Geist Mono',monospace;font-size:14px;font-weight:600;color:var(--ink);",
               )}
             >
-              {(Math.round(r.avg * 10) / 10).toString().replace('.', en ? '.' : ',')}h / {r.cap}h
+              {(Math.round(r.avg * 10) / 10).toString().replace('.', en ? '.' : ',')}h /{' '}
+              {String(r.cap).replace('.', en ? '.' : ',')}h
             </span>
             <span>{nW > 1 ? tr('média por semana') : wLblY(wk(a0))}</span>
           </div>
@@ -205,7 +207,7 @@ export function MgDash({ mg }: { mg: Mg }) {
                   key={i}
                   title={`${wLbl(wk(w))} · ${hh}h`}
                   style={css(
-                    `height:12px;border-radius:4px;background:${hh ? mg.heat(hh, r.cap).bg : 'rgb(var(--w) / .08)'};`,
+                    `height:12px;border-radius:4px;background:${hh ? mg.heat(hh, mg.capW(p.id, w)).bg : 'rgb(var(--w) / .08)'};`,
                   )}
                 />
               );

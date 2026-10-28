@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { MG_COLLECTIONS, MgSchemas, mgDiff, mgSample, mgWeeks, type MgData } from '@/lib/mg';
+import { AbsenceSchema, BookingSchema } from '@/lib/alloc';
 import { mgTr } from '@/lib/mgText';
 
 let n = 0;
 const uuid = () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`;
-const sample = (): MgData => ({ ...mgSample(uuid, new Date('2026-10-07T12:00:00Z')), settings: {} });
+const full = () => mgSample(uuid, new Date('2026-10-07T12:00:00Z'));
+const sample = (): MgData => {
+  const { bookings: _b, absences: _a, ...d } = full();
+  return { ...d, settings: {} };
+};
 
 describe('management model', () => {
   it('weeks start on Monday and count from the current week', () => {
@@ -23,10 +28,23 @@ describe('management model', () => {
     const projects = ids('projects');
     expect(d.people.length).toBe(38);
     expect(d.teams.length).toBe(3);
-    for (const a of d.allocs) {
-      expect(people.has(a.person)).toBe(true);
-      expect(projects.has(a.project)).toBe(true);
+    // allocations v2: valid, pointing at the sample's people (or none = "Por atribuir") and projects
+    const s = full();
+    const sp = new Set(s.people.map((p) => p.id));
+    const spj = new Set(s.projects.map((p) => p.id));
+    expect(s.bookings.length).toBeGreaterThan(40);
+    for (const b of s.bookings) {
+      expect(() => BookingSchema.parse(b)).not.toThrow();
+      expect(!b.person || sp.has(b.person)).toBe(true);
+      expect(spj.has(b.project)).toBe(true);
     }
+    expect(s.bookings.filter((b) => !b.person).length).toBeGreaterThanOrEqual(3);
+    expect(s.bookings.filter((b) => b.status === 'tentative').length).toBeGreaterThanOrEqual(4);
+    expect(s.bookings.some((b) => b.mask & 0b1100000)).toBe(true); // a weekend cutover
+    for (const a of s.absences) expect(() => AbsenceSchema.parse(a)).not.toThrow();
+    expect(new Set(s.absences.map((a) => a.type)).size).toBe(4);
+    void people;
+    void projects;
     for (const p of d.projects) if (p.client) expect(ids('clients').has(p.client)).toBe(true);
   });
 
@@ -41,18 +59,18 @@ describe('management model', () => {
     expect(mgDiff(a, a)).toEqual([]);
     const b = structuredClone(a);
     b.people[0]!.name = 'Outro Nome';
-    const gone = b.allocs.shift()!;
+    const gone = b.projects[0]!;
     const t = { ...b.teams[0]!, id: uuid(), name: 'Nova' };
     b.teams.push(t);
     b.people[1]!.team = t.id;
     b.settings = { levels: ['', 'A', 'B'] };
-    b.projects = b.projects.filter((p) => p.id !== gone.project);
-    b.allocs = b.allocs.filter((x) => x.project !== gone.project);
+    b.projects = b.projects.filter((p) => p.id !== gone.id);
+    b.reqs = b.reqs.filter((x) => x.project !== gone.id);
     const ops = mgDiff(a, b);
     const puts = ops.filter((o) => o.op === 'put').map((o) => o.c);
     expect(puts).toEqual(['teams', 'people', 'people', 'settings']);
     const dels = ops.filter((o) => o.op === 'del').map((o) => o.c);
-    expect(dels[0]).toBe('allocs');
+    expect(dels[0]).toBe('reqs');
     expect(dels.at(-1)).toBe('projects');
     expect(ops.findIndex((o) => o.op === 'del')).toBe(puts.length);
   });

@@ -15,9 +15,14 @@ export function MgOverview({ mg }: { mg: Mg }) {
   const { D, tr, lang, P, PJ, LV, wk, wi } = mg;
   const L = (i: number) => mgL(i, lang);
   const act = PJ.filter((p) => p.status !== 'Concluído' && wi(p.from) <= 0 && wi(p.to) >= 0);
-  const cap = P.reduce((s, p) => s + (+p.cap || 40), 0);
-  const weeks = Array.from({ length: 12 }, (_, w) => P.reduce((s, p) => s + mg.loadW(p.id, w), 0));
-  const util4 = mg.pct(weeks.slice(0, 4).reduce((a, b) => a + b, 0) / 4, cap);
+  // capacity of each week: weekly hours less holidays and absences
+  const r1 = (x: number) => Math.round(x * 10) / 10;
+  const caps = Array.from({ length: 12 }, (_, w) => r1(P.reduce((s, p) => s + mg.capW(p.id, w), 0)));
+  const weeks = Array.from({ length: 12 }, (_, w) => r1(P.reduce((s, p) => s + mg.loadW(p.id, w), 0)));
+  const util4 = mg.pct(
+    weeks.slice(0, 4).reduce((a, b) => a + b, 0),
+    caps.slice(0, 4).reduce((a, b) => a + b, 0),
+  );
   const over = P.map((p) => {
     let mx = 0;
     let mw = 0;
@@ -30,9 +35,9 @@ export function MgOverview({ mg }: { mg: Mg }) {
     }
     return { p, mx, mw };
   })
-    .filter((x) => x.mx > (+x.p.cap || 40))
+    .filter((x) => x.mx > mg.capW(x.p.id, x.mw) + 0.001)
     .sort((a, b) => b.mx - a.mx);
-  const free = P.map((p) => ({ p, f: (+p.cap || 40) - mg.avgLoad(p.id, 0, 3) }))
+  const free = P.map((p) => ({ p, f: mg.avgCap(p.id, 0, 3) - mg.avgLoad(p.id, 0, 3) }))
     .filter((x) => x.f >= 16)
     .sort((a, b) => b.f - a.f);
   const openReqs = D.reqs.filter((r) => r.status !== 'Preenchido');
@@ -188,11 +193,11 @@ export function MgOverview({ mg }: { mg: Mg }) {
             )}
           >
             {weeks.map((a, i) => {
-              const p = mg.pct(a, cap);
+              const p = mg.pct(a, caps[i]!);
               return (
                 <div
                   key={i}
-                  title={tr(`${a}h alocadas de ${cap}h`)}
+                  title={tr(`${a}h alocadas de ${caps[i]}h`)}
                   style={css(
                     'height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;min-width:0;',
                   )}

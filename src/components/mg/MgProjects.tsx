@@ -1,10 +1,11 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MG_PST, MG_RST, mgEur, mgModSkill, wLbl, type MgProject } from '@/lib/mg';
 import { modColor } from '@/lib/sap';
 import { mgL } from '@/lib/mgText';
+import { dnOf, effortLabel, fmtDay, isIsoDay } from '@/lib/alloc';
 import { CHEV, OPT, css } from './css';
 import { Av, Chip, Dialog, Fields, Split, Trash, uid } from './ui';
 import type { Mg } from './store';
@@ -73,6 +74,12 @@ export function MgProjects({ mg }: { mg: Mg }) {
   );
   const sel = list.find((p) => p.id === sp.get('pj')) ?? list[0];
   const select = (id: string) => mg.nav('mg_projects', { pj: id });
+  // the forecast needs the project's allocations up to its end
+  const ensure = mg.AL.ensure;
+  const [pf, pt] = [sel?.from ?? '', sel?.to ?? ''];
+  useEffect(() => {
+    if (isIsoDay(pf) && isIsoDay(pt) && pf <= pt) ensure(dnOf(pf), dnOf(pt) + 6);
+  }, [ensure, pf, pt]);
   const cOpts = D.clients.map((c) => ({
     v: c.id,
     l: c.name + (c.type === 'Interno' ? tr(' (interno)') : ''),
@@ -246,9 +253,11 @@ export function MgProjects({ mg }: { mg: Mg }) {
       pr.to = wk(Math.max(e0, w - 1));
     });
   };
-  const team = D.allocs.filter(
+  const team = mg.BK.filter(
     (a) =>
-      a.project === sel.id && wi(a.to) >= -2 && (mg.gTeam === 'all' || mg.pById[a.person]?.team === mg.gTeam),
+      a.project === sel.id &&
+      a.to >= wk(-2) &&
+      (mg.gTeam === 'all' || !a.person || mg.pById[a.person]?.team === mg.gTeam),
   );
   const reqs = D.reqs.filter((r) => r.project === sel.id);
   /** a new resource request asks for the skills of the project's modules (ABAP when none matches) */
@@ -325,10 +334,10 @@ export function MgProjects({ mg }: { mg: Mg }) {
               if (!mg.cf(`Remover o projeto ${sel.code} e as suas alocações?`)) return;
               mg.upd((d) => {
                 d.projects = d.projects.filter((x) => x.id !== sel.id);
-                d.allocs = d.allocs.filter((a) => a.project !== sel.id);
                 d.reqs = d.reqs.filter((r) => r.project !== sel.id);
                 d.ts.forEach((t) => delete t.rows[sel.id]);
               });
+              mg.AL.forget({ project: sel.id });
               mg.nav('mg_projects');
             }}
           >
@@ -571,16 +580,27 @@ export function MgProjects({ mg }: { mg: Mg }) {
                 role="button"
                 tabIndex={0}
                 className="mg-h10"
-                onClick={() => mg.nav('mg_people', { p: a.person })}
-                onKeyDown={(e) => e.key === 'Enter' && mg.nav('mg_people', { p: a.person })}
+                onClick={() =>
+                  a.person ? mg.nav('mg_people', { p: a.person }) : mg.nav('mg_alloc', { v: 'proj', pj: sel.id })
+                }
+                onKeyDown={(e) =>
+                  e.key === 'Enter' &&
+                  (a.person ? mg.nav('mg_people', { p: a.person }) : mg.nav('mg_alloc', { v: 'proj', pj: sel.id }))
+                }
                 style={css(
                   'display:flex;align-items:center;gap:10px;min-height:46px;padding:0 12px;border-radius:14px;background:rgb(var(--w) / .04);cursor:pointer;',
                 )}
               >
-                <Av p={p} size={30} fs={11} tc={tm.tc} />
+                {p ? <Av p={p} size={30} fs={11} tc={tm.tc} /> : <span className="al-ph-av sm">?</span>}
                 <span style={css('flex:1;min-width:0;display:flex;flex-direction:column;')}>
-                  <span style={css('font-size:13.5px;font-weight:600;')}>{p?.name ?? '?'}</span>
+                  <span style={css('font-size:13.5px;font-weight:600;')}>
+                    {p?.name ?? `${a.role || tr('Função')} · ${tr('Por atribuir')}`}
+                    {a.status === 'tentative' && (
+                      <span style={css('font-weight:500;opacity:.7;')}> · {tr('tentativo')}</span>
+                    )}
+                  </span>
                   <span style={css('font-size:11.5px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
+                    {a.person && a.role ? `${a.role} · ` : ''}
                     {tr(p?.role ?? '')}
                     {tm.tn && (
                       <>
@@ -596,14 +616,14 @@ export function MgProjects({ mg }: { mg: Mg }) {
                     'font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));white-space:nowrap;',
                   )}
                 >
-                  {wLbl(a.from)} → {wLbl(a.to)}
+                  {fmtDay(a.from)} → {fmtDay(a.to)}
                 </span>
                 <span
                   style={css(
-                    "width:64px;text-align:right;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;",
+                    "min-width:72px;text-align:right;font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;",
                   )}
                 >
-                  {a.hours}h
+                  {effortLabel(a, lang)}
                 </span>
               </div>
             );

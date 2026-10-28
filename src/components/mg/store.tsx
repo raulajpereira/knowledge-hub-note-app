@@ -13,10 +13,25 @@ import {
   mgDiff,
   mgWeeks,
   wLblY,
-  type MgAlloc,
   type MgData,
   type MgPerson,
 } from '@/lib/mg';
+import {
+  bookingSeries,
+  bookingSum,
+  dnOf,
+  loadBand,
+  personLoads,
+  sumDays,
+  todayIso,
+  weeklyOf,
+  type Absence,
+  type Booking,
+  type CalcEnv,
+  type Dn,
+  type Loads,
+} from '@/lib/alloc';
+import { AlProvider, useAl } from './allocStore';
 import { mgTr } from '@/lib/mgText';
 import { usePersistentState, useToast, useViewport } from '@/components/ui';
 
@@ -50,7 +65,7 @@ export function MgProvider({ children }: { children: React.ReactNode }) {
   }, []);
   useEffect(() => {
     load().catch(() =>
-      setD({ clients: [], teams: [], people: [], projects: [], allocs: [], ts: [], reqs: [], settings: {} }),
+      setD({ clients: [], teams: [], people: [], projects: [], ts: [], reqs: [], settings: {} }),
     );
   }, [load]);
 
@@ -114,7 +129,11 @@ export function MgProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => (D ? { D, upd, setAll, local } : null), [D, upd, setAll, local]);
   if (!value) return <div aria-busy="true" style={{ flex: 1 }} />;
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      <AlProvider>{children}</AlProvider>
+    </Ctx.Provider>
+  );
 }
 
 export function useMgStore() {
@@ -126,6 +145,7 @@ export function useMgStore() {
 /** Derived values and helpers of the prototype's _rv(), for every page. */
 export function useMg() {
   const { D, upd, setAll, local } = useMgStore();
+  const AL = useAl();
   const { lang } = useI18n();
   const router = useRouter();
   const [team, setTeam] = usePersistentState<string>('mg.team', 'all');
@@ -134,7 +154,7 @@ export function useMg() {
   const vp = useViewport();
   const m = useMemo(() => {
     const W = mgWeeks();
-    const { wk, wi, dIso } = W;
+    const { wk } = W;
     const S = D.settings;
     // the level names as stored (Definições edits them) and as shown
     const LVR = S.levels ?? MG_LV;
@@ -162,30 +182,59 @@ export function useMg() {
     const tsBy: Record<string, MgData['ts'][number]> = Object.fromEntries(
       D.ts.map((x) => [`${x.person}|${x.week}`, x]),
     );
-    const inW = (a: MgAlloc, w: number) => wi(a.from) <= w && wi(a.to) >= w;
-    const aDay = (a: MgAlloc, w: number, i: number) => {
-      if (!inW(a, w)) return 0;
-      const k = dIso(w, i);
-      if (a.dov && a.dov[k] != null && a.dov[k] !== '') return +a.dov[k]!;
-      const ov = a.ovr?.[wk(w)];
-      const wv = ov != null && ov !== '' ? +ov : +a.hours || 0;
-      return Math.round((wv / 5) * 10) / 10;
+    // ── Alocações v2: hours from the shared calculation (src/lib/alloc.ts) ──
+    const base: Dn = dnOf(wk(0));
+    const wDays = (w: number): [Dn, Dn] => [base + 7 * w, base + 7 * w + 6];
+    const BK = [...AL.bookings].sort((x, y) => x.from.localeCompare(y.from) || x.id.localeCompare(y.id));
+    const AB = AL.absences;
+    const absBy = new Map<string, Absence[]>();
+    for (const a of AB) absBy.set(a.person, [...(absBy.get(a.person) ?? []), a]);
+    const env: CalcEnv = {
+      weekly: (p) => weeklyOf(pById[p]?.cap),
+      absences: (p) => absBy.get(p) ?? [],
     };
-    const aWeek = (a: MgAlloc, w: number) => {
-      if (!inW(a, w)) return 0;
-      if (a.dov && [0, 1, 2, 3, 4].some((i) => a.dov![dIso(w, i)] != null && a.dov![dIso(w, i)] !== ''))
-        return Math.round([0, 1, 2, 3, 4].reduce((s, i) => s + aDay(a, w, i), 0) * 10) / 10;
-      const ov = a.ovr?.[wk(w)];
-      return ov != null && ov !== '' ? +ov : +a.hours || 0;
+    const sCache = new WeakMap<Booking, ReturnType<typeof bookingSeries>>();
+    const series = (b: Booking) => {
+      let s = sCache.get(b);
+      if (!s) sCache.set(b, (s = bookingSeries(b, env)));
+      return s;
     };
-    const byPerson = new Map<string, MgAlloc[]>();
-    for (const a of D.allocs) byPerson.set(a.person, [...(byPerson.get(a.person) ?? []), a]);
-    const loadW = (pid: string, w: number) => (byPerson.get(pid) ?? []).reduce((s, a) => s + aWeek(a, w), 0);
+    const byPerson = new Map<string, Booking[]>();
+    for (const b of BK) byPerson.set(b.person, [...(byPerson.get(b.person) ?? []), b]);
+    const lCache = new Map<string, Loads>();
+    /** confirmed / tentative hours and capacity of a person per day, over the loaded range */
+    const loads = (pid: string) => {
+      let l = lCache.get(pid);
+      if (!l) lCache.set(pid, (l = personLoads(pid, byPerson.get(pid) ?? [], env, AL.lo, AL.hi, series)));
+      return l;
+    };
+    const inW = (b: Booking, w: number) => b.from < wk(w + 1) && b.to >= wk(w);
+    /** hours of a booking in week w (0 = this week) */
+    const bkW = (b: Booking, w: number) => {
+      const [f, t] = wDays(w);
+      const s = series(b);
+      let h = 0;
+      for (let n = Math.max(f, s.from); n <= Math.min(t, s.from + s.h.length - 1); n++) h += s.h[n - s.from]!;
+      return Math.round(h * 10) / 10;
+    };
+    /** confirmed hours of a person in week w (tentative never count) */
+    const loadW = (pid: string, w: number) => sumDays(loads(pid).conf, loads(pid), ...wDays(w));
+    const tentW = (pid: string, w: number) => sumDays(loads(pid).tent, loads(pid), ...wDays(w));
+    /** capacity of a person in week w: weekly hours less holidays and absences */
+    const capW = (pid: string, w: number) => sumDays(loads(pid).cap, loads(pid), ...wDays(w));
     const avgLoad = (pid: string, a: number, b: number) => {
       let s = 0;
       for (let w = a; w <= b; w++) s += loadW(pid, w);
       return s / (b - a + 1);
     };
+    const avgCap = (pid: string, a: number, b: number) => {
+      let s = 0;
+      for (let w = a; w <= b; w++) s += capW(pid, w);
+      return s / (b - a + 1);
+    };
+    /** a person's bookings (with a person) overlapping weeks a..b */
+    const bkIn = (pid: string, a: number, b: number) =>
+      (byPerson.get(pid) ?? []).filter((x) => x.from < wk(b + 1) && x.to >= wk(a));
     const tsHours = (pr: string) => {
       let h = 0;
       let v = 0;
@@ -198,17 +247,16 @@ export function useMg() {
       }
       return { h, v };
     };
+    /** cost still to come of a project: confirmed hours from today to its end × the person's rate */
     const forecast = (pr: string) => {
       const p = pjById[pr];
       if (!p) return 0;
-      const e = wi(p.to);
-      return D.allocs
-        .filter((a) => a.project === pr)
-        .reduce((s, a) => {
-          const f = Math.max(0, wi(a.from));
-          const t = Math.min(e, wi(a.to));
-          return t >= f ? s + (t - f + 1) * a.hours * (pById[a.person]?.rate ?? 0) : s;
-        }, 0);
+      const t0 = dnOf(todayIso());
+      const end = dnOf(p.to) + 6;
+      return BK.filter((b) => b.project === pr && b.person && b.status === 'confirmed').reduce(
+        (s, b) => s + bookingSum(b, env, t0, end) * (pById[b.person]?.rate ?? 0),
+        0,
+      );
     };
     const weekOpts: Array<{ v: string; l: string }> = [];
     for (let w = -30; w <= 52; w++) weekOpts.push({ v: wk(w), l: wLblY(wk(w)) });
@@ -218,30 +266,27 @@ export function useMg() {
       l: `${p.name} · ${tr(p.role)}${(p.status ?? 'Ativo') !== 'Ativo' ? ` (${tr(p.status)})` : ''}`,
     }));
     const projOpt = PJ.map((p) => ({ v: p.id, l: `${p.code} · ${p.name}` }));
-    const band = (h: number, cap: number | string) => {
-      const c = +cap || 40;
-      const r = h / c;
-      return !h ? 0 : r > 1.0001 ? 3 : r >= 0.9 ? 2 : 1;
-    };
+    /** 0 none, 1 under 90 %, 2 90–100 %, 3 over — against the capacity of the same period */
+    const band = (h: number, cap: number) => loadBand(h, cap);
     const LC = [
       'rgb(var(--t) / calc(.5 * var(--t-k)))',
       'oklch(0.86 0.12 85)',
       'oklch(0.86 0.12 150)',
       'oklch(0.82 0.14 30)',
     ];
-    const lc = (h: number, cap: number | string) => LC[band(h, cap)]!;
+    const lc = (h: number, cap: number) => LC[band(h, cap)]!;
     const HEAT = [
       { bg: 'rgb(var(--w) / .04)', fg: 'rgb(var(--t) / calc(.35 * var(--t-k)))' },
       { bg: 'oklch(0.78 0.12 85 / .42)', fg: 'var(--ink)' },
       { bg: 'oklch(0.7 0.12 150 / .6)', fg: 'var(--ink-hi)' },
       { bg: 'oklch(0.66 0.16 25 / .75)', fg: 'var(--ink-hi)' },
     ];
-    const heat = (h: number, cap: number | string) => HEAT[band(h, cap)]!;
+    const heat = (h: number, cap: number) => HEAT[band(h, cap)]!;
     const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
     const inTeamProj = (pid: string) =>
       gTeam === 'all' ||
       pjById[pid]?.team === gTeam ||
-      D.allocs.some((a) => a.project === pid && pById[a.person]?.team === gTeam);
+      BK.some((a) => a.project === pid && pById[a.person]?.team === gTeam);
     const teamOpts = [{ v: '', l: 'Todas as equipas' }, ...TEAMS.map((x) => ({ v: x.id, l: tr(x.name) }))];
     /** team colour and name of a person (prototype _decTeam) */
     const tOf = (p: MgPerson | undefined) => {
@@ -269,11 +314,22 @@ export function useMg() {
       pjById,
       cById,
       tsBy,
+      AL,
+      BK,
+      AB,
+      env,
+      series,
+      loads,
+      base,
+      wDays,
       inW,
-      aDay,
-      aWeek,
+      bkW,
+      bkIn,
       loadW,
+      tentW,
+      capW,
       avgLoad,
+      avgCap,
       tsHours,
       forecast,
       weekOpts,
@@ -288,7 +344,7 @@ export function useMg() {
       tOf,
       MG_SKN,
     };
-  }, [D, team, tr]);
+  }, [D, team, tr, AL]);
   /** prototype nav(page, patch): the selection travels in the URL */
   const nav = useCallback(
     (page: string, q?: Record<string, string>) =>

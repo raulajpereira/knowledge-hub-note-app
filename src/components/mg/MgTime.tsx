@@ -37,7 +37,7 @@ function entryOf(d: MgData, person: string, week: string): MgTs {
 // client, role or team with planned vs. logged hours.
 export function MgTime({ mg }: { mg: Mg }) {
   const sp = useSearchParams();
-  const { D, tr, lang, P, wk, wi, dIso } = mg;
+  const { tr, lang, P, wk, dIso } = mg;
   const L = (i: number) => mgL(i, lang);
   const [w, setW] = useState(-1);
   const [vm0, setVM] = usePersistentState<string>('mg.tsView', 'person');
@@ -48,8 +48,17 @@ export function MgTime({ mg }: { mg: Mg }) {
   const DN = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map((d) => tr(d));
   const days = DN.map((d, i) => `${d} ${+dIso(w, i).slice(8, 10)}`);
   const entry = (pid: string, wkIso = wIso) => mg.tsBy[`${pid}|${wkIso}`];
-  const planned = (pid: string) =>
-    D.allocs.filter((a) => a.person === pid && wi(a.from) <= w && wi(a.to) >= w);
+  /** confirmed hours planned in the allocations for week w, per project (tentative ones don't count) */
+  const plannedW = (pid: string, ww: number) => {
+    const m = new Map<string, number>();
+    for (const a of mg.bkIn(pid, ww, ww))
+      if (a.status === 'confirmed') {
+        const h = mg.bkW(a, ww);
+        if (h) m.set(a.project, Math.round(((m.get(a.project) ?? 0) + h) * 10) / 10);
+      }
+    return [...m].map(([project, hours]) => ({ project, hours }));
+  };
+  const planned = (pid: string) => plannedW(pid, w);
   const sum = (e?: MgTs) =>
     e ? Object.values(e.rows).reduce((s, r) => s + r.reduce((a, b) => a + (+b || 0), 0), 0) : 0;
   const team = P.filter((p) => planned(p.id).length || entry(p.id));
@@ -130,11 +139,11 @@ export function MgTime({ mg }: { mg: Mg }) {
             });
           }
       }
-      for (const a of D.allocs)
-        if (wi(a.from) <= wv && wi(a.to) >= wv && mg.pById[a.person] && P.includes(mg.pById[a.person]!)) {
-          const [g, k] = bucket(gOf(a.person, a.project), a.person);
-          g.plan += +a.hours || 0;
-          k.plan += +a.hours || 0;
+      for (const p of P)
+        for (const a of plannedW(p.id, wv)) {
+          const [g, k] = bucket(gOf(p.id, a.project), p.id);
+          g.plan += a.hours;
+          k.plan += a.hours;
         }
     });
     const stOf = (pid: string) => {
@@ -497,7 +506,7 @@ function PersonSheet({
   days: string[];
   weekLbl: string;
   entry: (pid: string) => MgTs | undefined;
-  planned: (pid: string) => Mg['D']['allocs'];
+  planned: (pid: string) => Array<{ project: string; hours: number }>;
   sum: (e?: MgTs) => number;
 }) {
   const { tr, lang } = mg;

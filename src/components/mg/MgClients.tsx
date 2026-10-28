@@ -120,9 +120,11 @@ export function MgClients({ mg }: { mg: Mg }) {
   const bud = my.reduce((s, p) => s + (+p.budget || 0), 0);
   const used = my.reduce((s, p) => s + mg.tsHours(p.id).v, 0);
   const tm: Record<string, number> = {};
-  for (const a of D.allocs)
-    if (my.some((p) => p.id === a.project) && mg.wi(a.from) <= 0 && mg.wi(a.to) >= 0)
-      tm[a.person] = (tm[a.person] ?? 0) + a.hours;
+  for (const a of mg.BK)
+    if (a.person && a.status === 'confirmed' && my.some((p) => p.id === a.project) && mg.inW(a, 0)) {
+      const h = mg.bkW(a, 0);
+      if (h) tm[a.person] = (tm[a.person] ?? 0) + h;
+    }
   const kpis = [
     ['Projetos ativos', String(my.filter((p) => p.status === 'Ativo' || p.status === 'Em risco').length)],
     ['Orçamento total', mgK(bud)],

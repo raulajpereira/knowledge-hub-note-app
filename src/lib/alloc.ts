@@ -567,3 +567,22 @@ export const fmtNum = (x: number, lang: string, max = 1) => {
   return lang === 'en' ? s : s.replace('.', ',');
 };
 export const fmtH = (x: number, lang: string) => `${fmtNum(x, lang)}h`;
+/** "6h/dia", "32h/sem", "50%", "0,5 FTE", "120h" — the rule as typed. */
+export function effortLabel(b: Pick<Booking, 'mode' | 'value'>, lang: string) {
+  const en = lang === 'en';
+  const v = fmtNum(b.value, lang, 2);
+  switch (b.mode) {
+    case 'hpd':
+      return `${v}h/${en ? 'd' : 'dia'}`;
+    case 'hpw':
+      return `${v}h/${en ? 'wk' : 'sem'}`;
+    case 'pct':
+      return `${v}%`;
+    case 'fte':
+      return `${v} FTE`;
+    default:
+      return `${v}h ${en ? 'total' : 'total'}`;
+  }
+}
+/** dd/mm/yyyy */
+export const fmtDay = (s: string) => (isIsoDay(s) ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '—');

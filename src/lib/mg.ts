@@ -755,7 +755,13 @@ export function mgSample(uuid: () => string, now = new Date()): MgSampleData {
     bookings.push(b);
     return b;
   };
-  const addA = (pid: string, proj: string, from: number, to: number, hpd: number, role: string) => {
+  const addA = (pid: string, proj: string, from: number, to: number, want: number, role: string, over = false) => {
+    // what still fits in the person's week over the range (a few are left over capacity on purpose)
+    let peak = 0;
+    for (let w = from; w <= to; w++) peak = Math.max(peak, load[pid + w] ?? 0);
+    const room = Math.max(0, 40 - peak) / 5;
+    const hpd = over ? want : Math.min(want, Math.floor(room * 2) / 2);
+    if (hpd < 1) return;
     const asWeek = bookings.length % 4 === 3;
     bk({
       person: pid,
@@ -800,7 +806,7 @@ export function mgSample(uuid: () => string, now = new Date()): MgSampleData {
         .filter((p) => p.area === area)
         .sort((a, b) => (load[`${a.id}0`] ?? 0) - (load[`${b.id}0`] ?? 0));
       cands.slice(0, n).forEach((p, j) => {
-        const hpd = [4, 6, 8, 8][Math.floor(R() * 4)]!;
+        const hpd = [4, 6, 6, 8][Math.floor(R() * 4)]!;
         const f = Math.max(s, -8);
         const t = Math.min(e, 4 + Math.floor(R() * 16));
         const fns = FN[area] ?? [MG_ROLE[area] ?? area];
@@ -833,7 +839,8 @@ export function mgSample(uuid: () => string, now = new Date()): MgSampleData {
     ] as const
   ).forEach(([a, i, pr, f, t, hpd]) => {
     const p = byArea(a)[i];
-    if (p) addA(p.id, id(pr), f, t, hpd, FN[a]?.[0] ?? '');
+    // these overlap on purpose: over capacity for a few weeks
+    if (p) addA(p.id, id(pr), f, t, hpd, FN[a]?.[0] ?? '', true);
   });
   // the proposal (CRT-RISE): tentative bookings of real people, and roles "Por atribuir"
   const rise = id('p10');

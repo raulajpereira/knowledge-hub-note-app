@@ -1,6 +1,6 @@
 'use client';
 
-import { MgAlloc } from './MgAlloc';
+import { AllocPage as MgAlloc } from './alloc/AllocPage';
 import { MgClients } from './MgClients';
 import { MgDash } from './MgDash';
 import { MgOverview } from './MgOverview';

@@ -199,7 +199,8 @@ function TeamDetail({ mg, t, onBack }: { mg: Mg; t: MgTeam; onBack: () => void }
   const qq = q.trim().toLowerCase();
   const occOf = (p: MgPerson) => {
     const v = mg.avgLoad(p.id, 0, 3);
-    return { t: `${Math.round((v / (+p.cap || 40)) * 100)}%`, c: OCC[mg.band(v, p.cap)]! };
+    const c = mg.avgCap(p.id, 0, 3);
+    return { t: `${c ? Math.round((v / c) * 100) : v ? 100 : 0}%`, c: OCC[mg.band(v, c)]! };
   };
   const members = mem
     .filter((p) => match(p, qq))
@@ -665,7 +666,7 @@ function AddMembers({
     { label: 'Função', k: 'role' },
     { label: 'Área principal', k: 'area', opts: Object.keys(ROLE).map((k) => ({ v: k, l: SKN[k] ?? k })) },
     { label: 'Senioridade', k: 'level', opts: lvIdx.map((l) => ({ v: String(l), l: LV[l]! })), num: true },
-    { label: 'Capacidade', k: 'cap', type: 'number', unit: 'h/sem', num: true },
+    { label: 'Horas semanais', k: 'cap', type: 'number', unit: 'h/sem', num: true },
     { label: 'Custo interno', k: 'cost', type: 'number', unit: '€/h', num: true },
     { label: 'Preço de venda', k: 'rate', type: 'number', unit: '€/h', num: true },
     { label: 'Localização', k: 'loc' },

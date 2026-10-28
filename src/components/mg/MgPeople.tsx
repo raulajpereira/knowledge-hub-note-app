@@ -1,5 +1,6 @@
 'use client';
 
+import { effortLabel, fmtDay } from '@/lib/alloc';
 import { useId, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -25,7 +26,7 @@ import { PersonPhoto } from './PersonPhoto';
 // cost/price, capacity, skills, 12-week load and allocations.
 export function MgPeople({ mg }: { mg: Mg }) {
   const sp = useSearchParams();
-  const { D, tr, lang, LV, SKN, ROLE, lvIdx } = mg;
+  const { tr, lang, LV, SKN, ROLE, lvIdx } = mg;
   const L = (i: number) => mgL(i, lang);
   const [q, setQ] = useState('');
   const [lvF, setLvF] = useState(0);
@@ -77,7 +78,9 @@ export function MgPeople({ mg }: { mg: Mg }) {
       }
       return;
     }
-    const v = num ? (raw === '' ? 0 : +raw) : k === 'expYears' ? (raw === '' ? '' : +raw) : raw;
+    let v = num ? (raw === '' ? 0 : +raw) : k === 'expYears' ? (raw === '' ? '' : +raw) : raw;
+    // weekly hours: an open number, within a week
+    if (k === 'cap') v = Math.min(168, Math.max(0, Number.isFinite(+v) ? +v : 40));
     mg.upd((d) => {
       const p = d.people.find((x) => x.id === sel.id)!;
       (p as Record<string, unknown>)[k] = v;
@@ -187,6 +190,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
       >
         {list.map((p) => {
           const l = Math.round(mg.avgLoad(p.id, 0, 3));
+          const lcap = mg.avgCap(p.id, 0, 3);
           const on = sel && p.id === sel.id;
           const t = mg.tOf(p);
           return (
@@ -231,7 +235,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
               <span
                 title={L(64)}
                 style={css(
-                  `font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:${mg.lc(l, p.cap)};`,
+                  `font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;color:${mg.lc(l, lcap)};`,
                 )}
               >
                 {l}h
@@ -250,9 +254,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
       </Split>
     );
   const t = mg.tOf(sel);
-  const my = D.allocs
-    .filter((a) => a.person === sel.id && mg.wi(a.to) >= 0)
-    .sort((a, b) => a.from.localeCompare(b.from));
+  const my = mg.BK.filter((a) => a.person === sel.id && a.to >= mg.wk(0));
   let tsh = 0;
   for (let w = -4; w <= -1; w++) {
     const e = mg.tsBy[`${sel.id}|${mg.wk(w)}`];
@@ -309,7 +311,6 @@ export function MgPeople({ mg }: { mg: Mg }) {
               if (!mg.cf(`Remover ${sel.name} e as suas alocações?`)) return;
               mg.upd((d) => {
                 d.people = d.people.filter((x) => x.id !== sel.id);
-                d.allocs = d.allocs.filter((a) => a.person !== sel.id);
                 d.teams.forEach((x) => {
                   if (x.lead === sel.id) x.lead = '';
                 });
@@ -321,6 +322,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                 });
                 d.ts = d.ts.filter((x) => x.person !== sel.id);
               });
+              mg.AL.forget({ person: sel.id });
               mg.nav('mg_people');
             }}
           >
@@ -394,7 +396,8 @@ export function MgPeople({ mg }: { mg: Mg }) {
                   onChange: set('rate', true),
                 },
                 {
-                  label: tr('Capacidade'),
+                  // the person's normal week: weekdays get a fifth each (8h a day for 40h), weekends 0
+                  label: tr('Horas semanais'),
                   val: sel.cap,
                   type: 'number',
                   unit: tr('h/semana'),
@@ -534,7 +537,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
           <div style={css('display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;')}>
             {Array.from({ length: 12 }, (_, w) => {
               const h = mg.loadW(sel.id, w);
-              const c = mg.heat(h, sel.cap);
+              const c = mg.heat(h, mg.capW(sel.id, w));
               return (
                 <div
                   key={w}
@@ -595,11 +598,13 @@ export function MgPeople({ mg }: { mg: Mg }) {
                     <span style={css("font-family:'Geist Mono',monospace;")}>{pj?.code}</span> · {pj?.name}
                   </span>
                   <span style={css('font-size:12px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
-                    {wLblY(a.from)} → {wLblY(a.to)}
+                    {fmtDay(a.from)} → {fmtDay(a.to)}
+                    {a.role && ` · ${a.role}`}
+                    {a.status === 'tentative' && ` · ${tr('tentativo')}`}
                   </span>
                 </span>
                 <span style={css("font-family:'Geist Mono',monospace;font-size:13px;font-weight:600;")}>
-                  {tr(`${a.hours}h/sem`)}
+                  {effortLabel(a, lang)}
                 </span>
               </div>
             );
