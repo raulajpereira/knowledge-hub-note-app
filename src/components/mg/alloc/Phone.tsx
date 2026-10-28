@@ -350,7 +350,7 @@ function PersonSheet({ mg, p, mon, onClose }: { mg: Mg; p: MgPerson; mon: Dn; on
   const over = conf > cap + 0.01;
   const absList = mg.AB.filter((a) => a.person === p.id && a.from <= B && a.to >= A);
   return (
-    <Sheet open onClose={onClose} title={p.name} closeLabel={tr('Fechar')}>
+    <Sheet open onClose={onClose} closeLabel={tr('Fechar')}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Av p={p} size={48} fs={16} tc={mg.tOf(p).tc} />

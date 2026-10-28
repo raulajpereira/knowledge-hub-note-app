@@ -274,23 +274,21 @@ export function BookingPop({
           <div className="al-2">
             <label className="al-lbl">
               {tr('De')}
-              <input
-                type="date"
-                className="al-in mono"
+              <DateField
                 value={b.from}
-                onChange={(e) => isIsoDay(e.target.value) && set({ from: e.target.value })}
-                aria-label={tr('De')}
+                onChange={(from) => set({ from })}
+                label={tr('De')}
+                pickLabel={tr('Escolher no calendário')}
               />
             </label>
             <label className="al-lbl">
               {tr('Até')}
-              <input
-                type="date"
-                className="al-in mono"
+              <DateField
                 value={b.to}
                 min={b.from}
-                onChange={(e) => isIsoDay(e.target.value) && set({ to: e.target.value })}
-                aria-label={tr('Até')}
+                onChange={(to) => set({ to })}
+                label={tr('Até')}
+                pickLabel={tr('Escolher no calendário')}
               />
             </label>
           </div>
@@ -326,6 +324,7 @@ export function BookingPop({
               <button
                 key={i}
                 type="button"
+                className="wdb"
                 aria-pressed={(b.mask & (1 << i)) !== 0}
                 title={tr(['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][i]!)}
                 aria-label={tr(['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][i]!)}
@@ -584,21 +583,21 @@ export function AbsencePop({
           <div className="al-2">
             <label className="al-lbl">
               {tr('De')}
-              <input
-                type="date"
-                className="al-in mono"
+              <DateField
                 value={a.from}
-                onChange={(e) => isIsoDay(e.target.value) && set({ from: e.target.value })}
+                onChange={(from) => set({ from })}
+                label={tr('De')}
+                pickLabel={tr('Escolher no calendário')}
               />
             </label>
             <label className="al-lbl">
               {tr('Até')}
-              <input
-                type="date"
-                className="al-in mono"
+              <DateField
                 value={a.to}
                 min={a.from}
-                onChange={(e) => isIsoDay(e.target.value) && set({ to: e.target.value })}
+                onChange={(to) => set({ to })}
+                label={tr('Até')}
+                pickLabel={tr('Escolher no calendário')}
               />
             </label>
           </div>
@@ -676,3 +675,93 @@ export const newAbsence = (person: string, from: string, to = from): Absence => 
   ver: '',
 });
 export { addDays, newBooking };
+
+/** 'YYYY-MM-DD' from what was typed: dd/mm/aaaa, d-m-aa or ISO; null when it is not a day. */
+export function parseDay(s: string): string | null {
+  const t = s.trim();
+  let y: number;
+  let m: number;
+  let d: number;
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+  const pt = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(t);
+  if (iso) [y, m, d] = [+iso[1]!, +iso[2]!, +iso[3]!];
+  else if (pt) [d, m, y] = [+pt[1]!, +pt[2]!, pt[3]!.length === 2 ? 2000 + +pt[3]! : +pt[3]!];
+  else return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return dt.toISOString().slice(0, 10);
+}
+const fmtField = (s: string) => (isIsoDay(s) ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '');
+
+/** A day typed as dd/mm/aaaa (whatever the browser's language), with the browser's calendar next to it. */
+export function DateField({
+  value,
+  onChange,
+  label,
+  min,
+  pickLabel,
+}: {
+  value: string;
+  onChange: (iso: string) => void;
+  label: string;
+  min?: string;
+  pickLabel: string;
+}) {
+  const [txt, setTxt] = useState(fmtField(value));
+  const pick = useRef<HTMLInputElement>(null);
+  useEffect(() => setTxt(fmtField(value)), [value]);
+  return (
+    <span className="al-date">
+      <input
+        className="al-in mono"
+        value={txt}
+        aria-label={label}
+        placeholder="dd/mm/aaaa"
+        inputMode="numeric"
+        onChange={(e) => {
+          setTxt(e.target.value);
+          const d = parseDay(e.target.value);
+          if (d) onChange(d);
+        }}
+        onBlur={() => setTxt(fmtField(value))}
+      />
+      <button
+        type="button"
+        className="al-date-btn"
+        aria-label={pickLabel}
+        title={pickLabel}
+        onClick={() => {
+          const el = pick.current;
+          try {
+            el?.showPicker();
+          } catch {
+            el?.focus();
+          }
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden
+        >
+          <rect x="3" y="5" width="18" height="16" rx="3" />
+          <path d="M3 10h18M8 3v4M16 3v4" />
+        </svg>
+      </button>
+      <input
+        ref={pick}
+        type="date"
+        tabIndex={-1}
+        aria-hidden
+        className="al-date-native"
+        value={value}
+        min={min}
+        onChange={(e) => isIsoDay(e.target.value) && onChange(e.target.value)}
+      />
+    </span>
+  );
+}

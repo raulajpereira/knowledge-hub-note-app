@@ -197,6 +197,7 @@ export const MG_EX_AL: Record<string, string> = {
   'Só com disponibilidade': 'With room only',
   Tentativos: 'Tentative',
   Ausências: 'Absences',
+  'Escolher no calendário': 'Pick in the calendar',
   'Atalhos de teclado': 'Keyboard shortcuts',
   'Arrastar numa linha': 'Drag on a row',
   'Shift + arrastar': 'Shift + drag',

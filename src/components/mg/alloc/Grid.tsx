@@ -240,6 +240,8 @@ export function Grid({
   const fmtU = (h: number, pid: string, c: Col) => {
     const v = toUnit(h, pid, c);
     if (unit === 'pct') return `${Math.round(v)}%`;
+    // a little that rounds to 0 still shows it is there
+    if (v > 0 && v < 0.05) return lang === 'en' ? '<0.1' : '<0,1';
     return fmtNum(v, lang, 1);
   };
   const fromUnit = (v: number, pid: string, c: Col) =>
@@ -811,7 +813,7 @@ export function Grid({
               onKeyDown={onKey}
               style={{ width: W, height: HEAD + totalH }}
             >
-              <div className="al-hdr" style={{ height: HEAD, width: W }}>
+              <div className="al-hdr" style={{ height: HEAD, width: W, display: 'flex' }}>
                 <div
                   className="al-corner"
                   style={{
@@ -854,10 +856,7 @@ export function Grid({
                     </div>
                   );
                 })}
-                <div
-                  className="al-gtot"
-                  style={{ position: 'absolute', right: 0, top: 0, bottom: 0, height: HEAD }}
-                >
+                <div className="al-gtot" style={{ marginLeft: 'auto', height: HEAD }}>
                   {tr('Total')}
                 </div>
               </div>
@@ -975,7 +974,7 @@ export function Grid({
                         </span>
                       </div>
                       {visCols.map((c, k) => personCell(p, c, c0 + k, ri))}
-                      <div className="al-gtot" style={{ position: 'absolute', right: 0, top: 0, bottom: 0 }}>
+                      <div className="al-gtot" style={{ marginLeft: 'auto', height: '100%' }}>
                         {totals(p.id)}
                       </div>
                     </div>
@@ -1027,10 +1026,7 @@ export function Grid({
                       </span>
                     </div>
                     {visCols.map((c, k) => editCell(row, c, c0 + k, ri))}
-                    <div
-                      className="al-gtot"
-                      style={{ position: 'absolute', right: 0, top: 0, bottom: 0, fontWeight: 500 }}
-                    >
+                    <div className="al-gtot" style={{ marginLeft: 'auto', height: '100%', fontWeight: 500 }}>
                       {totals(t.person, t.bks)}
                     </div>
                   </div>

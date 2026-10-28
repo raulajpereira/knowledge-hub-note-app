@@ -1,12 +1,14 @@
 /* Alocações v2 (alloc2): timeline, grid, projects and capacity views, the booking popover. */
-.al-root {
+:root {
   --al-u1: oklch(0.85 0.14 85);
   --al-u2: oklch(0.8 0.15 152);
   --al-u3: oklch(0.7 0.18 27);
   --al-hol: oklch(calc(0.86 * var(--lk)) 0.12 30);
-  --al-name: 236px;
   /* behind the sticky name column (what scrolls under it must not show through) */
   --al-solid: rgb(60 47 40 / 0.985);
+}
+.al-root {
+  --al-name: 236px;
   position: relative;
   isolation: isolate;
   flex: 1;
@@ -397,7 +399,9 @@
   left: 0;
   z-index: 5;
   width: var(--al-name);
-  height: 100%;
+  /* over the row's top border too */
+  height: calc(100% + 1px);
+  margin-top: -1px;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -481,6 +485,9 @@
 .al-group .g {
   position: sticky;
   left: 0;
+  z-index: 5;
+  min-width: var(--al-name);
+  background: linear-gradient(90deg, rgb(var(--w) / 0.035), rgb(var(--w) / 0.035)), var(--al-solid);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -491,7 +498,6 @@
   text-transform: uppercase;
   color: rgb(var(--t) / calc(0.62 * var(--t-k)));
   white-space: nowrap;
-  background: none;
   border: 0;
   cursor: pointer;
   height: 100%;
@@ -714,7 +720,7 @@
   backdrop-filter: blur(30px) saturate(160%);
   -webkit-backdrop-filter: blur(30px) saturate(160%);
 }
-:root[data-theme='light'] .al-root {
+:root[data-theme='light'] {
   --al-solid: rgb(246 240 234 / 0.985);
 }
 :root[data-theme='light'] .al-pop {
@@ -846,7 +852,7 @@ select.al-in {
   align-items: center;
   flex-wrap: wrap;
 }
-.al-wd button {
+.al-wd > button.wdb {
   width: 26px;
   height: 26px;
   border-radius: 50%;
@@ -859,7 +865,7 @@ select.al-in {
   cursor: pointer;
   padding: 0;
 }
-.al-wd button[aria-pressed='true'] {
+.al-wd > button.wdb[aria-pressed='true'] {
   background: var(--ink);
   color: var(--ink-inv);
   border-color: var(--ink);
@@ -1155,9 +1161,9 @@ select.al-in {
   position: sticky;
   right: 0;
   z-index: 3;
-  background: rgb(var(--d) / calc(0.3 * var(--d-k)));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background:
+    linear-gradient(90deg, rgb(var(--d) / calc(0.2 * var(--d-k))), rgb(var(--d) / calc(0.2 * var(--d-k)))),
+    var(--al-solid);
   border-left: 1px solid rgb(var(--w) / 0.1);
   font-family: 'Geist Mono', monospace;
   font-size: 13px;
@@ -1467,6 +1473,9 @@ select.al-in {
 }
 
 /* phone (A5 / A6) */
+.al-phone > * {
+  flex: none;
+}
 .al-phone {
   flex: 1;
   min-height: 0;
@@ -1639,4 +1648,44 @@ select.al-in {
   .al-titles h1 {
     font-size: 22px;
   }
+}
+
+.al-date {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.al-date .al-in {
+  padding-right: 36px;
+}
+.al-date-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.al-date-btn:hover {
+  background: rgb(var(--w) / 0.1);
+  color: var(--ink);
+}
+.al-date-native {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  padding: 0;
 }

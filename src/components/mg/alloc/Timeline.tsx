@@ -232,42 +232,44 @@ export function Timeline({
     ro.observe(el);
     return () => ro.disconnect();
   }, [onScroll]);
+  // the day at the centre of the view: kept when the zoom or the window changes
+  const center = useRef<number | null>(null);
+  // when we scrolled ourselves (those scroll events move nothing else)
+  const prog = useRef(0);
+  const lastPpd = useRef(ppd);
+  useLayoutEffect(() => {
+    const el = scRef.current;
+    if (!el) return;
+    const span = (el.clientWidth - nameW) / ppd;
+    // a new zoom with today in view keeps today a fifth from the left (else the day in the centre stays)
+    if (center.current != null && lastPpd.current !== ppd) {
+      const half = (el.clientWidth - nameW) / lastPpd.current / 2;
+      if (Math.abs(today - center.current) < half) center.current = null;
+    }
+    lastPpd.current = ppd;
+    // first show: today a fifth from the left
+    if (center.current == null) center.current = today + span * 0.3;
+    prog.current = performance.now();
+    el.scrollLeft = Math.max(0, (center.current - F) * ppd - (el.clientWidth - nameW) / 2);
+    onScroll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [F, ppd]);
   // free scrolling past the edges widens the window by 3 months
   const onUserScroll = () => {
     onScroll();
     const el = scRef.current;
-    if (!el || !shown.current) return;
+    if (!el || performance.now() - prog.current < 150) return;
+    center.current = F + (el.scrollLeft + (el.clientWidth - nameW) / 2) / ppd;
     if (el.scrollLeft < 40 && F > dnOf(todayIso()) - 365 * 3) setWin([monthStart(F, -3), T]);
     else if (el.scrollLeft + el.clientWidth > nameW + width - 40) setWin([F, monthStart(T + 1, 3) - 1]);
   };
-  // keep the day at the left edge when the zoom or the window changes
-  const prev = useRef({ F, ppd });
-  useLayoutEffect(() => {
-    const el = scRef.current;
-    if (!el) return;
-    const p = prev.current;
-    if (p.F !== F || p.ppd !== ppd) {
-      const leftDn = p.F + el.scrollLeft / p.ppd;
-      el.scrollLeft = (leftDn - F) * ppd;
-      prev.current = { F, ppd };
-      onScroll();
-    }
-  }, [F, ppd, onScroll]);
-  // first show: today a fifth from the left
-  const shown = useRef(false);
-  useLayoutEffect(() => {
-    const el = scRef.current;
-    if (!el || shown.current) return;
-    shown.current = true;
-    el.scrollLeft = Math.max(0, (today - F) * ppd - (el.clientWidth - nameW) / 5);
-    onScroll();
-  }, [F, ppd, today, nameW, onScroll]);
   // ‹ Hoje ›
   useEffect(() => {
     const el = scRef.current;
     if (!el || !nav.n) return;
     const span = el.clientWidth - nameW;
     if (nav.kind === 'today') {
+      center.current = today + (span / ppd) * 0.3;
       const want = (today - F) * ppd - span / 5;
       el.scrollTo({ left: Math.max(0, want), behavior: 'smooth' });
       return;

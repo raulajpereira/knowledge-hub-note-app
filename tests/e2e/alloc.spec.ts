@@ -135,8 +135,9 @@ test('timeline: drag to create with the linked fields, resize, move, Alt+drag co
   await page.mouse.up();
   const pop = page.getByRole('dialog', { name: 'Nova alocação' });
   await expect(pop).toBeVisible();
-  await expect(pop.getByLabel('De', { exact: true })).toHaveValue(mon);
-  await expect(pop.getByLabel('Até', { exact: true })).toHaveValue(addD(mon, 4));
+  const dm = (x: string) => `${x.slice(8, 10)}/${x.slice(5, 7)}/${x.slice(0, 4)}`;
+  await expect(pop.getByLabel('De', { exact: true })).toHaveValue(dm(mon));
+  await expect(pop.getByLabel('Até', { exact: true })).toHaveValue(dm(addD(mon, 4)));
   // typing 75 % gives 6 h a day and 30 h in total (5 working days, 8 h capacity)
   await pop.getByLabel('% capacidade').click();
   await pop.getByLabel('% capacidade').fill('75');
