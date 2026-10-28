@@ -328,6 +328,7 @@ export function BookingPop({
                 type="button"
                 aria-pressed={(b.mask & (1 << i)) !== 0}
                 title={tr(['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][i]!)}
+                aria-label={tr(['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][i]!)}
                 onClick={() => {
                   const m = b.mask ^ (1 << i);
                   if (m & AL_MASK_ALL) set({ mask: m });

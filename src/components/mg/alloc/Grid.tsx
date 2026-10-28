@@ -257,7 +257,19 @@ export function Grid({
     if (!t) return;
     const hours = roundStep(hours0);
     const curB = t.bks.map((b) => acc.get(b.id) ?? b);
-    const over = curB.filter((b) => dnOf(b.to) >= c.a && dnOf(b.from) <= c.b);
+    let over = curB.filter((b) => dnOf(b.to) >= c.a && dnOf(b.from) <= c.b);
+    if (!over.length && r.k === 'ph' && hours) {
+      // a role "Por atribuir" is one booking: it grows to the column (the days in between give 0)
+      const b = curB[0]!;
+      const days = { ...b.days };
+      const from = Math.min(dnOf(b.from), c.a);
+      const to = Math.max(dnOf(b.to), c.b);
+      for (let n = from; n <= to; n++)
+        if ((n < dnOf(b.from) || n > dnOf(b.to)) && (n < c.a || n > c.b)) days[isoOf(n)] = 0;
+      const grown = { ...b, from: isoOf(from), to: isoOf(to), days };
+      acc.set(b.id, grown);
+      over = [grown];
+    }
     if (!over.length) {
       if (!hours) return;
       // nothing there yet: a new booking with this total over the column
@@ -453,6 +465,7 @@ export function Grid({
     writeCells(out);
   };
   const onKey = (e: React.KeyboardEvent) => {
+    if (e.target !== gridRef.current) return;
     const ed = editRef.current;
     if (ed && e.target === gridRef.current) {
       // typed before the cell's input took the focus
@@ -1038,6 +1051,8 @@ export function Grid({
                       onChange={(e) => setEdit({ ...edit, v: e.target.value })}
                       onBlur={() => setEdit(null)}
                       onKeyDown={(e) => {
+                        // the grid's own keys are not for this input
+                        e.stopPropagation();
                         if (e.key === 'Escape') {
                           e.preventDefault();
                           setEdit(null);

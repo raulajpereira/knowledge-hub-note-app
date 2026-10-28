@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   dnOf,
@@ -91,15 +91,16 @@ export function AllocPage({ mg }: { mg: Mg }) {
   const want = sp.get('v');
   const wantF = sp.get('f');
   const wantPj = sp.get('pj');
+  // a link from another screen (?v=grid, ?f=over, ?pj=<project>) is applied once
+  const applied = useRef('');
   useEffect(() => {
+    const k = `${want}|${wantF}|${wantPj}`;
+    if (applied.current === k) return;
+    applied.current = k;
     if (want === 'tl' || want === 'grid' || want === 'proj' || want === 'cap') setView(want);
-  }, [want, setView]);
-  // other screens open this one filtered: ?f=over (over capacity), ?pj=<project>
-  useEffect(() => {
     if (wantF === 'over' || wantPj)
       setFl({ ...(wantF === 'over' ? { over: true } : {}), ...(wantPj ? { proj: wantPj } : {}) });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wantF, wantPj]);
+  }, [want, wantF, wantPj, setView, setFl]);
   const onView = useCallback((a: Dn, b: Dn) => setVis((o) => (o[0] === a && o[1] === b ? o : [a, b])), []);
   const widen = useCallback(
     (w: [Dn, Dn]) => {

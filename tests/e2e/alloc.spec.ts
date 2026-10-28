@@ -254,18 +254,20 @@ test('grid: a week typed is spread over the working days; a selection distribute
   ).projects.find((x) => x.id === b.project)!.code;
   const sub = page.locator(`[data-sub="${who.id}|${code}"]`).first();
   await expect(sub).toBeVisible();
-  // the second visible week of the first project row
+  // the second visible week of the row (cells are addressed by row:column)
   const cells = sub.locator('[role="gridcell"]');
-  const c = cells.nth(3);
+  const [r0, c0] = (await cells.nth(3).getAttribute('data-cell'))!.split(':').map(Number) as [number, number];
+  const cell = (k: number) => page.locator(`[data-cell="${r0}:${c0 + k}"]`);
+  const c = cell(0);
   await c.click();
-  await page.keyboard.type('20');
+  await page.keyboard.type('13');
   await page.keyboard.press('Enter');
   const bk = async () =>
     (await range(page)).bookings.find(
       (x) => x.person === who.id && x.project === b.project && x.from === b.from,
     )!;
   await expect.poll(async () => Object.keys((await bk()).days).length).toBeGreaterThan(0);
-  await expect(c).toContainText('20');
+  await expect(c).toContainText('13');
   // three weeks selected, 30 distributed over the period
   await c.click();
   await page.keyboard.press('Shift+ArrowRight');
@@ -278,9 +280,9 @@ test('grid: a week typed is spread over the working days; a selection distribute
   await how.getByText(/Distribuir 30h no período/).click();
   await how.getByRole('button', { name: /Aplicar/ }).click();
   // 30 h over the three weeks (by capacity: a holiday week gets less)
-  const num = async (i: number) =>
-    Number(((await cells.nth(i).textContent()) ?? '').replace(',', '.').replace(/[^\d.]/g, ''));
-  await expect.poll(async () => (await num(3)) + (await num(4)) + (await num(5))).toBe(30);
+  const num = async (k: number) =>
+    Number(((await cell(k).textContent()) ?? '').replace(',', '.').replace(/[^\d.]/g, ''));
+  await expect.poll(async () => (await num(0)) + (await num(1)) + (await num(2))).toBe(30);
   // a typed cell is marked
   await expect(c.locator('.man')).toHaveCount(1);
 });
@@ -299,10 +301,11 @@ test('projects: drag a person from "Quem pode ir?" onto a role "Por atribuir"', 
   await expect(cand).toBeVisible();
   const pid = await cand.getAttribute('data-cand');
   const from = (await cand.boundingBox())!;
-  const to = (await ph.boundingBox())!;
+  // onto the role's row (its name cell is always in view)
+  const to = (await ph.locator('.al-name').boundingBox())!;
   await page.mouse.move(from.x + 40, from.y + 20);
   await page.mouse.down();
-  await page.mouse.move(to.x + 500, to.y + to.height / 2, { steps: 15 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 });
   await page.mouse.up();
   const drop = page.getByRole('dialog', { name: 'Largar na função' });
   await expect(drop).toBeVisible();
