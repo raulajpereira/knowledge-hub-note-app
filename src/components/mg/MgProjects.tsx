@@ -581,11 +581,15 @@ export function MgProjects({ mg }: { mg: Mg }) {
                 tabIndex={0}
                 className="mg-h10"
                 onClick={() =>
-                  a.person ? mg.nav('mg_people', { p: a.person }) : mg.nav('mg_alloc', { v: 'proj', pj: sel.id })
+                  a.person
+                    ? mg.nav('mg_people', { p: a.person })
+                    : mg.nav('mg_alloc', { v: 'proj', pj: sel.id })
                 }
                 onKeyDown={(e) =>
                   e.key === 'Enter' &&
-                  (a.person ? mg.nav('mg_people', { p: a.person }) : mg.nav('mg_alloc', { v: 'proj', pj: sel.id }))
+                  (a.person
+                    ? mg.nav('mg_people', { p: a.person })
+                    : mg.nav('mg_alloc', { v: 'proj', pj: sel.id }))
                 }
                 style={css(
                   'display:flex;align-items:center;gap:10px;min-height:46px;padding:0 12px;border-radius:14px;background:rgb(var(--w) / .04);cursor:pointer;',

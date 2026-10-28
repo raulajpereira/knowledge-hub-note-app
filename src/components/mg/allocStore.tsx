@@ -5,7 +5,16 @@ import { api, isApiFailure } from '@/lib/client/api';
 import { useI18n } from '@/i18n/client';
 import { mgTr } from '@/lib/mgText';
 import { useToast } from '@/components/ui';
-import { dnOf, isoOf, monthStart, todayIso, type AlOpT, type Absence, type Booking, type Dn } from '@/lib/alloc';
+import {
+  dnOf,
+  isoOf,
+  monthStart,
+  todayIso,
+  type AlOpT,
+  type Absence,
+  type Booking,
+  type Dn,
+} from '@/lib/alloc';
 
 // Alocações v2 on the client: the bookings and absences of the loaded date
 // range (6 months back, 12 ahead to start with; the screens widen it with

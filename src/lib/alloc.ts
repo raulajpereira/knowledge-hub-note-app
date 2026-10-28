@@ -211,14 +211,12 @@ export const AbsenceSchema = z
   })
   .refine(span, 'range');
 /** A batch of changes (POST /mg/alloc/ops); `base` = the version the change was made on ('' = new). */
-export const AlOp = z.discriminatedUnion('op', [
+export const AlOp = z.union([
   z.strictObject({
     op: z.literal('put'),
     c: z.literal('bk'),
     v: z.unknown(),
     base: ver,
-    /** the booking moved by this many days: its typed days move with it */
-    shift: z.number().int().min(-AL_MAX_DAYS).max(AL_MAX_DAYS).optional(),
   }),
   z.strictObject({ op: z.literal('put'), c: z.literal('ab'), v: z.unknown(), base: ver }),
   z.strictObject({ op: z.literal('del'), c: z.enum(['bk', 'ab']), id: z.uuid(), base: ver }),
@@ -585,4 +583,5 @@ export function effortLabel(b: Pick<Booking, 'mode' | 'value'>, lang: string) {
   }
 }
 /** dd/mm/yyyy */
-export const fmtDay = (s: string) => (isIsoDay(s) ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '—');
+export const fmtDay = (s: string) =>
+  isIsoDay(s) ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '—';

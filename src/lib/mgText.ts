@@ -1,3 +1,4 @@
+import { MG_EX_AL, MG_RX_AL } from './mgTextAlloc';
 // Management labels from Management.dc.html (MG_L, MG_EX, MG_RX): the UI is written in
 // Portuguese like the prototype; mt() gives the English text when the app is in English.
 export const MG_L: Array<[string, string]> = [
@@ -457,7 +458,9 @@ export const MG_RX: Array<[RegExp, string]> = [
 export function mgTr(s: string, lang: string): string {
   if (lang !== 'en' || !/[A-Za-zÀ-ú]/.test(s)) return s;
   if (MG_EX[s] !== undefined) return MG_EX[s]!;
+  if (MG_EX_AL[s] !== undefined) return MG_EX_AL[s]!;
   let r = s;
+  for (const [re, to] of MG_RX_AL) r = r.replace(re, to);
   for (const [re, to] of MG_RX) r = r.replace(re, to);
   return r;
 }

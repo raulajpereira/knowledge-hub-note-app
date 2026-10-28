@@ -27,7 +27,17 @@ import type { MgPerson } from '@/lib/mg';
 import { Av } from '../ui';
 import type { Mg } from '../store';
 import { Floating } from './Popovers';
-import { BAND_BG, BAND_FG, columns, groupOfArea, newBooking, stdHours, stdWorkDays, type Col } from './shared';
+import {
+  ABS_LABEL,
+  BAND_BG,
+  BAND_FG,
+  columns,
+  groupOfArea,
+  newBooking,
+  stdHours,
+  stdWorkDays,
+  type Col,
+} from './shared';
 import type { GroupBy, Nav } from './Timeline';
 
 export type GUnit = 'h' | 'pct' | 'fte';
@@ -38,7 +48,15 @@ const NAMEW = 262;
 type GRow =
   | { k: 'g'; key: string; label: string; dot: string; sub: string; people: string[] }
   | { k: 'p'; key: string; p: MgPerson; open: boolean }
-  | { k: 's'; key: string; person: string; project: string; status: Booking['status']; bks: Booking[]; role: string }
+  | {
+      k: 's';
+      key: string;
+      person: string;
+      project: string;
+      status: Booking['status'];
+      bks: Booking[];
+      role: string;
+    }
   | { k: 'ph'; key: string; b: Booking }
   | { k: 'add'; key: string; person: string };
 type Sel = { r0: number; c0: number; r1: number; c1: number };
@@ -91,7 +109,13 @@ export function Grid({
   const [openP, setOpenP] = useState<Record<string, boolean>>({});
   const [cur, setCur] = useState<{ r: number; c: number } | null>(null);
   const [sel, setSel] = useState<Sel | null>(null);
-  const [edit, setEdit] = useState<{ r: number; c: number; v: string } | null>(null);
+  const [edit, setEdit0] = useState<{ r: number; c: number; v: string } | null>(null);
+  // the cell being typed, also for keys that arrive before its input has focus
+  const editRef = useRef<{ r: number; c: number; v: string } | null>(null);
+  const setEdit = (e: { r: number; c: number; v: string } | null) => {
+    editRef.current = e;
+    setEdit0(e);
+  };
   const [apply, setApply] = useState<Apply | null>(null);
   const [dayEd, setDayEd] = useState<{ r: number; c: number; x: number; y: number } | null>(null);
   const [fill, setFill] = useState<number | null>(null);
@@ -110,7 +134,14 @@ export function Grid({
     if (showPh) {
       const ph = mg.BK.filter((b) => !b.person && inWin(b));
       if (ph.length) {
-        out.push({ k: 'g', key: 'g|ph', label: tr('Por atribuir'), dot: 'rgb(var(--w) / .6)', sub: tr(`${ph.length} perfis`), people: [] });
+        out.push({
+          k: 'g',
+          key: 'g|ph',
+          label: tr('Por atribuir'),
+          dot: 'rgb(var(--w) / .6)',
+          sub: tr(`${ph.length} perfis`),
+          people: [],
+        });
         for (const b of ph) out.push({ k: 'ph', key: `ph|${b.id}`, b });
       }
     }
@@ -120,10 +151,19 @@ export function Grid({
       if (!open) return;
       const m = new Map<string, Booking[]>();
       for (const b of mg.BK)
-        if (b.person === p.id && inWin(b)) m.set(`${b.project}|${b.status}`, [...(m.get(`${b.project}|${b.status}`) ?? []), b]);
+        if (b.person === p.id && inWin(b))
+          m.set(`${b.project}|${b.status}`, [...(m.get(`${b.project}|${b.status}`) ?? []), b]);
       for (const [k, bks] of [...m].sort((a, b) => a[0].localeCompare(b[0]))) {
         const [project, status] = k.split('|') as [string, Booking['status']];
-        out.push({ k: 's', key: `s|${p.id}|${k}`, person: p.id, project, status, bks, role: bks.map((b) => b.role).filter(Boolean)[0] ?? '' });
+        out.push({
+          k: 's',
+          key: `s|${p.id}|${k}`,
+          person: p.id,
+          project,
+          status,
+          bks,
+          role: bks.map((b) => b.role).filter(Boolean)[0] ?? '',
+        });
       }
       out.push({ k: 'add', key: `add|${p.id}`, person: p.id });
     };
@@ -139,8 +179,19 @@ export function Grid({
     } else if (groupBy === 'none') people.forEach(person);
     else {
       // by team (also when the timeline groups by project / client)
-      for (const t of mg.TEAMS) grp(`g|${t.id}`, tr(t.name), t.color, people.filter((p) => p.team === t.id));
-      grp('g|', tr('Sem equipa'), 'rgb(var(--w) / .4)', people.filter((p) => !mg.tById[p.team]));
+      for (const t of mg.TEAMS)
+        grp(
+          `g|${t.id}`,
+          tr(t.name),
+          t.color,
+          people.filter((p) => p.team === t.id),
+        );
+      grp(
+        'g|',
+        tr('Sem equipa'),
+        'rgb(var(--w) / .4)',
+        people.filter((p) => !mg.tById[p.team]),
+      );
     }
     return out;
   }, [mg.BK, mg.TEAMS, mg.tById, people, groupBy, showPh, openP, bkFilter, cols, F, T, tr]);
@@ -169,7 +220,8 @@ export function Grid({
     let t = 0;
     for (const b of bks) {
       const s = mg.series(b);
-      for (let n = Math.max(c.a, s.from); n <= Math.min(c.b, s.from + s.h.length - 1); n++) t += s.h[n - s.from]!;
+      for (let n = Math.max(c.a, s.from); n <= Math.min(c.b, s.from + s.h.length - 1); n++)
+        t += s.h[n - s.from]!;
     }
     return r1(t);
   };
@@ -315,7 +367,8 @@ export function Grid({
     const dir = nav.kind === 'next' ? 1 : -1;
     const target = el.scrollLeft + dir * span * 0.8;
     if (target < 0) setWin([monthStart(F, zoom === 'quarter' ? -6 : -3), T]);
-    else if (target + el.clientWidth > cols.length * colW + NAMEW) setWin([F, monthStart(T + 1, zoom === 'quarter' ? 6 : 3) - 1]);
+    else if (target + el.clientWidth > cols.length * colW + NAMEW)
+      setWin([F, monthStart(T + 1, zoom === 'quarter' ? 6 : 3) - 1]);
     requestAnimationFrame(() => el.scrollBy({ left: dir * span * 0.8, behavior: 'smooth' }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav]);
@@ -323,7 +376,8 @@ export function Grid({
   const c1 = Math.min(cols.length - 1, Math.ceil((view.l + view.w - NAMEW) / colW) + 2);
   const visCols = cols.slice(c0, c1 + 1);
   const va = cols[Math.max(0, Math.floor(view.l / colW))]?.a ?? F;
-  const vb = cols[Math.max(0, Math.min(cols.length - 1, Math.floor((view.l + view.w - NAMEW - 84) / colW)))]?.b ?? T;
+  const vb =
+    cols[Math.max(0, Math.min(cols.length - 1, Math.floor((view.l + view.w - NAMEW - 84) / colW)))]?.b ?? T;
   useEffect(() => onView(va, vb), [va, vb, onView]);
 
   // ── selection & keyboard ──
@@ -337,11 +391,18 @@ export function Grid({
     if (!sel) return [] as Array<{ r: number; c: number }>;
     const out: Array<{ r: number; c: number }> = [];
     for (let r = Math.min(sel.r0, sel.r1); r <= Math.max(sel.r0, sel.r1); r++)
-      if (editable(rows[r])) for (let c = Math.min(sel.c0, sel.c1); c <= Math.max(sel.c0, sel.c1); c++) out.push({ r, c });
+      if (editable(rows[r]))
+        for (let c = Math.min(sel.c0, sel.c1); c <= Math.max(sel.c0, sel.c1); c++) out.push({ r, c });
     return out;
   };
   const move = (dr: number, dc: number, extend: boolean) => {
-    const p = cur ?? { r: rows.findIndex(editable), c: Math.max(0, cols.findIndex((c) => c.b >= today)) };
+    const p = cur ?? {
+      r: rows.findIndex(editable),
+      c: Math.max(
+        0,
+        cols.findIndex((c) => c.b >= today),
+      ),
+    };
     if (p.r < 0) return;
     let r = p.r + dr;
     while (r >= 0 && r < rows.length && !editable(rows[r])) r += dr || 1;
@@ -358,7 +419,8 @@ export function Grid({
       const L = layout[r];
       if (L) {
         if (L.y < el.scrollTop) el.scrollTop = L.y;
-        else if (L.y + L.h + HEAD > el.scrollTop + el.clientHeight) el.scrollTop = L.y + L.h + HEAD - el.clientHeight;
+        else if (L.y + L.h + HEAD > el.scrollTop + el.clientHeight)
+          el.scrollTop = L.y + L.h + HEAD - el.clientHeight;
       }
     }
   };
@@ -391,7 +453,20 @@ export function Grid({
     writeCells(out);
   };
   const onKey = (e: React.KeyboardEvent) => {
-    if (edit || apply || dayEd) return;
+    const ed = editRef.current;
+    if (ed && e.target === gridRef.current) {
+      // typed before the cell's input took the focus
+      if (/^[0-9.,]$/.test(e.key)) {
+        e.preventDefault();
+        setEdit({ ...ed, v: ed.v + e.key });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const el = document.querySelector(`[data-cell="${ed.r}:${ed.c}"]`)?.getBoundingClientRect();
+        if (!commit(ed.v, ed.r, ed.c, el?.left ?? 400, (el?.bottom ?? 300) + 6)) move(1, 0, false);
+      } else if (e.key === 'Escape') setEdit(null);
+      return;
+    }
+    if (ed || apply || dayEd) return;
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === 'z') {
       e.preventDefault();
@@ -455,7 +530,9 @@ export function Grid({
     setCur({ r, c });
     setSel({ r0: r, c0: c, r1: r, c1: c });
     const mv = (ev: PointerEvent) => {
-      const t = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest('[data-cell]');
+      const t = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest(
+        '[data-cell]',
+      );
       const m = t?.getAttribute('data-cell')?.split(':').map(Number);
       if (m) setSel({ r0: r, c0: c, r1: m[0]!, c1: m[1]! });
     };
@@ -475,7 +552,9 @@ export function Grid({
     const last = Math.max(s.c0, s.c1);
     let to: number | null = null;
     const mv = (ev: PointerEvent) => {
-      const t = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest('[data-cell]');
+      const t = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest(
+        '[data-cell]',
+      );
       const m = t?.getAttribute('data-cell')?.split(':').map(Number);
       if (m && m[1]! > last) {
         to = m[1]!;
@@ -534,17 +613,37 @@ export function Grid({
     const l = mg.loads(pid);
     return { conf: sumDays(l.conf, l, a, b), tent: sumDays(l.tent, l, a, b), cap: sumDays(l.cap, l, a, b) };
   };
-  const cellBox = (ci: number): React.CSSProperties => ({ left: x(ci), width: colW, top: 0, bottom: 0, position: 'absolute' });
+  const cellBox = (ci: number): React.CSSProperties => ({
+    left: x(ci),
+    width: colW,
+    top: 0,
+    bottom: 0,
+    position: 'absolute',
+  });
   const personCell = (p: MgPerson, c: Col, ci: number, ri: number) => {
     const s = tsum(p.id, c.a, c.b);
     const bd = s.cap ? loadBand(s.conf, s.cap) : s.conf ? 3 : 0;
     const absent =
-      !s.conf && !s.cap && mg.env.absences(p.id).some((a) => dnOf(a.from) <= c.b && dnOf(a.to) >= c.a) && !(zoom === 'day' && c.weekend);
+      !s.conf &&
+      !s.cap &&
+      mg.env.absences(p.id).some((a) => dnOf(a.from) <= c.b && dnOf(a.to) >= c.a) &&
+      !(zoom === 'day' && c.weekend);
     const holOnly = !s.conf && !s.cap && !!c.hol && zoom === 'day';
     return (
-      <div key={ci} data-cell={`${ri}:${ci}`} className={`al-gcell${c.weekend ? ' we' : ''}`} style={cellBox(ci)}>
+      <div
+        key={ci}
+        data-cell={`${ri}:${ci}`}
+        className={`al-gcell${c.weekend ? ' we' : ''}`}
+        style={cellBox(ci)}
+      >
         {absent ? (
-          <span className="v absent">{tr('Ausente')}</span>
+          <span className="v absent">
+            {tr(
+              ABS_LABEL[
+                mg.env.absences(p.id).find((a) => dnOf(a.from) <= c.b && dnOf(a.to) >= c.a)?.type ?? 'outra'
+              ]!,
+            )}
+          </span>
         ) : holOnly ? (
           <span className="v none" style={{ fontSize: 10, color: 'var(--al-hol)' }}>
             {tr('feriado')}
@@ -587,7 +686,11 @@ export function Grid({
         data-cell={`${ri}:${ci}`}
         role="gridcell"
         className={`al-gcell sub${t.status === 'tentative' ? ' tent' : ''}${c.weekend ? ' we' : ''}${isSel || filling ? ' sel' : ''}${isCur ? ' cur' : ''}`}
-        style={{ ...cellBox(ci), cursor: 'cell', outline: filling ? '1px dashed rgb(var(--w) / .5)' : undefined }}
+        style={{
+          ...cellBox(ci),
+          cursor: 'cell',
+          outline: filling ? '1px dashed rgb(var(--w) / .5)' : undefined,
+        }}
         onPointerDown={(e) => down(e, ri, ci)}
         onDoubleClick={() => setEdit({ r: ri, c: ci, v: h ? String(r1(toUnit(h, t.person, c))) : '' })}
       >
@@ -601,7 +704,9 @@ export function Grid({
           <span style={{ color: 'rgb(var(--t) / calc(.3 * var(--t-k)))' }}>·</span>
         )}
         {typedIn(t.bks, c) && <span className="man" title={tr('ajustado à mão')} />}
-        {isLastSel && <span className="fill" onPointerDown={fillDown} title={tr('Arraste para copiar para a direita')} />}
+        {isLastSel && (
+          <span className="fill" onPointerDown={fillDown} title={tr('Arraste para copiar para a direita')} />
+        )}
       </div>
     );
   };
@@ -620,7 +725,11 @@ export function Grid({
             const sh = stdHours(c.a, c.b) || 1;
             const d = (cap - conf) / sh;
             return (
-              <div key={ci} className="al-gcell" style={{ ...cellBox(ci), flexDirection: 'column', fontSize: 11.5 }}>
+              <div
+                key={ci}
+                className="al-gcell"
+                style={{ ...cellBox(ci), flexDirection: 'column', fontSize: 11.5 }}
+              >
                 <span>
                   {fmtNum(conf / sh, lang, 1)}/{fmtNum(cap / sh, lang, 0)}
                 </span>
@@ -628,7 +737,8 @@ export function Grid({
                   style={{
                     fontSize: 10,
                     fontWeight: 500,
-                    color: d < 0 ? 'oklch(calc(.84 * var(--lk)) .13 30)' : 'oklch(calc(.86 * var(--lk)) .12 150)',
+                    color:
+                      d < 0 ? 'oklch(calc(.84 * var(--lk)) .13 30)' : 'oklch(calc(.86 * var(--lk)) .12 150)',
                   }}
                 >
                   {d < 0 ? tr('falta') : tr('livre')} {fmtNum(Math.abs(d), lang, 1)}
@@ -641,7 +751,10 @@ export function Grid({
           return (
             <div key={ci} className="al-gcell" style={cellBox(ci)}>
               {cap > 0 && (
-                <span className="al-pct" style={{ background: BAND_BG[bd], color: bd ? BAND_FG[bd] : 'var(--ink)', fontSize: 10.5 }}>
+                <span
+                  className="al-pct"
+                  style={{ background: BAND_BG[bd], color: bd ? BAND_FG[bd] : 'var(--ink)', fontSize: 10.5 }}
+                >
                   {pct}%
                 </span>
               )}
@@ -688,7 +801,13 @@ export function Grid({
               <div className="al-hdr" style={{ height: HEAD, width: W }}>
                 <div
                   className="al-corner"
-                  style={{ width: NAMEW, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 12px' }}
+                  style={{
+                    width: NAMEW,
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    padding: '14px 16px 12px',
+                  }}
                 >
                   <span>{tr('Pessoa / projeto')}</span>
                   <span style={{ fontSize: 11, fontWeight: 500, color: muted }}>
@@ -709,29 +828,67 @@ export function Grid({
                         {zoom === 'day' || zoom === 'week' ? c.sub : ''}
                       </span>
                       <span className="lbl">{c.lbl}</span>
-                      <span className="sub" style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}>
-                        {zoom === 'day' ? '' : c.hol && zoom === 'week' ? `${tr('feriado')} ${+isoOf(holDay(c)).slice(8)}` : tr(`${wd} dias`)}
+                      <span
+                        className="sub"
+                        style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}
+                      >
+                        {zoom === 'day'
+                          ? ''
+                          : c.hol && zoom === 'week'
+                            ? `${tr('feriado')} ${+isoOf(holDay(c)).slice(8)}`
+                            : tr(`${wd} dias`)}
                       </span>
                     </div>
                   );
                 })}
-                <div className="al-gtot" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, height: HEAD }}>
+                <div
+                  className="al-gtot"
+                  style={{ position: 'absolute', right: 0, top: 0, bottom: 0, height: HEAD }}
+                >
                   {tr('Total')}
                 </div>
               </div>
               {rows.map((row, ri) => {
                 const L = layout[ri]!;
                 if (L.y + L.h < ya || L.y > yb) return null;
-                const style: React.CSSProperties = { position: 'absolute', top: HEAD + L.y, height: L.h, width: W, left: 0 };
+                const style: React.CSSProperties = {
+                  position: 'absolute',
+                  top: HEAD + L.y,
+                  height: L.h,
+                  width: W,
+                  left: 0,
+                };
                 if (row.k === 'g')
                   return (
-                    <div key={row.key} className="al-grow" style={{ ...style, background: 'rgb(var(--w) / .035)' }}>
+                    <div
+                      key={row.key}
+                      className="al-grow"
+                      style={{ ...style, background: 'rgb(var(--w) / .035)' }}
+                    >
                       <div className="al-gname" style={{ height: '100%' }}>
-                        <i style={{ width: 8, height: 8, borderRadius: '50%', background: row.dot, flex: 'none' }} />
-                        <span style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <i
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: row.dot,
+                            flex: 'none',
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
                           {row.label}
                         </span>
-                        <span style={{ fontSize: 11, color: muted, whiteSpace: 'nowrap' }}>{row.sub || tr(`${row.people.length} pessoas`)}</span>
+                        <span style={{ fontSize: 11, color: muted, whiteSpace: 'nowrap' }}>
+                          {row.sub || tr(`${row.people.length} pessoas`)}
+                        </span>
                       </div>
                       {groupCells(row)}
                     </div>
@@ -780,10 +937,26 @@ export function Grid({
                         </button>
                         <Av p={p} size={32} fs={11} tc={mg.tOf(p).tc} />
                         <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          <span style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span
+                            style={{
+                              fontSize: 13.5,
+                              fontWeight: 600,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
                             {p.name}
                           </span>
-                          <span style={{ fontSize: 11, color: muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: muted,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
                             {tr(p.role)} · {mg.LV[p.level]} · {fmtNum(+p.cap, lang)}h
                           </span>
                         </span>
@@ -798,19 +971,53 @@ export function Grid({
                 const t = rowTarget(row)!;
                 const pj = mg.pjById[t.project];
                 return (
-                  <div key={row.key} className="al-grow sub" style={style} data-sub={`${t.person}|${pj?.code ?? ''}`}>
-                    <div className="al-gname" style={{ height: '100%', paddingLeft: row.k === 'ph' ? 12 : 50 }}>
+                  <div
+                    key={row.key}
+                    className="al-grow sub"
+                    style={style}
+                    data-sub={`${t.person}|${pj?.code ?? ''}`}
+                  >
+                    <div
+                      className="al-gname"
+                      style={{ height: '100%', paddingLeft: row.k === 'ph' ? 12 : 50 }}
+                    >
                       {row.k === 'ph' && <span className="al-ph-av sm">?</span>}
-                      <i style={{ width: 7, height: 7, borderRadius: '50%', background: pj?.color, flex: 'none' }} />
-                      <span className="al-mono" style={{ fontSize: 12, fontWeight: 600 }}>
+                      <i
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: '50%',
+                          background: pj?.color,
+                          flex: 'none',
+                        }}
+                      />
+                      <span
+                        className="al-mono"
+                        style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flex: 'none' }}
+                      >
                         {pj?.code}
                       </span>
-                      <span style={{ fontSize: 11, color: muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {row.k === 'ph' ? row.b.role : t.status === 'tentative' ? tr('tentativo') : row.role || pj?.name}
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: muted,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {row.k === 'ph'
+                          ? row.b.role
+                          : t.status === 'tentative'
+                            ? tr('tentativo')
+                            : row.role || pj?.name}
                       </span>
                     </div>
                     {visCols.map((c, k) => editCell(row, c, c0 + k, ri))}
-                    <div className="al-gtot" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, fontWeight: 500 }}>
+                    <div
+                      className="al-gtot"
+                      style={{ position: 'absolute', right: 0, top: 0, bottom: 0, fontWeight: 500 }}
+                    >
                       {totals(t.person, t.bks)}
                     </div>
                   </div>
@@ -876,13 +1083,20 @@ export function Grid({
                   for (const b of rowTarget(rows[r])?.bks ?? [])
                     if (dnOf(b.to) >= cols[c]!.a && dnOf(b.from) <= cols[c]!.b) ids.set(b.id, b);
                 mg.AL.change({
-                  bk: [...ids.values()].map((b) => ({ ...b, status: b.status === 'tentative' ? 'confirmed' : 'tentative' })),
+                  bk: [...ids.values()].map((b) => ({
+                    ...b,
+                    status: b.status === 'tentative' ? 'confirmed' : 'tentative',
+                  })),
                 });
               }}
             >
               {tr('Tentativo')}
             </button>
-            <button type="button" className="al-btn ghost sm" onClick={() => writeCells(selCells().map((c) => ({ ...c, hours: 0 })))}>
+            <button
+              type="button"
+              className="al-btn ghost sm"
+              onClick={() => writeCells(selCells().map((c) => ({ ...c, hours: 0 })))}
+            >
               {tr('Limpar')}
             </button>
           </div>
@@ -906,7 +1120,15 @@ export function Grid({
           {tr('+8 tentativo')}
         </span>
         <span className="al-lg">
-          <i style={{ width: 0, height: 0, borderLeft: '8px solid transparent', borderTop: '8px solid oklch(0.72 0.17 245)', borderRadius: 0 }} />
+          <i
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '8px solid transparent',
+              borderTop: '8px solid oklch(0.72 0.17 245)',
+              borderRadius: 0,
+            }}
+          />
           {tr('ajustado à mão')}
         </span>
         <span style={{ flex: 1 }} />
@@ -1000,7 +1222,11 @@ function ApplyPop({
   const per = { day: 'dia', week: 'semana', month: 'mês', quarter: 'trimestre' }[zoom];
   const opts: Array<['each' | 'dist' | 'day', string, string]> = [
     ['each', tr(`${fmtNum(v, lang)}${u} em cada ${per}`), `${fmtNum(v * ncols, lang)}${u} ${tr('no total')}`],
-    ['dist', tr(`Distribuir ${fmtNum(v, lang)}${u} no período`), `${fmtNum(v / ncols, lang)}${u} ${tr(`por ${per}`)}`],
+    [
+      'dist',
+      tr(`Distribuir ${fmtNum(v, lang)}${u} no período`),
+      `${fmtNum(v / ncols, lang)}${u} ${tr(`por ${per}`)}`,
+    ],
     ['day', tr(`Manter horas/dia (${fmtNum(v / (perDay || 1), lang)}h)`), tr('ajusta-se a feriados')],
   ];
   return (
@@ -1014,14 +1240,25 @@ function ApplyPop({
         }}
       >
         <label className="al-lbl">
-          <input className="al-in mono" value={raw} onChange={(e) => setRaw(e.target.value)} aria-label={tr('Valor')} inputMode="decimal" />
+          <input
+            className="al-in mono"
+            value={raw}
+            onChange={(e) => setRaw(e.target.value)}
+            aria-label={tr('Valor')}
+            inputMode="decimal"
+          />
         </label>
         <b style={{ fontSize: 13 }}>{tr(`Como aplicar ${fmtNum(v, lang)}${u} em ${ncols} colunas?`)}</b>
         {opts.map(([k, l, s]) => (
           <label
             key={k}
             className="al-pill"
-            style={{ width: '100%', borderRadius: 14, justifyContent: 'flex-start', background: m === k ? 'rgb(var(--w) / .12)' : undefined }}
+            style={{
+              width: '100%',
+              borderRadius: 14,
+              justifyContent: 'flex-start',
+              background: m === k ? 'rgb(var(--w) / .12)' : undefined,
+            }}
           >
             <input type="radio" name="al-apply" checked={m === k} onChange={() => setM(k)} />
             <span style={{ flex: 1 }}>{l}</span>
@@ -1063,7 +1300,9 @@ function DayEditor({
   const b = row.bks.find((k) => dnOf(k.to) >= col.a && dnOf(k.from) <= col.b);
   const s = b ? bookingSeries(b, mg.env) : null;
   const days: Dn[] = [];
-  if (b) for (let n = Math.max(col.a, dnOf(b.from)); n <= Math.min(col.b, dnOf(b.to)) && days.length < 31; n++) days.push(n);
+  if (b)
+    for (let n = Math.max(col.a, dnOf(b.from)); n <= Math.min(col.b, dnOf(b.to)) && days.length < 31; n++)
+      days.push(n);
   const [vals, setVals] = useState<Record<number, string>>(() =>
     Object.fromEntries(days.map((n) => [n, fmtNum(s?.h[n - s.from] ?? 0, lang)])),
   );

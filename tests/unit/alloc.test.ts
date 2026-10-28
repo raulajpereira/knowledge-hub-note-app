@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AlOp,
   AL_MASK_ALL,
   AL_MASK_WK,
   BookingSchema,
@@ -271,6 +272,16 @@ describe('conflicts', () => {
 });
 
 describe('validation', () => {
+  it('batch operations', () => {
+    const v = bk({});
+    expect(AlOp.safeParse({ op: 'put', c: 'bk', v, base: '' }).success).toBe(true);
+    expect(AlOp.safeParse({ op: 'put', c: 'ab', v: {}, base: '2026-10-28T10:00:00.000Z' }).success).toBe(
+      true,
+    );
+    expect(AlOp.safeParse({ op: 'del', c: 'bk', id: v.id, base: '' }).success).toBe(true);
+    expect(AlOp.safeParse({ op: 'del', c: 'xx', id: v.id, base: '' }).success).toBe(false);
+    expect(AlOp.safeParse({ op: 'put', c: 'bk', v, base: '', extra: 1 }).success).toBe(false);
+  });
   it('ranges, units and limits', () => {
     const ok = bk({ person: '', role: 'Consultor FI', need: [{ k: 'fi', l: 3 }] });
     expect(BookingSchema.safeParse(ok).success).toBe(true);

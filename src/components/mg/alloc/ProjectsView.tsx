@@ -106,7 +106,9 @@ export function ProjectsView({
     const out: PRow[] = [];
     let y = 0;
     for (const pj of projects) {
-      const bks = mg.BK.filter((b) => b.project === pj.id && b.to >= A && b.from <= B && (!fl.hideTent || b.status !== 'tentative'));
+      const bks = mg.BK.filter(
+        (b) => b.project === pj.id && b.to >= A && b.from <= B && (!fl.hideTent || b.status !== 'tentative'),
+      );
       out.push({ k: 'pj', key: pj.id, pj, y, h: 52 });
       y += 52;
       if (closed[pj.id]) continue;
@@ -146,9 +148,14 @@ export function ProjectsView({
         const freeAvg = free.reduce((s, x) => s + x, 0) / (free.length || 1);
         const av = Math.min(1, freeAvg / need5);
         const lvK = need[0]?.k;
-        const lvl = lvK && p.skills[lvK] ? `${mg.SKN[lvK] ?? lvK} ${mg.LV[p.skills[lvK]!] ?? ''}` : `${mg.SKN[p.area] ?? p.area} ${mg.LV[p.level] ?? ''}`;
+        const lvl =
+          lvK && p.skills[lvK]
+            ? `${mg.SKN[lvK] ?? lvK} ${mg.LV[p.skills[lvK]!] ?? ''}`
+            : `${mg.SKN[p.area] ?? p.area} ${mg.LV[p.level] ?? ''}`;
         // where the person is now
-        const now = mg.BK.filter((b) => b.person === p.id && b.status === 'confirmed' && b.from <= picked.to && b.to >= picked.from);
+        const now = mg.BK.filter(
+          (b) => b.person === p.id && b.status === 'confirmed' && b.from <= picked.to && b.to >= picked.from,
+        );
         const note = !now.length
           ? tr('Livre no período')
           : now.length === 1
@@ -236,7 +243,12 @@ export function ProjectsView({
       if (b && !b.person) setDrop({ b, p, x: ev.clientX - 180, y: ev.clientY - 220 });
       else if (b) {
         // onto a role with a person: a new booking of the same role and period
-        openBk({ ...b, id: crypto.randomUUID(), person: p.id, days: {}, ver: '' }, true, ev.clientX, ev.clientY - 100);
+        openBk(
+          { ...b, id: crypto.randomUUID(), person: p.id, days: {}, ver: '' },
+          true,
+          ev.clientX,
+          ev.clientY - 100,
+        );
       } else {
         const pj = mg.pjById[over];
         if (pj) {
@@ -293,7 +305,11 @@ export function ProjectsView({
         data-role-row={pj.id}
         style={{ top: HEAD + r.y, height: r.h, width: NAMEW + width, background: 'rgb(var(--w) / .035)' }}
       >
-        <div className="al-name" style={{ width: NAMEW, cursor: 'pointer' }} onClick={() => setClosed({ ...closed, [pj.id]: !closed[pj.id] })}>
+        <div
+          className="al-name"
+          style={{ width: NAMEW, cursor: 'pointer' }}
+          onClick={() => setClosed({ ...closed, [pj.id]: !closed[pj.id] })}
+        >
           <span style={{ fontSize: 9, width: 8 }}>{closed[pj.id] ? '▸' : '▾'}</span>
           <span style={{ width: 10, height: 10, borderRadius: 3, background: pj.color, flex: 'none' }} />
           <span className="txt">
@@ -303,13 +319,33 @@ export function ProjectsView({
             <span className="rl">{pj.name}</span>
           </span>
         </div>
-        <div className="al-budget" style={{ left: Math.max(NAMEW + 12, view.l + NAMEW + 12), width: Math.min(560, view.w - NAMEW - 40) }}>
-          <span className="al-status" style={{ background: MG_PST[pj.status] ?? 'rgb(var(--w) / .12)', color: 'var(--ink)' }}>
+        <div
+          className="al-budget"
+          style={{
+            left: Math.max(NAMEW + 12, view.l + NAMEW + 12),
+            width: Math.min(560, view.w - NAMEW - 40),
+          }}
+        >
+          <span
+            className="al-status"
+            style={{ background: MG_PST[pj.status] ?? 'rgb(var(--w) / .12)', color: 'var(--ink)' }}
+          >
             {st}
           </span>
-          <span className="bar" title={`${tr('real')} ${mgEur(used)} · ${tr('previsto')} ${mgEur(plan)} · ${tr('orçamento')} ${mgEur(pj.budget)}`}>
-            <i style={{ width: `${Math.min(100, (used / bud) * 100)}%`, background: 'rgb(var(--w) / .75)' }} />
-            <i style={{ left: `${Math.min(100, (used / bud) * 100)}%`, width: `${Math.max(0, Math.min(100 - (used / bud) * 100, (plan / bud) * 100))}%`, background: pj.color }} />
+          <span
+            className="bar"
+            title={`${tr('real')} ${mgEur(used)} · ${tr('previsto')} ${mgEur(plan)} · ${tr('orçamento')} ${mgEur(pj.budget)}`}
+          >
+            <i
+              style={{ width: `${Math.min(100, (used / bud) * 100)}%`, background: 'rgb(var(--w) / .75)' }}
+            />
+            <i
+              style={{
+                left: `${Math.min(100, (used / bud) * 100)}%`,
+                width: `${Math.max(0, Math.min(100 - (used / bud) * 100, (plan / bud) * 100))}%`,
+                background: pj.color,
+              }}
+            />
           </span>
           <span style={{ color: over ? 'oklch(calc(.84 * var(--lk)) .13 30)' : undefined }}>
             {mgK(used)} {tr('real')} · {mgK(used + plan)} / {mgK(pj.budget)}
@@ -359,12 +395,18 @@ export function ProjectsView({
               left,
               top: 9,
               width: w,
+              paddingLeft: 8 + Math.max(0, Math.min(view.l + NAMEW - left, w - 120)),
               cursor: 'pointer',
               ...(p
                 ? tent
                   ? { background: `color-mix(in oklch, ${c} 38%, transparent)`, border: `1.5px dashed ${c}` }
                   : { background: c }
-                : { background: 'transparent', border: '1.5px dashed rgb(var(--w) / .55)', color: 'var(--ink)', boxShadow: 'none' }),
+                : {
+                    background: 'transparent',
+                    border: '1.5px dashed rgb(var(--w) / .55)',
+                    color: 'var(--ink)',
+                    boxShadow: 'none',
+                  }),
             }}
             onClick={(e) => (b.person ? openBk(b, false, e.clientX + 10, e.clientY - 40) : setPick(b.id))}
             onDoubleClick={(e) => openBk(b, false, e.clientX + 10, e.clientY - 40)}
@@ -395,15 +437,29 @@ export function ProjectsView({
     <div className="al-body">
       <div className="al-well">
         <div className="al-scroll" ref={scRef} onScroll={onScroll}>
-          <div className="al-canvas" style={{ width: NAMEW + width, height: HEAD + rows.height, ['--al-name' as string]: `${NAMEW}px` }}>
+          <div
+            className="al-canvas"
+            style={{
+              width: NAMEW + width,
+              height: HEAD + rows.height,
+              ['--al-name' as string]: `${NAMEW}px`,
+            }}
+          >
             <div className="al-hdr" style={{ height: HEAD, width: NAMEW + width }}>
               <div className="al-corner">{tr('Projeto · função')}</div>
               {cols
                 .filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)
                 .map((c, i) => (
-                  <div key={c.a} className={`al-hcol${c.today ? ' today' : ''}${c.top && i ? ' newgrp' : ''}`} style={{ left: x(c.a), width: (c.b - c.a + 1) * ppd }}>
+                  <div
+                    key={c.a}
+                    className={`al-hcol${c.today ? ' today' : ''}${c.top && i ? ' newgrp' : ''}`}
+                    style={{ left: x(c.a), width: (c.b - c.a + 1) * ppd }}
+                  >
                     {c.hol && zoom === 'week' ? (
-                      <span className="top" style={{ color: 'var(--al-hol)', textTransform: 'none', letterSpacing: 0 }}>
+                      <span
+                        className="top"
+                        style={{ color: 'var(--al-hol)', textTransform: 'none', letterSpacing: 0 }}
+                      >
                         {tr('feriado')}
                       </span>
                     ) : (
@@ -426,10 +482,28 @@ export function ProjectsView({
             />
             {zoom === 'week' &&
               holidays.map((n) => (
-                <span key={n} className="al-holcol" style={{ left: x(n - wdOf(n)), width: 7 * ppd, top: HEAD, height: rows.height, opacity: 0.55 }} />
+                <span
+                  key={n}
+                  className="al-holcol"
+                  style={{
+                    left: x(n - wdOf(n)),
+                    width: 7 * ppd,
+                    top: HEAD,
+                    height: rows.height,
+                    opacity: 0.55,
+                  }}
+                />
               ))}
-            {today >= F && today <= T && <span className="al-todayline" style={{ left: x(today), top: HEAD, height: rows.height }} />}
-            {rows.list.map((r) => (r.y + r.h < view.t - 300 || r.y > view.t + view.h + 300 ? null : r.k === 'pj' ? projHead(r) : roleRow(r)))}
+            {today >= F && today <= T && (
+              <span className="al-todayline" style={{ left: x(today), top: HEAD, height: rows.height }} />
+            )}
+            {rows.list.map((r) =>
+              r.y + r.h < view.t - 300 || r.y > view.t + view.h + 300
+                ? null
+                : r.k === 'pj'
+                  ? projHead(r)
+                  : roleRow(r),
+            )}
             {!rows.list.length && <div className="al-empty">{tr('Sem projetos com estes filtros.')}</div>}
           </div>
         </div>
@@ -459,13 +533,16 @@ export function ProjectsView({
             <small>{tr('Escolha uma função por atribuir (linha com “?”).')}</small>
           )}
           <div className="t" style={{ fontSize: 11 }}>
-            <small style={{ marginRight: 'auto' }}>{tr('Correspondência · competência + disponibilidade')}</small>
+            <small style={{ marginRight: 'auto' }}>
+              {tr('Correspondência · competência + disponibilidade')}
+            </small>
             <small>{tr('horas livres / sem')}</small>
           </div>
         </div>
         <div className="al-side-bd">
           {cands.map((c) => {
-            const bd = c.score >= 85 ? 'var(--al-u2)' : c.score >= 60 ? 'var(--al-u1)' : 'rgb(var(--w) / .16)';
+            const bd =
+              c.score >= 85 ? 'var(--al-u2)' : c.score >= 60 ? 'var(--al-u1)' : 'rgb(var(--w) / .16)';
             const mx = Math.max(1, ...c.cap);
             return (
               <div
@@ -481,7 +558,10 @@ export function ProjectsView({
                     <b>{c.p.name}</b>
                     <span>{c.note}</span>
                   </span>
-                  <span className="al-pct" style={{ background: bd, color: c.score >= 60 ? '#1d2a12' : 'var(--ink)' }}>
+                  <span
+                    className="al-pct"
+                    style={{ background: bd, color: c.score >= 60 ? '#1d2a12' : 'var(--ink)' }}
+                  >
                     {c.score}%
                   </span>
                 </div>
@@ -494,7 +574,12 @@ export function ProjectsView({
                         title={`${fmtNum(f, lang)}h`}
                         style={{
                           height: `${Math.max(2, (f / mx) * 18)}px`,
-                          background: f >= (c.cap[i] ?? 0) * 0.6 ? 'var(--al-u2)' : f > 0 ? 'var(--al-u1)' : 'var(--al-u3)',
+                          background:
+                            f >= (c.cap[i] ?? 0) * 0.6
+                              ? 'var(--al-u2)'
+                              : f > 0
+                                ? 'var(--al-u1)'
+                                : 'var(--al-u3)',
                         }}
                       />
                     ))}
@@ -552,7 +637,9 @@ function DropPop({
   const { tr, lang } = mg;
   const [half, setHalf] = useState(false);
   const base: Booking = { ...d.b, person: d.p.id };
-  const b: Booking = half ? { ...base, value: base.mode === 'fte' ? base.value / 2 : Math.round(base.value) / 2 } : base;
+  const b: Booking = half
+    ? { ...base, value: base.mode === 'fte' ? base.value / 2 : Math.round(base.value) / 2 }
+    : base;
   const eq = equivalents(b, mg.env);
   const pj = mg.pjById[b.project];
   const c = conflictOf(b, mg.BK, mg.env);
@@ -589,12 +676,17 @@ function DropPop({
           {tr('Largar em')} {pj?.code} · {b.role || tr('Por atribuir')}
         </b>
         {row(tr('Período'), `${dayMon(f, lang)} → ${dayMon(t, lang)} · ${tr(`${eq.days} dias úteis`)}`)}
-        {row(tr('Esforço'), `${fmtNum(eq.hpw, lang)}h/${lang === 'en' ? 'wk' : 'sem'} = ${fmtNum(eq.hpd, lang)}h/${lang === 'en' ? 'day' : 'dia'} · ${fmtNum(total, lang)}h`)}
+        {row(
+          tr('Esforço'),
+          `${fmtNum(eq.hpw, lang)}h/${lang === 'en' ? 'wk' : 'sem'} = ${fmtNum(eq.hpd, lang)}h/${lang === 'en' ? 'day' : 'dia'} · ${fmtNum(total, lang)}h`,
+        )}
         {row(
           tr('Estado'),
           <span style={{ fontFamily: 'inherit' }}>
             {tr(b.status === 'tentative' ? 'Tentativo' : 'Confirmado')}
-            {pj?.status === 'Planeado' && <span style={{ opacity: 0.7 }}> ({tr('o projeto é proposta')})</span>}
+            {pj?.status === 'Planeado' && (
+              <span style={{ opacity: 0.7 }}> ({tr('o projeto é proposta')})</span>
+            )}
           </span>,
         )}
         {row(
@@ -604,12 +696,22 @@ function DropPop({
               {tr(`fica a ${pct}% · ${c.days.length} dias acima da capacidade`)}
             </span>
           ) : (
-            <span style={{ color: 'oklch(calc(.86 * var(--lk)) .13 150)' }}>{tr(`fica a ${pct}% · sem conflitos`)}</span>
+            <span style={{ color: 'oklch(calc(.86 * var(--lk)) .13 150)' }}>
+              {tr(`fica a ${pct}% · sem conflitos`)}
+            </span>
           ),
         )}
-        {row(tr('Custo'), `${fmtNum(total, lang, 0)}h × ${fmtNum(d.p.rate, lang, 0)} €/h = ${mgEur(total * d.p.rate)}`)}
+        {row(
+          tr('Custo'),
+          `${fmtNum(total, lang, 0)}h × ${fmtNum(d.p.rate, lang, 0)} €/h = ${mgEur(total * d.p.rate)}`,
+        )}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 }}>
-          <button type="button" className="al-btn ghost sm" aria-pressed={half} onClick={() => setHalf(!half)}>
+          <button
+            type="button"
+            className="al-btn ghost sm"
+            aria-pressed={half}
+            onClick={() => setHalf(!half)}
+          >
             {half ? tr('100%') : tr('Só 50%')}
           </button>
           <button type="button" className="al-btn ghost sm" onClick={() => onEdit(b)}>

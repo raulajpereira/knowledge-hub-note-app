@@ -38,7 +38,11 @@ export function CapacityView({
     setStart((s) => (nav.kind === 'today' ? t0 : monthStart(s, nav.kind === 'next' ? 3 : -3)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav]);
-  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({ a: monthStart(start, i), b: monthStart(start, i + 1) - 1 })), [start]);
+  const months = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({ a: monthStart(start, i), b: monthStart(start, i + 1) - 1 })),
+    [start],
+  );
   useEffect(() => {
     mg.AL.ensure(months[0]!.a, months[11]!.b);
     onView(months[0]!.a, months[11]!.b);
@@ -48,7 +52,15 @@ export function CapacityView({
     const groups = new Map<string, { people: string[]; cells: Cell[]; phProj: Set<string> }>();
     const G = (g: string) => {
       let x = groups.get(g);
-      if (!x) groups.set(g, (x = { people: [], cells: months.map((m) => ({ cap: 0, conf: 0, tent: 0, ph: 0, std: stdHours(m.a, m.b) })), phProj: new Set() }));
+      if (!x)
+        groups.set(
+          g,
+          (x = {
+            people: [],
+            cells: months.map((m) => ({ cap: 0, conf: 0, tent: 0, ph: 0, std: stdHours(m.a, m.b) })),
+            phProj: new Set(),
+          }),
+        );
       return x;
     };
     for (const [g] of AREA_GROUPS) void g;
@@ -64,7 +76,8 @@ export function CapacityView({
         c.tent += sumDays(l.tent, l, m.a, m.b);
       });
     }
-    const keep = (b: Booking) => (!fl.proj || b.project === fl.proj) && (!fl.client || mg.pjById[b.project]?.client === fl.client);
+    const keep = (b: Booking) =>
+      (!fl.proj || b.project === fl.proj) && (!fl.client || mg.pjById[b.project]?.client === fl.client);
     for (const b of mg.BK) {
       if (b.person || !keep(b) || fl.hidePh) continue;
       const pj = mg.pjById[b.project];
@@ -75,7 +88,8 @@ export function CapacityView({
       const s = mg.series(b);
       months.forEach((m, i) => {
         let h = 0;
-        for (let n = Math.max(m.a, s.from); n <= Math.min(m.b, s.from + s.h.length - 1); n++) h += s.h[n - s.from]!;
+        for (let n = Math.max(m.a, s.from); n <= Math.min(m.b, s.from + s.h.length - 1); n++)
+          h += s.h[n - s.from]!;
         x.cells[i]!.ph += h;
       });
     }
@@ -88,7 +102,8 @@ export function CapacityView({
   }, [mg, months, fl]);
 
   const val = (h: number, c: Cell) => (unit === 'fte' ? h / (c.std || 1) : unit === 'pct' ? h : h);
-  const fmtV = (h: number, c: Cell) => (unit === 'fte' ? fmtNum(h / (c.std || 1), lang, 1) : `${fmtNum(h, lang, 0)}h`);
+  const fmtV = (h: number, c: Cell) =>
+    unit === 'fte' ? fmtNum(h / (c.std || 1), lang, 1) : `${fmtNum(h, lang, 0)}h`;
   const gaps = useMemo(() => {
     const out: Gap[] = [];
     for (const [g, x] of data) {
@@ -125,14 +140,20 @@ export function CapacityView({
     <div className="al-body">
       <div className="al-well">
         <div className="al-scroll">
-          <div style={{ minWidth: 820 }}>
+          <div style={{ minWidth: 700 }}>
             <div className="al-hdr" style={{ display: 'flex', height: 54 }}>
               <div className="al-corner" style={{ width: 170, position: 'static' }}>
                 {tr('Área SAP')}
               </div>
               {months.map((m, i) => (
-                <div key={m.a} className={`al-hcol${m.a === t0 ? ' today' : ''}`} style={{ position: 'relative', flex: 1, minWidth: 46 }}>
-                  {(i === 0 || monthStart(m.a) === Date.UTC(yearOf(m.a), 0, 1) / 86_400_000) && <span className="top">{yearOf(m.a)}</span>}
+                <div
+                  key={m.a}
+                  className={`al-hcol${m.a === t0 ? ' today' : ''}`}
+                  style={{ position: 'relative', flex: 1, minWidth: 46 }}
+                >
+                  {(i === 0 || monthStart(m.a) === Date.UTC(yearOf(m.a), 0, 1) / 86_400_000) && (
+                    <span className="top">{yearOf(m.a)}</span>
+                  )}
                   <span className="lbl">{mon(m.a)}</span>
                 </div>
               ))}
@@ -140,7 +161,10 @@ export function CapacityView({
             {data.map(([g, x]) => {
               const capAvg = x.cells.reduce((s, c) => s + c.cap / (c.std || 1), 0) / x.cells.length;
               const phAvg = x.cells.reduce((s, c) => s + c.ph / (c.std || 1), 0) / x.cells.length;
-              const mx = Math.max(1, ...x.cells.map((c) => Math.max(val(c.cap, c), val(c.conf + c.tent + c.ph, c))));
+              const mx = Math.max(
+                1,
+                ...x.cells.map((c) => Math.max(val(c.cap, c), val(c.conf + c.tent + c.ph, c))),
+              );
               return (
                 <div key={g} className="al-cap-row" data-area={g}>
                   <div className="al-cap-name">
@@ -168,19 +192,38 @@ export function CapacityView({
                         title={`${mon(months[i]!.a)} · ${tr('capacidade')} ${fmtV(c.cap, c)} · ${tr('confirmado')} ${fmtV(c.conf, c)} · ${tr('tentativo')} ${fmtV(c.tent, c)} · ${tr('por atribuir')} ${fmtV(c.ph, c)}`}
                       >
                         <span className="col" style={{ height: H }}>
-                          <i style={{ height: sc(c.conf), background: overC ? 'var(--al-u3)' : 'var(--al-u2)', borderRadius: '0 0 3px 3px' }} />
+                          <i
+                            style={{
+                              height: sc(c.conf),
+                              background: overC ? 'var(--al-u3)' : 'var(--al-u2)',
+                              borderRadius: '0 0 3px 3px',
+                            }}
+                          />
                           <i
                             className="al-stripe"
-                            style={{ height: sc(c.tent), background: 'color-mix(in oklch, oklch(0.78 0.12 300) 70%, transparent)', backgroundImage: 'repeating-linear-gradient(135deg, rgb(255 255 255 / .35) 0 3px, transparent 3px 7px)' }}
+                            style={{
+                              height: sc(c.tent),
+                              background: 'color-mix(in oklch, oklch(0.78 0.12 300) 70%, transparent)',
+                              backgroundImage:
+                                'repeating-linear-gradient(135deg, rgb(255 255 255 / .35) 0 3px, transparent 3px 7px)',
+                            }}
                           />
-                          <i style={{ height: sc(c.ph), border: c.ph ? '1.5px dashed oklch(0.85 0.13 85)' : 0, borderRadius: '3px 3px 0 0' }} />
+                          <i
+                            style={{
+                              height: sc(c.ph),
+                              border: c.ph ? '1.5px dashed oklch(0.85 0.13 85)' : 0,
+                              borderRadius: '3px 3px 0 0',
+                            }}
+                          />
                         </span>
                         <span className="line" style={{ bottom: 18 + sc(c.cap) }} />
                         <span
                           className="d"
                           style={{
                             color:
-                              diff < -0.05 ? 'oklch(calc(.84 * var(--lk)) .14 30)' : 'rgb(var(--t) / calc(.7 * var(--t-k)))',
+                              diff < -0.05
+                                ? 'oklch(calc(.84 * var(--lk)) .14 30)'
+                                : 'rgb(var(--t) / calc(.7 * var(--t-k)))',
                           }}
                         >
                           {unit === 'fte'
@@ -196,7 +239,10 @@ export function CapacityView({
             {!data.length && <div className="al-empty">{tr('Sem pessoas com estes filtros.')}</div>}
           </div>
         </div>
-        <div className="al-foot" style={{ margin: 0, borderRadius: 0, border: 0, borderTop: '1px solid rgb(var(--w) / .1)' }}>
+        <div
+          className="al-foot"
+          style={{ margin: 0, borderRadius: 0, border: 0, borderTop: '1px solid rgb(var(--w) / .1)' }}
+        >
           <span className="al-lg">
             <i style={{ background: 'var(--al-u2)' }} />
             {tr('confirmado')}
@@ -231,19 +277,33 @@ export function CapacityView({
                 <span style={{ color: 'rgb(var(--t) / calc(.6 * var(--t-k)))' }}>
                   {mon(g.a)} → {mon(g.b)}
                 </span>
-                <span className="v" style={{ color: g.kind === 'short' ? 'oklch(calc(.84 * var(--lk)) .14 30)' : 'oklch(calc(.86 * var(--lk)) .12 150)' }}>
+                <span
+                  className="v"
+                  style={{
+                    color:
+                      g.kind === 'short'
+                        ? 'oklch(calc(.84 * var(--lk)) .14 30)'
+                        : 'oklch(calc(.86 * var(--lk)) .12 150)',
+                  }}
+                >
                   {tr(g.kind === 'short' ? 'falta' : 'livre')} {fmtNum(g.v, lang, 1)} FTE
                 </span>
               </div>
               <span style={{ color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>{g.why}</span>
               <div>
-                <button type="button" className="al-btn ghost sm" onClick={() => mg.nav(g.kind === 'short' ? 'mg_staff' : 'mg_projects')}>
+                <button
+                  type="button"
+                  className="al-btn ghost sm"
+                  onClick={() => mg.nav(g.kind === 'short' ? 'mg_staff' : 'mg_projects')}
+                >
                   {tr(g.kind === 'short' ? 'Pesquisar Recursos' : 'Propor a pipeline')} →
                 </button>
               </div>
             </div>
           ))}
-          {!gaps.length && <div className="al-empty">{tr('Nada por decidir: a procura cabe na capacidade.')}</div>}
+          {!gaps.length && (
+            <div className="al-empty">{tr('Nada por decidir: a procura cabe na capacidade.')}</div>
+          )}
         </div>
       </aside>
     </div>

@@ -755,7 +755,15 @@ export function mgSample(uuid: () => string, now = new Date()): MgSampleData {
     bookings.push(b);
     return b;
   };
-  const addA = (pid: string, proj: string, from: number, to: number, want: number, role: string, over = false) => {
+  const addA = (
+    pid: string,
+    proj: string,
+    from: number,
+    to: number,
+    want: number,
+    role: string,
+    over = false,
+  ) => {
     // what still fits in the person's week over the range (a few are left over capacity on purpose)
     let peak = 0;
     for (let w = from; w <= to; w++) peak = Math.max(peak, load[pid + w] ?? 0);
@@ -870,9 +878,10 @@ export function mgSample(uuid: () => string, now = new Date()): MgSampleData {
     pr = rise,
     status: Booking['status'] = 'tentative',
   ) => bk({ person: '', project: pr, from: dIso(f, 0), to: dIso(t, 4), value: hpd, role, need, status });
-  ph(3, 12, 8, 'Consultor FI · Sénior', [{ k: 'fi', l: 3 }]);
+  ph(3, 30, 8, 'Consultor FI · Sénior', [{ k: 'fi', l: 3 }]);
+  ph(6, 34, 8, 'Consultor CO · Pleno', [{ k: 'co', l: 2 }]);
   ph(14, 30, 6, 'Consultor PP/QM', [{ k: 'pp', l: 2 }]);
-  ph(4, 9, 8, 'Developer ABAP · RICEFW', [{ k: 'abap', l: 2 }], id('p1'), 'confirmed');
+  ph(4, 26, 8, 'Developer ABAP · RICEFW', [{ k: 'abap', l: 2 }], id('p1'), 'confirmed');
   ph(5, 14, 6, 'Consultor SD · Pleno', [{ k: 'sd', l: 2 }], id('p8'), 'confirmed');
   // a Saturday cutover (weekends are allowed) and a part-time person (4 days a week, 32 h)
   const bas = byArea('basis')[0];

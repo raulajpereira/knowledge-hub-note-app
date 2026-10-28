@@ -89,16 +89,24 @@ export function Floating({
 }
 
 const X = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.4"
+    strokeLinecap="round"
+  >
     <path d="M6 6l12 12M18 6L6 18" />
   </svg>
 );
 const WD = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 const WD_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const MODES: Array<[BkMode, string, string]> = [
-  ['hpd', 'Horas por dia', 'h'],
-  ['hpw', 'Horas por semana', 'h'],
-  ['pct', '% da capacidade', '%'],
+  ['hpd', 'Horas/dia', 'h'],
+  ['hpw', 'Horas/semana', 'h'],
+  ['pct', '% capacidade', '%'],
   ['fte', 'FTE', ''],
   ['total', 'Total', 'h'],
 ];
@@ -144,8 +152,8 @@ export function BookingPop({
     for (let n = F; n <= T; n++) {
       if (!inMask(b.mask, n)) continue;
       const h = holidayOf(n);
-      if (h && ((n + 3) % 7 + 7) % 7 < 5) hol.push([isoOf(n), h]);
-      if (((n + 3) % 7 + 7) % 7 >= 5) we = true;
+      if (h && (((n + 3) % 7) + 7) % 7 < 5) hol.push([isoOf(n), h]);
+      if ((((n + 3) % 7) + 7) % 7 >= 5) we = true;
     }
     const abs = b.person ? mg.env.absences(b.person).filter((a) => a.from <= b.to && a.to >= b.from) : [];
     return { hol, abs, we };
@@ -192,7 +200,7 @@ export function BookingPop({
   const title = isNew ? tr('Nova alocação') : tr('Editar alocação');
 
   return (
-    <Floating x={x} y={y} w={392} label={title} onClose={onClose}>
+    <Floating x={x} y={y} w={372} label={title} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -213,9 +221,17 @@ export function BookingPop({
           )}
           <span className="t">
             <b>{title}</b>
-            <span>{person ? `${person.name} · ${tr(person.role)} · ${mg.LV[person.level]}` : tr('Por atribuir')}</span>
+            <span>
+              {person ? `${person.name} · ${tr(person.role)} · ${mg.LV[person.level]}` : tr('Por atribuir')}
+            </span>
           </span>
-          <button type="button" className="al-x" onClick={onClose} aria-label={tr('Fechar')} title={tr('Fechar')}>
+          <button
+            type="button"
+            className="al-x"
+            onClick={onClose}
+            aria-label={tr('Fechar')}
+            title={tr('Fechar')}
+          >
             <X />
           </button>
         </div>
@@ -284,7 +300,7 @@ export function BookingPop({
           <div className="al-eff" role="group" aria-label={tr('Esforço')}>
             {MODES.map(([m, l, u]) => (
               <label key={m} className={b.mode === m ? 'on' : ''}>
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr(l)}</span>
+                <span style={{ lineHeight: 1.15, minHeight: 23 }}>{tr(l)}</span>
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
                   <input
                     inputMode="decimal"
@@ -320,32 +336,38 @@ export function BookingPop({
                 {d}
               </button>
             ))}
-            <span style={{ flex: 1 }} />
+          </div>
+          <div className="al-wd" style={{ flexWrap: 'nowrap' }}>
             <span className="al-seg" role="group" aria-label={tr('Estado')}>
               {(['confirmed', 'tentative'] as const).map((s) => (
-                <button key={s} type="button" aria-pressed={b.status === s} onClick={() => set({ status: s })}>
+                <button
+                  key={s}
+                  type="button"
+                  aria-pressed={b.status === s}
+                  onClick={() => set({ status: s })}
+                >
                   {tr(s === 'confirmed' ? 'Confirmado' : 'Tentativo')}
                 </button>
               ))}
             </span>
-          </div>
-          <label className="al-lbl">
-            {b.person ? tr('Função') : tr('Função a preencher')}
             <input
               className="al-in"
+              style={{ height: 34, flex: 1 }}
               value={b.role}
               maxLength={120}
               list="al-role-sugg"
-              placeholder={b.person ? tr('ex.: Líder FI-GL / AA') : tr('ex.: Consultor FI · Sénior')}
+              placeholder={
+                b.person ? tr('Função: ex.: Líder FI-GL / AA') : tr('Função: ex.: Consultor FI · Sénior')
+              }
               onChange={(e) => set({ role: e.target.value })}
-              aria-label={tr('Função')}
+              aria-label={b.person ? tr('Função') : tr('Função a preencher')}
             />
             <datalist id="al-role-sugg">
               {roleSugg.map((r) => (
                 <option key={r} value={r} />
               ))}
             </datalist>
-          </label>
+          </div>
           {!b.person && (
             <div className="al-2">
               <label className="al-lbl">
@@ -386,7 +408,8 @@ export function BookingPop({
             <div className="al-warn soft" role="note">
               <span className="ic">!</span>
               <span>
-                {tr('Inclui feriado')}: {notes.hol.map(([d, k]) => `${fmtD(d)} (${holidayName(k, lang)})`).join(', ')}
+                {tr('Inclui feriado')}:{' '}
+                {notes.hol.map(([d, k]) => `${fmtD(d)} (${holidayName(k, lang)})`).join(', ')}
                 {' — '}
                 {b.hol ? tr('conta como dia de trabalho (capacidade 0).') : tr('não conta.')}{' '}
                 <button type="button" className="lk" onClick={() => set({ hol: !b.hol })}>
@@ -416,7 +439,9 @@ export function BookingPop({
                   {conflict.days.length > 1 ? `–${fmtD(isoOf(conflict.days.at(-1)!))}` : ''})
                 </b>
                 : {person?.name}{' '}
-                {tr(`chega a ${fmtNum(conflict.peak, lang)}h/dia (capacidade ${fmtNum(conflict.peakCap, lang)}h).`)}
+                {tr(
+                  `chega a ${fmtNum(conflict.peak, lang)}h/dia (capacidade ${fmtNum(conflict.peakCap, lang)}h).`,
+                )}
                 <br />
                 {tr('Resolver')}:{' '}
                 {conflict.startFree && conflict.startFree <= b.to && (
@@ -451,7 +476,9 @@ export function BookingPop({
             </div>
           )}
           {notes.we && (
-            <span className="al-hint">{tr('Inclui fins de semana (ex.: cutover) — capacidade 0, conta como extra.')}</span>
+            <span className="al-hint">
+              {tr('Inclui fins de semana (ex.: cutover) — capacidade 0, conta como extra.')}
+            </span>
           )}
         </div>
         <div className="al-pop-ft">
@@ -506,7 +533,9 @@ export function AbsencePop({
   const ok = !!a.person && isIsoDay(a.from) && isIsoDay(a.to) && a.from <= a.to;
   const title = isNew ? tr('Marcar ausência') : tr('Ausência');
   const affected = ok
-    ? mg.BK.filter((b) => b.person === a.person && b.from <= a.to && b.to >= a.from && b.status === 'confirmed')
+    ? mg.BK.filter(
+        (b) => b.person === a.person && b.from <= a.to && b.to >= a.from && b.status === 'confirmed',
+      )
     : [];
   return (
     <Floating x={x} y={y} w={360} label={title} onClose={onClose}>
@@ -540,7 +569,13 @@ export function AbsencePop({
           </label>
           <div className="al-chips" role="group" aria-label={tr('Tipo')}>
             {ABS_TYPES.map((t) => (
-              <button key={t} type="button" className="al-chip" aria-pressed={a.type === t} onClick={() => set({ type: t })}>
+              <button
+                key={t}
+                type="button"
+                className="al-chip"
+                aria-pressed={a.type === t}
+                onClick={() => set({ type: t })}
+              >
                 {tr(ABS_LABEL[t]!)}
               </button>
             ))}
@@ -571,7 +606,11 @@ export function AbsencePop({
               <button type="button" aria-pressed={a.hours == null} onClick={() => set({ hours: null })}>
                 {tr('Dia inteiro')}
               </button>
-              <button type="button" aria-pressed={a.hours != null} onClick={() => set({ hours: a.hours ?? 4 })}>
+              <button
+                type="button"
+                aria-pressed={a.hours != null}
+                onClick={() => set({ hours: a.hours ?? 4 })}
+              >
                 {tr('Parte do dia')}
               </button>
             </span>
@@ -593,7 +632,12 @@ export function AbsencePop({
           </div>
           <label className="al-lbl">
             {tr('Nota')}
-            <input className="al-in" value={a.note} maxLength={500} onChange={(e) => set({ note: e.target.value })} />
+            <input
+              className="al-in"
+              value={a.note}
+              maxLength={500}
+              onChange={(e) => set({ note: e.target.value })}
+            />
           </label>
           {affected.length > 0 && (
             <span className="al-hint" style={{ whiteSpace: 'normal' }}>

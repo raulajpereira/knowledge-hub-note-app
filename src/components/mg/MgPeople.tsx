@@ -1,6 +1,9 @@
 'use client';
 
-import { effortLabel, fmtDay } from '@/lib/alloc';
+import { addDays, effortLabel, fmtDay, type Absence } from '@/lib/alloc';
+import { AbsencePop, newAbsence } from './alloc/Popovers';
+import { ABS_LABEL } from './alloc/shared';
+import './alloc/alloc.css';
 import { useId, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -613,8 +616,92 @@ export function MgPeople({ mg }: { mg: Mg }) {
             <div style={css('font-size:13px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>{L(24)}</div>
           )}
         </div>
+        <PersonAbsences mg={mg} pid={sel.id} />
       </div>
     </Split>
+  );
+}
+
+/** Vacation and other absences of the person (marked by the manager; they take capacity off). */
+function PersonAbsences({ mg, pid }: { mg: Mg; pid: string }) {
+  const { tr } = mg;
+  const [pop, setPop] = useState<{ a: Absence; isNew: boolean; x: number; y: number } | null>(null);
+  const today = mg.wk(0);
+  const list = mg.AB.filter((a) => a.person === pid && a.to >= today).sort((a, b) =>
+    a.from.localeCompare(b.from),
+  );
+  return (
+    <div style={css('display:flex;flex-direction:column;gap:8px;')}>
+      <div style={css('display:flex;align-items:center;gap:10px;')}>
+        <span style={css('font-size:16px;font-weight:600;margin-right:auto;')}>{tr('Ausências')}</span>
+        <button
+          type="button"
+          className="mg-h12"
+          onClick={(e) =>
+            setPop({
+              a: newAbsence(pid, today, addDays(today, 4)),
+              isNew: true,
+              x: e.clientX - 300,
+              y: e.clientY + 10,
+            })
+          }
+          style={css(
+            'height:32px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .16);background:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
+          )}
+        >
+          {tr('Marcar ausência')}
+        </button>
+      </div>
+      {list.map((a) => (
+        <div
+          key={a.id}
+          role="button"
+          tabIndex={0}
+          className="mg-h10"
+          onClick={(e) => setPop({ a, isNew: false, x: e.clientX - 300, y: e.clientY + 10 })}
+          onKeyDown={(e) => e.key === 'Enter' && setPop({ a, isNew: false, x: 400, y: 300 })}
+          style={css(
+            'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border-radius:16px;background:repeating-linear-gradient(135deg,rgb(var(--w) / .08) 0 3px,rgb(var(--w) / .03) 3px 8px);border:1px solid rgb(var(--w) / .14);cursor:pointer;',
+          )}
+        >
+          <span style={css('flex:1;font-size:13.5px;font-weight:600;')}>
+            {tr(ABS_LABEL[a.type] ?? a.type)}
+          </span>
+          <span style={css("font-family:'Geist Mono',monospace;font-size:12.5px;")}>
+            {fmtDay(a.from)} → {fmtDay(a.to)}
+            {a.hours != null && ` · ${a.hours}h`}
+          </span>
+        </div>
+      ))}
+      {!list.length && (
+        <div style={css('font-size:13px;color:rgb(var(--t) / calc(.62 * var(--t-k)));')}>
+          {tr('Sem ausências marcadas.')}
+        </div>
+      )}
+      {pop && (
+        <AbsencePop
+          key={pop.a.id}
+          mg={mg}
+          draft={pop.a}
+          isNew={pop.isNew}
+          x={pop.x}
+          y={pop.y}
+          onClose={() => setPop(null)}
+          onSave={(a) => {
+            mg.AL.change({ ab: [a] });
+            setPop(null);
+          }}
+          onDelete={
+            pop.isNew
+              ? undefined
+              : () => {
+                  mg.AL.change({ delAb: [pop.a.id] });
+                  setPop(null);
+                }
+          }
+        />
+      )}
+    </div>
   );
 }
 

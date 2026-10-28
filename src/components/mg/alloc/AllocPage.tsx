@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { dnOf, isoOf, monthStart, sumDays, type Absence, type Booking, type Dn, type Zoom } from '@/lib/alloc';
+import {
+  dnOf,
+  isoOf,
+  monthStart,
+  sumDays,
+  type Absence,
+  type Booking,
+  type Dn,
+  type Zoom,
+} from '@/lib/alloc';
 import { usePersistentState } from '@/components/ui';
 import type { Mg } from '../store';
 import { AbsencePop, BookingPop, Floating } from './Popovers';
@@ -31,13 +40,29 @@ type Pop =
   | { kind: 'ab'; a: Absence; isNew: boolean; x: number; y: number };
 
 const SearchIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <circle cx="11" cy="11" r="7" />
     <path d="m20 20-3.5-3.5" />
   </svg>
 );
 const FilterIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M4 5h16l-6 8v6l-4-2v-4z" />
   </svg>
 );
@@ -52,7 +77,8 @@ export function AllocPage({ mg }: { mg: Mg }) {
   const [tz, setTz] = usePersistentState<TZoom>('mg.al2.zoom', 'day');
   const [gz, setGz] = usePersistentState<Zoom>('mg.al2.gzoom', 'week');
   const [unit, setUnit] = usePersistentState<Unit>('mg.al2.unit', 'hpd');
-  const [gunit, setGunit] = usePersistentState<GUnit>('mg.al2.gunit', 'h');
+  const [gunit0, setGunit0] = usePersistentState<GUnit>('mg.al2.gunit', 'h');
+  const [cunit, setCunit] = usePersistentState<GUnit>('mg.al2.cunit', 'fte');
   const [groupBy, setGroupBy] = usePersistentState<GroupBy>('mg.al2.group', 'team');
   const [fl, setFl] = usePersistentState<Filters>('mg.al2.filters', {});
   const [win, setWin] = useState<[Dn, Dn]>(defaultWindow);
@@ -61,10 +87,19 @@ export function AllocPage({ mg }: { mg: Mg }) {
   const [vis, setVis] = useState<[Dn, Dn]>(win);
   const [pop, setPop] = useState<Pop | null>(null);
   const [filtOpen, setFiltOpen] = useState<{ x: number; y: number } | null>(null);
+  const [keys, setKeys] = useState<{ x: number; y: number } | null>(null);
   const want = sp.get('v');
+  const wantF = sp.get('f');
+  const wantPj = sp.get('pj');
   useEffect(() => {
     if (want === 'tl' || want === 'grid' || want === 'proj' || want === 'cap') setView(want);
   }, [want, setView]);
+  // other screens open this one filtered: ?f=over (over capacity), ?pj=<project>
+  useEffect(() => {
+    if (wantF === 'over' || wantPj)
+      setFl({ ...(wantF === 'over' ? { over: true } : {}), ...(wantPj ? { proj: wantPj } : {}) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantF, wantPj]);
   const onView = useCallback((a: Dn, b: Dn) => setVis((o) => (o[0] === a && o[1] === b ? o : [a, b])), []);
   const widen = useCallback(
     (w: [Dn, Dn]) => {
@@ -75,7 +110,9 @@ export function AllocPage({ mg }: { mg: Mg }) {
   );
 
   const qq = q.trim().toLowerCase();
-  const nFilters = [fl.proj, fl.client, fl.area, fl.over, fl.free, fl.hideTent, fl.hidePh, fl.hideAbs].filter(Boolean).length;
+  const nFilters = [fl.proj, fl.client, fl.area, fl.over, fl.free, fl.hideTent, fl.hidePh, fl.hideAbs].filter(
+    Boolean,
+  ).length;
   const bkFilter = useCallback(
     (b: Booking) =>
       (!fl.hideTent || b.status !== 'tentative') &&
@@ -90,7 +127,8 @@ export function AllocPage({ mg }: { mg: Mg }) {
     return mg.P.filter((p) => {
       const my = mg.BK.filter((x) => x.person === p.id && x.to >= A && x.from <= B);
       if (qq) {
-        const hay = `${p.name} ${p.role} ${my.map((x) => `${mg.pjById[x.project]?.code ?? ''} ${x.role}`).join(' ')}`.toLowerCase();
+        const hay =
+          `${p.name} ${p.role} ${my.map((x) => `${mg.pjById[x.project]?.code ?? ''} ${x.role}`).join(' ')}`.toLowerCase();
         if (!hay.includes(qq)) return false;
       }
       if (fl.area && p.area !== fl.area) return false;
@@ -106,8 +144,14 @@ export function AllocPage({ mg }: { mg: Mg }) {
     });
   }, [mg, vis, qq, fl, bkFilter]);
 
-  const openBk = useCallback((b: Booking, isNew: boolean, x: number, y: number) => setPop({ kind: 'bk', b, isNew, x, y }), []);
-  const openAb = useCallback((a: Absence, isNew: boolean, x: number, y: number) => setPop({ kind: 'ab', a, isNew, x, y }), []);
+  const openBk = useCallback(
+    (b: Booking, isNew: boolean, x: number, y: number) => setPop({ kind: 'bk', b, isNew, x, y }),
+    [],
+  );
+  const openAb = useCallback(
+    (a: Absence, isNew: boolean, x: number, y: number) => setPop({ kind: 'ab', a, isNew, x, y }),
+    [],
+  );
   const addNew = (e: React.MouseEvent) => {
     const t = dnOf(isoOf(vis[0]));
     const mon = Math.max(t, dnOf(mg.wk(0)));
@@ -132,7 +176,10 @@ export function AllocPage({ mg }: { mg: Mg }) {
     ['cap', 'Capacidade'],
   ];
   const isTl = view === 'tl';
-  const span = (vis[1] - vis[0] + 1);
+  // the capacity view has its own unit (FTE by default)
+  const gunit = view === 'cap' ? cunit : gunit0;
+  const setGunit = view === 'cap' ? setCunit : setGunit0;
+  const span = vis[1] - vis[0] + 1;
   const sub =
     view === 'tl'
       ? `${tr(`${people.length} pessoas`)} · ${rangeLabel(vis[0], vis[1], lang)} · ${tr('arraste numa linha vazia para criar · Shift+arrastar marca ausência')}`
@@ -170,13 +217,27 @@ export function AllocPage({ mg }: { mg: Mg }) {
   );
   const navBtns = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      <button type="button" className="al-pill sm" style={{ padding: '0 10px' }} aria-label={tr('Anterior')} title={tr('Anterior')} onClick={() => setNav({ kind: 'prev', n: nav.n + 1 })}>
+      <button
+        type="button"
+        className="al-pill sm"
+        style={{ padding: '0 10px' }}
+        aria-label={tr('Anterior')}
+        title={tr('Anterior')}
+        onClick={() => setNav({ kind: 'prev', n: nav.n + 1 })}
+      >
         ‹
       </button>
       <button type="button" className="al-pill sm" onClick={() => setNav({ kind: 'today', n: nav.n + 1 })}>
         {tr('Hoje')}
       </button>
-      <button type="button" className="al-pill sm" style={{ padding: '0 10px' }} aria-label={tr('Seguinte')} title={tr('Seguinte')} onClick={() => setNav({ kind: 'next', n: nav.n + 1 })}>
+      <button
+        type="button"
+        className="al-pill sm"
+        style={{ padding: '0 10px' }}
+        aria-label={tr('Seguinte')}
+        title={tr('Seguinte')}
+        onClick={() => setNav({ kind: 'next', n: nav.n + 1 })}
+      >
         ›
       </button>
     </span>
@@ -190,7 +251,13 @@ export function AllocPage({ mg }: { mg: Mg }) {
               <h1>{tr('Alocações')}</h1>
               <span className="al-seg" role="tablist" aria-label={tr('Vista')}>
                 {VIEWS.map(([k, l]) => (
-                  <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)}>
+                  <button
+                    key={k}
+                    type="button"
+                    role="tab"
+                    aria-selected={view === k}
+                    onClick={() => setView(k)}
+                  >
                     {tr(l)}
                   </button>
                 ))}
@@ -201,7 +268,14 @@ export function AllocPage({ mg }: { mg: Mg }) {
             </span>
           </div>
           <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <span style={{ position: 'absolute', left: 13, color: 'rgb(var(--t) / calc(.55 * var(--t-k)))', display: 'flex' }}>
+            <span
+              style={{
+                position: 'absolute',
+                left: 13,
+                color: 'rgb(var(--t) / calc(.55 * var(--t-k)))',
+                display: 'flex',
+              }}
+            >
               <SearchIcon />
             </span>
             <input
@@ -229,7 +303,14 @@ export function AllocPage({ mg }: { mg: Mg }) {
                 value={groupBy}
                 onChange={(e) => setGroupBy(e.target.value as GroupBy)}
                 aria-label={tr('Agrupar')}
-                style={{ background: 'transparent', border: 0, color: 'inherit', font: 'inherit', outline: 'none', cursor: 'pointer' }}
+                style={{
+                  background: 'transparent',
+                  border: 0,
+                  color: 'inherit',
+                  font: 'inherit',
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
               >
                 {GROUPS.map(([k, l]) => (
                   <option key={k} value={k} style={{ background: '#2b2c33', color: '#f4f2f0' }}>
@@ -246,8 +327,13 @@ export function AllocPage({ mg }: { mg: Mg }) {
         <div className="al-head-row">
           {isTl || view === 'proj' ? (
             <span className="al-seg" role="group" aria-label={tr('Zoom')}>
-              {ZOOMS.map(([k, l]) => (
-                <button key={k} type="button" aria-pressed={tz === k} onClick={() => setTz(k)}>
+              {ZOOMS.filter(([k]) => isTl || k !== 'day').map(([k, l]) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={tz === k || (!isTl && tz === 'day' && k === 'week')}
+                  onClick={() => setTz(k)}
+                >
                   {tr(l)}
                 </button>
               ))}
@@ -269,10 +355,26 @@ export function AllocPage({ mg }: { mg: Mg }) {
           )}
           {navBtns}
           <span className="al-range">
-            {view === 'cap' ? monthRange(monthStart(vis[0]), monthStart(vis[0], 12) - 1, lang) : span > 70 ? monthRange(vis[0], vis[1], lang) : rangeLabel(vis[0], vis[1], lang)}
+            {view === 'cap'
+              ? monthRange(monthStart(vis[0]), monthStart(vis[0], 12) - 1, lang)
+              : span > 70
+                ? monthRange(vis[0], vis[1], lang)
+                : rangeLabel(vis[0], vis[1], lang)}
           </span>
           <span style={{ flex: 1 }} />
           {(isTl || view === 'proj') && legend}
+          {isTl && (
+            <button
+              type="button"
+              className="al-pill sm"
+              style={{ padding: '0 10px' }}
+              title={tr('Atalhos de teclado')}
+              aria-label={tr('Atalhos de teclado')}
+              onClick={(e) => setKeys({ x: e.clientX - 300, y: e.clientY + 20 })}
+            >
+              ?
+            </button>
+          )}
           {isTl && (
             <span className="al-seg" role="group" aria-label={tr('Unidade')}>
               {(
@@ -407,7 +509,53 @@ export function AllocPage({ mg }: { mg: Mg }) {
           }
         />
       )}
-      {filtOpen && <FilterPop mg={mg} fl={fl} setFl={setFl} x={filtOpen.x} y={filtOpen.y} onClose={() => setFiltOpen(null)} />}
+      {keys && (
+        <Floating
+          x={keys.x}
+          y={keys.y}
+          w={330}
+          label={tr('Atalhos de teclado')}
+          onClose={() => setKeys(null)}
+        >
+          <div className="al-pop-bd" style={{ paddingTop: 14, gap: 7 }}>
+            <b style={{ fontSize: 14 }}>{tr('Atalhos de teclado')}</b>
+            {(
+              [
+                ['Arrastar numa linha', 'criar'],
+                ['Shift + arrastar', 'marcar ausência'],
+                ['Arrastar a barra', 'mover (também para outra pessoa)'],
+                ['Arrastar a ponta', 'mudar início / fim'],
+                ['Alt + arrastar', 'copiar'],
+                ['← →', 'mover 1 dia'],
+                ['Shift + ← →', 'encurtar / alongar'],
+                ['S', 'dividir no dia do rato'],
+                ['T', 'tentativo / confirmado'],
+                ['Ctrl D', 'duplicar a seguir'],
+                ['Del', 'eliminar'],
+                ['Ctrl Z / Ctrl Shift Z', 'desfazer / refazer'],
+                ['↵', 'editar'],
+              ] as const
+            ).map(([k, d]) => (
+              <span key={k} style={{ display: 'flex', gap: 10, fontSize: 12.5 }}>
+                <span className="al-kbd" style={{ minWidth: 120, textAlign: 'center' }}>
+                  {tr(k)}
+                </span>
+                {tr(d)}
+              </span>
+            ))}
+          </div>
+        </Floating>
+      )}
+      {filtOpen && (
+        <FilterPop
+          mg={mg}
+          fl={fl}
+          setFl={setFl}
+          x={filtOpen.x}
+          y={filtOpen.y}
+          onClose={() => setFiltOpen(null)}
+        />
+      )}
     </section>
   );
 }
@@ -439,7 +587,11 @@ function FilterPop({
       <div className="al-pop-bd" style={{ paddingTop: 14 }}>
         <label className="al-lbl">
           {tr('Projeto')}
-          <select className="al-in" value={fl.proj ?? ''} onChange={(e) => set({ proj: e.target.value || undefined })}>
+          <select
+            className="al-in"
+            value={fl.proj ?? ''}
+            onChange={(e) => set({ proj: e.target.value || undefined })}
+          >
             <option value="">{tr('Todos os Projetos')}</option>
             {mg.PJ.map((p) => (
               <option key={p.id} value={p.id}>
@@ -450,7 +602,11 @@ function FilterPop({
         </label>
         <label className="al-lbl">
           {tr('Cliente')}
-          <select className="al-in" value={fl.client ?? ''} onChange={(e) => set({ client: e.target.value || undefined })}>
+          <select
+            className="al-in"
+            value={fl.client ?? ''}
+            onChange={(e) => set({ client: e.target.value || undefined })}
+          >
             <option value="">{tr('Todos os clientes')}</option>
             {mg.D.clients.map((c) => (
               <option key={c.id} value={c.id}>
@@ -461,7 +617,11 @@ function FilterPop({
         </label>
         <label className="al-lbl">
           {tr('Área principal')}
-          <select className="al-in" value={fl.area ?? ''} onChange={(e) => set({ area: e.target.value || undefined })}>
+          <select
+            className="al-in"
+            value={fl.area ?? ''}
+            onChange={(e) => set({ area: e.target.value || undefined })}
+          >
             <option value="">{tr('Todas as áreas')}</option>
             {Object.keys(mg.ROLE).map((k) => (
               <option key={k} value={k}>
@@ -472,7 +632,9 @@ function FilterPop({
         </label>
         <div className="al-chips">
           {chip(fl.over, 'Só sobre-alocados', () => set({ over: !fl.over || undefined, free: undefined }))}
-          {chip(fl.free, 'Só com disponibilidade', () => set({ free: !fl.free || undefined, over: undefined }))}
+          {chip(fl.free, 'Só com disponibilidade', () =>
+            set({ free: !fl.free || undefined, over: undefined }),
+          )}
         </div>
         <div className="al-chips">
           {chip(!fl.hideTent, 'Tentativos', () => set({ hideTent: !fl.hideTent || undefined }))}

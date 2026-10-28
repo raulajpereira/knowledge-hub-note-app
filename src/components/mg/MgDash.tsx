@@ -126,9 +126,7 @@ export function MgDash({ mg }: { mg: Mg }) {
     const p = r.p;
     const tm = mg.tOf(p);
     const c = CAT[r.cat][1];
-    const projs = [...new Set(mine(p.id).map((a) => a.project))]
-      .map((id) => mg.pjById[id])
-      .filter(Boolean);
+    const projs = [...new Set(mine(p.id).map((a) => a.project))].map((id) => mg.pjById[id]).filter(Boolean);
     return (
       <div
         key={p.id}

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 // Phones, phase 4 (D71): Management (Recursos list → person → back, the
-// allocations grid sliding inside its own box, a timesheet day filled in) and
+// allocations week with a person sheet (mark a vacation), a timesheet day filled in) and
 // the Admin Console (its menu as a drawer, a list → code drawer → back).
 const PHONE = {
   locale: 'pt-PT',
@@ -147,34 +147,52 @@ test('Recursos: list → person (edit a field) → back, also with the browser B
   await expect(page.locator('.kh-mback')).toHaveCount(0);
 });
 
-test('Alocações: the grid slides inside its box, the names stay; editing is for a computer', async ({
+test('Alocações: a week to read, a person sheet; confirm a tentative booking, mark a vacation', async ({
   page,
 }) => {
   await login(page);
-  await page.goto('app/mg-alloc?mode=heat');
-  await expect(page.getByRole('heading', { name: 'Alocações' })).toBeVisible();
-  await expect(page.getByRole('note')).toHaveText('Editar no computador');
-  await expect(page.getByRole('button', { name: '+ Nova Alocação' })).toHaveCount(0);
+  await page.goto('app/mg-alloc');
+  await expect(page.getByRole('region', { name: 'Alocações' })).toBeVisible();
+  // the desktop tools are not there
+  await expect(page.getByRole('button', { name: '+ Alocação' })).toHaveCount(0);
   await noSideScroll(page);
-  const name = (await mgData(page)).people[0]!.name;
-  const cell = page.locator('.mg-alname', { hasText: name }).first();
-  const box = page
-    .locator('.mg-alname')
-    .first()
-    .locator('xpath=ancestor::div[contains(@style,"overflow")][1]');
-  expect(await box.evaluate((e) => e.scrollWidth > e.clientWidth + 200)).toBe(true);
-  const x0 = (await cell.boundingBox())!.x;
-  await box.evaluate((e) => (e.scrollLeft = 600));
-  await expect.poll(async () => box.evaluate((e) => e.scrollLeft)).toBeGreaterThan(500);
-  // the name column is sticky, the page itself did not move
-  expect(Math.abs((await cell.boundingBox())!.x - x0)).toBeLessThan(2);
-  await noSideScroll(page);
-  // a cell opens its projects in a sheet (to read)
-  await page.locator('.mg-alrow button[aria-label]').first().click();
+  await expect(page.locator('.al-pcard').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Sobre-alocados/ })).toBeVisible();
+  // a person with a tentative booking this week (the sample has them on CRT-RISE)
+  const d = await mgData(page);
+  type Bk = { id: string; person: string; status: string; from: string; to: string };
+  const now = new Date();
+  const iso = (x: Date) =>
+    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  const r = (await (await page.request.get(`api/v1/mg/alloc?from=${iso(mon)}&to=${iso(sun)}`)).json()) as {
+    bookings: Bk[];
+  };
+  const people = new Map(d.people.map((p) => [p.id, p.name]));
+  const pick = r.bookings.find((b) => b.person && people.has(b.person))!;
+  const name = people.get(pick.person)!;
+  await page.locator('.al-pcard', { hasText: name }).first().click();
   const sheet = page.locator('.kh-sheet-panel');
   await expect(sheet).toBeVisible();
-  await expect(sheet.locator('input')).toHaveCount(0);
-  await sheet.getByRole('button', { name: 'Fechar' }).click();
+  await expect(sheet.getByText(name).first()).toBeVisible();
+  await noSideScroll(page);
+  // mark a vacation from the sheet
+  await sheet.getByRole('button', { name: 'Marcar férias' }).click();
+  await sheet.getByRole('button', { name: 'Marcar', exact: true }).click();
+  await expect
+    .poll(async () => {
+      const x = (await (
+        await page.request.get(`api/v1/mg/alloc?from=${iso(mon)}&to=${iso(sun)}`)
+      ).json()) as {
+        absences: Array<{ person: string; type: string }>;
+      };
+      return x.absences.some((a) => a.person === pick.person && a.type === 'ferias');
+    })
+    .toBe(true);
+  await sheet.getByRole('button', { name: 'Fechar' }).first().click();
   await expect(sheet).toBeHidden();
 });
 

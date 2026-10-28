@@ -72,15 +72,6 @@ type Mg = {
     phases: Array<{ name: string }>;
     modules?: string[];
   }>;
-  allocs: Array<{
-    id: string;
-    person: string;
-    project: string;
-    hours: number;
-    ovr?: Record<string, number | ''>;
-    dov?: Record<string, number>;
-    fn?: string;
-  }>;
   reqs: Array<{ id: string; status: string; assigned: string; skills: Array<{ k: string; l: number }> }>;
   ts: Array<{ person: string; week: string; status: string; rows: Record<string, number[]> }>;
   teams: Array<{ id: string; name: string; desc: string }>;
@@ -344,56 +335,72 @@ test('projects: SAP modules — two from the list and one of our own, chips, edi
   await expect(page.getByText('E2E-01', { exact: true })).toBeVisible();
 });
 
-test('allocations: new allocation from the panel, weekly override, dashboard and overview', async ({
+test('allocations: new allocation from the popover, a week typed in the grid, dashboard and overview', async ({
   page,
 }) => {
   await login(page);
-  await page.goto('app/mg-alloc');
-  await page.getByRole('tab', { name: 'Timeline' }).click();
+  await page.goto('app/mg-alloc?v=tl');
   await page.getByRole('button', { name: '+ Alocação' }).click();
-  const panel = page.getByRole('complementary', { name: 'Nova Alocação' });
+  const pop = page.getByRole('dialog', { name: 'Nova alocação' });
   // still suspended from the people test (if not, the earlier save was lost)
   expect((await mgData(page)).people.find((p) => p.name === 'Rui Martins')?.status).toBe('Suspenso');
-  // name · cargo; suspended people are not offered for new allocations
-  await expect(panel.getByLabel('Recurso').locator('option', { hasText: 'Rui Martins' })).toHaveCount(0);
-  await panel.getByLabel('Recurso').selectOption({ label: 'Zé Novo · Developer ABAP' });
-  await panel.getByLabel('Projeto', { exact: true }).selectOption({ label: 'E2E-01 · Projeto E2E' });
-  // role in the project: the person's skills as suggestions, or free text
-  await panel
-    .getByRole('group', { name: 'Competências da pessoa' })
-    .getByRole('button', { name: /^ABAP/ })
-    .click();
-  await expect(panel.getByLabel('Função no projeto')).toHaveValue('ABAP');
-  await panel.getByLabel('Função no projeto').fill('Programador ABAP sénior');
-  await panel.getByLabel('Horas por dia').fill('4');
-  await panel.getByLabel('Número de dias úteis').fill('10');
-  await panel.getByRole('button', { name: 'Sex' }).click();
-  await expect(panel.getByText('16h', { exact: true })).toBeVisible(); // per week: 4 days × 4h
-  await panel.getByRole('button', { name: 'Guardar' }).click();
-  await expect(panel).toBeHidden();
-  const alloc = async () => {
+  // suspended people are not offered for new allocations
+  await expect(pop.getByLabel('Pessoa').locator('option', { hasText: 'Rui Martins' })).toHaveCount(0);
+  await pop.getByLabel('Pessoa').selectOption({ label: 'Zé Novo' });
+  await pop.getByLabel('Projeto', { exact: true }).selectOption({ label: 'E2E-01 · Projeto E2E' });
+  // this week's Monday, for two weeks; 4h a day Monday to Thursday
+  const d0 = new Date();
+  d0.setDate(d0.getDate() - ((d0.getDay() + 6) % 7));
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const mon = iso(d0);
+  const d1 = new Date(d0);
+  d1.setDate(d1.getDate() + 11);
+  await pop.getByLabel('De', { exact: true }).fill(mon);
+  await pop.getByLabel('Até', { exact: true }).fill(iso(d1));
+  await pop.getByLabel('Horas/dia').fill('4');
+  await pop.getByRole('button', { name: 'Sexta' }).click();
+  await pop.getByLabel('Função').fill('Programador ABAP sénior');
+  await expect(pop.getByLabel('Horas/semana')).toHaveValue('16'); // 4 days × 4h
+  await pop.getByRole('button', { name: 'Criar alocação' }).click();
+  await expect(pop).toBeHidden();
+  type Bk = {
+    id: string;
+    person: string;
+    project: string;
+    mode: string;
+    value: number;
+    mask: number;
+    role: string;
+    days: Record<string, number>;
+  };
+  const booking = async () => {
     const d = await mgData(page);
     const pid = d.people.find((p) => p.name === 'Zé Novo')!.id;
     const pj = d.projects.find((p) => p.code === 'E2E-01')!.id;
-    return d.allocs.find((a) => a.person === pid && a.project === pj);
+    const r = (await (await page.request.get(`api/v1/mg/alloc?from=${mon}&to=${iso(d1)}`)).json()) as {
+      bookings: Bk[];
+    };
+    return r.bookings.find((a) => a.person === pid && a.project === pj);
   };
-  await expect.poll(async () => (await alloc())?.hours).toBe(16);
-  expect((await alloc())!.fn).toBe('Programador ABAP sénior');
-  expect(Object.values((await alloc())!.dov!).filter((h) => h === 4)).toHaveLength(10);
+  await expect.poll(async () => (await booking())?.value).toBe(4);
+  expect(await booking()).toMatchObject({ mode: 'hpd', mask: 0b01111, role: 'Programador ABAP sénior' });
 
-  // weekly grid: override one week from the cell popover
-  await page.getByRole('tab', { name: 'Grelha Semanal' }).click();
-  await page.getByLabel('Filtrar pessoas…').fill('Zé Novo');
-  const cell = page.getByRole('button', { name: /^Zé Novo · .* · 16h\s+E2E-01 .* · 16h$/ }).first();
-  // the cell says which project the hours are for
-  await expect(cell.locator('.mg-alchip')).toHaveText(/E2E-01\s*16/);
-  await cell.click();
-  const pop = page.getByRole('dialog', { name: 'Zé Novo' });
-  await pop.getByLabel(/E2E-01/).fill('8');
-  await expect.poll(async () => Object.values((await alloc())!.ovr ?? {})).toContain(8);
-  await page.mouse.click(5, 5);
+  // the grid: 8h typed in the second week are spread over its working days
+  await page.getByRole('tab', { name: 'Grelha' }).click();
+  await page.getByLabel('Pesquisar pessoa, projeto…').fill('Zé Novo');
+  await page.getByRole('button', { name: 'Abrir Zé Novo' }).click();
+  const row = page.locator('[data-sub$="|E2E-01"]');
+  const cells = row.locator('[role="gridcell"]');
+  const wk2 = cells.filter({ hasText: '16' }).nth(1);
+  await wk2.click();
+  await page.keyboard.type('8');
+  await page.keyboard.press('Enter');
+  await expect
+    .poll(async () => Object.values((await booking())?.days ?? {}).reduce((a, b) => a + b, 0))
+    .toBe(8);
 
-  // dashboard: the band card filters; overview: KPI opens the weekly grid
+  // dashboard: the band card filters; overview: KPI opens the grid with the over-capacity filter
   await page.goto('app/mg-dash');
   await page.getByRole('button', { name: /Acima da Alocação/ }).click();
   await expect(page.getByRole('button', { name: /Acima da Alocação/ })).toHaveAttribute(
@@ -406,8 +413,8 @@ test('allocations: new allocation from the panel, weekly override, dashboard and
     .getByRole('button', { name: /Sobre-alocados/ })
     .first()
     .click();
-  await expect(page).toHaveURL(/mg-alloc\?mode=heat/);
-  await expect(page.getByRole('tab', { name: 'Grelha Semanal' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/mg-alloc\?v=grid&f=over/);
+  await expect(page.getByRole('tab', { name: 'Grelha' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('resource finder: new search, profile, assign; timesheets; project on a task', async ({ page }) => {

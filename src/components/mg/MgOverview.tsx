@@ -55,7 +55,7 @@ export function MgOverview({ mg }: { mg: Mg }) {
       val: String(over.length),
       sub: 'acima de 40h numa semana',
       subC: over.length ? 'oklch(calc(.84 * var(--lk)) .13 30)' : DIM,
-      go: () => mg.nav('mg_alloc', { mode: 'heat' }),
+      go: () => mg.nav('mg_alloc', { v: 'grid', f: 'over' }),
     },
     {
       label: 'Disponíveis',

@@ -6,7 +6,7 @@
   --al-hol: oklch(calc(0.86 * var(--lk)) 0.12 30);
   --al-name: 236px;
   /* behind the sticky name column (what scrolls under it must not show through) */
-  --al-solid: rgb(64 50 42 / 0.92);
+  --al-solid: rgb(60 47 40 / 0.985);
   position: relative;
   isolation: isolate;
   flex: 1;
@@ -15,7 +15,11 @@
   flex-direction: column;
   border-radius: 30px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgb(var(--sf) / calc(0.12 * var(--sf-k))), rgb(var(--sf) / calc(0.04 * var(--sf-k))));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.12 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.04 * var(--sf-k)))
+  );
   border: 1px solid rgb(var(--w) / 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
   color: var(--ink);
@@ -233,7 +237,11 @@
   border: 1px solid rgb(var(--w) / 0.3);
 }
 .al-lg i.hol {
-  background: repeating-linear-gradient(135deg, rgb(var(--d) / calc(0.6 * var(--d-k))) 0 3px, rgb(var(--d) / calc(0.3 * var(--d-k))) 3px 7px);
+  background: repeating-linear-gradient(
+    135deg,
+    rgb(var(--d) / calc(0.6 * var(--d-k))) 0 3px,
+    rgb(var(--d) / calc(0.3 * var(--d-k))) 3px 7px
+  );
   border: 1px solid oklch(0.75 0.12 30 / 0.6);
 }
 .al-lg i.ph {
@@ -274,7 +282,12 @@
   position: sticky;
   top: 0;
   z-index: 8;
-  background: linear-gradient(180deg, rgb(var(--sf) / calc(0.18 * var(--sf-k))), rgb(var(--sf) / calc(0.1 * var(--sf-k)))),
+  background:
+    linear-gradient(
+      180deg,
+      rgb(var(--sf) / calc(0.18 * var(--sf-k))),
+      rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+    ),
     var(--al-solid);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
@@ -293,7 +306,12 @@
   font-weight: 600;
   color: rgb(var(--t) / calc(0.85 * var(--t-k)));
   border-right: 1px solid rgb(var(--w) / 0.1);
-  background: linear-gradient(90deg, rgb(var(--sf) / calc(0.1 * var(--sf-k))), rgb(var(--sf) / calc(0.06 * var(--sf-k)))),
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--sf) / calc(0.1 * var(--sf-k))),
+      rgb(var(--sf) / calc(0.06 * var(--sf-k)))
+    ),
     var(--al-solid);
 }
 .al-hcol {
@@ -384,7 +402,12 @@
   align-items: center;
   gap: 11px;
   padding: 0 12px 0 16px;
-  background: linear-gradient(90deg, rgb(var(--sf) / calc(0.12 * var(--sf-k))), rgb(var(--sf) / calc(0.07 * var(--sf-k)))),
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--sf) / calc(0.12 * var(--sf-k))),
+      rgb(var(--sf) / calc(0.07 * var(--sf-k)))
+    ),
     var(--al-solid);
   border-right: 1px solid rgb(var(--w) / 0.1);
   cursor: pointer;
@@ -499,7 +522,11 @@
   position: absolute;
   pointer-events: none;
   z-index: 3;
-  background: repeating-linear-gradient(135deg, rgb(var(--d) / calc(0.55 * var(--d-k))) 0 3px, rgb(var(--d) / calc(0.3 * var(--d-k))) 3px 7px);
+  background: repeating-linear-gradient(
+    135deg,
+    rgb(var(--d) / calc(0.55 * var(--d-k))) 0 3px,
+    rgb(var(--d) / calc(0.3 * var(--d-k))) 3px 7px
+  );
   border-left: 1px solid oklch(0.75 0.12 30 / 0.5);
   border-right: 1px solid oklch(0.75 0.12 30 / 0.5);
 }
@@ -533,7 +560,9 @@
   overflow: hidden;
   white-space: nowrap;
   color: #24180f;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 6px rgb(0 0 0 / calc(0.18 * var(--sh-k)));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 6px rgb(0 0 0 / calc(0.18 * var(--sh-k)));
   cursor: grab;
   z-index: 2;
   user-select: none;
@@ -562,7 +591,11 @@
 .al-bar.tent {
   color: var(--ink);
   box-shadow: none;
-  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.14) 0 4px, transparent 4px 9px) !important;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(255 255 255 / 0.14) 0 4px,
+    transparent 4px 9px
+  ) !important;
 }
 .al-bar.sel {
   outline: 2px solid var(--ink);
@@ -650,7 +683,9 @@
   pointer-events: none;
 }
 .al-strip.over {
-  box-shadow: 0 0 0 1px oklch(0.75 0.19 27), 0 0 8px oklch(0.7 0.18 27 / 0.7);
+  box-shadow:
+    0 0 0 1px oklch(0.75 0.19 27),
+    0 0 8px oklch(0.7 0.18 27 / 0.7);
 }
 
 /* ── popovers / dialogs ───────────────────────────────────────────────────── */
@@ -661,7 +696,9 @@
   border-radius: 22px;
   background: linear-gradient(180deg, rgb(70 56 48 / 0.82), rgb(52 41 35 / 0.86));
   border: 1px solid rgb(var(--w) / 0.2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 30px 80px rgb(0 0 0 / calc(0.45 * var(--sh-k)));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 30px 80px rgb(0 0 0 / calc(0.45 * var(--sh-k)));
   color: var(--ink);
   display: flex;
   flex-direction: column;
@@ -678,7 +715,7 @@
   -webkit-backdrop-filter: blur(30px) saturate(160%);
 }
 :root[data-theme='light'] .al-root {
-  --al-solid: rgb(246 240 234 / 0.94);
+  --al-solid: rgb(246 240 234 / 0.985);
 }
 :root[data-theme='light'] .al-pop {
   background: linear-gradient(180deg, rgb(255 255 255 / 0.9), rgb(250 246 242 / 0.92));
@@ -777,8 +814,9 @@ select.al-in {
 .al-eff label {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 2px;
-  padding: 6px 8px;
+  padding: 6px 7px;
   border-radius: 12px;
   border: 1px solid rgb(var(--w) / 0.14);
   background: rgb(var(--d) / calc(0.22 * var(--d-k)));
@@ -994,7 +1032,12 @@ select.al-in {
   align-items: center;
   gap: 10px;
   padding: 0 10px 0 12px;
-  background: linear-gradient(90deg, rgb(var(--sf) / calc(0.12 * var(--sf-k))), rgb(var(--sf) / calc(0.07 * var(--sf-k)))),
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--sf) / calc(0.12 * var(--sf-k))),
+      rgb(var(--sf) / calc(0.07 * var(--sf-k)))
+    ),
     var(--al-solid);
   border-right: 1px solid rgb(var(--w) / 0.1);
   min-width: 0;
@@ -1032,7 +1075,9 @@ select.al-in {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 8px rgb(0 0 0 / calc(0.15 * var(--sh-k)));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 8px rgb(0 0 0 / calc(0.15 * var(--sh-k)));
 }
 .al-gcell .v.none {
   box-shadow: none;
@@ -1331,6 +1376,7 @@ select.al-in {
 }
 .al-budget {
   position: absolute;
+  top: 0;
   display: flex;
   align-items: center;
   gap: 10px;

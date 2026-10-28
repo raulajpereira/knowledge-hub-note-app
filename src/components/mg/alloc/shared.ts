@@ -101,17 +101,16 @@ export function columns(zoom: Zoom, F: Dn, T: Dn, lang: string, holLbl: (k: stri
         ...b,
         lbl: `${String(dt(b.a).getUTCDate()).padStart(2, '0')}/${String(monthOf(b.a) + 1).padStart(2, '0')}`,
         sub: `S${w.w}`,
-        top: newM ? `${monShort(b.a, lang)}${!prev || yearOf(prev.a) !== yearOf(b.a) ? ` ${yearOf(b.a)}` : ''}` : '',
+        top: newM
+          ? `${monShort(b.a, lang)}${!prev || yearOf(prev.a) !== yearOf(b.a) ? ` ${yearOf(b.a)}` : ''}`
+          : '',
         today: t >= b.a && t <= b.b,
         hol,
         weekend: false,
       };
     }
     const newY = !prev || yearOf(prev.a) !== yearOf(b.a);
-    const lbl =
-      zoom === 'quarter'
-        ? `T${Math.floor(monthOf(b.a) / 3) + 1}`
-        : monShort(b.a, lang);
+    const lbl = zoom === 'quarter' ? `T${Math.floor(monthOf(b.a) / 3) + 1}` : monShort(b.a, lang);
     return {
       ...b,
       lbl,

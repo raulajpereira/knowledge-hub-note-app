@@ -116,7 +116,8 @@ export function Timeline({
     let y = 0;
     const inWin = (x: { from: string; to: string }) => x.to >= isoOf(F) && x.from <= isoOf(T);
     const bkOf = new Map<string, Booking[]>();
-    for (const b of mg.BK) if (b.person && inWin(b) && bkFilter(b)) bkOf.set(b.person, [...(bkOf.get(b.person) ?? []), b]);
+    for (const b of mg.BK)
+      if (b.person && inWin(b) && bkFilter(b)) bkOf.set(b.person, [...(bkOf.get(b.person) ?? []), b]);
     const abOf = new Map<string, Absence[]>();
     if (showAbs) for (const a of mg.AB) if (inWin(a)) abOf.set(a.person, [...(abOf.get(a.person) ?? []), a]);
     const group = (key: string, label: string, dot: string, count: string) => {
@@ -126,7 +127,9 @@ export function Timeline({
     };
     const person = (p: MgPerson, gkey: string, only?: (b: Booking) => boolean, gp?: string) => {
       const its: Array<{ from: string; to: string; it: Item }> = [
-        ...(bkOf.get(p.id) ?? []).filter((b) => !only || only(b)).map((b) => ({ from: b.from, to: b.to, it: { kind: 'bk' as const, b } })),
+        ...(bkOf.get(p.id) ?? [])
+          .filter((b) => !only || only(b))
+          .map((b) => ({ from: b.from, to: b.to, it: { kind: 'bk' as const, b } })),
         ...(abOf.get(p.id) ?? []).map((a) => ({ from: a.from, to: a.to, it: { kind: 'ab' as const, a } })),
       ];
       const ln = lanes(its);
@@ -147,7 +150,10 @@ export function Timeline({
     }
     const n = (k: number) => tr(k === 1 ? '1 pessoa' : `${k} pessoas`);
     if (groupBy === 'team') {
-      const teams = [...mg.TEAMS.map((t) => ({ id: t.id, name: tr(t.name), color: t.color })), { id: '', name: tr('Sem equipa'), color: 'rgb(var(--w) / .4)' }];
+      const teams = [
+        ...mg.TEAMS.map((t) => ({ id: t.id, name: tr(t.name), color: t.color })),
+        { id: '', name: tr('Sem equipa'), color: 'rgb(var(--w) / .4)' },
+      ];
       for (const t of teams) {
         const ps = people.filter((p) => (t.id ? p.team === t.id : !mg.tById[p.team]));
         if (!ps.length) continue;
@@ -156,11 +162,12 @@ export function Timeline({
     } else if (groupBy === 'project' || groupBy === 'client') {
       const keyOf = (b: Booking) => (groupBy === 'project' ? b.project : mg.pjById[b.project]?.client || '_');
       const keys = new Map<string, Set<string>>();
-      for (const p of people) for (const b of bkOf.get(p.id) ?? []) {
-        const k = keyOf(b);
-        if (!keys.has(k)) keys.set(k, new Set());
-        keys.get(k)!.add(p.id);
-      }
+      for (const p of people)
+        for (const b of bkOf.get(p.id) ?? []) {
+          const k = keyOf(b);
+          if (!keys.has(k)) keys.set(k, new Set());
+          keys.get(k)!.add(p.id);
+        }
       const list = [...keys.entries()].sort((a, b) => {
         const la = groupBy === 'project' ? (mg.pjById[a[0]]?.code ?? '') : (mg.cById[a[0]]?.name ?? '~');
         const lb = groupBy === 'project' ? (mg.pjById[b[0]]?.code ?? '') : (mg.cById[b[0]]?.name ?? '~');
@@ -168,24 +175,46 @@ export function Timeline({
       });
       for (const [k, ids] of list) {
         const pj = mg.pjById[k];
-        const label = groupBy === 'project' ? `${pj?.code ?? '?'} · ${pj?.name ?? ''}` : (mg.cById[k]?.name ?? tr('Sem cliente'));
+        const label =
+          groupBy === 'project'
+            ? `${pj?.code ?? '?'} · ${pj?.name ?? ''}`
+            : (mg.cById[k]?.name ?? tr('Sem cliente'));
         const dot = groupBy === 'project' ? (pj?.color ?? 'transparent') : 'rgb(var(--w) / .5)';
         const ps = people.filter((p) => ids.has(p.id));
         if (group(`g|${k}`, label, dot, n(ps.length)))
-          for (const p of ps) person(p, `g|${k}`, (b) => keyOf(b) === k, groupBy === 'project' ? k : undefined);
+          for (const p of ps)
+            person(p, `g|${k}`, (b) => keyOf(b) === k, groupBy === 'project' ? k : undefined);
       }
       const idle = people.filter((p) => !(bkOf.get(p.id) ?? []).length);
-      if (idle.length && group('g|idle', tr('Sem alocações'), 'rgb(var(--w) / .3)', n(idle.length))) for (const p of idle) person(p, 'g|idle');
+      if (idle.length && group('g|idle', tr('Sem alocações'), 'rgb(var(--w) / .3)', n(idle.length)))
+        for (const p of idle) person(p, 'g|idle');
     } else if (groupBy === 'module') {
       const gm = new Map<string, MgPerson[]>();
       for (const p of people) {
         const g = groupOfArea(p.area);
         gm.set(g, [...(gm.get(g) ?? []), p]);
       }
-      for (const [g, ps] of gm) if (group(`m|${g}`, g, 'oklch(0.8 0.1 200)', n(ps.length))) for (const p of ps) person(p, `m|${g}`);
+      for (const [g, ps] of gm)
+        if (group(`m|${g}`, g, 'oklch(0.8 0.1 200)', n(ps.length))) for (const p of ps) person(p, `m|${g}`);
     } else for (const p of people) person(p, 'all');
     return { list: out, height: y };
-  }, [mg.BK, mg.AB, mg.TEAMS, mg.tById, mg.pjById, mg.cById, F, T, people, groupBy, showPh, showAbs, bkFilter, collapsed, tr]);
+  }, [
+    mg.BK,
+    mg.AB,
+    mg.TEAMS,
+    mg.tById,
+    mg.pjById,
+    mg.cById,
+    F,
+    T,
+    people,
+    groupBy,
+    showPh,
+    showAbs,
+    bkFilter,
+    collapsed,
+    tr,
+  ]);
 
   // ── scroll / view ──
   const onScroll = useCallback(() => {
@@ -203,6 +232,14 @@ export function Timeline({
     ro.observe(el);
     return () => ro.disconnect();
   }, [onScroll]);
+  // free scrolling past the edges widens the window by 3 months
+  const onUserScroll = () => {
+    onScroll();
+    const el = scRef.current;
+    if (!el || !shown.current) return;
+    if (el.scrollLeft < 40 && F > dnOf(todayIso()) - 365 * 3) setWin([monthStart(F, -3), T]);
+    else if (el.scrollLeft + el.clientWidth > nameW + width - 40) setWin([F, monthStart(T + 1, 3) - 1]);
+  };
   // keep the day at the left edge when the zoom or the window changes
   const prev = useRef({ F, ppd });
   useLayoutEffect(() => {
@@ -242,12 +279,6 @@ export function Timeline({
     requestAnimationFrame(() => el.scrollBy({ left: dir * span * 0.8, behavior: 'smooth' }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav]);
-  // free scrolling past the edges widens the window by 3 months
-  useEffect(() => {
-    if (view.l < 40 && F > dnOf(todayIso()) - 365 * 3) setWin([monthStart(F, -3), T]);
-    else if (view.l + view.w > width - 40 && view.w < width) setWin([F, monthStart(T + 1, 3) - 1]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view.l]);
   const visA = F + Math.max(0, Math.floor(view.l / ppd));
   const visB = Math.min(T, F + Math.ceil((view.l + view.w - nameW) / ppd));
   useEffect(() => {
@@ -405,14 +436,30 @@ export function Timeline({
   };
   const create = (person: string, a: Dn, b: Dn, abs: boolean, row: Row | null, cx: number, cy: number) => {
     if (abs && person) {
-      openAb({ id: crypto.randomUUID(), person, type: 'ferias', from: isoOf(a), to: isoOf(b), hours: null, note: '', ver: '' }, true, cx, cy);
+      openAb(
+        {
+          id: crypto.randomUUID(),
+          person,
+          type: 'ferias',
+          from: isoOf(a),
+          to: isoOf(b),
+          hours: null,
+          note: '',
+          ver: '',
+        },
+        true,
+        cx,
+        cy,
+      );
       return;
     }
+    // the group's project, else the person's latest project, else the last one used
+    const mine = mg.BK.filter((x) => x.person === person && x.status === 'confirmed');
     const proj =
       (row?.k === 'p' && row.gp) ||
       (row?.k === 'ph' && row.b.project) ||
+      mine.sort((x, y) => y.to.localeCompare(x.to))[0]?.project ||
       lastProject.current ||
-      mg.BK.find((x) => x.person === person)?.project ||
       mg.PJ.find((p) => p.status !== 'Concluído')?.id ||
       '';
     const weekend = wdOf(a) >= 5 && a === b;
@@ -441,7 +488,7 @@ export function Timeline({
     );
   };
   useEffect(() => {
-    lastProject.current = mg.BK.at(-1)?.project ?? '';
+    lastProject.current = lastProject.current || (mg.BK.at(-1)?.project ?? '');
   }, [mg.BK]);
 
   // ── keyboard ──
@@ -537,10 +584,16 @@ export function Timeline({
             ],
             [
               it.b.status === 'tentative' ? tr('Confirmar') : tr('Marcar como tentativo'),
-              () => mg.AL.change({ bk: [{ ...it.b, status: it.b.status === 'tentative' ? 'confirmed' : 'tentative' }] }),
+              () =>
+                mg.AL.change({
+                  bk: [{ ...it.b, status: it.b.status === 'tentative' ? 'confirmed' : 'tentative' }],
+                }),
               'T',
             ],
-            [tr('Pôr por atribuir'), () => mg.AL.change({ bk: [{ ...it.b, person: '', role: it.b.role || tr('Por atribuir') }] })],
+            [
+              tr('Pôr por atribuir'),
+              () => mg.AL.change({ bk: [{ ...it.b, person: '', role: it.b.role || tr('Por atribuir') }] }),
+            ],
             null,
             [tr('Eliminar'), () => del(it), 'Del'],
           ]
@@ -557,19 +610,29 @@ export function Timeline({
     const mon = n - wdOf(n);
     const items: Menu['items'] = [
       [tr('Nova alocação neste dia'), () => create(person, n, n, false, row, e.clientX + 10, e.clientY - 40)],
-      [tr('Nova alocação nesta semana'), () => create(person, mon, mon + 4, false, row, e.clientX + 10, e.clientY - 40)],
+      [
+        tr('Nova alocação nesta semana'),
+        () => create(person, mon, mon + 4, false, row, e.clientX + 10, e.clientY - 40),
+      ],
     ];
     if (row.k === 'p') {
       items.push(null);
-      items.push([tr('Marcar ausência neste dia'), () => create(person, n, n, true, row, e.clientX + 10, e.clientY - 40), 'Shift+arrastar']);
-      items.push([tr('Marcar férias nesta semana'), () => create(person, mon, mon + 4, true, row, e.clientX + 10, e.clientY - 40)]);
+      items.push([
+        tr('Marcar ausência neste dia'),
+        () => create(person, n, n, true, row, e.clientX + 10, e.clientY - 40),
+        'Shift+arrastar',
+      ]);
+      items.push([
+        tr('Marcar férias nesta semana'),
+        () => create(person, mon, mon + 4, true, row, e.clientX + 10, e.clientY - 40),
+      ]);
     }
     setMenu({ x: e.clientX, y: e.clientY, items });
   };
 
   // ── render ──
-  const loadsCols = useMemo(() => cols.filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb), [cols, xa, xb, ppd, nameW, F]); // eslint-disable-line react-hooks/exhaustive-deps
-  const vcols = loadsCols;
+  // the columns in view (and a little around)
+  const vcols = cols.filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb);
   const holidays = useMemo(() => {
     const out: Dn[] = [];
     if (zoom === 'month') return out;
@@ -591,10 +654,19 @@ export function Timeline({
       pos.push('0 0');
     }
     if (zoom === 'week') {
-      layers.push(`repeating-linear-gradient(90deg, rgb(var(--w) / .07) 0 1px, transparent 1px ${7 * ppd}px)`);
+      layers.push(
+        `repeating-linear-gradient(90deg, rgb(var(--w) / .07) 0 1px, transparent 1px ${7 * ppd}px)`,
+      );
       pos.push(`${off}px 0`);
     }
-    return { left: nameW, top: HEAD, width, height: rows.height, backgroundImage: layers.join(','), backgroundPosition: pos.join(',') };
+    return {
+      left: nameW,
+      top: HEAD,
+      width,
+      height: rows.height,
+      backgroundImage: layers.join(','),
+      backgroundPosition: pos.join(','),
+    };
   })();
   const monthLines = useMemo(() => {
     const out: Dn[] = [];
@@ -625,17 +697,34 @@ export function Timeline({
           key={`${id}${ghostly ? 'g' : ''}`}
           data-item={id}
           className={`al-bar abs${isSel ? ' sel' : ''}${ghostly ? ' ghost' : ''}`}
-          style={{ left, top, width: w }}
+          style={{
+            left,
+            top,
+            width: w,
+            paddingLeft: 8 + Math.max(0, Math.min(view.l + nameW - left, w - 90)),
+          }}
           title={`${tr(ABS_LABEL[a.type]!)} · ${a.from} → ${a.to}${a.hours != null ? ` · ${fmtNum(a.hours, lang)}h` : ''}${a.note ? ` · ${a.note}` : ''}`}
           onPointerDown={(e) => startItem(e, it, 'move', row)}
           onContextMenu={(e) => ctxItem(e, it)}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden
+          >
             <circle cx="12" cy="12" r="4" />
             <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
           </svg>
           {w > 50 && tr(ABS_LABEL[a.type]!)}
-          {w > 120 && <span style={{ fontWeight: 500, opacity: 0.75 }}>{`${dnOf(a.from) === dnOf(a.to) ? isoOf(dnOf(a.from)).slice(8) : `${+a.from.slice(8)}–${+a.to.slice(8)}`}`}</span>}
+          {w > 120 && (
+            <span
+              style={{ fontWeight: 500, opacity: 0.75 }}
+            >{`${dnOf(a.from) === dnOf(a.to) ? isoOf(dnOf(a.from)).slice(8) : `${+a.from.slice(8)}–${+a.to.slice(8)}`}`}</span>
+          )}
           {!ghostly && <span className="h l" onPointerDown={(e) => startItem(e, it, 'l', row)} />}
           {!ghostly && <span className="h r" onPointerDown={(e) => startItem(e, it, 'r', row)} />}
         </div>
@@ -644,12 +733,14 @@ export function Timeline({
     const b = it.b;
     const pj = mg.pjById[b.project];
     const code = pj?.code ?? '?';
+    // the label stays in view when the bar starts left of it
+    const pad = Math.max(0, Math.min(view.l + nameW - left, w - 120));
     return (
       <div
         key={`${id}${ghostly ? 'g' : ''}`}
         data-item={id}
         className={`al-bar${b.status === 'tentative' ? ' tent' : ''}${isSel ? ' sel' : ''}${ghostly ? ' ghost' : ''}`}
-        style={{ left, top, width: w, ...barStyle(b) }}
+        style={{ left, top, width: w, paddingLeft: 8 + pad, ...barStyle(b) }}
         title={`${code} · ${pj?.name ?? ''}\n${effortLabel(b, lang)} · ${b.from} → ${b.to}${b.role ? `\n${b.role}` : ''}${b.status === 'tentative' ? `\n${tr('tentativo')}` : ''}`}
         onPointerDown={(e) => startItem(e, it, 'move', row)}
         onContextMenu={(e) => ctxItem(e, it)}
@@ -704,15 +795,23 @@ export function Timeline({
           <span className="rl">{sub}</span>
         </span>
         <span className="badge">
-          <span className="al-pct" style={{ background: BAND_BG[bd], color: bd ? BAND_FG[bd] : 'var(--ink)' }}>
+          <span
+            className="al-pct"
+            style={{ background: BAND_BG[bd], color: bd ? BAND_FG[bd] : 'var(--ink)' }}
+          >
             {pct}%
           </span>
-          {overDays > 0 && <span className="al-over">+{tr(overDays === 1 ? '1 dia' : `${overDays} dias`)}</span>}
+          {overDays > 0 && (
+            <span className="al-over">+{tr(overDays === 1 ? '1 dia' : `${overDays} dias`)}</span>
+          )}
         </span>
       </div>
     );
   };
-  const mgMon = (s: string) => new Date(`${s}T00:00:00Z`).toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-PT', { month: 'short', timeZone: 'UTC' }).replace('.', '');
+  const mgMon = (s: string) =>
+    new Date(`${s}T00:00:00Z`)
+      .toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-PT', { month: 'short', timeZone: 'UTC' })
+      .replace('.', '');
 
   const strip = (row: RowP) => {
     const l = mg.loads(row.p.id);
@@ -729,17 +828,23 @@ export function Timeline({
           key={c.a}
           className={`al-strip${over ? ' over' : ''}`}
           title={`${fmtNum(conf, lang)}h / ${fmtNum(cap, lang)}h`}
-          style={{ left, width: w, background: bd < 0 ? 'var(--accent)' : bd ? BAND_BG[bd] : 'rgb(var(--w) / .08)' }}
+          style={{
+            left,
+            width: w,
+            background: bd < 0 ? 'var(--accent)' : bd ? BAND_BG[bd] : 'rgb(var(--w) / .08)',
+          }}
         />
       );
     });
   };
 
   const totalH = HEAD + rows.height;
-  const todayX = x(today) + (zoom === 'day' ? ppd * ((new Date().getHours() + new Date().getMinutes() / 60) / 24) : ppd / 2);
+  const todayX =
+    x(today) +
+    (zoom === 'day' ? ppd * ((new Date().getHours() + new Date().getMinutes() / 60) / 24) : ppd / 2);
   return (
     <div className="al-well" tabIndex={0} onKeyDown={onKey} aria-label={tr('Timeline de alocações')}>
-      <div className="al-scroll" ref={scRef} onScroll={onScroll} data-al-scroll>
+      <div className="al-scroll" ref={scRef} onScroll={onUserScroll} data-al-scroll>
         <div className="al-canvas" style={{ width: nameW + width, height: totalH }}>
           {/* header */}
           <div className="al-hdr" style={{ height: HEAD, width: nameW + width }}>
@@ -751,12 +856,16 @@ export function Timeline({
                   key={c.a}
                   className={`al-hcol${c.top && i ? ' newgrp' : ''}${c.today ? ' today' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}${c.weekend ? ' we' : ''}${w < 34 ? ' narrow' : ''}`}
                   style={{ left: x(c.a), width: w }}
+                  data-day={isoOf(c.a)}
                   title={c.hol ? holidayName(c.hol, lang) : undefined}
                 >
                   {c.top && <span className="top">{c.top}</span>}
                   <span className="lbl">{c.lbl}</span>
                   {c.sub && (zoom === 'day' || zoom === 'week') && (
-                    <span className="sub" style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}>
+                    <span
+                      className="sub"
+                      style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}
+                    >
                       {zoom === 'week' && c.hol ? tr('feriado') : c.sub}
                     </span>
                   )}
@@ -766,7 +875,13 @@ export function Timeline({
           </div>
           <div className="al-bg" style={bgStyle} />
           {zoom !== 'day' &&
-            monthLines.map((m) => <span key={m} className="al-vline" style={{ left: x(m), top: HEAD, height: rows.height, background: 'rgb(var(--w) / .12)' }} />)}
+            monthLines.map((m) => (
+              <span
+                key={m}
+                className="al-vline"
+                style={{ left: x(m), top: HEAD, height: rows.height, background: 'rgb(var(--w) / .12)' }}
+              />
+            ))}
           {holidays.map((n) => (
             <span
               key={n}
@@ -775,7 +890,9 @@ export function Timeline({
               style={{ left: x(n), top: HEAD, width: ppd, height: rows.height }}
             />
           ))}
-          {today >= F && today <= T && <span className="al-todayline" style={{ left: todayX, top: HEAD, height: rows.height }} />}
+          {today >= F && today <= T && (
+            <span className="al-todayline" style={{ left: todayX, top: HEAD, height: rows.height }} />
+          )}
           {/* rows */}
           {rows.list.map((row) => {
             if (row.y + row.h < ya || row.y > yb) return null;
@@ -820,10 +937,13 @@ export function Timeline({
                   : renderBar({ kind: 'bk', b: row.b }, 0, row, row.b.from, row.b.to)}
                 {ghost && ghost.row === row.key && ghost.m === 'create' && (
                   <>
-                    <span className={`al-sweep${ghost.abs ? ' abs' : ''}`} style={{ left: x(ghost.a) + 2, top: 8, width: (ghost.b - ghost.a + 1) * ppd - 4 }} />
+                    <span
+                      className={`al-sweep${ghost.abs ? ' abs' : ''}`}
+                      style={{ left: x(ghost.a) + 2, top: 8, width: (ghost.b - ghost.a + 1) * ppd - 4 }}
+                    />
                     <span className="al-tip" style={{ left: x(ghost.a), top: -14 }}>
-                      {isoOf(ghost.a).slice(8)}/{isoOf(ghost.a).slice(5, 7)} → {isoOf(ghost.b).slice(8)}/{isoOf(ghost.b).slice(5, 7)} · {ghost.b - ghost.a + 1}{' '}
-                      {tr('dias')}
+                      {isoOf(ghost.a).slice(8)}/{isoOf(ghost.a).slice(5, 7)} → {isoOf(ghost.b).slice(8)}/
+                      {isoOf(ghost.b).slice(5, 7)} · {ghost.b - ghost.a + 1} {tr('dias')}
                       {ghost.abs ? ` · ${tr('ausência')}` : ''}
                     </span>
                   </>
@@ -832,7 +952,8 @@ export function Timeline({
                   <>
                     {renderBar(ghost.it, 0, row, isoOf(ghost.from), isoOf(ghost.to), true)}
                     <span className="al-tip" style={{ left: x(ghost.from), top: -14 }}>
-                      {isoOf(ghost.from).slice(8)}/{isoOf(ghost.from).slice(5, 7)} → {isoOf(ghost.to).slice(8)}/{isoOf(ghost.to).slice(5, 7)}
+                      {isoOf(ghost.from).slice(8)}/{isoOf(ghost.from).slice(5, 7)} →{' '}
+                      {isoOf(ghost.to).slice(8)}/{isoOf(ghost.to).slice(5, 7)}
                       {ghost.copy ? ` · ${tr('copiar')}` : ''}
                     </span>
                   </>
@@ -841,13 +962,31 @@ export function Timeline({
               </div>
             );
           })}
-          {!rows.list.length && <div className="al-empty" style={{ position: 'absolute', top: HEAD + 20, left: 0, right: 0 }}>{tr('Ninguém com estes filtros.')}</div>}
+          {!rows.list.length && (
+            <div className="al-empty" style={{ position: 'absolute', top: HEAD + 20, left: 0, right: 0 }}>
+              {tr('Ninguém com estes filtros.')}
+            </div>
+          )}
         </div>
       </div>
       {menu && (
         <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 305 }} onPointerDown={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null); }} />
-          <div className="al-menu" role="menu" style={{ left: Math.min(menu.x, window.innerWidth - 240), top: Math.min(menu.y, window.innerHeight - 280) }}>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 305 }}
+            onPointerDown={() => setMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setMenu(null);
+            }}
+          />
+          <div
+            className="al-menu"
+            role="menu"
+            style={{
+              left: Math.min(menu.x, window.innerWidth - 240),
+              top: Math.min(menu.y, window.innerHeight - 280),
+            }}
+          >
             {menu.items.map((m, i) =>
               m ? (
                 <button
