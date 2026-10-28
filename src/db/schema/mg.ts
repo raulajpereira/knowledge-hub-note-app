@@ -1,39 +1,48 @@
 // Management (Management.dc.html): teams, people, projects, allocations,
-// timesheets and staffing requests. Shared by the tenant like the SAP data
-// (D40): RLS checks the tenant only (migration 0020). Clients live in
-// mg_clients (sap.ts). Ids are made by the client (the screen keeps the
-// prototype's single data set and sends the changes as a batch).
+// timesheets and staffing requests. Each manager's own (migration 0050): RLS
+// checks tenant + owner, like notes. Clients live in mg_clients (sap.ts) and
+// stay shared by the tenant. Ids are made by the client (the screen keeps the
+// prototype's single data set and sends the changes as a batch; allocations
+// v2 are loaded by date range — mg_bookings, mg_booking_days, mg_absences).
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   date,
   doublePrecision,
   index,
   integer,
   jsonb,
   pgTable,
+  primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { tenants } from './identity';
+import { tenants, users } from './identity';
 import { mgClients } from './sap';
 
 const tenantId = () =>
   uuid('tenant_id')
     .notNull()
     .references(() => tenants.id, { onDelete: 'cascade' });
+const ownerId = () =>
+  uuid('owner_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' });
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 const stamps = () => ({
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
 
-/** Areas and seniority levels of the tenant (Definições › Management). */
+/** Areas and seniority levels of a manager (Definições › Management). */
 export const mgSettings = pgTable('mg_settings', {
-  tenantId: uuid('tenant_id')
+  ownerId: uuid('owner_id')
     .primaryKey()
-    .references(() => tenants.id, { onDelete: 'cascade' }),
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: tenantId(),
   data: jsonb('data')
     .notNull()
     .default(sql`'{}'::jsonb`),
@@ -45,6 +54,7 @@ export const mgTeams = pgTable(
   {
     id: uuid('id').primaryKey(),
     tenantId: tenantId(),
+    ownerId: ownerId(),
     name: text('name').notNull(),
     areas: text('areas')
       .array()
@@ -64,6 +74,7 @@ export const mgPeople = pgTable(
   {
     id: uuid('id').primaryKey(),
     tenantId: tenantId(),
+    ownerId: ownerId(),
     teamId: uuid('team_id').references(() => mgTeams.id, { onDelete: 'set null' }),
     name: text('name').notNull(),
     area: text('area').notNull(),
@@ -102,6 +113,7 @@ export const mgProjects = pgTable(
   {
     id: uuid('id').primaryKey(),
     tenantId: tenantId(),
+    ownerId: ownerId(),
     teamId: uuid('team_id').references(() => mgTeams.id, { onDelete: 'set null' }),
     code: text('code').notNull().default(''),
     name: text('name').notNull(),
@@ -130,6 +142,7 @@ export const mgAllocs = pgTable(
   {
     id: uuid('id').primaryKey(),
     tenantId: tenantId(),
+    ownerId: ownerId(),
     personId: uuid('person_id')
       .notNull()
       .references(() => mgPeople.id, { onDelete: 'cascade' }),
@@ -139,7 +152,8 @@ export const mgAllocs = pgTable(
     fromDate: date('from_date').notNull(),
     toDate: date('to_date').notNull(),
     hours: doublePrecision('hours').notNull(),
-    /** overrides and the "Nova Alocação" plan (start, hours/day, days, weekday mask) */
+    /** overrides and the "Nova Alocação" plan (start, hours/day, days, weekday mask) —
+     *  v1 data, converted to mg_bookings by migration 0050 and kept for rollback (no longer written) */
     extra: jsonb('extra')
       .notNull()
       .default(sql`'{}'::jsonb`),
@@ -153,6 +167,7 @@ export const mgTimesheets = pgTable(
   {
     id: uuid('id').primaryKey(),
     tenantId: tenantId(),
+    ownerId: ownerId(),
     personId: uuid('person_id')
       .notNull()
       .references(() => mgPeople.id, { onDelete: 'cascade' }),
@@ -174,6 +189,7 @@ export const mgRequests = pgTable(
   {
     id: uuid('id').primaryKey(),
     tenantId: tenantId(),
+    ownerId: ownerId(),
     teamId: uuid('team_id').references(() => mgTeams.id, { onDelete: 'set null' }),
     projectId: uuid('project_id').references(() => mgProjects.id, { onDelete: 'cascade' }),
     skills: jsonb('skills').notNull(),
@@ -187,4 +203,91 @@ export const mgRequests = pgTable(
     ...stamps(),
   },
   (t) => [index('mg_requests_tenant_idx').on(t.tenantId)],
+);
+
+/** Alocações v2: a range and an effort rule; no person = a role "Por atribuir". */
+export const mgBookings = pgTable(
+  'mg_bookings',
+  {
+    id: uuid('id').primaryKey(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    personId: uuid('person_id').references(() => mgPeople.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => mgProjects.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().default(''),
+    status: text('status', { enum: ['confirmed', 'tentative'] })
+      .notNull()
+      .default('confirmed'),
+    fromDate: date('from_date').notNull(),
+    toDate: date('to_date').notNull(),
+    mode: text('mode', { enum: ['hpd', 'hpw', 'pct', 'fte', 'total'] })
+      .notNull()
+      .default('hpd'),
+    value: doublePrecision('value').notNull(),
+    /** worked weekdays, bit 0 = Monday */
+    mask: smallint('mask').notNull().default(31),
+    /** also on national holidays */
+    hol: boolean('hol').notNull().default(false),
+    note: text('note').notNull().default(''),
+    /** skills a placeholder asks for: [{ k, l }] */
+    need: jsonb('need')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    /** the version for optimistic concurrency (milliseconds, always increasing) */
+    updatedAt: ts('updated_at')
+      .notNull()
+      .default(sql`date_trunc('milliseconds', now())`),
+  },
+  (t) => [
+    index('mg_bookings_range_idx').on(t.tenantId, t.ownerId, t.toDate, t.fromDate),
+    index('mg_bookings_person_idx').on(t.personId),
+    index('mg_bookings_project_idx').on(t.projectId),
+  ],
+);
+
+/** Hours typed by hand on one day of a booking (they win over its rule). */
+export const mgBookingDays = pgTable(
+  'mg_booking_days',
+  {
+    bookingId: uuid('booking_id')
+      .notNull()
+      .references(() => mgBookings.id, { onDelete: 'cascade' }),
+    day: date('day').notNull(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    hours: doublePrecision('hours').notNull(),
+  },
+  (t) => [primaryKey({ name: 'mg_booking_days_pk', columns: [t.bookingId, t.day] })],
+);
+
+/** Vacation, sickness, training… marked by the manager (no approval). */
+export const mgAbsences = pgTable(
+  'mg_absences',
+  {
+    id: uuid('id').primaryKey(),
+    tenantId: tenantId(),
+    ownerId: ownerId(),
+    personId: uuid('person_id')
+      .notNull()
+      .references(() => mgPeople.id, { onDelete: 'cascade' }),
+    type: text('type', { enum: ['ferias', 'doenca', 'formacao', 'outra'] })
+      .notNull()
+      .default('ferias'),
+    fromDate: date('from_date').notNull(),
+    toDate: date('to_date').notNull(),
+    /** hours off a day; null = the whole day */
+    hours: doublePrecision('hours'),
+    note: text('note').notNull().default(''),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at')
+      .notNull()
+      .default(sql`date_trunc('milliseconds', now())`),
+  },
+  (t) => [
+    index('mg_absences_range_idx').on(t.tenantId, t.ownerId, t.toDate, t.fromDate),
+    index('mg_absences_person_idx').on(t.personId),
+  ],
 );

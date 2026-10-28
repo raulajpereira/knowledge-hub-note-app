@@ -3,6 +3,7 @@
 // (prototype mgSeed) used by "Repor Dados".
 import { z } from 'zod';
 import { parseTxMod } from './sap';
+import { AL_MASK_WK, bookingSeries, dnOf, type Absence, type Booking, type CalcEnv } from './alloc';
 
 export const MG_DAY = 86_400_000;
 export const mgMonday = (d: Date) => {
@@ -247,24 +248,6 @@ export type MgProject = {
   /** SAP modules the project covers (SAP_MODULES ids or the tenant's own names), in the order picked */
   modules?: string[];
 };
-export type MgAlloc = {
-  id: string;
-  person: string;
-  project: string;
-  from: string;
-  to: string;
-  hours: number;
-  /** hours per week overriding `hours` ({ 'YYYY-MM-DD' (Monday): h | '' }) */
-  ovr?: Record<string, number | ''>;
-  /** hours per day ({ 'YYYY-MM-DD': h | '' }) */
-  dov?: Record<string, number | ''>;
-  start?: string;
-  hpd?: number;
-  days?: number;
-  mask?: number[];
-  /** role in the project (free text, suggested from the person's skills) */
-  fn?: string;
-};
 export type MgTs = {
   id: string;
   person: string;
@@ -297,12 +280,11 @@ export type MgData = {
   teams: MgTeam[];
   people: MgPerson[];
   projects: MgProject[];
-  allocs: MgAlloc[];
   ts: MgTs[];
   reqs: MgReq[];
   settings: MgSettings;
 };
-export const MG_COLLECTIONS = ['clients', 'teams', 'people', 'projects', 'allocs', 'ts', 'reqs'] as const;
+export const MG_COLLECTIONS = ['clients', 'teams', 'people', 'projects', 'ts', 'reqs'] as const;
 export type MgCollection = (typeof MG_COLLECTIONS)[number];
 
 // ── Validation (server edge) ─────────────────────────────────────────────────
@@ -316,7 +298,6 @@ const line = (max: number) =>
 const key = z.string().regex(/^[a-z][\w-]{0,39}$/i);
 const color = z.string().regex(/^(oklch\([\d. /]{5,40}\)|rgba?\([\d., ]{5,40}\)|transparent)$/);
 const hours = z.number().min(0).max(1000);
-const hmap = z.record(day, z.union([z.literal(''), hours])).refine((m) => Object.keys(m).length <= 800);
 export const MgSchemas = {
   clients: z.strictObject({
     id: z.uuid(),
@@ -384,22 +365,6 @@ export const MgSchemas = {
       .max(MG_PJ_MOD_MAX)
       .refine((m) => new Set(m).size === m.length)
       .optional(),
-  }),
-  allocs: z.strictObject({
-    id: z.uuid(),
-    person: z.uuid(),
-    project: z.uuid(),
-    from: day,
-    to: day,
-    hours,
-    ovr: hmap.optional(),
-    dov: hmap.optional(),
-    start: day.optional(),
-    hpd: z.number().min(0).max(24).optional(),
-    days: z.number().int().min(1).max(2000).optional(),
-    mask: z.array(z.number().int().min(0).max(1)).length(5).optional(),
-    /** role in the project (free text, suggested from the person's skills) */
-    fn: line(120).optional(),
   }),
   ts: z.strictObject({
     id: z.uuid(),
@@ -551,8 +516,9 @@ const mgRnd = (seed: number) => {
 };
 
 /** Prototype mgSeed + mgEnsureTeams; `uuid` makes the ids, `now` fixes the current week. */
-export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'settings'> {
-  const { wk, wi } = mgWeeks(now);
+export type MgSampleData = Omit<MgData, 'settings'> & { bookings: Booking[]; absences: Absence[] };
+export function mgSample(uuid: () => string, now = new Date()): MgSampleData {
+  const { wk, wi, dIso } = mgWeeks(now);
   const R = mgRnd(17);
   const C: Record<string, string> = {};
   const id = (k: string) => (C[k] ??= uuid());
@@ -742,6 +708,19 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
       'Ativo',
       [['abap', 1]],
     ],
+    // a proposal: tentative bookings and roles still without a person
+    [
+      'p10',
+      'CRT-RISE',
+      'RISE with SAP (proposta)',
+      'c4',
+      240000,
+      3,
+      40,
+      'oklch(0.78 0.12 300)',
+      'Planeado',
+      [],
+    ],
   ];
   // FIORI is not in SAP_MODULES: a module of the tenant's own
   const MODS: Record<string, string[]> = {
@@ -754,12 +733,54 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
     p7: ['BC'],
     p8: ['SD', 'FI'],
     p9: ['ABAP'],
+    p10: ['FI', 'CO', 'PP', 'QM', 'BC', 'BTP'],
   };
-  const allocs: MgAlloc[] = [];
+  // Alocações v2: h/dia (some h/semana) from a Monday to a Friday, a role on each booking
+  const bookings: Booking[] = [];
   const load: Record<string, number> = {};
-  const addA = (pid: string, proj: string, from: number, to: number, hours: number) => {
-    allocs.push({ id: uuid(), person: pid, project: proj, from: wk(from), to: wk(to), hours });
-    for (let w = from; w <= to; w++) load[pid + w] = (load[pid + w] ?? 0) + hours;
+  const bk = (o: Partial<Booking> & Pick<Booking, 'person' | 'project' | 'from' | 'to' | 'value'>) => {
+    const b: Booking = {
+      id: uuid(),
+      role: '',
+      status: 'confirmed',
+      mode: 'hpd',
+      mask: AL_MASK_WK,
+      hol: false,
+      note: '',
+      need: [],
+      days: {},
+      ver: '',
+      ...o,
+    };
+    bookings.push(b);
+    return b;
+  };
+  const addA = (pid: string, proj: string, from: number, to: number, hpd: number, role: string) => {
+    const asWeek = bookings.length % 4 === 3;
+    bk({
+      person: pid,
+      project: proj,
+      from: dIso(from, 0),
+      to: dIso(to, 4),
+      mode: asWeek ? 'hpw' : 'hpd',
+      value: asWeek ? hpd * 5 : hpd,
+      role,
+    });
+    for (let w = from; w <= to; w++) load[pid + w] = (load[pid + w] ?? 0) + hpd * 5;
+  };
+  const FN: Record<string, string[]> = {
+    abap: ['ABAP · interfaces', 'ABAP · RICEFW', 'ABAP · conversões'],
+    fi: ['Líder FI-GL / AA', 'FI · contas a pagar', 'FI · fecho'],
+    co: ['CO-PA', 'CO · centros de custo'],
+    sd: ['SD pricing / output', 'SD · encomendas'],
+    mm: ['MM · migração de dados', 'MM · compras'],
+    fiori: ['Fiori · apps de loja', 'Fiori · Launchpad'],
+    basis: ['Basis · landscape', 'Basis · cutover'],
+    pm: ['Gestão de projeto'],
+    ewm: ['EWM · armazém'],
+    sf: ['SuccessFactors EC'],
+    hcm: ['HCM · integração'],
+    btp: ['BTP · extensões'],
   };
   const projects: MgProject[] = P.map(([k, code, name, client, budget, s, e, color, status, needs]) => {
     const dur = e - s + 1;
@@ -778,11 +799,12 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
       const cands = people
         .filter((p) => p.area === area)
         .sort((a, b) => (load[`${a.id}0`] ?? 0) - (load[`${b.id}0`] ?? 0));
-      cands.slice(0, n).forEach((p) => {
-        const hrs = [24, 32, 40, 40][Math.floor(R() * 4)]!;
+      cands.slice(0, n).forEach((p, j) => {
+        const hpd = [4, 6, 8, 8][Math.floor(R() * 4)]!;
         const f = Math.max(s, -8);
         const t = Math.min(e, 4 + Math.floor(R() * 16));
-        if (f <= t) addA(p.id, id(k), f, t, hrs);
+        const fns = FN[area] ?? [MG_ROLE[area] ?? area];
+        if (f <= t) addA(p.id, id(k), f, t, hpd, fns[j % fns.length]!);
       });
     }
     return {
@@ -804,31 +826,104 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
   const byArea = (a: string) => people.filter((p) => p.area === a);
   (
     [
-      ['abap', 0, 'p9', 0, 6, 16],
-      ['fi', 0, 'p3', -1, 4, 16],
-      ['sd', 0, 'p8', 3, 10, 24],
-      ['pm', 0, 'p6', -2, 8, 16],
+      ['abap', 0, 'p9', 0, 6, 2],
+      ['fi', 0, 'p3', -1, 4, 2],
+      ['sd', 0, 'p8', 3, 10, 4],
+      ['pm', 0, 'p6', -2, 8, 2],
     ] as const
-  ).forEach(([a, i, pr, f, t, hh]) => {
+  ).forEach(([a, i, pr, f, t, hpd]) => {
     const p = byArea(a)[i];
-    if (p) addA(p.id, id(pr), f, t, hh);
+    if (p) addA(p.id, id(pr), f, t, hpd, FN[a]?.[0] ?? '');
   });
+  // the proposal (CRT-RISE): tentative bookings of real people, and roles "Por atribuir"
+  const rise = id('p10');
+  const tent = (a: string, i: number, f: number, t: number, hpd: number, role: string) => {
+    const p = byArea(a)[i];
+    if (p)
+      bk({
+        person: p.id,
+        project: rise,
+        from: dIso(f, 0),
+        to: dIso(t, 4),
+        value: hpd,
+        role,
+        status: 'tentative',
+      });
+  };
+  tent('fi', 1, 3, 12, 2, 'Fit-to-standard FI');
+  tent('co', 0, 4, 16, 4, 'Arquitetura Finance');
+  tent('basis', 1, 3, 20, 4, 'Basis / BTP');
+  tent('fiori', 1, 6, 18, 8, 'Fiori / BTP');
+  const ph = (
+    f: number,
+    t: number,
+    hpd: number,
+    role: string,
+    need: Booking['need'],
+    pr = rise,
+    status: Booking['status'] = 'tentative',
+  ) => bk({ person: '', project: pr, from: dIso(f, 0), to: dIso(t, 4), value: hpd, role, need, status });
+  ph(3, 12, 8, 'Consultor FI · Sénior', [{ k: 'fi', l: 3 }]);
+  ph(14, 30, 6, 'Consultor PP/QM', [{ k: 'pp', l: 2 }]);
+  ph(4, 9, 8, 'Developer ABAP · RICEFW', [{ k: 'abap', l: 2 }], id('p1'), 'confirmed');
+  ph(5, 14, 6, 'Consultor SD · Pleno', [{ k: 'sd', l: 2 }], id('p8'), 'confirmed');
+  // a Saturday cutover (weekends are allowed) and a part-time person (4 days a week, 32 h)
+  const bas = byArea('basis')[0];
+  if (bas) {
+    const sat = dIso(3, 5);
+    bk({
+      person: bas.id,
+      project: id('p1'),
+      from: sat,
+      to: sat,
+      value: 8,
+      mask: 0b0100000,
+      role: 'Cutover go-live',
+    });
+    bas.cap = 32;
+  }
   for (const pr of projects) {
     const pm =
-      people.find((p) => p.area === 'pm' && allocs.some((a) => a.person === p.id && a.project === pr.id)) ??
+      people.find((p) => p.area === 'pm' && bookings.some((a) => a.person === p.id && a.project === pr.id)) ??
       people.find((p) => p.area === 'pm');
     pr.manager = pm?.id ?? '';
   }
+  // absences: vacation (soon, Christmas, summer), training, a sick leave
+  const absences: Absence[] = [];
+  const ab = (pi: number, type: Absence['type'], from: string, to: string, hours: number | null = null) => {
+    const p = people[pi];
+    if (p) absences.push({ id: uuid(), person: p.id, type, from, to, hours, note: '', ver: '' });
+  };
+  const y = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+  ab(6, 'ferias', dIso(1, 0), dIso(1, 4));
+  ab(1, 'ferias', `${y}-12-21`, `${y}-12-31`);
+  ab(3, 'ferias', `${y}-12-28`, `${y + 1}-01-08`);
+  ab(9, 'ferias', dIso(5, 0), dIso(6, 4));
+  ab(16, 'ferias', `${y + 1}-08-02`, `${y + 1}-08-20`);
+  ab(21, 'ferias', `${y + 1}-07-12`, `${y + 1}-07-23`);
+  ab(5, 'formacao', dIso(2, 2), dIso(2, 3));
+  ab(11, 'formacao', dIso(0, 4), dIso(0, 4), 4);
+  ab(13, 'doenca', dIso(-1, 2), dIso(-1, 3));
+  ab(25, 'outra', dIso(3, 1), dIso(3, 1));
+  const weekly = Object.fromEntries(people.map((p) => [p.id, p.cap]));
+  const env: CalcEnv = {
+    weekly: (p) => weekly[p] ?? 40,
+    absences: (p) => absences.filter((a) => a.person === p),
+  };
   const ts: MgTs[] = [];
   for (let w = -6; w <= -1; w++)
     people.forEach((p, pi) => {
       const rows: Record<string, number[]> = {};
-      allocs
-        .filter((a) => a.person === p.id && wi(a.from) <= w && wi(a.to) >= w)
+      bookings
+        .filter(
+          (a) => a.person === p.id && a.status === 'confirmed' && a.from <= dIso(w, 4) && a.to >= dIso(w, 0),
+        )
         .forEach((a) => {
-          rows[a.project] = [0, 1, 2, 3, 4].map(() =>
-            Math.max(0, Math.round((a.hours / 5 + (R() - 0.5) * 2) * 2) / 2),
-          );
+          const s = bookingSeries(a, env);
+          rows[a.project] = [0, 1, 2, 3, 4].map((i) => {
+            const h = s.h[dnOf(dIso(w, i)) - s.from] ?? 0;
+            return h ? Math.max(0, Math.round((h + (R() - 0.5) * 2) * 2) / 2) : 0;
+          });
         });
       if (!Object.keys(rows).length) return;
       ts.push({
@@ -889,5 +984,5 @@ export function mgSample(uuid: () => string, now = new Date()): Omit<MgData, 'se
   for (const p of people) p.team = (teams.find((t) => t.areas.includes(p.area)) ?? teams[0]!).id;
   for (const t of teams)
     t.lead = people.filter((p) => p.team === t.id).sort((a, b) => b.level - a.level)[0]?.id ?? '';
-  return { clients, teams, people, projects, allocs, ts, reqs };
+  return { clients, teams, people, projects, ts, reqs, bookings, absences };
 }

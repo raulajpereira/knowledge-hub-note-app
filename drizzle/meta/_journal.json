@@ -351,6 +351,13 @@
       "when": 1793190222788,
       "tag": "0049_mg_project_modules",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793202091420,
+      "tag": "0050_mg_alloc_v2",
+      "breakpoints": true
     }
   ]
 }

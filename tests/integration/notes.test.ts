@@ -1707,9 +1707,10 @@ describe.skipIf(!enabled)('notes', () => {
     await mg.resetMgSample(a);
     const d = await mg.loadMg(a);
     expect([d.clients.length, d.teams.length, d.people.length, d.projects.length, d.reqs.length]).toEqual([
-      6, 3, 38, 9, 6,
+      6, 3, 38, 10, 6,
     ]);
-    expect(d.allocs.length).toBeGreaterThan(20);
+    const al = await import('@/server/content/mgAlloc');
+    expect((await al.loadAlloc(a, '2025-01-01', '2028-12-31')).bookings.length).toBeGreaterThan(20);
     expect(d.ts.length).toBeGreaterThan(20);
     expect(d.teams.every((t) => d.people.some((p) => p.id === t.lead))).toBe(true);
     expect(await mg.loadMg(b)).toMatchObject({ people: [], clients: [], settings: {} });
@@ -1719,14 +1720,12 @@ describe.skipIf(!enabled)('notes', () => {
     const p0 = next.people[0]!;
     p0.name = 'Rui M.';
     p0.skills = { ...p0.skills, rap: 2 };
-    next.allocs = next.allocs.filter((x) => x.person !== p0.id);
     next.settings = { levels: ['', 'Júnior', 'Pleno', 'Sénior', 'Expert', 'Principal'] };
     const ops = mgDiff(d, next);
     expect(ops.filter((o) => o.op === 'put').map((o) => o.c)).toEqual(['people', 'settings']);
     await mg.applyMgOps(a, ops);
     const d2 = await mg.loadMg(a);
     expect(d2.people.find((x) => x.id === p0.id)).toMatchObject({ name: 'Rui M.', skills: { rap: 2 } });
-    expect(d2.allocs.some((x) => x.person === p0.id)).toBe(false);
     expect(d2.settings.levels).toHaveLength(6);
 
     // invalid data and references to another tenant's rows are refused, nothing is applied
@@ -1739,11 +1738,22 @@ describe.skipIf(!enabled)('notes', () => {
       id: crypto.randomUUID(),
       person: p0.id,
       project: other.id,
+      role: '',
+      status: 'confirmed' as const,
       from: '2026-10-05',
       to: '2026-11-02',
-      hours: 8,
+      mode: 'hpd' as const,
+      value: 8,
+      mask: 31,
+      hol: false,
+      note: '',
+      need: [],
+      days: {},
+      ver: '',
     };
-    expect(await codeOf(mg.applyMgOps(a, [{ op: 'put', c: 'allocs', v: sneaky }]))).toBe('invalid_reference');
+    expect(await codeOf(al.applyAlOps(a, [{ op: 'put', c: 'bk', v: sneaky, base: '' }]))).toBe(
+      'invalid_reference',
+    );
     expect(
       await codeOf(
         mg.applyMgOps(a, [
@@ -1777,7 +1787,9 @@ describe.skipIf(!enabled)('notes', () => {
     // deleting a project removes its allocations (FK)
     const pj = d2.projects[0]!;
     await mg.applyMgOps(a, [{ op: 'del', c: 'projects', id: pj.id }]);
-    expect((await mg.loadMg(a)).allocs.some((x) => x.project === pj.id)).toBe(false);
+    expect(
+      (await al.loadAlloc(a, '2025-01-01', '2028-12-31')).bookings.some((x) => x.project === pj.id),
+    ).toBe(false);
   });
 
   it('public links: owner only, token hashed, password, expiry, revoke, read as the owner', async () => {
@@ -2035,7 +2047,7 @@ describe.skipIf(!enabled)('notes', () => {
     await mg.resetMgSample(a);
     await mg.resetMgSample(b);
     const opts = await mg.mgOptions(a);
-    expect(opts.projects).toHaveLength(9);
+    expect(opts.projects).toHaveLength(10);
     expect(opts.people).toHaveLength(38);
     const pj = opts.projects.find((p) => p.client)!;
     const foreign = (await mg.mgOptions(b)).projects[0]!.id;
