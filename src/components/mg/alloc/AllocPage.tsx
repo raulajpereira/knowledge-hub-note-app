@@ -12,7 +12,7 @@ import {
   type Dn,
   type Zoom,
 } from '@/lib/alloc';
-import { usePersistentState } from '@/components/ui';
+import { Popover, usePersistentState } from '@/components/ui';
 import { OPT } from '../css';
 import type { Mg } from '../store';
 import { AbsencePop, BookingPop, Floating } from './Popovers';
@@ -89,6 +89,8 @@ export function AllocPage({ mg }: { mg: Mg }) {
   const [pop, setPop] = useState<Pop | null>(null);
   const [filtOpen, setFiltOpen] = useState<{ x: number; y: number } | null>(null);
   const [keys, setKeys] = useState<{ x: number; y: number } | null>(null);
+  const absHelpBtn = useRef<HTMLButtonElement>(null);
+  const [absHelp, setAbsHelp] = useState(false);
   const want = sp.get('v');
   const wantF = sp.get('f');
   const wantPj = sp.get('pj');
@@ -198,7 +200,7 @@ export function AllocPage({ mg }: { mg: Mg }) {
     ['none', 'Nenhum'],
   ];
   const legend = (
-    <div className="al-legend" aria-hidden>
+    <div className="al-legend">
       <span className="al-lg">
         <i className="conf" />
         {tr('Confirmado')}
@@ -210,11 +212,41 @@ export function AllocPage({ mg }: { mg: Mg }) {
       <span className="al-lg">
         <i className="abs" />
         {tr('Ausência')}
+        <button
+          ref={absHelpBtn}
+          type="button"
+          className="al-help"
+          aria-label={tr('Como marcar férias')}
+          title={tr('Como marcar férias')}
+          aria-expanded={absHelp}
+          onClick={() => setAbsHelp((v) => !v)}
+        >
+          ?
+        </button>
       </span>
       <span className="al-lg">
         <i className="hol" />
         {tr('Feriado')}
       </span>
+      {absHelp && (
+        <Popover
+          anchor={absHelpBtn}
+          align="right"
+          width={320}
+          onClose={() => setAbsHelp(false)}
+          className="al-help-pop"
+        >
+          <strong>{tr('Como marcar férias')}</strong>
+          <ul>
+            <li>{tr('Shift + arrastar na linha da pessoa, nos dias da ausência')}</li>
+            <li>{tr('Botão direito num dia da pessoa › Marcar ausência')}</li>
+            <li>{tr('Recursos › a pessoa › Ausências')}</li>
+          </ul>
+          <span>
+            {tr('Tipos: Férias, Doença, Formação ou Outra. Os dias de ausência não contam na capacidade.')}
+          </span>
+        </Popover>
+      )}
     </div>
   );
   const navBtns = (

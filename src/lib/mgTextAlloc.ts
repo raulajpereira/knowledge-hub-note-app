@@ -199,6 +199,13 @@ export const MG_EX_AL: Record<string, string> = {
   Ausências: 'Absences',
   'Escolher no calendário': 'Pick in the calendar',
   'Atalhos de teclado': 'Keyboard shortcuts',
+  'Como marcar férias': 'How to mark time off',
+  'Shift + arrastar na linha da pessoa, nos dias da ausência':
+    "Shift + drag on the person's row, over the days off",
+  'Botão direito num dia da pessoa › Marcar ausência': "Right-click a day on the person's row › Mark absence",
+  'Recursos › a pessoa › Ausências': 'Resources › the person › Absences',
+  'Tipos: Férias, Doença, Formação ou Outra. Os dias de ausência não contam na capacidade.':
+    'Types: Vacation, Sick leave, Training or Other. Days off are removed from capacity.',
   'Arrastar numa linha': 'Drag on a row',
   'Shift + arrastar': 'Shift + drag',
   'marcar ausência': 'mark an absence',
