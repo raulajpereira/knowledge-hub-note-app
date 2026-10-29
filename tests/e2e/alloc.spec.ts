@@ -231,7 +231,7 @@ test('popover: over-allocation is a warning with one-click fixes', async ({ page
   await pop.getByLabel('Pessoa').selectOption({ label: who.name });
   await pop.getByLabel('Horas/dia').fill('6');
   await expect(pop.getByRole('alert')).toContainText('Sobre-alocação');
-  await pop.getByRole('alert').getByRole('button', { name: 'tentativo', exact: true }).click();
+  await pop.getByRole('alert').getByRole('button', { name: 'Passar a tentativo', exact: true }).click();
   await expect(pop.getByRole('alert')).toHaveCount(0);
   await pop.getByRole('button', { name: 'Cancelar' }).click();
 });

@@ -1,5 +1,6 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   dnOf,
@@ -26,6 +27,7 @@ import {
   BAND_BG,
   BAND_FG,
   PPD,
+  bands,
   columns,
   groupOfArea,
   lanes,
@@ -55,7 +57,7 @@ type RowPh = { k: 'ph'; key: string; b: Booking; y: number; h: number };
 type RowG = { k: 'g'; key: string; label: string; dot: string; count: string; y: number; h: number };
 type Row = RowP | RowPh | RowG;
 
-const HEAD = 54;
+const HEAD = 66;
 const LANE = 26;
 
 export type Nav = { kind: 'today' | 'prev' | 'next'; n: number };
@@ -851,6 +853,11 @@ export function Timeline({
           {/* header */}
           <div className="al-hdr" style={{ height: HEAD, width: nameW + width }}>
             <div className="al-corner">{groupBy === 'none' ? tr('Pessoa') : tr('Pessoa')}</div>
+            {bands(vcols).map((g) => (
+              <div key={g.a} className="al-band" style={{ left: x(g.a), width: (g.b - g.a + 1) * ppd }}>
+                <span>{g.label}</span>
+              </div>
+            ))}
             {vcols.map((c, i) => {
               const w = (c.b - c.a + 1) * ppd;
               return (
@@ -861,7 +868,6 @@ export function Timeline({
                   data-day={isoOf(c.a)}
                   title={c.hol ? holidayName(c.hol, lang) : undefined}
                 >
-                  {c.top && <span className="top">{c.top}</span>}
                   <span className="lbl">{c.lbl}</span>
                   {c.sub && (zoom === 'day' || zoom === 'week') && (
                     <span
@@ -971,46 +977,48 @@ export function Timeline({
           )}
         </div>
       </div>
-      {menu && (
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 305 }}
-            onPointerDown={() => setMenu(null)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setMenu(null);
-            }}
-          />
-          <div
-            className="al-menu"
-            role="menu"
-            style={{
-              left: Math.min(menu.x, window.innerWidth - 240),
-              top: Math.min(menu.y, window.innerHeight - 280),
-            }}
-          >
-            {menu.items.map((m, i) =>
-              m ? (
-                <button
-                  key={i}
-                  type="button"
-                  role="menuitem"
-                  autoFocus={i === 0}
-                  onClick={() => {
-                    setMenu(null);
-                    m[1]();
-                  }}
-                >
-                  {m[0]}
-                  {m[2] && <span className="k al-kbd">{m[2]}</span>}
-                </button>
-              ) : (
-                <hr key={i} />
-              ),
-            )}
-          </div>
-        </>
-      )}
+      {menu &&
+        createPortal(
+          <>
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 8999 }}
+              onPointerDown={() => setMenu(null)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setMenu(null);
+              }}
+            />
+            <div
+              className="kh-popover al-menu"
+              role="menu"
+              style={{
+                left: Math.min(menu.x, window.innerWidth - 240),
+                top: Math.min(menu.y, window.innerHeight - 280),
+              }}
+            >
+              {menu.items.map((m, i) =>
+                m ? (
+                  <button
+                    key={i}
+                    type="button"
+                    role="menuitem"
+                    autoFocus={i === 0}
+                    onClick={() => {
+                      setMenu(null);
+                      m[1]();
+                    }}
+                  >
+                    {m[0]}
+                    {m[2] && <span className="k al-kbd">{m[2]}</span>}
+                  </button>
+                ) : (
+                  <hr key={i} />
+                ),
+              )}
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   );
 }

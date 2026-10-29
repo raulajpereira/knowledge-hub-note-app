@@ -625,7 +625,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
 /** Vacation and other absences of the person (marked by the manager; they take capacity off). */
 function PersonAbsences({ mg, pid }: { mg: Mg; pid: string }) {
   const { tr } = mg;
-  const [pop, setPop] = useState<{ a: Absence; isNew: boolean; x: number; y: number } | null>(null);
+  const [pop, setPop] = useState<{ a: Absence; isNew: boolean } | null>(null);
   const today = mg.wk(0);
   const list = mg.AB.filter((a) => a.person === pid && a.to >= today).sort((a, b) =>
     a.from.localeCompare(b.from),
@@ -637,14 +637,7 @@ function PersonAbsences({ mg, pid }: { mg: Mg; pid: string }) {
         <button
           type="button"
           className="mg-h12"
-          onClick={(e) =>
-            setPop({
-              a: newAbsence(pid, today, addDays(today, 4)),
-              isNew: true,
-              x: e.clientX - 300,
-              y: e.clientY + 10,
-            })
-          }
+          onClick={() => setPop({ a: newAbsence(pid, today, addDays(today, 4)), isNew: true })}
           style={css(
             'height:32px;padding:0 14px;border-radius:999px;border:1px solid rgb(var(--w) / .16);background:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;',
           )}
@@ -658,8 +651,8 @@ function PersonAbsences({ mg, pid }: { mg: Mg; pid: string }) {
           role="button"
           tabIndex={0}
           className="mg-h10"
-          onClick={(e) => setPop({ a, isNew: false, x: e.clientX - 300, y: e.clientY + 10 })}
-          onKeyDown={(e) => e.key === 'Enter' && setPop({ a, isNew: false, x: 400, y: 300 })}
+          onClick={() => setPop({ a, isNew: false })}
+          onKeyDown={(e) => e.key === 'Enter' && setPop({ a, isNew: false })}
           style={css(
             'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border-radius:16px;background:repeating-linear-gradient(135deg,rgb(var(--w) / .08) 0 3px,rgb(var(--w) / .03) 3px 8px);border:1px solid rgb(var(--w) / .14);cursor:pointer;',
           )}
@@ -684,8 +677,6 @@ function PersonAbsences({ mg, pid }: { mg: Mg; pid: string }) {
           mg={mg}
           draft={pop.a}
           isNew={pop.isNew}
-          x={pop.x}
-          y={pop.y}
           onClose={() => setPop(null)}
           onSave={(a) => {
             mg.AL.change({ ab: [a] });

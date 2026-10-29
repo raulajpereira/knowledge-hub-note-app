@@ -15,7 +15,7 @@ import {
 import { Popover, usePersistentState } from '@/components/ui';
 import { OPT } from '../css';
 import type { Mg } from '../store';
-import { AbsencePop, BookingPop, Floating } from './Popovers';
+import { AbsencePop, BookingPop, Fld } from './Popovers';
 import { Timeline, type GroupBy, type Nav, type Unit } from './Timeline';
 import { Grid, type GUnit } from './Grid';
 import { ProjectsView } from './ProjectsView';
@@ -36,9 +36,7 @@ export type Filters = {
   hidePh?: boolean;
   hideAbs?: boolean;
 };
-type Pop =
-  | { kind: 'bk'; b: Booking; isNew: boolean; x: number; y: number }
-  | { kind: 'ab'; a: Absence; isNew: boolean; x: number; y: number };
+type Pop = { kind: 'bk'; b: Booking; isNew: boolean } | { kind: 'ab'; a: Absence; isNew: boolean };
 
 const SearchIcon = () => (
   <svg
@@ -87,8 +85,8 @@ export function AllocPage({ mg }: { mg: Mg }) {
   const [nav, setNav] = useState<Nav>({ kind: 'today', n: 0 });
   const [vis, setVis] = useState<[Dn, Dn]>(win);
   const [pop, setPop] = useState<Pop | null>(null);
-  const [filtOpen, setFiltOpen] = useState<{ x: number; y: number } | null>(null);
-  const [keys, setKeys] = useState<{ x: number; y: number } | null>(null);
+  const filtBtn = useRef<HTMLButtonElement>(null);
+  const [filtOpen, setFiltOpen] = useState(false);
   const absHelpBtn = useRef<HTMLButtonElement>(null);
   const [absHelp, setAbsHelp] = useState(false);
   const want = sp.get('v');
@@ -148,15 +146,10 @@ export function AllocPage({ mg }: { mg: Mg }) {
     });
   }, [mg, vis, qq, fl, bkFilter]);
 
-  const openBk = useCallback(
-    (b: Booking, isNew: boolean, x: number, y: number) => setPop({ kind: 'bk', b, isNew, x, y }),
-    [],
-  );
-  const openAb = useCallback(
-    (a: Absence, isNew: boolean, x: number, y: number) => setPop({ kind: 'ab', a, isNew, x, y }),
-    [],
-  );
-  const addNew = (e: React.MouseEvent) => {
+  // the dialogs are centred: where the click was does not matter
+  const openBk = useCallback((b: Booking, isNew: boolean) => setPop({ kind: 'bk', b, isNew }), []);
+  const openAb = useCallback((a: Absence, isNew: boolean) => setPop({ kind: 'ab', a, isNew }), []);
+  const addNew = () => {
     const t = dnOf(isoOf(vis[0]));
     const mon = Math.max(t, dnOf(mg.wk(0)));
     openBk(
@@ -166,8 +159,6 @@ export function AllocPage({ mg }: { mg: Mg }) {
         to: isoOf(mon + 4),
       }),
       true,
-      e.clientX - 360,
-      e.clientY + 24,
     );
   };
 
@@ -186,7 +177,7 @@ export function AllocPage({ mg }: { mg: Mg }) {
   const span = vis[1] - vis[0] + 1;
   const sub =
     view === 'tl'
-      ? `${tr(`${people.length} pessoas`)} · ${rangeLabel(vis[0], vis[1], lang)} · ${tr('arraste numa linha vazia para criar · Shift+arrastar marca ausência')}`
+      ? `${tr(`${people.length} pessoas`)} · ${rangeLabel(vis[0], vis[1], lang)} · ${tr('arraste numa linha vazia para criar')}`
       : view === 'grid'
         ? tr('Escreva numa célula: distribui pelos dias úteis (feriados e ausências contam 0)')
         : view === 'proj'
@@ -216,8 +207,8 @@ export function AllocPage({ mg }: { mg: Mg }) {
           ref={absHelpBtn}
           type="button"
           className="al-help"
-          aria-label={tr('Como marcar férias')}
-          title={tr('Como marcar férias')}
+          aria-label={tr('Como criar uma ausência')}
+          title={tr('Como criar uma ausência')}
           aria-expanded={absHelp}
           onClick={() => setAbsHelp((v) => !v)}
         >
@@ -232,19 +223,51 @@ export function AllocPage({ mg }: { mg: Mg }) {
         <Popover
           anchor={absHelpBtn}
           align="right"
-          width={320}
+          width={380}
           onClose={() => setAbsHelp(false)}
-          className="al-help-pop"
+          className="al-pop al-help-pop"
+          role="dialog"
+          aria-label={tr('Como criar uma ausência')}
         >
-          <strong>{tr('Como marcar férias')}</strong>
-          <ul>
-            <li>{tr('Shift + arrastar na linha da pessoa, nos dias da ausência')}</li>
-            <li>{tr('Botão direito num dia da pessoa › Marcar ausência')}</li>
-            <li>{tr('Recursos › a pessoa › Ausências')}</li>
-          </ul>
-          <span>
-            {tr('Tipos: Férias, Doença, Formação ou Outra. Os dias de ausência não contam na capacidade.')}
-          </span>
+          <div className="al-pop-hd">
+            <b>{tr('Como criar uma ausência')}</b>
+          </div>
+          <div className="al-pop-bd">
+            <ol className="al-steps">
+              <li>
+                <b>{tr('Shift + arrastar')}</b> {tr('na linha da pessoa, sobre os dias da ausência.')}
+              </li>
+              <li>
+                <b>{tr('Botão direito')}</b> {tr('num dia da pessoa › Marcar ausência.')}
+              </li>
+              <li>
+                <b>{tr('Recursos')}</b> {tr('› a pessoa › Ausências › Marcar ausência.')}
+              </li>
+            </ol>
+            <div className="al-help-sec">
+              <span className="al-f-l">{tr('Tipo')}</span>
+              <div className="al-chips">
+                {(['Férias', 'Doença', 'Formação', 'Outra'] as const).map((t) => (
+                  <span key={t} className="al-chip" aria-pressed="false">
+                    {tr(t)}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="al-help-sec">
+              <span className="al-f-l">{tr('Dia inteiro ou horas')}</span>
+              <p>
+                {tr(
+                  'Por omissão é o dia inteiro. Para só algumas horas, escolha «Parte do dia» e indique as horas.',
+                )}
+              </p>
+            </div>
+            <div className="al-help-sec">
+              <span className="al-f-l">{tr('Alterar ou eliminar')}</span>
+              <p>{tr('Clique na barra às riscas da ausência: abre a ficha, com Guardar e Eliminar.')}</p>
+            </div>
+            <p className="al-note">{tr('Os dias de ausência não contam na capacidade.')}</p>
+          </div>
         </Popover>
       )}
     </div>
@@ -281,7 +304,7 @@ export function AllocPage({ mg }: { mg: Mg }) {
       <header className="al-head">
         <div className="al-head-row top">
           <div className="al-titles">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <h1>{tr('Alocações')}</h1>
               <span className="al-seg" role="tablist" aria-label={tr('Vista')}>
                 {VIEWS.map(([k, l]) => (
@@ -301,7 +324,15 @@ export function AllocPage({ mg }: { mg: Mg }) {
               {sub}
             </span>
           </div>
-          <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <label
+            style={{
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              flex: '0 1 212px',
+              minWidth: 140,
+            }}
+          >
             <span
               style={{
                 position: 'absolute',
@@ -322,9 +353,11 @@ export function AllocPage({ mg }: { mg: Mg }) {
           </label>
           <button
             type="button"
+            ref={filtBtn}
             className={`al-pill${nFilters ? ' on' : ''}`}
-            onClick={(e) => setFiltOpen({ x: e.clientX - 150, y: e.clientY + 22 })}
+            onClick={() => setFiltOpen((v) => !v)}
             aria-haspopup="dialog"
+            aria-expanded={filtOpen}
           >
             <FilterIcon />
             {tr('Filtros')}
@@ -397,18 +430,6 @@ export function AllocPage({ mg }: { mg: Mg }) {
           </span>
           <span style={{ flex: 1 }} />
           {(isTl || view === 'proj') && legend}
-          {isTl && (
-            <button
-              type="button"
-              className="al-pill sm"
-              style={{ padding: '0 10px' }}
-              title={tr('Atalhos de teclado')}
-              aria-label={tr('Atalhos de teclado')}
-              onClick={(e) => setKeys({ x: e.clientX - 300, y: e.clientY + 20 })}
-            >
-              ?
-            </button>
-          )}
           {isTl && (
             <span className="al-seg" role="group" aria-label={tr('Unidade')}>
               {(
@@ -503,8 +524,6 @@ export function AllocPage({ mg }: { mg: Mg }) {
           mg={mg}
           draft={pop.b}
           isNew={pop.isNew}
-          x={pop.x}
-          y={pop.y}
           onClose={() => setPop(null)}
           onSave={(b) => {
             mg.AL.change({ bk: [b] });
@@ -526,8 +545,6 @@ export function AllocPage({ mg }: { mg: Mg }) {
           mg={mg}
           draft={pop.a}
           isNew={pop.isNew}
-          x={pop.x}
-          y={pop.y}
           onClose={() => setPop(null)}
           onSave={(a) => {
             mg.AL.change({ ab: [a] });
@@ -543,52 +560,8 @@ export function AllocPage({ mg }: { mg: Mg }) {
           }
         />
       )}
-      {keys && (
-        <Floating
-          x={keys.x}
-          y={keys.y}
-          w={330}
-          label={tr('Atalhos de teclado')}
-          onClose={() => setKeys(null)}
-        >
-          <div className="al-pop-bd" style={{ paddingTop: 14, gap: 7 }}>
-            <b style={{ fontSize: 14 }}>{tr('Atalhos de teclado')}</b>
-            {(
-              [
-                ['Arrastar numa linha', 'criar'],
-                ['Shift + arrastar', 'marcar ausência'],
-                ['Arrastar a barra', 'mover (também para outra pessoa)'],
-                ['Arrastar a ponta', 'mudar início / fim'],
-                ['Alt + arrastar', 'copiar'],
-                ['← →', 'mover 1 dia'],
-                ['Shift + ← →', 'encurtar / alongar'],
-                ['S', 'dividir no dia do rato'],
-                ['T', 'tentativo / confirmado'],
-                ['Ctrl D', 'duplicar a seguir'],
-                ['Del', 'eliminar'],
-                ['Ctrl Z / Ctrl Shift Z', 'desfazer / refazer'],
-                ['↵', 'editar'],
-              ] as const
-            ).map(([k, d]) => (
-              <span key={k} style={{ display: 'flex', gap: 10, fontSize: 12.5 }}>
-                <span className="al-kbd" style={{ minWidth: 120, textAlign: 'center' }}>
-                  {tr(k)}
-                </span>
-                {tr(d)}
-              </span>
-            ))}
-          </div>
-        </Floating>
-      )}
       {filtOpen && (
-        <FilterPop
-          mg={mg}
-          fl={fl}
-          setFl={setFl}
-          x={filtOpen.x}
-          y={filtOpen.y}
-          onClose={() => setFiltOpen(null)}
-        />
+        <FilterPop mg={mg} fl={fl} setFl={setFl} anchor={filtBtn} onClose={() => setFiltOpen(false)} />
       )}
     </section>
   );
@@ -598,15 +571,13 @@ function FilterPop({
   mg,
   fl,
   setFl,
-  x,
-  y,
+  anchor,
   onClose,
 }: {
   mg: Mg;
   fl: Filters;
   setFl: (f: Filters) => void;
-  x: number;
-  y: number;
+  anchor: React.RefObject<HTMLButtonElement | null>;
   onClose: () => void;
 }) {
   const { tr } = mg;
@@ -617,10 +588,20 @@ function FilterPop({
     </button>
   );
   return (
-    <Floating x={x} y={y} w={320} label={tr('Filtros')} onClose={onClose}>
-      <div className="al-pop-bd" style={{ paddingTop: 14 }}>
-        <label className="al-lbl">
-          {tr('Projeto')}
+    <Popover
+      anchor={anchor}
+      align="right"
+      width={360}
+      onClose={onClose}
+      className="al-pop al-filters"
+      role="dialog"
+      aria-label={tr('Filtros')}
+    >
+      <div className="al-pop-hd">
+        <b>{tr('Filtros')}</b>
+      </div>
+      <div className="al-pop-bd">
+        <Fld label={tr('Projeto')}>
           <select
             className="al-in"
             value={fl.proj ?? ''}
@@ -633,9 +614,8 @@ function FilterPop({
               </option>
             ))}
           </select>
-        </label>
-        <label className="al-lbl">
-          {tr('Cliente')}
+        </Fld>
+        <Fld label={tr('Cliente')}>
           <select
             className="al-in"
             value={fl.client ?? ''}
@@ -648,9 +628,8 @@ function FilterPop({
               </option>
             ))}
           </select>
-        </label>
-        <label className="al-lbl">
-          {tr('Área principal')}
+        </Fld>
+        <Fld label={tr('Área principal')}>
           <select
             className="al-in"
             value={fl.area ?? ''}
@@ -663,28 +642,36 @@ function FilterPop({
               </option>
             ))}
           </select>
-        </label>
-        <div className="al-chips">
-          {chip(fl.over, 'Só sobre-alocados', () => set({ over: !fl.over || undefined, free: undefined }))}
-          {chip(fl.free, 'Só com disponibilidade', () =>
-            set({ free: !fl.free || undefined, over: undefined }),
-          )}
-        </div>
-        <div className="al-chips">
-          {chip(!fl.hideTent, 'Tentativos', () => set({ hideTent: !fl.hideTent || undefined }))}
-          {chip(!fl.hidePh, 'Por atribuir', () => set({ hidePh: !fl.hidePh || undefined }))}
-          {chip(!fl.hideAbs, 'Ausências', () => set({ hideAbs: !fl.hideAbs || undefined }))}
-        </div>
+        </Fld>
+        <Fld as="div" label={tr('Ocupação')}>
+          <div className="al-chips">
+            {chip(fl.over, 'Só sobre-alocados', () => set({ over: !fl.over || undefined, free: undefined }))}
+            {chip(fl.free, 'Só com disponibilidade', () =>
+              set({ free: !fl.free || undefined, over: undefined }),
+            )}
+          </div>
+        </Fld>
+        <Fld as="div" label={tr('Mostrar')}>
+          <div className="al-chips">
+            {chip(!fl.hideTent, 'Tentativos', () => set({ hideTent: !fl.hideTent || undefined }))}
+            {chip(!fl.hidePh, 'Por atribuir', () => set({ hidePh: !fl.hidePh || undefined }))}
+            {chip(!fl.hideAbs, 'Ausências', () => set({ hideAbs: !fl.hideAbs || undefined }))}
+          </div>
+        </Fld>
       </div>
       <div className="al-pop-ft">
-        <button type="button" className="al-btn ghost sm" onClick={() => setFl({})}>
+        <button
+          type="button"
+          className="al-btn ghost"
+          onClick={() => setFl({})}
+          disabled={!Object.keys(fl).length}
+        >
           {tr('Limpar filtros')}
         </button>
-        <span style={{ flex: 1 }} />
-        <button type="button" className="al-btn sm" onClick={onClose}>
+        <button type="button" className="al-btn" onClick={onClose}>
           {tr('Fechar')}
         </button>
       </div>
-    </Floating>
+    </Popover>
   );
 }

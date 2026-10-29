@@ -22,10 +22,10 @@ import type { Mg } from '../store';
 import type { Filters } from './AllocPage';
 import type { GUnit } from './Grid';
 import { Floating } from './Popovers';
-import { PPD, columns, dayMon, type TZoom } from './shared';
+import { PPD, bands, columns, dayMon, type TZoom } from './shared';
 import type { Nav } from './Timeline';
 
-const HEAD = 54;
+const HEAD = 66;
 const NAMEW = 250;
 type PRow =
   | { k: 'pj'; key: string; pj: MgProject; y: number; h: number }
@@ -447,6 +447,11 @@ export function ProjectsView({
           >
             <div className="al-hdr" style={{ height: HEAD, width: NAMEW + width }}>
               <div className="al-corner">{tr('Projeto · função')}</div>
+              {bands(cols.filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)).map((g) => (
+                <div key={g.a} className="al-band" style={{ left: x(g.a), width: (g.b - g.a + 1) * ppd }}>
+                  <span>{g.label}</span>
+                </div>
+              ))}
               {cols
                 .filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)
                 .map((c, i) => (
@@ -455,17 +460,12 @@ export function ProjectsView({
                     className={`al-hcol${c.today ? ' today' : ''}${c.top && i ? ' newgrp' : ''}`}
                     style={{ left: x(c.a), width: (c.b - c.a + 1) * ppd }}
                   >
-                    {c.hol && zoom === 'week' ? (
-                      <span
-                        className="top"
-                        style={{ color: 'var(--al-hol)', textTransform: 'none', letterSpacing: 0 }}
-                      >
-                        {tr('feriado')}
-                      </span>
-                    ) : (
-                      c.top && <span className="top">{c.top}</span>
-                    )}
                     <span className="lbl">{c.lbl}</span>
+                    {zoom === 'week' && (
+                      <span className="sub" style={c.hol ? { color: 'var(--al-hol)' } : undefined}>
+                        {c.hol ? tr('feriado') : c.sub}
+                      </span>
+                    )}
                   </div>
                 ))}
             </div>
@@ -657,68 +657,65 @@ function DropPop({
   const pct = cap ? Math.round(((conf + (b.status === 'confirmed' ? total : 0)) / cap) * 100) : 0;
   const first = d.p.name.split(' ')[0];
   const row = (k: string, v: React.ReactNode) => (
-    <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: 10, fontSize: 13 }}>
-      <span style={{ color: 'rgb(var(--t) / calc(.65 * var(--t-k)))' }}>{k}</span>
-      <span className="al-mono">{v}</span>
+    <div className="al-kv">
+      <span>{k}</span>
+      <span>{v}</span>
     </div>
   );
   return (
-    <Floating x={d.x} y={d.y} w={370} label={tr('Largar na função')} onClose={onClose}>
+    <Floating x={d.x} y={d.y} w={440} label={tr('Largar na função')} onClose={onClose}>
       <form
-        className="al-pop-bd"
-        style={{ paddingTop: 16, gap: 8 }}
         onSubmit={(e) => {
           e.preventDefault();
           onDrop(b);
         }}
       >
-        <b style={{ fontSize: 14 }}>
-          {tr('Largar em')} {pj?.code} · {b.role || tr('Por atribuir')}
-        </b>
-        {row(tr('Período'), `${dayMon(f, lang)} → ${dayMon(t, lang)} · ${tr(`${eq.days} dias úteis`)}`)}
-        {row(
-          tr('Esforço'),
-          `${fmtNum(eq.hpw, lang)}h/${lang === 'en' ? 'wk' : 'sem'} = ${fmtNum(eq.hpd, lang)}h/${lang === 'en' ? 'day' : 'dia'} · ${fmtNum(total, lang)}h`,
-        )}
-        {row(
-          tr('Estado'),
-          <span style={{ fontFamily: 'inherit' }}>
-            {tr(b.status === 'tentative' ? 'Tentativo' : 'Confirmado')}
-            {pj?.status === 'Planeado' && (
-              <span style={{ opacity: 0.7 }}> ({tr('o projeto é proposta')})</span>
-            )}
-          </span>,
-        )}
-        {row(
-          first ?? '',
-          c ? (
-            <span style={{ color: 'oklch(calc(.84 * var(--lk)) .14 30)' }}>
-              {tr(`fica a ${pct}% · ${c.days.length} dias acima da capacidade`)}
-            </span>
-          ) : (
-            <span style={{ color: 'oklch(calc(.86 * var(--lk)) .13 150)' }}>
-              {tr(`fica a ${pct}% · sem conflitos`)}
-            </span>
-          ),
-        )}
-        {row(
-          tr('Custo'),
-          `${fmtNum(total, lang, 0)}h × ${fmtNum(d.p.rate, lang, 0)} €/h = ${mgEur(total * d.p.rate)}`,
-        )}
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 }}>
-          <button
-            type="button"
-            className="al-btn ghost sm"
-            aria-pressed={half}
-            onClick={() => setHalf(!half)}
-          >
+        <div className="al-pop-hd">
+          <b>
+            {tr('Largar em')} {pj?.code} · {b.role || tr('Por atribuir')}
+          </b>
+        </div>
+        <div className="al-pop-bd al-kvs">
+          {row(tr('Período'), `${dayMon(f, lang)} → ${dayMon(t, lang)} · ${tr(`${eq.days} dias úteis`)}`)}
+          {row(
+            tr('Esforço'),
+            `${fmtNum(eq.hpw, lang)}h/${lang === 'en' ? 'wk' : 'sem'} = ${fmtNum(eq.hpd, lang)}h/${lang === 'en' ? 'day' : 'dia'} · ${fmtNum(total, lang)}h`,
+          )}
+          {row(
+            tr('Estado'),
+            <span style={{ fontFamily: 'inherit' }}>
+              {tr(b.status === 'tentative' ? 'Tentativo' : 'Confirmado')}
+              {pj?.status === 'Planeado' && (
+                <span style={{ opacity: 0.7 }}> ({tr('o projeto é proposta')})</span>
+              )}
+            </span>,
+          )}
+          {row(
+            first ?? '',
+            c ? (
+              <span style={{ color: 'oklch(calc(.84 * var(--lk)) .14 30)' }}>
+                {tr(`fica a ${pct}% · ${c.days.length} dias acima da capacidade`)}
+              </span>
+            ) : (
+              <span style={{ color: 'oklch(calc(.86 * var(--lk)) .13 150)' }}>
+                {tr(`fica a ${pct}% · sem conflitos`)}
+              </span>
+            ),
+          )}
+          {row(
+            tr('Custo'),
+            `${fmtNum(total, lang, 0)}h × ${fmtNum(d.p.rate, lang, 0)} €/h = ${mgEur(total * d.p.rate)}`,
+          )}
+        </div>
+        <div className="al-pop-ft">
+          <button type="button" className="al-btn ghost" aria-pressed={half} onClick={() => setHalf(!half)}>
             {half ? tr('100%') : tr('Só 50%')}
           </button>
-          <button type="button" className="al-btn ghost sm" onClick={() => onEdit(b)}>
+          <button type="button" className="al-btn ghost" onClick={() => onEdit(b)}>
             {tr('Mudar período')}
           </button>
-          <button type="submit" className="al-btn sm" autoFocus>
-            {tr('Largar')} ↵
+          <button type="submit" className="al-btn" autoFocus>
+            {tr('Largar')}
           </button>
         </div>
       </form>

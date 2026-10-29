@@ -4,8 +4,11 @@
   --al-u2: oklch(0.8 0.15 152);
   --al-u3: oklch(0.7 0.18 27);
   --al-hol: oklch(calc(0.86 * var(--lk)) 0.12 30);
-  /* behind the sticky name column (what scrolls under it must not show through) */
-  --al-solid: rgb(60 47 40 / 0.985);
+  /* the header's top band (week · month · year) */
+  --al-band: 26px;
+  /* under the sticky glass columns: cells and bars scroll beneath them, a
+     little more tint keeps the names readable over the coloured values */
+  --al-under: rgb(var(--d) / calc(0.3 * var(--d-k)));
 }
 .al-root {
   --al-name: 236px;
@@ -62,8 +65,9 @@
   flex-direction: column;
   gap: 4px;
   margin-right: auto;
-  min-width: 0;
-  flex: 1;
+  /* as wide as the title and the view tabs; the subtitle only fills it */
+  min-width: max-content;
+  flex: 1 1 auto;
 }
 .al-titles h1 {
   margin: 0;
@@ -72,31 +76,37 @@
   letter-spacing: -0.02em;
 }
 .al-sub {
+  contain: inline-size;
   font-size: 13.5px;
   color: rgb(var(--t) / calc(0.72 * var(--t-k)));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* segmented controls: the app's .kh-seg */
 .al-seg {
   display: inline-flex;
   gap: 2px;
   padding: 3px;
   border-radius: 999px;
-  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
-  border: 1px solid rgb(var(--w) / 0.12);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.16 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.06 * var(--sf-k)))
+  );
+  border: 1px solid rgb(var(--w) / 0.18);
   flex: none;
 }
 .al-seg button {
-  height: 28px;
-  padding: 0 12px;
+  height: 30px;
+  padding: 0 13px;
   border-radius: 999px;
   border: 0;
   background: transparent;
-  color: rgb(var(--t) / calc(0.78 * var(--t-k)));
+  color: rgb(var(--t) / calc(0.82 * var(--t-k)));
   font: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -108,15 +118,17 @@
   background: var(--ink);
   color: var(--ink-inv);
 }
+/* secondary buttons: the app's ghost pill (.kh-sap-ghost) */
 .al-pill {
-  height: 36px;
-  padding: 0 14px;
+  height: 38px;
+  padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid rgb(var(--w) / 0.14);
-  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.2);
+  background: rgb(var(--w) / 0.1);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -125,12 +137,12 @@
   flex: none;
 }
 .al-pill:hover {
-  background: rgb(var(--w) / 0.1);
+  background: rgb(var(--w) / 0.16);
 }
 .al-pill.sm {
-  height: 30px;
-  font-size: 12px;
-  padding: 0 11px;
+  height: 34px;
+  font-size: 12.5px;
+  padding: 0 13px;
 }
 .al-pill.on {
   border-color: rgb(var(--w) / 0.45);
@@ -138,65 +150,80 @@
 .al-pill .n {
   font-family: 'Geist Mono', monospace;
   font-size: 11px;
-  padding: 1px 6px;
+  padding: 1px 7px;
   border-radius: 999px;
   background: var(--ink);
   color: var(--ink-inv);
 }
+.al-pill select {
+  font-weight: 600;
+}
 .al-search {
-  height: 36px;
-  width: 210px;
-  padding: 0 14px 0 34px;
+  height: 38px;
+  width: 212px;
+  min-width: 140px;
+  padding: 0 14px 0 36px;
   border-radius: 999px;
   border: 1px solid rgb(var(--w) / 0.14);
-  background: rgb(var(--d) / calc(0.22 * var(--d-k))) no-repeat 12px 50% / 14px;
+  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 13.5px;
   outline: none;
-  flex: none;
+  flex: 0 1 auto;
 }
 .al-search:focus {
   border-color: rgb(var(--w) / 0.4);
 }
 .al-search::placeholder {
-  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
 }
+/* primary button: the app's white pill (.kh-sap-new) */
 .al-btn {
-  height: 36px;
-  padding: 0 16px;
+  height: 38px;
+  padding: 0 18px;
   border-radius: 999px;
   border: 0;
   background: var(--ink);
   color: var(--ink-inv);
   font: inherit;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   white-space: nowrap;
   cursor: pointer;
   flex: none;
+  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.18 * var(--sh-k)));
 }
 .al-btn:disabled {
   opacity: 0.45;
   cursor: default;
 }
 .al-btn.ghost {
-  background: rgb(var(--w) / 0.08);
+  background: rgb(var(--w) / 0.1);
   color: var(--ink);
-  border: 1px solid rgb(var(--w) / 0.18);
+  border: 1px solid rgb(var(--w) / 0.2);
+  box-shadow: none;
+}
+.al-btn.ghost:hover {
+  background: rgb(var(--w) / 0.16);
 }
 .al-btn.sm {
-  height: 30px;
-  font-size: 12px;
-  padding: 0 12px;
+  height: 34px;
+  font-size: 12.5px;
+  padding: 0 14px;
 }
 .al-btn.danger {
   background: transparent;
   color: var(--kh-error-text);
-  border: 1px solid rgb(var(--w) / 0.16);
+  border: 1px solid oklch(0.7 0.17 27 / 0.45);
+  box-shadow: none;
+}
+.al-btn.danger:hover {
+  background: oklch(0.6 0.17 27 / 0.16);
 }
 .al-range {
   font-size: 13px;
@@ -263,8 +290,12 @@
   min-width: 0;
   min-height: 0;
   border-radius: 22px;
-  background: rgb(var(--d) / calc(0.16 * var(--d-k)));
-  border: 1px solid rgb(var(--w) / 0.1);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.06 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.03 * var(--sf-k)))
+  );
+  border: 1px solid rgb(var(--w) / 0.12);
   overflow: hidden;
   position: relative;
   display: flex;
@@ -280,20 +311,23 @@
 .al-canvas {
   position: relative;
 }
+/* sticky header and first column: the glass of the app's other tables */
 .al-hdr {
   position: sticky;
   top: 0;
   z-index: 8;
-  background:
-    linear-gradient(
-      180deg,
-      rgb(var(--sf) / calc(0.18 * var(--sf-k))),
-      rgb(var(--sf) / calc(0.1 * var(--sf-k)))
-    ),
-    var(--al-solid);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border-bottom: 1px solid rgb(var(--w) / 0.12);
+  background: var(--kh-sticky-bg);
+  border-bottom: 1px solid var(--kh-divider);
+}
+/* the blur sits on a layer behind: a blurred parent would stop the corner's own blur */
+.al-hdr::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
 }
 .al-corner {
   position: sticky;
@@ -302,59 +336,68 @@
   width: var(--al-name);
   height: 100%;
   display: flex;
-  align-items: center;
-  padding: 0 18px;
-  font-size: 12.5px;
+  align-items: flex-end;
+  padding: 0 18px 14px;
+  font-size: 12px;
   font-weight: 600;
-  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
-  border-right: 1px solid rgb(var(--w) / 0.1);
-  background:
-    linear-gradient(
-      90deg,
-      rgb(var(--sf) / calc(0.1 * var(--sf-k))),
-      rgb(var(--sf) / calc(0.06 * var(--sf-k)))
-    ),
-    var(--al-solid);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
+  border-right: 1px solid var(--kh-divider);
+  background: var(--kh-sticky-bg), var(--al-under);
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
 }
-.al-hcol {
+/* top row: one band per week / month / year, its label kept in view */
+.al-band {
   position: absolute;
   top: 0;
-  height: 100%;
+  height: var(--al-band);
+  display: flex;
+  align-items: center;
+  border-left: 1px solid rgb(var(--w) / 0.16);
+  border-bottom: 1px solid rgb(var(--w) / 0.08);
+  box-sizing: border-box;
+  overflow: visible;
+  pointer-events: none;
+}
+.al-band > span {
+  position: sticky;
+  left: calc(var(--al-name) + 10px);
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgb(var(--t) / calc(0.78 * var(--t-k)));
+  white-space: nowrap;
+}
+/* bottom row: the day (or week / month) and its weekday */
+.al-hcol {
+  position: absolute;
+  top: var(--al-band);
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  padding-bottom: 6px;
-  gap: 3px;
+  justify-content: center;
+  gap: 2px;
   border-left: 1px solid rgb(var(--w) / 0.05);
-  overflow: visible;
+  overflow: hidden;
 }
 .al-hcol.newgrp {
   border-left-color: rgb(var(--w) / 0.16);
 }
-.al-hcol .top {
-  position: absolute;
-  left: 6px;
-  top: 7px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
-  white-space: nowrap;
-}
 .al-hcol .lbl {
-  height: 20px;
-  min-width: 22px;
+  height: 22px;
+  min-width: 24px;
   padding: 0 6px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'Geist Mono', monospace;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
-  color: rgb(var(--t) / calc(0.82 * var(--t-k)));
+  color: rgb(var(--t) / calc(0.88 * var(--t-k)));
   white-space: nowrap;
 }
 .al-hcol.narrow .lbl {
@@ -370,11 +413,12 @@
   color: var(--al-hol);
 }
 .al-hcol.we {
-  background: rgb(var(--d) / calc(0.12 * var(--d-k)));
+  background: rgb(var(--d) / calc(0.1 * var(--d-k)));
 }
 .al-hcol .sub {
-  font-size: 9.5px;
-  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
+  font-size: 10px;
+  line-height: 1.1;
+  color: rgb(var(--t) / calc(0.58 * var(--t-k)));
   white-space: nowrap;
   max-width: 100%;
   overflow: hidden;
@@ -406,14 +450,10 @@
   align-items: center;
   gap: 11px;
   padding: 0 12px 0 16px;
-  background:
-    linear-gradient(
-      90deg,
-      rgb(var(--sf) / calc(0.12 * var(--sf-k))),
-      rgb(var(--sf) / calc(0.07 * var(--sf-k)))
-    ),
-    var(--al-solid);
-  border-right: 1px solid rgb(var(--w) / 0.1);
+  background: var(--kh-sticky-col-bg), var(--al-under);
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
+  border-right: 1px solid var(--kh-divider);
   cursor: pointer;
 }
 .al-name .txt {
@@ -487,7 +527,10 @@
   left: 0;
   z-index: 5;
   min-width: var(--al-name);
-  background: linear-gradient(90deg, rgb(var(--w) / 0.035), rgb(var(--w) / 0.035)), var(--al-solid);
+  background: var(--kh-sticky-col-bg);
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
+  border-right: 1px solid var(--kh-divider);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -694,99 +737,119 @@
     0 0 8px oklch(0.7 0.18 27 / 0.7);
 }
 
-/* ── popovers / dialogs ───────────────────────────────────────────────────── */
-.al-pop {
-  position: fixed;
-  z-index: 300;
-  isolation: isolate;
+/* ── popovers (on the app's .kh-popover glass) and dialogs (on .kh-modal) ── */
+.kh-popover.al-pop {
+  padding: 0;
+  gap: 0;
   border-radius: 22px;
-  background: linear-gradient(180deg, rgb(70 56 48 / 0.82), rgb(52 41 35 / 0.86));
-  border: 1px solid rgb(var(--w) / 0.2);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 30px 80px rgb(0 0 0 / calc(0.45 * var(--sh-k)));
-  color: var(--ink);
-  display: flex;
-  flex-direction: column;
   max-height: calc(100vh - 24px);
-  overflow: auto;
-}
-.al-pop::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  backdrop-filter: blur(30px) saturate(160%);
-  -webkit-backdrop-filter: blur(30px) saturate(160%);
-}
-:root[data-theme='light'] {
-  --al-solid: rgb(246 240 234 / 0.985);
-}
-:root[data-theme='light'] .al-pop {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.9), rgb(250 246 242 / 0.92));
+  /* over the coloured bars and cells the glass is a little darker (as the
+     app's tag suggestions over fields), so the text stays readable */
+  background:
+    linear-gradient(
+      180deg,
+      rgb(var(--sf) / calc(0.2 * var(--sf-k))),
+      rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+    ),
+    rgb(var(--d) / calc(0.3 * var(--d-k)));
 }
 .al-pop-hd {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 14px 6px 16px;
+  padding: 18px 20px 2px;
 }
-.al-pop-hd .t {
-  flex: 1;
-  min-width: 0;
+.al-pop-hd b {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.al-pop-bd {
+  padding: 14px 20px 18px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 16px;
 }
-.al-pop-hd .t b {
-  font-size: 15px;
+.al-pop-ft {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 20px 18px;
+}
+.al-pop-ft .al-btn {
+  height: 40px;
+}
+.kh-modal.al-dlg {
+  width: min(780px, 100%);
+  gap: 22px;
+}
+.kh-modal.al-dlg--abs {
+  width: min(620px, 100%);
+}
+.al-dlg .kh-modal__foot {
+  align-items: center;
+  margin-top: 2px;
+}
+.al-dlg .kh-modal__foot .al-btn {
+  height: 44px;
+  padding: 0 22px;
+  font-size: 14px;
+}
+.al-dlg .kh-modal__foot .al-dlg-del {
+  margin-right: auto;
+}
+.al-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.al-grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
+}
+.al-grid2--wd {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+/* a field: the label above (as in Novo ticket), the control under it */
+.al-f {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.al-f-l {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12.5px;
   font-weight: 600;
-}
-.al-pop-hd .t span {
-  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: rgb(var(--t) / calc(0.7 * var(--t-k)));
   white-space: nowrap;
+}
+.al-f-l small {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgb(var(--t) / calc(0.58 * var(--t-k)));
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.al-x {
-  width: 30px;
-  height: 30px;
-  flex: none;
-  border-radius: 50%;
-  border: 1px solid rgb(var(--w) / 0.16);
-  background: rgb(var(--w) / 0.08);
-  color: var(--ink);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.al-pop-bd {
-  padding: 6px 16px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.al-lbl {
-  font-size: 11.5px;
-  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
 .al-in {
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 12px;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
   border: 1px solid rgb(var(--w) / 0.14);
   background: rgb(var(--d) / calc(0.25 * var(--d-k)));
   color: var(--ink);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 15px;
   outline: none;
   min-width: 0;
   width: 100%;
@@ -801,92 +864,185 @@
 .al-in:focus {
   border-color: rgb(var(--w) / 0.45);
 }
+.al-in::placeholder {
+  color: rgb(var(--t) / calc(0.45 * var(--t-k)));
+}
 select.al-in {
   appearance: none;
-  padding-right: 30px;
+  -webkit-appearance: none;
+  padding-right: 38px;
+  background-color: rgb(var(--w) / 0.06);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f4efe9' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
+  background-position: right 14px center;
+  background-size: 12px;
+  cursor: pointer;
 }
-.al-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+:root[data-theme='light'] select.al-in {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23332a24' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
+select.al-in option {
+  background-color: var(--kh-option-bg);
+  color: var(--kh-option-fg);
+}
+select.al-in:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.al-pop .al-in {
+  height: 42px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+/* the five linked effort fields: write in one, the others follow */
 .al-eff {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  gap: 12px;
 }
 .al-eff label {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 2px;
-  padding: 6px 7px;
-  border-radius: 12px;
-  border: 1px solid rgb(var(--w) / 0.14);
-  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
-  font-size: 10px;
-  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+  gap: 7px;
   min-width: 0;
+  cursor: text;
 }
-.al-eff label.on {
+.al-eff .k {
+  font-size: 12px;
+  color: rgb(var(--t) / calc(0.68 * var(--t-k)));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-eff .v {
+  box-sizing: border-box;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--d) / calc(0.25 * var(--d-k)));
+}
+.al-eff label.on .k {
+  color: var(--ink);
+  font-weight: 600;
+}
+.al-eff label.on .v {
   border-color: var(--ink);
-  background: rgb(var(--w) / 0.1);
+  background: rgb(var(--w) / 0.12);
+  box-shadow: 0 0 0 3px rgb(var(--w) / 0.1);
 }
 .al-eff input {
+  flex: 1;
   width: 100%;
+  min-width: 0;
   border: 0;
+  padding: 0;
   background: transparent;
   color: var(--ink);
   font-family: 'Geist Mono', monospace;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
   outline: none;
-  padding: 0;
-  min-width: 0;
+}
+.al-eff i,
+.al-unit i {
+  font-style: normal;
+  font-size: 13px;
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+}
+.al-unit {
+  position: relative;
+  display: flex;
+}
+.al-unit .al-in {
+  padding-right: 34px;
+}
+.al-unit i {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 .al-wd {
   display: flex;
-  gap: 5px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
 .al-wd > button.wdb {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid rgb(var(--w) / 0.2);
-  background: transparent;
-  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+  height: 40px;
+  min-width: 52px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.06);
+  color: rgb(var(--t) / calc(0.75 * var(--t-k)));
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  padding: 0;
+}
+.al-wd > button.wdb:hover {
+  background: rgb(var(--w) / 0.12);
 }
 .al-wd > button.wdb[aria-pressed='true'] {
   background: var(--ink);
   color: var(--ink-inv);
   border-color: var(--ink);
 }
+.al-f .kh-seg {
+  align-self: flex-start;
+}
+.al-f .kh-seg button {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+.al-types {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.al-type {
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.06);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.al-type:hover {
+  background: rgb(var(--w) / 0.12);
+}
+.al-type[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ink-inv);
+  border-color: var(--ink);
+}
+/* warnings: the text, then what can be done, as buttons on their own line */
 .al-warn {
   display: flex;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: oklch(0.55 0.15 27 / 0.28);
-  border: 1px solid oklch(0.7 0.17 27 / 0.6);
-  font-size: 12.5px;
-  line-height: 1.45;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: oklch(0.55 0.15 27 / 0.22);
+  border: 1px solid oklch(0.7 0.17 27 / 0.5);
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 .al-warn.soft {
-  background: oklch(0.6 0.1 70 / 0.22);
-  border-color: oklch(0.8 0.12 75 / 0.5);
+  background: oklch(0.6 0.1 70 / 0.18);
+  border-color: oklch(0.8 0.12 75 / 0.45);
 }
 .al-warn .ic {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex: none;
   border-radius: 50%;
   background: oklch(0.68 0.2 27);
@@ -901,74 +1057,109 @@ select.al-in {
   background: oklch(0.75 0.14 75);
   color: #2a1f0e;
 }
-.al-warn a,
-.al-warn button.lk {
-  color: inherit;
-  text-decoration: underline;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
-}
-.al-pop-ft {
+.al-warn .tx {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+}
+.al-warn .acts {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 0 16px 14px;
+  margin-top: 8px;
+}
+.al-act {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.24);
+  background: rgb(var(--w) / 0.12);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.al-act:hover {
+  background: rgb(var(--w) / 0.2);
+}
+.al-note {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
 }
 .al-kbd {
   font-family: 'Geist Mono', monospace;
   font-size: 10.5px;
-  padding: 1px 5px;
-  border-radius: 5px;
+  padding: 1px 6px;
+  border-radius: 6px;
   border: 1px solid rgb(var(--w) / 0.22);
   background: rgb(var(--w) / 0.08);
   color: rgb(var(--t) / calc(0.75 * var(--t-k)));
 }
 .al-hint {
-  font-size: 11px;
-  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+  font-size: 11.5px;
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
   display: inline-flex;
   align-items: center;
   gap: 5px;
   white-space: nowrap;
 }
-.al-menu {
-  position: fixed;
-  z-index: 310;
-  min-width: 200px;
-  padding: 6px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgb(70 56 48 / 0.9), rgb(52 41 35 / 0.92));
-  border: 1px solid rgb(var(--w) / 0.2);
-  box-shadow: 0 20px 50px rgb(0 0 0 / calc(0.4 * var(--sh-k)));
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+.al-lbl {
+  font-size: 12.5px;
+  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
   display: flex;
   flex-direction: column;
+  gap: 7px;
+  min-width: 0;
 }
-:root[data-theme='light'] .al-menu {
-  background: rgb(255 255 255 / 0.95);
+.al-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.al-x {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--w) / 0.2);
+  background: rgb(var(--w) / 0.1);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+/* right-click menu (on .kh-popover), items as the app's menus */
+.kh-popover.al-menu {
+  min-width: 230px;
+  padding: 6px;
 }
 .al-menu button {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 34px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 0 12px;
   border-radius: 10px;
   border: 0;
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 13.5px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
+  white-space: nowrap;
 }
 .al-menu button:hover,
 .al-menu button:focus-visible {
-  background: rgb(var(--w) / 0.1);
+  background: rgb(var(--w) / 0.12);
   outline: none;
 }
 .al-menu button .k {
@@ -976,34 +1167,32 @@ select.al-in {
 }
 .al-menu hr {
   border: 0;
-  border-top: 1px solid rgb(var(--w) / 0.12);
-  margin: 4px 6px;
-}
-.al-filters {
-  width: 300px;
-  padding: 14px;
-  gap: 12px;
+  border-top: 1px solid rgb(var(--w) / 0.14);
+  margin: 4px 8px;
 }
 .al-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 .al-chip {
-  height: 28px;
-  padding: 0 10px;
+  height: 32px;
+  padding: 0 13px;
   border-radius: 999px;
   border: 1px solid rgb(var(--w) / 0.16);
   background: rgb(var(--w) / 0.06);
   color: var(--ink);
   font: inherit;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+}
+button.al-chip:hover {
+  background: rgb(var(--w) / 0.12);
 }
 .al-chip[aria-pressed='true'] {
   background: var(--ink);
@@ -1038,14 +1227,10 @@ select.al-in {
   align-items: center;
   gap: 10px;
   padding: 0 10px 0 12px;
-  background:
-    linear-gradient(
-      90deg,
-      rgb(var(--sf) / calc(0.12 * var(--sf-k))),
-      rgb(var(--sf) / calc(0.07 * var(--sf-k)))
-    ),
-    var(--al-solid);
-  border-right: 1px solid rgb(var(--w) / 0.1);
+  background: var(--kh-sticky-col-bg), var(--al-under);
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
+  border-right: 1px solid var(--kh-divider);
   min-width: 0;
 }
 .al-gname .tw {
@@ -1161,10 +1346,10 @@ select.al-in {
   position: sticky;
   right: 0;
   z-index: 3;
-  background:
-    linear-gradient(90deg, rgb(var(--d) / calc(0.2 * var(--d-k))), rgb(var(--d) / calc(0.2 * var(--d-k)))),
-    var(--al-solid);
-  border-left: 1px solid rgb(var(--w) / 0.1);
+  background: var(--kh-sticky-col-bg), var(--al-under);
+  backdrop-filter: var(--kh-sticky-filter);
+  -webkit-backdrop-filter: var(--kh-sticky-filter);
+  border-left: 1px solid var(--kh-divider);
   font-family: 'Geist Mono', monospace;
   font-size: 13px;
   font-weight: 600;
@@ -1197,8 +1382,12 @@ select.al-in {
   padding: 0 16px;
   height: 44px;
   border-radius: 18px;
-  background: rgb(var(--d) / calc(0.16 * var(--d-k)));
-  border: 1px solid rgb(var(--w) / 0.1);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.06 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.03 * var(--sf-k)))
+  );
+  border: 1px solid rgb(var(--w) / 0.12);
   overflow: hidden;
 }
 .al-selbar {
@@ -1212,16 +1401,20 @@ select.al-in {
   gap: 8px;
   padding: 8px 8px 8px 16px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgb(70 56 48 / 0.85), rgb(52 41 35 / 0.88));
-  border: 1px solid rgb(var(--w) / 0.2);
-  box-shadow: 0 16px 40px rgb(0 0 0 / calc(0.4 * var(--sh-k)));
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.22 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.12 * var(--sf-k)))
+  );
+  border: 1px solid rgb(var(--w) / 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 18px 50px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
+  backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
   white-space: nowrap;
-  font-size: 12.5px;
-}
-:root[data-theme='light'] .al-selbar {
-  background: rgb(255 255 255 / 0.94);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* ── side panels (Quem pode ir?, O que falta decidir) ─────────────────────── */
@@ -1229,8 +1422,12 @@ select.al-in {
   width: 330px;
   flex: none;
   border-radius: 22px;
-  background: rgb(var(--d) / calc(0.16 * var(--d-k)));
-  border: 1px solid rgb(var(--w) / 0.1);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.06 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.03 * var(--sf-k)))
+  );
+  border: 1px solid rgb(var(--w) / 0.12);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1339,9 +1536,17 @@ select.al-in {
   gap: 10px;
   padding: 6px 14px 6px 6px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgb(70 56 48 / 0.92), rgb(52 41 35 / 0.94));
-  border: 1px solid rgb(var(--w) / 0.25);
-  box-shadow: 0 14px 36px rgb(0 0 0 / calc(0.45 * var(--sh-k)));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.24 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.14 * var(--sf-k)))
+  );
+  border: 1px solid rgb(var(--w) / 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 14px 36px rgb(0 0 0 / calc(0.35 * var(--sh-k)));
+  backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--kh-blur-menu)) saturate(170%);
   font-size: 13px;
   font-weight: 600;
   color: var(--ink);
@@ -1656,17 +1861,17 @@ select.al-in {
   min-width: 0;
 }
 .al-date .al-in {
-  padding-right: 36px;
+  padding-right: 44px;
 }
 .al-date-btn {
   position: absolute;
-  right: 4px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
   color: rgb(var(--t) / calc(0.7 * var(--t-k)));
   cursor: pointer;
@@ -1690,38 +1895,192 @@ select.al-in {
   padding: 0;
 }
 
-/* "?" next to Ausência: how to mark time off */
+/* "?" next to Ausência: how to create an absence */
 .al-help {
   display: inline-grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   margin-left: 2px;
   padding: 0;
-  border: 1px solid rgb(var(--w) / 0.3);
+  border: 1px solid rgb(var(--w) / 0.28);
   border-radius: 50%;
   background: rgb(var(--w) / 0.1);
   color: var(--ink);
-  font: 600 11px/1 inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 .al-help:hover,
 .al-help[aria-expanded='true'] {
-  background: rgb(var(--w) / 0.22);
+  background: var(--ink);
+  color: var(--ink-inv);
+  border-color: var(--ink);
 }
-.al-help-pop {
+.al-help-pop .al-pop-bd {
+  gap: 14px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.al-help-pop p {
+  margin: 0;
+  color: rgb(var(--t) / calc(0.85 * var(--t-k)));
+}
+.al-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: st;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.al-steps li {
+  counter-increment: st;
+  display: block;
+  padding-left: 32px;
+  position: relative;
+}
+.al-steps li::before {
+  content: counter(st);
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgb(var(--w) / 0.14);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.al-help-sec {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  padding: 14px 16px;
-  font-size: 13px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(var(--w) / 0.1);
+}
+.al-help-sec .al-chip {
+  cursor: default;
+}
+
+/* the grid's "how to apply" choices and the per-day editor */
+.al-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.al-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.05);
+  cursor: pointer;
+}
+.al-opt:hover {
+  background: rgb(var(--w) / 0.1);
+}
+.al-opt.on {
+  border-color: rgb(var(--w) / 0.5);
+  background: rgb(var(--w) / 0.12);
+}
+.al-opt input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid rgb(var(--w) / 0.4);
+  background: transparent;
+  cursor: pointer;
+}
+.al-opt input:checked {
+  border: 5px solid var(--ink);
+}
+.al-opt input:focus-visible {
+  outline: 2px solid rgb(var(--w) / 0.7);
+  outline-offset: 2px;
+}
+.al-opt .t {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.al-opt .t b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.al-opt .t span {
+  font-size: 12.5px;
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+}
+.al-daygrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 10px;
+}
+.al-daygrid .al-f-l {
+  letter-spacing: 0.04em;
+  justify-content: center;
+}
+/* "Largar na função": what happens, one line per fact */
+.al-pop-bd.al-kvs {
+  gap: 10px;
+}
+.al-kv {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 13.5px;
   line-height: 1.45;
 }
-.al-help-pop ul {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 4px;
+.al-kv > span:last-child {
+  font-variant-numeric: tabular-nums;
 }
-.al-help-pop > span {
-  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
-  font-size: 12px;
+.al-kv > span:first-child {
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+}
+/* capacity: years over the months */
+.al-caphdr {
+  display: flex;
+  height: 66px;
+}
+.al-caphdr .al-corner {
+  height: auto;
+}
+.al-caphdr-cols {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.al-caphdr-band {
+  height: var(--al-band);
+  flex: none;
+  display: flex;
+  border-bottom: 1px solid rgb(var(--w) / 0.08);
+}
+.al-caphdr-band > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgb(var(--t) / calc(0.78 * var(--t-k)));
+  border-left: 1px solid rgb(var(--w) / 0.16);
+}
+.al-caphdr .al-hcol {
+  top: auto;
+  bottom: auto;
 }

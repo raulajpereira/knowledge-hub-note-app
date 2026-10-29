@@ -31,11 +31,13 @@ import {
   ABS_LABEL,
   BAND_BG,
   BAND_FG,
+  bands,
   columns,
   groupOfArea,
   newBooking,
   stdHours,
   stdWorkDays,
+  wdShort,
   type Col,
 } from './shared';
 import type { GroupBy, Nav } from './Timeline';
@@ -820,15 +822,28 @@ export function Grid({
                     width: NAMEW,
                     flexDirection: 'column',
                     alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    padding: '14px 16px 12px',
+                    justifyContent: 'flex-end',
+                    gap: 4,
                   }}
                 >
                   <span>{tr('Pessoa / projeto')}</span>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: muted }}>
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 500,
+                      letterSpacing: 0,
+                      textTransform: 'none',
+                      color: muted,
+                    }}
+                  >
                     {tr(unit === 'fte' ? 'Área · FTE por período' : 'Equipa · ocupação confirmada')}
                   </span>
                 </div>
+                {bands(visCols).map((g) => (
+                  <div key={g.a} className="al-band" style={{ left: x(c0 + g.i), width: g.n * colW }}>
+                    <span>{g.label}</span>
+                  </div>
+                ))}
                 {visCols.map((c, k) => {
                   const ci = c0 + k;
                   const wd = stdWorkDays(c.a, c.b);
@@ -836,23 +851,20 @@ export function Grid({
                     <div
                       key={ci}
                       className={`al-hcol${c.today ? ' today' : ''}${c.top && ci ? ' newgrp' : ''}${c.weekend ? ' we' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}`}
-                      style={{ left: x(ci), width: colW, justifyContent: 'center', gap: 2 }}
+                      style={{ left: x(ci), width: colW }}
                     >
-                      {c.top && <span className="top">{c.top}</span>}
-                      <span className="sub" style={{ marginTop: 12 }}>
-                        {zoom === 'day' || zoom === 'week' ? c.sub : ''}
-                      </span>
                       <span className="lbl">{c.lbl}</span>
-                      <span
-                        className="sub"
-                        style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}
-                      >
-                        {zoom === 'day'
-                          ? ''
-                          : c.hol && zoom === 'week'
+                      {(zoom === 'day' || zoom === 'week') && <span className="sub">{c.sub}</span>}
+                      {zoom !== 'day' && (
+                        <span
+                          className="sub"
+                          style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}
+                        >
+                          {c.hol && zoom === 'week'
                             ? `${tr('feriado')} ${+isoOf(holDay(c)).slice(8)}`
                             : tr(`${wd} dias`)}
-                      </span>
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -1241,47 +1253,45 @@ function ApplyPop({
     ['day', tr(`Manter horas/dia (${fmtNum(v / (perDay || 1), lang)}h)`), tr('ajusta-se a feriados')],
   ];
   return (
-    <Floating x={x} y={y} w={360} label={tr('Como aplicar')} onClose={onClose}>
+    <Floating x={x} y={y} w={420} label={tr('Como aplicar')} onClose={onClose}>
       <form
-        className="al-pop-bd"
-        style={{ paddingTop: 14 }}
         onSubmit={(e) => {
           e.preventDefault();
           onApply(m, v);
         }}
       >
-        <label className="al-lbl">
-          <input
-            className="al-in mono"
-            value={raw}
-            onChange={(e) => setRaw(e.target.value)}
-            aria-label={tr('Valor')}
-            inputMode="decimal"
-          />
-        </label>
-        <b style={{ fontSize: 13 }}>{tr(`Como aplicar ${fmtNum(v, lang)}${u} em ${ncols} colunas?`)}</b>
-        {opts.map(([k, l, s]) => (
-          <label
-            key={k}
-            className="al-pill"
-            style={{
-              width: '100%',
-              borderRadius: 14,
-              justifyContent: 'flex-start',
-              background: m === k ? 'rgb(var(--w) / .12)' : undefined,
-            }}
-          >
-            <input type="radio" name="al-apply" checked={m === k} onChange={() => setM(k)} />
-            <span style={{ flex: 1 }}>{l}</span>
-            <span className="al-hint">{s}</span>
+        <div className="al-pop-hd">
+          <b>{tr(`Como aplicar ${fmtNum(v, lang)}${u} em ${ncols} colunas?`)}</b>
+        </div>
+        <div className="al-pop-bd">
+          <label className="al-f">
+            <span className="al-f-l">{tr('Valor')}</span>
+            <input
+              className="al-in mono"
+              value={raw}
+              onChange={(e) => setRaw(e.target.value)}
+              aria-label={tr('Valor')}
+              inputMode="decimal"
+            />
           </label>
-        ))}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button type="button" className="al-btn ghost sm" onClick={onClose}>
+          <div className="al-opts" role="radiogroup" aria-label={tr('Como aplicar')}>
+            {opts.map(([k, l, s]) => (
+              <label key={k} className={`al-opt${m === k ? ' on' : ''}`}>
+                <input type="radio" name="al-apply" checked={m === k} onChange={() => setM(k)} />
+                <span className="t">
+                  <b>{l}</b>
+                  <span>{s}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="al-pop-ft">
+          <button type="button" className="al-btn ghost" onClick={onClose}>
             {tr('Cancelar')}
           </button>
-          <button type="submit" className="al-btn sm" autoFocus>
-            {tr('Aplicar')} ↵
+          <button type="submit" className="al-btn" autoFocus>
+            {tr('Aplicar')}
           </button>
         </div>
       </form>
@@ -1319,17 +1329,24 @@ function DayEditor({
   );
   if (!b || !s)
     return (
-      <Floating x={x} y={y} w={300} label={tr('Por dias')} onClose={onClose}>
-        <div className="al-pop-bd" style={{ paddingTop: 14 }}>
-          <span>{tr('Sem alocação neste período.')}</span>
+      <Floating x={x} y={y} w={320} label={tr('Por dias')} onClose={onClose}>
+        <div className="al-pop-hd">
+          <b>{tr('Por dias')}</b>
+        </div>
+        <div className="al-pop-bd">
+          <span className="al-note">{tr('Sem alocação neste período.')}</span>
         </div>
       </Floating>
     );
   return (
-    <Floating x={x} y={y} w={Math.min(560, 90 + days.length * 62)} label={tr('Por dias')} onClose={onClose}>
+    <Floating
+      x={x}
+      y={y}
+      w={Math.min(600, 64 + Math.min(days.length, 7) * 72)}
+      label={tr('Por dias')}
+      onClose={onClose}
+    >
       <form
-        className="al-pop-bd"
-        style={{ paddingTop: 14 }}
         onSubmit={(e) => {
           e.preventDefault();
           const nd = { ...b.days };
@@ -1343,28 +1360,35 @@ function DayEditor({
           onClose();
         }}
       >
-        <b style={{ fontSize: 13 }}>
-          {mg.pjById[b.project]?.code} · {tr('horas por dia')}
-        </b>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {days.map((n, i) => (
-            <label key={n} className="al-lbl" style={{ width: 56, alignItems: 'center' }}>
-              {isoOf(n).slice(8)}/{isoOf(n).slice(5, 7)}
-              <input
-                className="al-in mono"
-                style={{ height: 32, padding: '0 6px', textAlign: 'center' }}
-                inputMode="decimal"
-                value={vals[n] ?? ''}
-                autoFocus={i === 0}
-                onChange={(e) => setVals({ ...vals, [n]: e.target.value })}
-              />
-            </label>
-          ))}
+        <div className="al-pop-hd">
+          <b>
+            {mg.pjById[b.project]?.code} · {tr('horas por dia')}
+          </b>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="al-pop-bd">
+          <div className="al-daygrid">
+            {days.map((n, i) => (
+              <label key={n} className="al-f">
+                <span className="al-f-l">
+                  {wdShort(n, lang)} {isoOf(n).slice(8)}
+                </span>
+                <input
+                  className="al-in mono"
+                  style={{ textAlign: 'center', padding: '0 6px' }}
+                  inputMode="decimal"
+                  value={vals[n] ?? ''}
+                  autoFocus={i === 0}
+                  onChange={(e) => setVals({ ...vals, [n]: e.target.value })}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="al-pop-ft">
           <button
             type="button"
-            className="al-btn ghost sm"
+            className="al-btn ghost"
+            style={{ marginRight: 'auto' }}
             onClick={(e) => {
               onClose();
               openBk(b, false, e.clientX, e.clientY);
@@ -1372,8 +1396,7 @@ function DayEditor({
           >
             {tr('Abrir alocação…')}
           </button>
-          <span style={{ flex: 1 }} />
-          <button type="submit" className="al-btn sm">
+          <button type="submit" className="al-btn">
             {tr('Guardar')}
           </button>
         </div>

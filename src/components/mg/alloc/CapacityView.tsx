@@ -141,22 +141,38 @@ export function CapacityView({
       <div className="al-well">
         <div className="al-scroll">
           <div style={{ minWidth: 700 }}>
-            <div className="al-hdr" style={{ display: 'flex', height: 54 }}>
+            <div className="al-hdr al-caphdr">
               <div className="al-corner" style={{ width: 170, position: 'static' }}>
                 {tr('Área SAP')}
               </div>
-              {months.map((m, i) => (
-                <div
-                  key={m.a}
-                  className={`al-hcol${m.a === t0 ? ' today' : ''}`}
-                  style={{ position: 'relative', flex: 1, minWidth: 46 }}
-                >
-                  {(i === 0 || monthStart(m.a) === Date.UTC(yearOf(m.a), 0, 1) / 86_400_000) && (
-                    <span className="top">{yearOf(m.a)}</span>
-                  )}
-                  <span className="lbl">{mon(m.a)}</span>
+              <div className="al-caphdr-cols">
+                <div className="al-caphdr-band">
+                  {months
+                    .reduce<Array<{ y: number; n: number }>>((o, m) => {
+                      const y = yearOf(m.a);
+                      const l = o.at(-1);
+                      if (l && l.y === y) l.n++;
+                      else o.push({ y, n: 1 });
+                      return o;
+                    }, [])
+                    .map((g) => (
+                      <span key={g.y} style={{ flex: g.n }}>
+                        {g.y}
+                      </span>
+                    ))}
                 </div>
-              ))}
+                <div style={{ display: 'flex', flex: 1 }}>
+                  {months.map((m) => (
+                    <div
+                      key={m.a}
+                      className={`al-hcol${m.a === t0 ? ' today' : ''}`}
+                      style={{ position: 'relative', flex: 1, minWidth: 46 }}
+                    >
+                      <span className="lbl">{mon(m.a)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
             {data.map(([g, x]) => {
               const capAvg = x.cells.reduce((s, c) => s + c.cap / (c.std || 1), 0) / x.cells.length;

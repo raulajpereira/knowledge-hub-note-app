@@ -50,6 +50,11 @@ export const wdShort = (n: Dn, lang: string) =>
 /** "out", "nov" … */
 export const monShort = (n: Dn, lang: string) =>
   df(lang, { month: 'short' }).format(dt(n)).replace('.', '').toLowerCase();
+/** "outubro 2026" / "October 2026" */
+export const monLong = (n: Dn, lang: string) => {
+  const m = df(lang, { month: 'long' }).format(dt(n));
+  return `${lang === 'en' ? m : m.toLowerCase()} ${yearOf(n)}`;
+};
 /** "26 out" */
 export const dayMon = (n: Dn, lang: string) => `${dt(n).getUTCDate()} ${monShort(n, lang)}`;
 /** "26 out – 4 dez 2026" */
@@ -69,6 +74,8 @@ export type Col = Bucket & {
   sub: string;
   /** label at the start of a new group (week number · month / year) */
   top: string;
+  /** the group the column belongs to (week · month · year), shown in the header's top band */
+  band: string;
   today: boolean;
   hol: string | null;
   weekend: boolean;
@@ -87,6 +94,7 @@ export function columns(zoom: Zoom, F: Dn, T: Dn, lang: string, holLbl: (k: stri
         lbl: String(dt(b.a).getUTCDate()),
         sub: h ? holLbl(h) : wdShort(b.a, lang),
         top: wd === 0 || !prev ? `S${w.w} · ${monShort(b.a, lang)}` : '',
+        band: `${lang === 'en' ? 'W' : 'S'}${w.w} · ${dayMon(b.a - wd, lang)} – ${dayMon(b.a - wd + 6, lang)}`,
         today: b.a === t,
         hol: h,
         weekend: wd >= 5,
@@ -104,6 +112,7 @@ export function columns(zoom: Zoom, F: Dn, T: Dn, lang: string, holLbl: (k: stri
         top: newM
           ? `${monShort(b.a, lang)}${!prev || yearOf(prev.a) !== yearOf(b.a) ? ` ${yearOf(b.a)}` : ''}`
           : '',
+        band: monLong(b.a, lang),
         today: t >= b.a && t <= b.b,
         hol,
         weekend: false,
@@ -116,11 +125,24 @@ export function columns(zoom: Zoom, F: Dn, T: Dn, lang: string, holLbl: (k: stri
       lbl,
       sub: '',
       top: newY ? String(yearOf(b.a)) : '',
+      band: String(yearOf(b.a)),
       today: t >= b.a && t <= b.b,
       hol: null,
       weekend: false,
     };
   });
+}
+/** The header's top band: runs of consecutive columns of the same group, with their label. */
+export function bands<C extends { a: Dn; b: Dn; band: string }>(cols: C[]) {
+  const out: Array<{ a: Dn; b: Dn; label: string; i: number; n: number }> = [];
+  cols.forEach((c, i) => {
+    const last = out.at(-1);
+    if (last && last.label === c.band) {
+      last.b = c.b;
+      last.n++;
+    } else out.push({ a: c.a, b: c.b, label: c.band, i, n: 1 });
+  });
+  return out;
 }
 /** Default window: 6 months before and 6 after today (whole months). */
 export function defaultWindow(): [Dn, Dn] {
@@ -207,6 +229,8 @@ export const ABS_LABEL: Record<string, string> = {
   formacao: 'Formação',
   outra: 'Ausência',
 };
+/** The absence types as offered when marking one. */
+export const ABS_TYPE_LABEL: Record<string, string> = { ...ABS_LABEL, outra: 'Outra' };
 
 /** Skill-group of an area (the SAP area rows of the capacity view). */
 export const AREA_GROUPS: Array<[string, string[]]> = [

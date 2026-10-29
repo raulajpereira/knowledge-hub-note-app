@@ -20,7 +20,7 @@ import type { MgPerson } from '@/lib/mg';
 import { Sheet } from '@/components/ui';
 import { Av } from '../ui';
 import type { Mg } from '../store';
-import { ABS_LABEL, BAND_BG, BAND_FG, dayMon, groupOfArea, wdShort } from './shared';
+import { ABS_LABEL, ABS_TYPE_LABEL, BAND_BG, BAND_FG, dayMon, groupOfArea, wdShort } from './shared';
 import './alloc.css';
 
 type PF = 'over' | 'free' | 'ph' | string;
@@ -459,7 +459,7 @@ function PersonSheet({ mg, p, mon, onClose }: { mg: Mg; p: MgPerson; mon: Dn; on
                   aria-pressed={abs.type === t}
                   onClick={() => setAbs({ ...abs, type: t })}
                 >
-                  {tr(ABS_LABEL[t]!)}
+                  {tr(ABS_TYPE_LABEL[t]!)}
                 </button>
               ))}
             </div>

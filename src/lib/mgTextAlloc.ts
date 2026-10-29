@@ -1,6 +1,28 @@
 // English text of the Alocações v2 screens (alloc2) — the screens are written in
 // Portuguese like the rest of Management; mgTr() looks here after MG_EX.
 export const MG_EX_AL: Record<string, string> = {
+  Outra: 'Other',
+  'Alterar ou eliminar': 'Change or delete',
+  'Botão direito': 'Right-click',
+  'Clique na barra às riscas da ausência: abre a ficha, com Guardar e Eliminar.':
+    'Click the striped bar of the absence: it opens its card, with Save and Delete.',
+  'Como criar uma ausência': 'How to create an absence',
+  'Dia inteiro ou horas': 'Whole day or hours',
+  Duração: 'Duration',
+  'Escolha a pessoa': 'Choose the person',
+  Mostrar: 'Show',
+  Ocupação: 'Load',
+  'Os dias de ausência não contam na capacidade.': 'Days of absence do not count in the capacity.',
+  'Passar a tentativo': 'Make it tentative',
+  'arraste numa linha vazia para criar': 'drag on an empty row to create',
+  'escreva num dos campos, os outros acompanham': 'type in any field, the others follow',
+  'na linha da pessoa, sobre os dias da ausência.': "on the person's row, over the days of the absence.",
+  'num dia da pessoa › Marcar ausência.': 'on a day of the person › Mark absence.',
+  'É só um aviso: pode manter assim.': 'It is only a warning: you can keep it.',
+  '› a pessoa › Ausências › Marcar ausência.': '› the person › Absences › Mark absence.',
+  'Por omissão é o dia inteiro. Para só algumas horas, escolha «Parte do dia» e indique as horas.':
+    'By default it is the whole day. For just a few hours, choose “Part of the day” and type the hours.',
+  Opcional: 'Optional',
   '+8 tentativo': '+8 tentative',
   '+setas selecionar': '+arrows select',
   '100%': '100%',
@@ -159,8 +181,6 @@ export const MG_EX_AL: Record<string, string> = {
   'Horas/dia': 'Hours/day',
   'Horas/semana': 'Hours/week',
   '% capacidade': '% capacity',
-  'Função: ex.: Líder FI-GL / AA': 'Role: e.g. FI-GL / AA lead',
-  'Função: ex.: Consultor FI · Sénior': 'Role: e.g. FI Consultant · Senior',
   'Horas por semana': 'Hours a week',
   '% da capacidade': '% of capacity',
   FTE: 'FTE',
@@ -260,8 +280,4 @@ export const MG_RX_AL: Array<[RegExp, string]> = [
   [/^fica a (\d+)% · sem conflitos$/, 'ends at $1% · no conflicts'],
   [/^projeto para (.*)…$/, 'project for $1…'],
   [/^só o que cabe \((.+)h\/dia\)$/, 'only what fits ($1h/day)'],
-  [
-    / · arraste numa linha vazia para criar · Shift\+arrastar marca ausência$/,
-    ' · drag on an empty row to create · Shift+drag marks an absence',
-  ],
 ];
