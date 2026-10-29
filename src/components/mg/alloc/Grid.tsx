@@ -345,7 +345,11 @@ export function Grid({
   // ── scroll / view ──
   const onScroll = useCallback(() => {
     const el = scRef.current;
-    if (el) setView({ l: el.scrollLeft, w: el.clientWidth, t: el.scrollTop, h: el.clientHeight });
+    if (!el) return;
+    // the cells are cut at the name and Total columns (see .al-lane--g)
+    el.style.setProperty('--al-sl', `${el.scrollLeft}px`);
+    el.style.setProperty('--al-vw', `${el.clientWidth}px`);
+    setView({ l: el.scrollLeft, w: el.clientWidth, t: el.scrollTop, h: el.clientHeight });
   }, []);
   useLayoutEffect(() => {
     const el = scRef.current;
@@ -813,7 +817,12 @@ export function Grid({
               role="grid"
               aria-label={tr('Grelha de alocações')}
               onKeyDown={onKey}
-              style={{ width: W, height: HEAD + totalH }}
+              style={{
+                width: W,
+                height: HEAD + totalH,
+                ['--al-name' as string]: `${NAMEW}px`,
+                ['--al-tot' as string]: '84px',
+              }}
             >
               <div className="al-hdr" style={{ height: HEAD, width: W, display: 'flex' }}>
                 <div
@@ -839,35 +848,42 @@ export function Grid({
                     {tr(unit === 'fte' ? 'Área · FTE por período' : 'Equipa · ocupação confirmada')}
                   </span>
                 </div>
-                {bands(visCols).map((g) => (
-                  <div key={g.a} className="al-band" style={{ left: x(c0 + g.i), width: g.n * colW }}>
-                    <span>{g.label}</span>
-                  </div>
-                ))}
-                {visCols.map((c, k) => {
-                  const ci = c0 + k;
-                  const wd = stdWorkDays(c.a, c.b);
-                  return (
-                    <div
-                      key={ci}
-                      className={`al-hcol${c.today ? ' today' : ''}${c.top && ci ? ' newgrp' : ''}${c.weekend ? ' we' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}`}
-                      style={{ left: x(ci), width: colW }}
-                    >
-                      <span className="lbl">{c.lbl}</span>
-                      {(zoom === 'day' || zoom === 'week') && <span className="sub">{c.sub}</span>}
-                      {zoom !== 'day' && (
-                        <span
-                          className="sub"
-                          style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}
-                        >
-                          {c.hol && zoom === 'week'
-                            ? `${tr('feriado')} ${+isoOf(holDay(c)).slice(8)}`
-                            : tr(`${wd} dias`)}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                <div className="al-lane al-lane--g">
+                  {bands(visCols).map((g) => {
+                    // cut to what is between the name and Total columns
+                    const l = Math.max(x(c0 + g.i), view.l + NAMEW);
+                    const r = Math.min(x(c0 + g.i) + g.n * colW, view.l + view.w - 84);
+                    return r - l < 24 ? null : (
+                      <div key={g.a} className="al-band" style={{ left: l, width: r - l }}>
+                        <span>{g.label}</span>
+                      </div>
+                    );
+                  })}
+                  {visCols.map((c, k) => {
+                    const ci = c0 + k;
+                    const wd = stdWorkDays(c.a, c.b);
+                    return (
+                      <div
+                        key={ci}
+                        className={`al-hcol${c.today ? ' today' : ''}${c.top && ci ? ' newgrp' : ''}${c.weekend ? ' we' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}`}
+                        style={{ left: x(ci), width: colW }}
+                      >
+                        <span className="lbl">{c.lbl}</span>
+                        {(zoom === 'day' || zoom === 'week') && <span className="sub">{c.sub}</span>}
+                        {zoom !== 'day' && (
+                          <span
+                            className="sub"
+                            style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}
+                          >
+                            {c.hol && zoom === 'week'
+                              ? `${tr('feriado')} ${+isoOf(holDay(c)).slice(8)}`
+                              : tr(`${wd} dias`)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
                 <div className="al-gtot" style={{ marginLeft: 'auto', height: HEAD }}>
                   {tr('Total')}
                 </div>
@@ -914,7 +930,8 @@ export function Grid({
                           {row.sub || tr(`${row.people.length} pessoas`)}
                         </span>
                       </div>
-                      {groupCells(row)}
+                      <div className="al-lane al-lane--g">{groupCells(row)}</div>
+                      <div className="al-gtot" style={{ marginLeft: 'auto', height: '100%' }} />
                     </div>
                   );
                 if (row.k === 'add')
@@ -985,7 +1002,9 @@ export function Grid({
                           </span>
                         </span>
                       </div>
-                      {visCols.map((c, k) => personCell(p, c, c0 + k, ri))}
+                      <div className="al-lane al-lane--g">
+                        {visCols.map((c, k) => personCell(p, c, c0 + k, ri))}
+                      </div>
                       <div className="al-gtot" style={{ marginLeft: 'auto', height: '100%' }}>
                         {totals(p.id)}
                       </div>
@@ -1037,7 +1056,9 @@ export function Grid({
                             : row.role || pj?.name}
                       </span>
                     </div>
-                    {visCols.map((c, k) => editCell(row, c, c0 + k, ri))}
+                    <div className="al-lane al-lane--g">
+                      {visCols.map((c, k) => editCell(row, c, c0 + k, ri))}
+                    </div>
                     <div className="al-gtot" style={{ marginLeft: 'auto', height: '100%', fontWeight: 500 }}>
                       {totals(t.person, t.bks)}
                     </div>

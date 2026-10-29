@@ -171,7 +171,9 @@ export function ProjectsView({
   // ── scroll ──
   const onScroll = useCallback(() => {
     const el = scRef.current;
-    if (el) setView({ l: el.scrollLeft, w: el.clientWidth, t: el.scrollTop, h: el.clientHeight });
+    if (!el) return;
+    el.style.setProperty('--al-sl', `${el.scrollLeft}px`);
+    setView({ l: el.scrollLeft, w: el.clientWidth, t: el.scrollTop, h: el.clientHeight });
   }, []);
   useLayoutEffect(() => {
     const el = scRef.current;
@@ -389,39 +391,44 @@ export function ProjectsView({
           </span>
         </div>
         {left + w >= xa && left <= xb && (
-          <div
-            className={`al-bar${tent ? ' tent' : ''}${isPick ? ' sel' : ''}`}
-            style={{
-              left,
-              top: 9,
-              width: w,
-              paddingLeft: 8 + Math.max(0, Math.min(view.l + NAMEW - left, w - 120)),
-              cursor: 'pointer',
-              ...(p
-                ? tent
-                  ? { background: `color-mix(in oklch, ${c} 38%, transparent)`, border: `1.5px dashed ${c}` }
-                  : { background: c }
-                : {
-                    background: 'transparent',
-                    border: '1.5px dashed rgb(var(--w) / .55)',
-                    color: 'var(--ink)',
-                    boxShadow: 'none',
-                  }),
-            }}
-            onClick={(e) => (b.person ? openBk(b, false, e.clientX + 10, e.clientY - 40) : setPick(b.id))}
-            onDoubleClick={(e) => openBk(b, false, e.clientX + 10, e.clientY - 40)}
-            title={`${b.role} · ${b.from} → ${b.to}`}
-          >
-            {p ? p.name.split(' ')[0] : null}
-            <span className="ef" style={!p ? { opacity: 1 } : undefined}>
-              {effort(b)}
-            </span>
-            {!p && w > 200 && (
-              <span className="fn">
-                · {b.role}
-                {need ? ` · ≥ ${mg.LV[need.l] ?? ''}` : ''}
+          <div className="al-lane">
+            <div
+              className={`al-bar${tent ? ' tent' : ''}${isPick ? ' sel' : ''}`}
+              style={{
+                left,
+                top: 9,
+                width: w,
+                paddingLeft: 8 + Math.max(0, Math.min(view.l + NAMEW - left, w - 120)),
+                cursor: 'pointer',
+                ...(p
+                  ? tent
+                    ? {
+                        background: `color-mix(in oklch, ${c} 38%, transparent)`,
+                        border: `1.5px dashed ${c}`,
+                      }
+                    : { background: c }
+                  : {
+                      background: 'transparent',
+                      border: '1.5px dashed rgb(var(--w) / .55)',
+                      color: 'var(--ink)',
+                      boxShadow: 'none',
+                    }),
+              }}
+              onClick={(e) => (b.person ? openBk(b, false, e.clientX + 10, e.clientY - 40) : setPick(b.id))}
+              onDoubleClick={(e) => openBk(b, false, e.clientX + 10, e.clientY - 40)}
+              title={`${b.role} · ${b.from} → ${b.to}`}
+            >
+              {p ? p.name.split(' ')[0] : null}
+              <span className="ef" style={!p ? { opacity: 1 } : undefined}>
+                {effort(b)}
               </span>
-            )}
+              {!p && w > 200 && (
+                <span className="fn">
+                  · {b.role}
+                  {need ? ` · ≥ ${mg.LV[need.l] ?? ''}` : ''}
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -447,56 +454,66 @@ export function ProjectsView({
           >
             <div className="al-hdr" style={{ height: HEAD, width: NAMEW + width }}>
               <div className="al-corner">{tr('Projeto · função')}</div>
-              {bands(cols.filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)).map((g) => (
-                <div key={g.a} className="al-band" style={{ left: x(g.a), width: (g.b - g.a + 1) * ppd }}>
-                  <span>{g.label}</span>
-                </div>
-              ))}
-              {cols
-                .filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)
-                .map((c, i) => (
-                  <div
-                    key={c.a}
-                    className={`al-hcol${c.today ? ' today' : ''}${c.top && i ? ' newgrp' : ''}`}
-                    style={{ left: x(c.a), width: (c.b - c.a + 1) * ppd }}
-                  >
-                    <span className="lbl">{c.lbl}</span>
-                    {zoom === 'week' && (
-                      <span className="sub" style={c.hol ? { color: 'var(--al-hol)' } : undefined}>
-                        {c.hol ? tr('feriado') : c.sub}
-                      </span>
-                    )}
-                  </div>
-                ))}
+              <div className="al-lane">
+                {bands(cols.filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)).map((g) => {
+                  const l = Math.max(x(g.a), view.l + NAMEW);
+                  const r = x(g.b) + ppd;
+                  return r - l < 24 ? null : (
+                    <div key={g.a} className="al-band" style={{ left: l, width: r - l }}>
+                      <span>{g.label}</span>
+                    </div>
+                  );
+                })}
+                {cols
+                  .filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)
+                  .map((c, i) => (
+                    <div
+                      key={c.a}
+                      className={`al-hcol${c.today ? ' today' : ''}${c.top && i ? ' newgrp' : ''}`}
+                      style={{ left: x(c.a), width: (c.b - c.a + 1) * ppd }}
+                    >
+                      <span className="lbl">{c.lbl}</span>
+                      {zoom === 'week' && (
+                        <span className="sub" style={c.hol ? { color: 'var(--al-hol)' } : undefined}>
+                          {c.hol ? tr('feriado') : c.sub}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+              </div>
             </div>
-            <div
-              className="al-bg"
-              style={{
-                left: NAMEW,
-                top: HEAD,
-                width,
-                height: rows.height,
-                backgroundImage: `repeating-linear-gradient(90deg, rgb(var(--w) / .06) 0 1px, transparent 1px ${7 * ppd}px)`,
-                backgroundPosition: `${off}px 0`,
-              }}
-            />
-            {zoom === 'week' &&
-              holidays.map((n) => (
-                <span
-                  key={n}
-                  className="al-holcol"
-                  style={{
-                    left: x(n - wdOf(n)),
-                    width: 7 * ppd,
-                    top: HEAD,
-                    height: rows.height,
-                    opacity: 0.55,
-                  }}
-                />
-              ))}
-            {today >= F && today <= T && (
-              <span className="al-todayline" style={{ left: x(today), top: HEAD, height: rows.height }} />
-            )}
+            <div className="al-lane">
+              <div
+                className="al-bg"
+                style={{
+                  left: NAMEW,
+                  top: HEAD,
+                  width,
+                  height: rows.height,
+                  backgroundImage: `repeating-linear-gradient(90deg, rgb(var(--w) / .06) 0 1px, transparent 1px ${7 * ppd}px)`,
+                  backgroundPosition: `${off}px 0`,
+                }}
+              />
+            </div>
+            <div className="al-lane al-lane--over">
+              {zoom === 'week' &&
+                holidays.map((n) => (
+                  <span
+                    key={n}
+                    className="al-holcol"
+                    style={{
+                      left: x(n - wdOf(n)),
+                      width: 7 * ppd,
+                      top: HEAD,
+                      height: rows.height,
+                      opacity: 0.55,
+                    }}
+                  />
+                ))}
+              {today >= F && today <= T && (
+                <span className="al-todayline" style={{ left: x(today), top: HEAD, height: rows.height }} />
+              )}
+            </div>
             {rows.list.map((r) =>
               r.y + r.h < view.t - 300 || r.y > view.t + view.h + 300
                 ? null

@@ -222,6 +222,8 @@ export function Timeline({
   const onScroll = useCallback(() => {
     const el = scRef.current;
     if (!el) return;
+    // what scrolls under the sticky people column is clipped there (see .al-lane)
+    el.style.setProperty('--al-sl', `${el.scrollLeft}px`);
     setView({ l: el.scrollLeft, t: el.scrollTop, w: el.clientWidth, h: el.clientHeight });
   }, []);
   useLayoutEffect(() => {
@@ -853,54 +855,65 @@ export function Timeline({
           {/* header */}
           <div className="al-hdr" style={{ height: HEAD, width: nameW + width }}>
             <div className="al-corner">{groupBy === 'none' ? tr('Pessoa') : tr('Pessoa')}</div>
-            {bands(vcols).map((g) => (
-              <div key={g.a} className="al-band" style={{ left: x(g.a), width: (g.b - g.a + 1) * ppd }}>
-                <span>{g.label}</span>
-              </div>
-            ))}
-            {vcols.map((c, i) => {
-              const w = (c.b - c.a + 1) * ppd;
-              return (
-                <div
-                  key={c.a}
-                  className={`al-hcol${c.top && i ? ' newgrp' : ''}${c.today ? ' today' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}${c.weekend ? ' we' : ''}${w < 34 ? ' narrow' : ''}`}
-                  style={{ left: x(c.a), width: w }}
-                  data-day={isoOf(c.a)}
-                  title={c.hol ? holidayName(c.hol, lang) : undefined}
-                >
-                  <span className="lbl">{c.lbl}</span>
-                  {c.sub && (zoom === 'day' || zoom === 'week') && (
-                    <span
-                      className="sub"
-                      style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}
-                    >
-                      {zoom === 'week' && c.hol ? tr('feriado') : c.sub}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+            <div className="al-lane">
+              {bands(vcols).map((g) => {
+                // cut to what is right of the people column, so the label always starts there
+                const l = Math.max(x(g.a), view.l + nameW);
+                const r = x(g.b) + ppd;
+                return r - l < 24 ? null : (
+                  <div key={g.a} className="al-band" style={{ left: l, width: r - l }}>
+                    <span>{g.label}</span>
+                  </div>
+                );
+              })}
+              {vcols.map((c, i) => {
+                const w = (c.b - c.a + 1) * ppd;
+                return (
+                  <div
+                    key={c.a}
+                    className={`al-hcol${c.top && i ? ' newgrp' : ''}${c.today ? ' today' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}${c.weekend ? ' we' : ''}${w < 34 ? ' narrow' : ''}`}
+                    style={{ left: x(c.a), width: w }}
+                    data-day={isoOf(c.a)}
+                    title={c.hol ? holidayName(c.hol, lang) : undefined}
+                  >
+                    <span className="lbl">{c.lbl}</span>
+                    {c.sub && (zoom === 'day' || zoom === 'week') && (
+                      <span
+                        className="sub"
+                        style={c.hol && zoom === 'week' ? { color: 'var(--al-hol)' } : undefined}
+                      >
+                        {zoom === 'week' && c.hol ? tr('feriado') : c.sub}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="al-bg" style={bgStyle} />
-          {zoom !== 'day' &&
-            monthLines.map((m) => (
+          <div className="al-lane">
+            <div className="al-bg" style={bgStyle} />
+            {zoom !== 'day' &&
+              monthLines.map((m) => (
+                <span
+                  key={m}
+                  className="al-vline"
+                  style={{ left: x(m), top: HEAD, height: rows.height, background: 'rgb(var(--w) / .12)' }}
+                />
+              ))}
+          </div>
+          <div className="al-lane al-lane--over">
+            {holidays.map((n) => (
               <span
-                key={m}
-                className="al-vline"
-                style={{ left: x(m), top: HEAD, height: rows.height, background: 'rgb(var(--w) / .12)' }}
+                key={n}
+                className="al-holcol"
+                title={holidayName(holidayOf(n)!, lang)}
+                style={{ left: x(n), top: HEAD, width: ppd, height: rows.height }}
               />
             ))}
-          {holidays.map((n) => (
-            <span
-              key={n}
-              className="al-holcol"
-              title={holidayName(holidayOf(n)!, lang)}
-              style={{ left: x(n), top: HEAD, width: ppd, height: rows.height }}
-            />
-          ))}
-          {today >= F && today <= T && (
-            <span className="al-todayline" style={{ left: todayX, top: HEAD, height: rows.height }} />
-          )}
+            {today >= F && today <= T && (
+              <span className="al-todayline" style={{ left: todayX, top: HEAD, height: rows.height }} />
+            )}
+          </div>
           {/* rows */}
           {rows.list.map((row) => {
             if (row.y + row.h < ya || row.y > yb) return null;
@@ -928,44 +941,46 @@ export function Timeline({
                 style={{ top: HEAD + row.y, height: row.h, width: nameW + width }}
                 data-row={row.k === 'p' ? row.p.id : 'ph'}
               >
-                <div
-                  className="al-track"
-                  style={{ left: nameW, width }}
-                  onPointerDown={(e) => startCreate(e, row)}
-                  onPointerMove={(e) => (hoverDn.current = dnAt(e.clientX))}
-                  onDoubleClick={(e) => {
-                    const n = dnAt(e.clientX);
-                    create(row.k === 'p' ? row.p.id : '', n, n, false, row, e.clientX + 12, e.clientY - 40);
-                  }}
-                  onContextMenu={(e) => ctxEmpty(e, row)}
-                />
-                {row.k === 'p' && strip(row)}
-                {row.k === 'p'
-                  ? row.items.map((l) => renderBar(l.it, l.lane, row, l.from, l.to))
-                  : renderBar({ kind: 'bk', b: row.b }, 0, row, row.b.from, row.b.to)}
-                {ghost && ghost.row === row.key && ghost.m === 'create' && (
-                  <>
-                    <span
-                      className={`al-sweep${ghost.abs ? ' abs' : ''}`}
-                      style={{ left: x(ghost.a) + 2, top: 8, width: (ghost.b - ghost.a + 1) * ppd - 4 }}
-                    />
-                    <span className="al-tip" style={{ left: x(ghost.a), top: -14 }}>
-                      {isoOf(ghost.a).slice(8)}/{isoOf(ghost.a).slice(5, 7)} → {isoOf(ghost.b).slice(8)}/
-                      {isoOf(ghost.b).slice(5, 7)} · {ghost.b - ghost.a + 1} {tr('dias')}
-                      {ghost.abs ? ` · ${tr('ausência')}` : ''}
-                    </span>
-                  </>
-                )}
-                {ghost && ghost.m !== 'create' && ghost.row === row.key && (
-                  <>
-                    {renderBar(ghost.it, 0, row, isoOf(ghost.from), isoOf(ghost.to), true)}
-                    <span className="al-tip" style={{ left: x(ghost.from), top: -14 }}>
-                      {isoOf(ghost.from).slice(8)}/{isoOf(ghost.from).slice(5, 7)} →{' '}
-                      {isoOf(ghost.to).slice(8)}/{isoOf(ghost.to).slice(5, 7)}
-                      {ghost.copy ? ` · ${tr('copiar')}` : ''}
-                    </span>
-                  </>
-                )}
+                <div className="al-lane">
+                  <div
+                    className="al-track"
+                    style={{ left: nameW, width }}
+                    onPointerDown={(e) => startCreate(e, row)}
+                    onPointerMove={(e) => (hoverDn.current = dnAt(e.clientX))}
+                    onDoubleClick={(e) => {
+                      const n = dnAt(e.clientX);
+                      create(row.k === 'p' ? row.p.id : '', n, n, false, row, e.clientX + 12, e.clientY - 40);
+                    }}
+                    onContextMenu={(e) => ctxEmpty(e, row)}
+                  />
+                  {row.k === 'p' && strip(row)}
+                  {row.k === 'p'
+                    ? row.items.map((l) => renderBar(l.it, l.lane, row, l.from, l.to))
+                    : renderBar({ kind: 'bk', b: row.b }, 0, row, row.b.from, row.b.to)}
+                  {ghost && ghost.row === row.key && ghost.m === 'create' && (
+                    <>
+                      <span
+                        className={`al-sweep${ghost.abs ? ' abs' : ''}`}
+                        style={{ left: x(ghost.a) + 2, top: 8, width: (ghost.b - ghost.a + 1) * ppd - 4 }}
+                      />
+                      <span className="al-tip" style={{ left: x(ghost.a), top: -14 }}>
+                        {isoOf(ghost.a).slice(8)}/{isoOf(ghost.a).slice(5, 7)} → {isoOf(ghost.b).slice(8)}/
+                        {isoOf(ghost.b).slice(5, 7)} · {ghost.b - ghost.a + 1} {tr('dias')}
+                        {ghost.abs ? ` · ${tr('ausência')}` : ''}
+                      </span>
+                    </>
+                  )}
+                  {ghost && ghost.m !== 'create' && ghost.row === row.key && (
+                    <>
+                      {renderBar(ghost.it, 0, row, isoOf(ghost.from), isoOf(ghost.to), true)}
+                      <span className="al-tip" style={{ left: x(ghost.from), top: -14 }}>
+                        {isoOf(ghost.from).slice(8)}/{isoOf(ghost.from).slice(5, 7)} →{' '}
+                        {isoOf(ghost.to).slice(8)}/{isoOf(ghost.to).slice(5, 7)}
+                        {ghost.copy ? ` · ${tr('copiar')}` : ''}
+                      </span>
+                    </>
+                  )}
+                </div>
                 {nameCell(row)}
               </div>
             );

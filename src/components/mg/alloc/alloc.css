@@ -9,6 +9,33 @@
   /* under the sticky glass columns: cells and bars scroll beneath them, a
      little more tint keeps the names readable over the coloured values */
   --al-under: rgb(var(--d) / calc(0.3 * var(--d-k)));
+  /* the sticky corner / people column: frosted, nearly solid (the card's own
+     tint), so nothing that scrolls beneath them can be read */
+  --al-stick: rgb(62 49 42 / 0.9);
+}
+:root[data-theme='light'] {
+  --al-stick: rgb(245 240 235 / 0.9);
+}
+/* layers that scroll sideways: cut at the right edge of the people column
+   (--al-sl is the scroll offset, set while scrolling) */
+.al-lane {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  clip-path: inset(-60px 0 -60px calc(var(--al-sl, 0px) + var(--al-name)));
+}
+:where(.al-lane > *) {
+  pointer-events: auto;
+}
+.al-lane--over {
+  z-index: 3;
+}
+/* the grid also keeps its Total column clear on the right */
+.al-lane--g {
+  clip-path: inset(
+    -4px calc(100% - var(--al-sl, 0px) - var(--al-vw, 100%) + var(--al-tot, 0px)) -4px
+      calc(var(--al-sl, 0px) + var(--al-name))
+  );
 }
 .al-root {
   --al-name: 236px;
@@ -344,7 +371,7 @@
   text-transform: uppercase;
   color: rgb(var(--t) / calc(0.72 * var(--t-k)));
   border-right: 1px solid var(--kh-divider);
-  background: var(--kh-sticky-bg), var(--al-under);
+  background: var(--kh-sticky-col-bg), var(--al-stick);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
 }
@@ -358,12 +385,13 @@
   border-left: 1px solid rgb(var(--w) / 0.16);
   border-bottom: 1px solid rgb(var(--w) / 0.08);
   box-sizing: border-box;
-  overflow: visible;
+  overflow: hidden;
   pointer-events: none;
 }
 .al-band > span {
-  position: sticky;
-  left: calc(var(--al-name) + 10px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: 0 10px;
   font-size: 11.5px;
   font-weight: 600;
@@ -450,7 +478,7 @@
   align-items: center;
   gap: 11px;
   padding: 0 12px 0 16px;
-  background: var(--kh-sticky-col-bg), var(--al-under);
+  background: var(--kh-sticky-col-bg), var(--al-stick);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-right: 1px solid var(--kh-divider);
@@ -527,7 +555,7 @@
   left: 0;
   z-index: 5;
   min-width: var(--al-name);
-  background: var(--kh-sticky-col-bg);
+  background: var(--kh-sticky-col-bg), var(--al-stick);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-right: 1px solid var(--kh-divider);
@@ -1227,7 +1255,7 @@ button.al-chip:hover {
   align-items: center;
   gap: 10px;
   padding: 0 10px 0 12px;
-  background: var(--kh-sticky-col-bg), var(--al-under);
+  background: var(--kh-sticky-col-bg), var(--al-stick);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-right: 1px solid var(--kh-divider);
@@ -1346,7 +1374,7 @@ button.al-chip:hover {
   position: sticky;
   right: 0;
   z-index: 3;
-  background: var(--kh-sticky-col-bg), var(--al-under);
+  background: var(--kh-sticky-col-bg), var(--al-stick);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-left: 1px solid var(--kh-divider);
