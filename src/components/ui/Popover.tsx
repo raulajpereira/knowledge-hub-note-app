@@ -20,6 +20,7 @@ export function Popover({
   maxHeight,
   children,
   sheet,
+  flip,
   ...aria
 }: {
   anchor: React.RefObject<HTMLElement | null>;
@@ -32,6 +33,8 @@ export function Popover({
   children: React.ReactNode;
   /** on phones: a full-height sheet from the bottom instead of a dropdown */
   sheet?: boolean;
+  /** opens above the anchor when there is no room below (e.g. a calendar near the bottom) */
+  flip?: boolean;
   id?: string;
   role?: string;
   'aria-label'?: string;
@@ -50,10 +53,13 @@ export function Popover({
       const vw = window.innerWidth;
       // never past the window's edges (narrow screens): slide it back inside
       const w = Math.min(width ?? ref.current?.offsetWidth ?? 0, vw - 16);
+      const h = ref.current?.offsetHeight ?? 0;
+      const up = flip && h > 0 && r.bottom + 6 + h > window.innerHeight - 8 && r.top - 6 - h >= 8;
+      const top = up ? r.top - 6 - h : r.bottom + 6;
       setPos(
         align === 'right'
-          ? { top: r.bottom + 6, right: Math.min(Math.max(8, vw - r.right), Math.max(8, vw - 8 - w)) }
-          : { top: r.bottom + 6, left: Math.min(Math.max(8, r.left), Math.max(8, vw - 8 - w)) },
+          ? { top, right: Math.min(Math.max(8, vw - r.right), Math.max(8, vw - 8 - w)) }
+          : { top, left: Math.min(Math.max(8, r.left), Math.max(8, vw - 8 - w)) },
       );
     };
     place();
@@ -66,7 +72,7 @@ export function Popover({
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [anchor, align, width]);
+  }, [anchor, align, width, flip]);
 
   useEffect(() => {
     const down = (e: PointerEvent) => {

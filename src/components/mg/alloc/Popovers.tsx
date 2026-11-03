@@ -22,7 +22,8 @@ import {
   type Booking,
 } from '@/lib/alloc';
 import { MG_ROLE, isAvailable } from '@/lib/mg';
-import { Modal, Segmented } from '@/components/ui';
+import { DatePicker, Modal, Segmented } from '@/components/ui';
+import { useI18n } from '@/i18n/client';
 import type { Mg } from '../store';
 import { ABS_LABEL, ABS_TYPE_LABEL, dayMon, newBooking } from './shared';
 import './alloc.css';
@@ -683,32 +684,41 @@ export function DateField({
   onChange,
   label,
   min,
+  max,
   pickLabel,
   size,
+  clearable,
 }: {
   value: string;
   onChange: (iso: string) => void;
   label: string;
   min?: string;
+  max?: string;
   pickLabel: string;
   /** sm: the compact size of the Management detail fields (34 px) */
   size?: 'sm';
+  /** the calendar offers "Limpar" (onChange('')) */
+  clearable?: boolean;
 }) {
+  const { lang } = useI18n();
   const [txt, setTxt] = useState(fmtField(value));
-  const pick = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLSpanElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
   useEffect(() => setTxt(fmtField(value)), [value]);
   return (
-    <span className={`al-date${size ? ` al-date--${size}` : ''}`}>
+    <span ref={box} className={`al-date${size ? ` al-date--${size}` : ''}`}>
       <input
         className="al-in mono"
         value={txt}
         aria-label={label}
-        placeholder="dd/mm/aaaa"
+        placeholder={lang === 'en' ? 'dd/mm/yyyy' : 'dd/mm/aaaa'}
         inputMode="numeric"
         onChange={(e) => {
           setTxt(e.target.value);
           const d = parseDay(e.target.value, true);
           if (d) onChange(d);
+          else if (clearable && !e.target.value.trim()) onChange('');
         }}
         onBlur={(e) => {
           // a 2-digit year ("12/11/26") is taken when leaving the field
@@ -716,20 +726,23 @@ export function DateField({
           if (d && d !== value) onChange(d);
           setTxt(fmtField(d ?? value));
         }}
+        onKeyDown={(e) => {
+          // Alt+↓ opens the calendar, as in a native date field
+          if (e.altKey && e.key === 'ArrowDown') {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
       />
       <button
+        ref={btn}
         type="button"
         className="al-date-btn"
         aria-label={pickLabel}
         title={pickLabel}
-        onClick={() => {
-          const el = pick.current;
-          try {
-            el?.showPicker();
-          } catch {
-            el?.focus();
-          }
-        }}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
       >
         <svg
           width="14"
@@ -744,16 +757,24 @@ export function DateField({
           <path d="M3 10h18M8 3v4M16 3v4" />
         </svg>
       </button>
-      <input
-        ref={pick}
-        type="date"
-        tabIndex={-1}
-        aria-hidden
-        className="al-date-native"
-        value={value}
-        min={min}
-        onChange={(e) => isIsoDay(e.target.value) && onChange(e.target.value)}
-      />
+      {open && (
+        <DatePicker
+          anchor={box}
+          value={value}
+          lang={lang}
+          min={min}
+          max={max}
+          clearable={clearable}
+          onPick={(d) => {
+            onChange(d);
+            setTxt(fmtField(d));
+          }}
+          onClose={() => {
+            setOpen(false);
+            btn.current?.focus();
+          }}
+        />
+      )}
     </span>
   );
 }

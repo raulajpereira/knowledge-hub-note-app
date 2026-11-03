@@ -21,6 +21,7 @@ import { Sheet } from '@/components/ui';
 import { Av } from '../ui';
 import type { Mg } from '../store';
 import { ABS_LABEL, ABS_TYPE_LABEL, BAND_BG, BAND_FG, dayMon, dm, groupOfArea, wdShort } from './shared';
+import { DateField } from './Popovers';
 import './alloc.css';
 
 type PF = 'over' | 'free' | 'ph' | string;
@@ -480,21 +481,21 @@ function PersonSheet({ mg, p, mon, onClose }: { mg: Mg; p: MgPerson; mon: Dn; on
             <div className="al-2">
               <label className="al-lbl">
                 {tr('De')}
-                <input
-                  type="date"
-                  className="al-in mono"
+                <DateField
                   value={abs.from}
-                  onChange={(e) => setAbs({ ...abs, from: e.target.value })}
+                  onChange={(from) => setAbs({ ...abs, from })}
+                  label={tr('De')}
+                  pickLabel={tr('Escolher no calendário')}
                 />
               </label>
               <label className="al-lbl">
                 {tr('Até')}
-                <input
-                  type="date"
-                  className="al-in mono"
+                <DateField
                   value={abs.to}
                   min={abs.from}
-                  onChange={(e) => setAbs({ ...abs, to: e.target.value })}
+                  onChange={(to) => setAbs({ ...abs, to })}
+                  label={tr('Até')}
+                  pickLabel={tr('Escolher no calendário')}
                 />
               </label>
             </div>

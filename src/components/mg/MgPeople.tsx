@@ -419,6 +419,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                   val: sel.hired ?? '',
                   type: 'date',
                   pick: tr('Escolher no calendário'),
+                  clearable: true,
                   onChange: set('hired'),
                 },
                 {

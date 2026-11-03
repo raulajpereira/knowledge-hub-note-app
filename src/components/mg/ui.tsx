@@ -454,6 +454,8 @@ export type Field = {
   readOnly?: boolean;
   /** type 'date': the label of the calendar button */
   pick?: string;
+  /** type 'date': can be emptied ("Limpar" in the calendar) */
+  clearable?: boolean;
   title?: string;
 };
 /** Label | input rows inside a rounded box (prototype fld()). */
@@ -516,6 +518,7 @@ export function Fields({
                 onChange={f.onChange}
                 label={f.label}
                 pickLabel={f.pick ?? `${f.label} · 📅`}
+                clearable={f.clearable}
               />
             ) : f.opts ? (
               <Sel

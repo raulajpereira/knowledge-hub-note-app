@@ -8,6 +8,7 @@ export * as Icons from './icons';
 export { ConfirmDialog, ConfirmProvider, Modal, useConfirm, type ConfirmOptions } from './Modal';
 export { ResizableTable, type Column, type SortState } from './ResizableTable';
 export { Popover } from './Popover';
+export { DatePicker, type DatePickerLabels } from './DatePicker';
 export { TagInput } from './TagInput';
 export { TagColorsProvider, useTagColors, useTagStyle } from './TagColors';
 export { Select, type SelectOption } from './Select';

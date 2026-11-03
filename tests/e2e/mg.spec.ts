@@ -303,6 +303,20 @@ test('projects: start / end and phase dates take any day (typed or picked), not 
       return [p?.from, p?.to, p?.phases[0]?.to];
     })
     .toEqual(['2026-11-11', '2027-03-19', '2026-12-04']);
+  // the glass calendar: opens on the day, the keyboard moves (→ = next day) and Enter picks
+  await page.getByRole('button', { name: 'Escolher no calendário' }).first().click();
+  const cal = page.getByRole('dialog', { name: 'Calendário' });
+  await expect(cal).toBeVisible();
+  await expect(cal.locator('.kh-dp__title')).toHaveText(/novembro de 2026/i);
+  await expect(cal.locator('[aria-selected="true"]')).toHaveText('11');
+  await expect(cal.locator('[aria-selected="true"]')).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(cal).toBeHidden();
+  await expect(page.getByLabel('Início', { exact: true })).toHaveValue('12/11/2026');
+  await expect
+    .poll(async () => (await mgData(page)).projects.find((x) => x.code === 'E2E-01')?.from)
+    .toBe('2026-11-12');
 });
 
 test('projects: SAP modules — two from the list and one of our own, chips, edit and filter', async ({

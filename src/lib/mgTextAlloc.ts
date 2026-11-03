@@ -1,6 +1,9 @@
 // English text of the Alocações v2 screens (alloc2) — the screens are written in
 // Portuguese like the rest of Management; mgTr() looks here after MG_EX.
 export const MG_EX_AL: Record<string, string> = {
+  'Outros projetos': 'Other projects',
+  'fora do filtro · contam na carga': 'outside the filter · count in the load',
+  'não conta na carga': 'not in the load',
   '= horas confirmadas ÷ capacidade (horas semanais da pessoa, menos feriados e ausências)':
     "= confirmed hours ÷ capacity (the person's weekly hours, less holidays and absences)",
   'A exportar…': 'Exporting…',

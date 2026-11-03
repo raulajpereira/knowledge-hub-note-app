@@ -1906,17 +1906,6 @@ button.al-chip:hover {
   background: rgb(var(--w) / 0.1);
   color: var(--ink);
 }
-.al-date-native {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-  border: 0;
-  padding: 0;
-}
 
 /* "?" next to Ausência: how to create an absence */
 .al-help {
