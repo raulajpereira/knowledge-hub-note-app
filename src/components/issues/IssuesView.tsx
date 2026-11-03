@@ -6,7 +6,7 @@ import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { fmtDue, localDay } from '@/lib/tasks';
-import { useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { DateInput, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
 import { BackBar, useListDetail } from '@/components/content/MobilePane';
@@ -788,11 +788,11 @@ export function IssuesView() {
               </label>
               <label className="kh-is-field">
                 <span className="kh-is-lbl">{t('t_due')}</span>
-                <input
-                  type="date"
+                <DateInput
                   className="kh-is-input"
                   value={a.dueOn ?? ''}
-                  onChange={(e) => save(a.id, { dueOn: e.target.value || null })}
+                  clearable
+                  onChange={(v) => save(a.id, { dueOn: v || null })}
                 />
               </label>
             </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { DateInput } from '@/components/ui';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { JSONContent } from '@tiptap/react';
@@ -874,11 +875,11 @@ function NotePanel({
           </label>
           <label className="kh-sap-fld">
             <span>{t('sn_released')}</span>
-            <input
+            <DateInput
               className="kh-sap-input"
-              type="date"
               value={n.releasedOn ?? ''}
-              onChange={(e) => upd({ releasedOn: e.target.value || null }, 0)}
+              clearable
+              onChange={(v) => upd({ releasedOn: v || null }, 0)}
             />
           </label>
         </div>
@@ -994,13 +995,13 @@ function NotePanel({
                     </option>
                   ))}
                 </select>
-                <input
-                  type="date"
+                <DateInput
                   className="kh-sap-input kh-sn-date"
                   value={v.implOn ?? ''}
                   aria-label={`${t('sn_implOn')} ${sysLabel(s)}`}
                   title={t('sn_implOn')}
-                  onChange={(e) => setStatus(s.id, { implOn: e.target.value || null })}
+                  clearable
+                  onChange={(d) => setStatus(s.id, { implOn: d || null })}
                 />
                 {hasTransports && (
                   <select

@@ -5,7 +5,7 @@ import type { JSONContent } from '@tiptap/react';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { PRIORITY_COLOR, RESOLVED_STATUSES, STATUS_COLOR, type TicketStatus } from '@/lib/tickets';
-import { useConfirm, useToast } from '@/components/ui';
+import { DateInput, DateTimeInput, useConfirm, useToast } from '@/components/ui';
 import { useWhen } from '@/components/content/useWhen';
 import { Connections } from '@/components/content/Connections';
 import { TicketNotes } from './TicketNotes';
@@ -547,38 +547,37 @@ export function TicketDetail({
           <div className="kh-tkt-dates">
             <label className="kh-sap-fld">
               <span>{t('tk_opened')}</span>
-              <input
+              <DateTimeInput
                 className="kh-sap-input"
-                type="datetime-local"
                 value={toLocalInput(x.openedAt)}
                 readOnly={!can}
-                onChange={(e) => {
-                  const v = fromLocalInput(e.target.value);
+                onChange={(lv) => {
+                  const v = fromLocalInput(lv);
                   if (v) upd({ openedAt: v }, 0);
                 }}
               />
             </label>
             <label className="kh-sap-fld">
               <span>{t('tk_due')}</span>
-              <input
+              <DateInput
                 className="kh-sap-input"
-                type="date"
                 data-late={late || undefined}
                 value={x.dueOn ?? ''}
                 readOnly={!can}
-                onChange={(e) => upd({ dueOn: e.target.value || null }, 0)}
+                clearable
+                onChange={(v) => upd({ dueOn: v || null }, 0)}
               />
               {late && <em className="kh-tkt-late">{t('tk_overdue')}</em>}
             </label>
             <label className="kh-sap-fld">
               <span>{t('tk_resolved')}</span>
-              <input
+              <DateTimeInput
                 className="kh-sap-input"
-                type="datetime-local"
                 value={toLocalInput(x.resolvedAt)}
                 disabled={!resolvedNow || !can}
                 title={t('tk_resolvedAuto')}
-                onChange={(e) => upd({ resolvedAt: fromLocalInput(e.target.value) }, 0)}
+                clearable
+                onChange={(v) => upd({ resolvedAt: fromLocalInput(v) }, 0)}
               />
             </label>
           </div>

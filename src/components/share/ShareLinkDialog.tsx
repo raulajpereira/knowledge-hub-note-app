@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { useToast } from '@/components/ui';
+import { DateInput, useToast } from '@/components/ui';
 import { ShareDialog, ShareHead } from './ShareDialog';
 
 export type PublicLink = {
@@ -121,11 +121,11 @@ export function ShareLinkDialog({
           <div className="kh-sh-grid2">
             <label>
               <span>{t('sh_expires')}</span>
-              <input
-                type="date"
+              <DateInput
                 value={link.expiresOn ?? ''}
                 min={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => void patch({ expiresOn: e.target.value || null })}
+                clearable
+                onChange={(v) => void patch({ expiresOn: v || null })}
               />
             </label>
             <label>

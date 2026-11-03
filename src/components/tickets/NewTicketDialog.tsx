@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { PRIORITY_COLOR, type TicketPriority } from '@/lib/tickets';
-import { Modal, useToast } from '@/components/ui';
+import { DateInput, Modal, useToast } from '@/components/ui';
 import { ChipSelect, PartyField, PRIORITIES, prioLabel, type Ticket, type TicketType } from './ticketUi';
 
 type Party = { id: string | null; name: string };
@@ -205,12 +205,7 @@ export function NewTicketDialog({
         <div className="kh-tkt-form__row">
           <label className="kh-sap-fld">
             <span>{t('tk_due')}</span>
-            <input
-              className="kh-sap-input"
-              type="date"
-              value={due}
-              onChange={(e) => setDue(e.target.value)}
-            />
+            <DateInput className="kh-sap-input" value={due} clearable onChange={setDue} />
           </label>
           <div />
         </div>

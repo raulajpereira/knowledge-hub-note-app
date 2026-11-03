@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '@/lib/client/api';
 import { actionLabel, areaLabel, AREA_LABELS } from '@/lib/adminLabels';
-import { useToast } from '@/components/ui';
+import { DateInput, useToast } from '@/components/ui';
 import { SEC_TITLE, SectionHead, Svg } from './AdminShell';
 import { Avatar, Cell, Field, Table, fmtStamp, useA } from './ui';
 
@@ -97,10 +97,20 @@ export function Audit() {
             {f.period === 'range' && (
               <>
                 <Field label={A('De')}>
-                  <input className="kh-ad-input" type="date" value={f.from} onChange={set('from')} />
+                  <DateInput
+                    className="kh-ad-input"
+                    value={f.from}
+                    onChange={(v) => setF({ ...f, from: v })}
+                    clearable
+                  />
                 </Field>
                 <Field label={A('Até')}>
-                  <input className="kh-ad-input" type="date" value={f.to} onChange={set('to')} />
+                  <DateInput
+                    className="kh-ad-input"
+                    value={f.to}
+                    onChange={(v) => setF({ ...f, to: v })}
+                    clearable
+                  />
                 </Field>
               </>
             )}

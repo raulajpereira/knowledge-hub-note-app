@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { Sheet, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { DateInput, Sheet, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
@@ -811,12 +811,7 @@ export function MeetingsView() {
             <div className="kh-mt-when">
               <label>
                 <span>{t('mt_date')}</span>
-                <input
-                  type="date"
-                  value={act.heldOn}
-                  required
-                  onChange={(e) => e.target.value && upd(act.id, { heldOn: e.target.value }, 0)}
-                />
+                <DateInput value={act.heldOn} required onChange={(v) => v && upd(act.id, { heldOn: v }, 0)} />
               </label>
               <label>
                 <span>{t('mt_start')}</span>

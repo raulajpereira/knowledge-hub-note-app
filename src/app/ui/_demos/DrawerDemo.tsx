@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Drawer, Field, Input, Select, Switch } from '@/components/ui';
+import { Button, DateInput, Drawer, Field, Input, Select, Switch } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
 import { Page, Row, Section } from './Section';
 
@@ -10,6 +10,7 @@ export default function DrawerDemo() {
   const [open, setOpen] = useState(true);
   const [plan, setPlan] = useState('PRO');
   const [active, setActive] = useState(true);
+  const [renew, setRenew] = useState('2027-06-03');
   return (
     <Page
       title="Drawer Redimensionável"
@@ -56,13 +57,7 @@ export default function DrawerDemo() {
             </Field>
             <Field label="Renovação">
               {({ id }) => (
-                <Input
-                  id={id}
-                  size="md"
-                  type="date"
-                  defaultValue="2027-06-03"
-                  style={{ colorScheme: 'dark' }}
-                />
+                <DateInput id={id} className="kh-input kh-input--md" value={renew} onChange={setRenew} />
               )}
             </Field>
             <Row gap={12}>

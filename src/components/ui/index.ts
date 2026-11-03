@@ -9,6 +9,7 @@ export { ConfirmDialog, ConfirmProvider, Modal, useConfirm, type ConfirmOptions 
 export { ResizableTable, type Column, type SortState } from './ResizableTable';
 export { Popover } from './Popover';
 export { DatePicker, type DatePickerLabels } from './DatePicker';
+export { DateInput, DateTimeInput, parseTypedDay, type DateInputProps } from './DateInput';
 export { TagInput } from './TagInput';
 export { TagColorsProvider, useTagColors, useTagStyle } from './TagColors';
 export { Select, type SelectOption } from './Select';

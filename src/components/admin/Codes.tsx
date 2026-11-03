@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '@/lib/client/api';
-import { useConfirm, useToast } from '@/components/ui';
+import { DateInput, useConfirm, useToast } from '@/components/ui';
 import { SEC_TITLE, SectionHead, useConsole } from './AdminShell';
 import {
   Bar,
@@ -472,12 +472,12 @@ export function CodeDetail({ row, onChanged }: { row: CodeRow; onChanged: () => 
           </Field>
           {v.life === 'date' && (
             <Field label={A('Válido até')}>
-              <input
+              <DateInput
                 className="kh-ad-input"
-                type="date"
                 disabled={!w}
                 value={v.exp}
-                onChange={(e) => setV({ ...v, exp: e.target.value })}
+                clearable
+                onChange={(exp) => setV({ ...v, exp })}
               />
             </Field>
           )}

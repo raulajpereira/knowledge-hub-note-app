@@ -250,7 +250,7 @@ test('tasks: create, subtasks, repetition, filters, link to a note, Trash', asyn
   const pt = (d: Date) => iso(d).split('-').reverse().join('/');
   const due = new Date(Date.now() + 30 * 864e5);
   const next = new Date(due.getTime() + 7 * 864e5);
-  await page.locator('.kh-tk-grid input[type=date]').fill(iso(due));
+  await page.locator('.kh-tk-grid .kh-di__in').fill(iso(due));
   await page.locator('.kh-tk-grid select').nth(1).selectOption('weekly');
   for (const s of ['Ver dumps', 'Limpar logs']) {
     await page.getByPlaceholder('Adicionar subtarefa e premir Enter').fill(s);

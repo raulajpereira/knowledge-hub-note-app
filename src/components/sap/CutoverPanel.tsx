@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { FN, FN_RBG, fnBlankRow, type FnRow } from '@/lib/functional';
 import { blockers, depsOf, durOf, fmtDur, isBlocked, phaseOf, plan, wouldCycle } from '@/lib/cutover';
-import { useConfirm, usePersistentState } from '@/components/ui';
+import { DateTimeInput, useConfirm, usePersistentState } from '@/components/ui';
 
 // Cutover runbook: activities grouped by phase with their predecessors
 // ("depende de"), planned start, duration, owner and status. An activity is
@@ -235,12 +235,12 @@ export function CutoverPanel({
                     </label>
                     <label className="kh-cu-f">
                       <span>{t('cu_start')}</span>
-                      <input
+                      <DateTimeInput
                         className="kh-fn-cin kh-cu-dt"
-                        type="datetime-local"
                         value={r.start ?? ''}
                         title={pl && !r.start ? `${t('cu_earliest')} ${dt(pl.es)}` : undefined}
-                        onChange={(e) => set(r.id, { start: e.target.value }, 0)}
+                        clearable
+                        onChange={(v) => set(r.id, { start: v }, 0)}
                       />
                     </label>
                     <label className="kh-cu-f kh-cu-f--dur">

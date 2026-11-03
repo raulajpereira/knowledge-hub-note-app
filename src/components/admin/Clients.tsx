@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { adminApi, isApiFailure } from '@/lib/client/api';
 import { actionLabel } from '@/lib/adminLabels';
 import { FILES_MAX_MB, FILES_MAX_MB_CAP, FILES_QUOTA_MB, FILES_QUOTA_MB_CAP, fmtBytes } from '@/lib/drive';
-import { useConfirm, useToast } from '@/components/ui';
+import { DateInput, useConfirm, useToast } from '@/components/ui';
 import { SEC_TITLE, SectionHead, Svg, useConsole } from './AdminShell';
 import { CodeDetail, CodeDone, type CodeRow } from './Codes';
 import {
@@ -580,12 +580,12 @@ function Subscription({
         </Field>
       )}
       <Field label={A('Próxima renovação')}>
-        <input
+        <DateInput
           className="kh-ad-input"
-          type="date"
           disabled={!w}
           value={c.renewAt?.slice(0, 10) ?? ''}
-          onChange={(e) => void save({ renewAt: e.target.value || null })}
+          clearable
+          onChange={(v) => void save({ renewAt: v || null })}
         />
       </Field>
       <Field label={A('Estado')}>

@@ -7,7 +7,14 @@ import { useI18n } from '@/i18n/client';
 import { api, isApiFailure } from '@/lib/client/api';
 import { COL_DEFAULTS, COL_LIMITS } from '@/lib/prefs';
 import { fmtDue, localDay } from '@/lib/tasks';
-import { onActivateKey, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import {
+  DateInput,
+  DateTimeInput,
+  onActivateKey,
+  useConfirm,
+  usePersistentState,
+  useToast,
+} from '@/components/ui';
 import { usePref } from '@/components/shell/PrefsProvider';
 import { useShell } from '@/components/shell/ShellContext';
 import { refreshCounts } from '@/components/shell/counts';
@@ -423,11 +430,7 @@ function Detail({
       <div className="kh-tk-grid">
         <label>
           <span className="kh-tk-lbl">{t('t_due')}</span>
-          <input
-            type="date"
-            value={task.dueOn ?? ''}
-            onChange={(e) => onPatch({ dueOn: e.target.value || null })}
-          />
+          <DateInput value={task.dueOn ?? ''} clearable onChange={(v) => onPatch({ dueOn: v || null })} />
         </label>
         {task.mine && (
           <label>
@@ -499,12 +502,9 @@ function Detail({
         {task.mine && task.remind === 'custom' && (
           <label>
             <span className="kh-tk-lbl">{t('t_remAt')}</span>
-            <input
-              type="datetime-local"
+            <DateTimeInput
               value={task.remindAt ? toLocalInput(task.remindAt) : ''}
-              onChange={(e) =>
-                e.target.value && onPatch({ remindAt: new Date(e.target.value).toISOString() })
-              }
+              onChange={(v) => v && onPatch({ remindAt: new Date(v).toISOString() })}
             />
           </label>
         )}

@@ -1594,3 +1594,60 @@ button.kh-table__th {
   color: var(--ink-inv);
   border-color: var(--ink);
 }
+
+/* DateInput: a typed date (dd/mm/aaaa) with the glass calendar button (DateInput.tsx) */
+.kh-di {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+label > .kh-di,
+.kh-dti > .kh-di {
+  width: 100%;
+}
+.kh-di > input.kh-di__in {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding-right: 38px;
+  font-variant-numeric: tabular-nums;
+}
+.kh-di__btn {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+  cursor: pointer;
+}
+.kh-di__btn:hover:not(:disabled) {
+  background: rgb(var(--w) / 0.12);
+  color: var(--ink);
+}
+.kh-di__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.kh-dti {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.kh-dti > .kh-di {
+  flex: 1 1 auto;
+}
+.kh-dti > input.kh-dti__time {
+  flex: 0 0 auto;
+  width: 104px;
+  color-scheme: var(--scheme);
+}
