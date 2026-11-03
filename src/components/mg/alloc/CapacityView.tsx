@@ -138,7 +138,7 @@ export function CapacityView({
   const mon = (n: Dn) => monShort(n, lang);
   return (
     <div className="al-body">
-      <div className="al-well">
+      <div className="kh-well al-well">
         <div className="al-scroll">
           <div style={{ minWidth: 700 }}>
             <div className="al-hdr al-caphdr">

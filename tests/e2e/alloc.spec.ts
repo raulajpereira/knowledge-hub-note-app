@@ -129,6 +129,8 @@ test('timeline: drag to create with the linked fields, resize, move, Alt+drag co
   const y = (await row.boundingBox())!.y + 20;
   const x0 = await dayX(page, mon);
   const x1 = await dayX(page, addD(mon, 4));
+  // the width of a day (the columns fit 30 days in the visible width)
+  const pd = (await page.locator(`.al-hcol[data-day="${mon}"]`).boundingBox())!.width;
   await page.mouse.move(x0, y);
   await page.mouse.down();
   await page.mouse.move(x1, y, { steps: 10 });
@@ -162,7 +164,7 @@ test('timeline: drag to create with the linked fields, resize, move, Alt+drag co
   const bb = (await bar.boundingBox())!;
   await page.mouse.move(bb.x + bb.width - 3, bb.y + bb.height / 2);
   await page.mouse.down();
-  await page.mouse.move(bb.x + bb.width - 3 + 34 * 3, bb.y + bb.height / 2, { steps: 8 });
+  await page.mouse.move(bb.x + bb.width - 3 + pd * 3, bb.y + bb.height / 2, { steps: 8 });
   await page.mouse.up();
   await expect.poll(async () => (await mine())[0]?.to).toBe(addD(mon, 7));
 
@@ -170,7 +172,7 @@ test('timeline: drag to create with the linked fields, resize, move, Alt+drag co
   const bb2 = (await bar.boundingBox())!;
   await page.mouse.move(bb2.x + 30, bb2.y + bb2.height / 2);
   await page.mouse.down();
-  await page.mouse.move(bb2.x + 30 + 34 * 7, bb2.y + bb2.height / 2, { steps: 10 });
+  await page.mouse.move(bb2.x + 30 + pd * 7, bb2.y + bb2.height / 2, { steps: 10 });
   await page.mouse.up();
   await expect.poll(async () => (await mine())[0]?.from).toBe(addD(mon, 7));
 
@@ -179,7 +181,7 @@ test('timeline: drag to create with the linked fields, resize, move, Alt+drag co
   await page.keyboard.down('Alt');
   await page.mouse.move(bb3.x + 30, bb3.y + bb3.height / 2);
   await page.mouse.down();
-  await page.mouse.move(bb3.x + 30 + 34 * 7, bb3.y + bb3.height / 2, { steps: 10 });
+  await page.mouse.move(bb3.x + 30 + pd * 7, bb3.y + bb3.height / 2, { steps: 10 });
   await page.mouse.up();
   await page.keyboard.up('Alt');
   await expect.poll(async () => (await mine()).length).toBe(2);

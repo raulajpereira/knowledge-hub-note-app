@@ -26,9 +26,10 @@ import {
   ABS_LABEL,
   BAND_BG,
   BAND_FG,
-  PPD,
+  fitPpd,
   bands,
   columns,
+  inView,
   groupOfArea,
   lanes,
   rangeBooking,
@@ -99,10 +100,11 @@ export function Timeline({
 }) {
   const { tr, lang } = mg;
   const [F, T] = win;
-  const ppd = PPD[zoom];
   const scRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ l: 0, t: 0, w: 1200, h: 700 });
   const [nameW, setNameW] = useState(236);
+  // the zoom's span (30 days · 4 weeks · 2 months) fills the visible width
+  const ppd = fitPpd(zoom, view.w - nameW);
   const [sel, setSel] = useState<{ kind: 'bk' | 'ab'; id: string } | null>(null);
   const [ghost, setGhost] = useState<Ghost | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
@@ -241,16 +243,19 @@ export function Timeline({
   // when we scrolled ourselves (those scroll events move nothing else)
   const prog = useRef(0);
   const lastPpd = useRef(ppd);
+  const lastZoom = useRef(zoom);
   useLayoutEffect(() => {
     const el = scRef.current;
     if (!el) return;
     const span = (el.clientWidth - nameW) / ppd;
     // a new zoom with today in view keeps today a fifth from the left (else the day in the centre stays)
-    if (center.current != null && lastPpd.current !== ppd) {
+    // (a resize only re-fits the columns: the centre stays)
+    if (center.current != null && lastZoom.current !== zoom) {
       const half = (el.clientWidth - nameW) / lastPpd.current / 2;
       if (Math.abs(today - center.current) < half) center.current = null;
     }
     lastPpd.current = ppd;
+    lastZoom.current = zoom;
     // first show: today a fifth from the left
     if (center.current == null) center.current = today + span * 0.3;
     prog.current = performance.now();
@@ -279,10 +284,11 @@ export function Timeline({
       return;
     }
     const dir = nav.kind === 'next' ? 1 : -1;
-    const target = el.scrollLeft + dir * span * 0.8;
+    // one whole visible span (30 days · 4 weeks · 2 months)
+    const target = el.scrollLeft + dir * span;
     if (target < 0) setWin([monthStart(F, -3), T]);
     else if (target + el.clientWidth > width) setWin([F, monthStart(T + 1, 3) - 1]);
-    requestAnimationFrame(() => el.scrollBy({ left: dir * span * 0.8, behavior: 'smooth' }));
+    requestAnimationFrame(() => el.scrollBy({ left: dir * span, behavior: 'smooth' }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav]);
   const visA = F + Math.max(0, Math.floor(view.l / ppd));
@@ -849,7 +855,7 @@ export function Timeline({
     x(today) +
     (zoom === 'day' ? ppd * ((new Date().getHours() + new Date().getMinutes() / 60) / 24) : ppd / 2);
   return (
-    <div className="al-well" tabIndex={0} onKeyDown={onKey} aria-label={tr('Timeline de alocações')}>
+    <div className="kh-well al-well" tabIndex={0} onKeyDown={onKey} aria-label={tr('Timeline de alocações')}>
       <div className="al-scroll" ref={scRef} onScroll={onUserScroll} data-al-scroll>
         <div className="al-canvas" style={{ width: nameW + width, height: totalH }}>
           {/* header */}
@@ -859,7 +865,7 @@ export function Timeline({
               {bands(vcols).map((g) => {
                 // cut to what is right of the people column, so the label always starts there
                 const l = Math.max(x(g.a), view.l + nameW);
-                const r = x(g.b) + ppd;
+                const r = Math.min(x(g.b) + ppd, view.l + view.w);
                 return r - l < 24 ? null : (
                   <div key={g.a} className="al-band" style={{ left: l, width: r - l }}>
                     <span>{g.label}</span>
@@ -868,11 +874,12 @@ export function Timeline({
               })}
               {vcols.map((c, i) => {
                 const w = (c.b - c.a + 1) * ppd;
+                const v = inView(x(c.a), x(c.a) + w, view.l + nameW, view.l + view.w);
                 return (
                   <div
                     key={c.a}
-                    className={`al-hcol${c.top && i ? ' newgrp' : ''}${c.today ? ' today' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}${c.weekend ? ' we' : ''}${w < 34 ? ' narrow' : ''}`}
-                    style={{ left: x(c.a), width: w }}
+                    className={`al-hcol${c.top && i ? ' newgrp' : ''}${c.today ? ' today' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}${c.weekend ? ' we' : ''}${w < 34 ? ' narrow' : ''}${v.tiny ? ' tiny' : ''}`}
+                    style={{ left: v.left, width: v.width }}
                     data-day={isoOf(c.a)}
                     title={c.hol ? holidayName(c.hol, lang) : undefined}
                   >

@@ -6,15 +6,6 @@
   --al-hol: oklch(calc(0.86 * var(--lk)) 0.12 30);
   /* the header's top band (week · month · year) */
   --al-band: 26px;
-  /* under the sticky glass columns: cells and bars scroll beneath them, a
-     little more tint keeps the names readable over the coloured values */
-  --al-under: rgb(var(--d) / calc(0.3 * var(--d-k)));
-  /* the sticky corner / people column: frosted, nearly solid (the card's own
-     tint), so nothing that scrolls beneath them can be read */
-  --al-stick: rgb(62 49 42 / 0.9);
-}
-:root[data-theme='light'] {
-  --al-stick: rgb(245 240 235 / 0.9);
 }
 /* layers that scroll sideways: cut at the right edge of the people column
    (--al-sl is the scroll offset, set while scrolling) */
@@ -316,13 +307,7 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
-  border-radius: 22px;
-  background: linear-gradient(
-    180deg,
-    rgb(var(--sf) / calc(0.06 * var(--sf-k))),
-    rgb(var(--sf) / calc(0.03 * var(--sf-k)))
-  );
-  border: 1px solid rgb(var(--w) / 0.12);
+  /* the app's table well (.kh-well, as ResizableTable): tint, hairline, 22px */
   overflow: hidden;
   position: relative;
   display: flex;
@@ -344,9 +329,11 @@
   top: 0;
   z-index: 8;
   background: var(--kh-sticky-bg);
-  border-bottom: 1px solid var(--kh-divider);
+  /* as the app's table heads (.kh-table__head) */
+  border-bottom: 1px solid rgb(var(--w) / 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
-/* the blur sits on a layer behind: a blurred parent would stop the corner's own blur */
+/* the blur sits on a layer behind, so the sticky columns under it keep their own */
 .al-hdr::before {
   content: '';
   position: absolute;
@@ -365,15 +352,14 @@
   display: flex;
   align-items: flex-end;
   padding: 0 18px 14px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgb(var(--t) / calc(0.72 * var(--t-k)));
+  color: var(--ink);
   border-right: 1px solid var(--kh-divider);
-  background: var(--kh-sticky-col-bg), var(--al-stick);
-  backdrop-filter: var(--kh-sticky-filter);
-  -webkit-backdrop-filter: var(--kh-sticky-filter);
+  /* part of the header's glass strip (the columns are cut at its edge) */
+  background: none;
 }
 /* top row: one band per week / month / year, its label kept in view */
 .al-band {
@@ -410,6 +396,9 @@
   gap: 2px;
   border-left: 1px solid rgb(var(--w) / 0.05);
   overflow: hidden;
+}
+.al-hcol.tiny > * {
+  visibility: hidden;
 }
 .al-hcol.newgrp {
   border-left-color: rgb(var(--w) / 0.16);
@@ -478,7 +467,7 @@
   align-items: center;
   gap: 11px;
   padding: 0 12px 0 16px;
-  background: var(--kh-sticky-col-bg), var(--al-stick);
+  background: var(--kh-sticky-col-bg);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-right: 1px solid var(--kh-divider);
@@ -555,7 +544,7 @@
   left: 0;
   z-index: 5;
   min-width: var(--al-name);
-  background: var(--kh-sticky-col-bg), var(--al-stick);
+  background: var(--kh-sticky-col-bg);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-right: 1px solid var(--kh-divider);
@@ -1255,7 +1244,7 @@ button.al-chip:hover {
   align-items: center;
   gap: 10px;
   padding: 0 10px 0 12px;
-  background: var(--kh-sticky-col-bg), var(--al-stick);
+  background: var(--kh-sticky-col-bg);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-right: 1px solid var(--kh-divider);
@@ -1286,7 +1275,7 @@ button.al-chip:hover {
   background: repeating-linear-gradient(135deg, rgb(var(--w) / 0.05) 0 3px, transparent 3px 8px);
 }
 .al-gcell .v {
-  min-width: 46px;
+  min-width: min(46px, calc(100% - 4px));
   height: 30px;
   padding: 0 6px;
   border-radius: 9px;
@@ -1374,7 +1363,7 @@ button.al-chip:hover {
   position: sticky;
   right: 0;
   z-index: 3;
-  background: var(--kh-sticky-col-bg), var(--al-stick);
+  background: var(--kh-sticky-col-bg);
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
   border-left: 1px solid var(--kh-divider);

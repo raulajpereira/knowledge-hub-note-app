@@ -36,6 +36,8 @@ import {
   groupOfArea,
   newBooking,
   stdHours,
+  fitColW,
+  inView,
   stdWorkDays,
   wdShort,
   type Col,
@@ -43,7 +45,6 @@ import {
 import type { GroupBy, Nav } from './Timeline';
 
 export type GUnit = 'h' | 'pct' | 'fte';
-const COLW: Record<Zoom, number> = { day: 52, week: 66, month: 74, quarter: 96 };
 const HEAD = 78;
 const NAMEW = 262;
 
@@ -104,10 +105,11 @@ export function Grid({
 }) {
   const { tr, lang } = mg;
   const [F, T] = win;
-  const colW = COLW[zoom];
   const scRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ l: 0, w: 1100, t: 0, h: 600 });
+  // 30 days · 4 weeks · 2 months · 4 quarters fill the width between the name and Total columns
+  const colW = fitColW(zoom, view.w - NAMEW - 84);
   const [openP, setOpenP] = useState<Record<string, boolean>>({});
   const [cur, setCur] = useState<{ r: number; c: number } | null>(null);
   const [sel, setSel] = useState<Sel | null>(null);
@@ -358,7 +360,7 @@ export function Grid({
     ro.observe(el);
     return () => ro.disconnect();
   }, [onScroll]);
-  const prevZ = useRef({ zoom, F });
+  const prevZ = useRef({ zoom, F, colW });
   const first = useRef(true);
   useLayoutEffect(() => {
     const el = scRef.current;
@@ -371,8 +373,11 @@ export function Grid({
       const old = columns(prevZ.current.zoom, prevZ.current.F, T, lang, () => '');
       const leftDn = old[Math.floor(el.scrollLeft / colW)]?.a ?? F;
       el.scrollLeft = Math.max(0, cols.findIndex((c) => c.b >= leftDn) * colW);
+    } else if (prevZ.current.colW !== colW) {
+      // re-fitted to a new width: the same first column stays at the left
+      el.scrollLeft = Math.round(el.scrollLeft / prevZ.current.colW) * colW;
     }
-    prevZ.current = { zoom, F };
+    prevZ.current = { zoom, F, colW };
     onScroll();
   }, [zoom, F, cols, colW, today, T, lang, onScroll]);
   useEffect(() => {
@@ -385,11 +390,13 @@ export function Grid({
       return;
     }
     const dir = nav.kind === 'next' ? 1 : -1;
-    const target = el.scrollLeft + dir * span * 0.8;
+    // one whole visible span, in whole columns
+    const step = Math.max(1, Math.floor(span / colW + 0.01)) * colW;
+    const target = el.scrollLeft + dir * step;
     if (target < 0) setWin([monthStart(F, zoom === 'quarter' ? -6 : -3), T]);
     else if (target + el.clientWidth > cols.length * colW + NAMEW)
       setWin([F, monthStart(T + 1, zoom === 'quarter' ? 6 : 3) - 1]);
-    requestAnimationFrame(() => el.scrollBy({ left: dir * span * 0.8, behavior: 'smooth' }));
+    requestAnimationFrame(() => el.scrollBy({ left: dir * step, behavior: 'smooth' }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav]);
   const c0 = Math.max(0, Math.floor(view.l / colW) - 2);
@@ -808,7 +815,7 @@ export function Grid({
   return (
     <>
       <div className="al-body" style={{ position: 'relative' }}>
-        <div className="al-well">
+        <div className="kh-well al-well">
           <div className="al-scroll" ref={scRef} onScroll={onScroll}>
             <div
               ref={gridRef}
@@ -862,11 +869,12 @@ export function Grid({
                   {visCols.map((c, k) => {
                     const ci = c0 + k;
                     const wd = stdWorkDays(c.a, c.b);
+                    const v = inView(x(ci), x(ci) + colW, view.l + NAMEW, view.l + view.w - 84);
                     return (
                       <div
                         key={ci}
-                        className={`al-hcol${c.today ? ' today' : ''}${c.top && ci ? ' newgrp' : ''}${c.weekend ? ' we' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}`}
-                        style={{ left: x(ci), width: colW }}
+                        className={`al-hcol${c.today ? ' today' : ''}${c.top && ci ? ' newgrp' : ''}${c.weekend ? ' we' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}${v.tiny ? ' tiny' : ''}`}
+                        style={{ left: v.left, width: v.width }}
                       >
                         <span className="lbl">{c.lbl}</span>
                         {(zoom === 'day' || zoom === 'week') && <span className="sub">{c.sub}</span>}

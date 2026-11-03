@@ -22,7 +22,7 @@ import type { Mg } from '../store';
 import type { Filters } from './AllocPage';
 import type { GUnit } from './Grid';
 import { Floating } from './Popovers';
-import { PPD, bands, columns, dayMon, type TZoom } from './shared';
+import { bands, columns, dayMon, fitPpd, inView, type TZoom } from './shared';
 import type { Nav } from './Timeline';
 
 const HEAD = 66;
@@ -77,10 +77,11 @@ export function ProjectsView({
 }) {
   const { tr, lang } = mg;
   const zoom: TZoom = z0 === 'day' ? 'week' : z0;
-  const ppd = PPD[zoom];
   const [F, T] = win;
   const scRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ l: 0, w: 900, t: 0, h: 600 });
+  // 4 weeks · 2 months fill the visible width
+  const ppd = fitPpd(zoom, view.w - NAMEW);
   const [pick, setPick] = useState<string | null>(null);
   const [drag, setDrag] = useState<{ p: MgPerson; x: number; y: number; over: string | null } | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
@@ -204,10 +205,10 @@ export function ProjectsView({
       return;
     }
     const dir = nav.kind === 'next' ? 1 : -1;
-    const target = el.scrollLeft + dir * span * 0.8;
+    const target = el.scrollLeft + dir * span;
     if (target < 0) setWin([monthStart(F, -3), T]);
     else if (target + el.clientWidth > width) setWin([F, monthStart(T + 1, 3) - 1]);
-    requestAnimationFrame(() => el.scrollBy({ left: dir * span * 0.8, behavior: 'smooth' }));
+    requestAnimationFrame(() => el.scrollBy({ left: dir * span, behavior: 'smooth' }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav]);
   const visA = F + Math.max(0, Math.floor(view.l / ppd));
@@ -442,7 +443,7 @@ export function ProjectsView({
   const off = -wdOf(F) * ppd;
   return (
     <div className="al-body">
-      <div className="al-well">
+      <div className="kh-well al-well">
         <div className="al-scroll" ref={scRef} onScroll={onScroll}>
           <div
             className="al-canvas"
@@ -457,7 +458,7 @@ export function ProjectsView({
               <div className="al-lane">
                 {bands(cols.filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)).map((g) => {
                   const l = Math.max(x(g.a), view.l + NAMEW);
-                  const r = x(g.b) + ppd;
+                  const r = Math.min(x(g.b) + ppd, view.l + view.w);
                   return r - l < 24 ? null : (
                     <div key={g.a} className="al-band" style={{ left: l, width: r - l }}>
                       <span>{g.label}</span>
@@ -466,20 +467,23 @@ export function ProjectsView({
                 })}
                 {cols
                   .filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)
-                  .map((c, i) => (
-                    <div
-                      key={c.a}
-                      className={`al-hcol${c.today ? ' today' : ''}${c.top && i ? ' newgrp' : ''}`}
-                      style={{ left: x(c.a), width: (c.b - c.a + 1) * ppd }}
-                    >
-                      <span className="lbl">{c.lbl}</span>
-                      {zoom === 'week' && (
-                        <span className="sub" style={c.hol ? { color: 'var(--al-hol)' } : undefined}>
-                          {c.hol ? tr('feriado') : c.sub}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  .map((c, i) => {
+                    const v = inView(x(c.a), x(c.b) + ppd, view.l + NAMEW, view.l + view.w);
+                    return (
+                      <div
+                        key={c.a}
+                        className={`al-hcol${c.today ? ' today' : ''}${c.top && i ? ' newgrp' : ''}${v.tiny ? ' tiny' : ''}`}
+                        style={{ left: v.left, width: v.width }}
+                      >
+                        <span className="lbl">{c.lbl}</span>
+                        {zoom === 'week' && (
+                          <span className="sub" style={c.hol ? { color: 'var(--al-hol)' } : undefined}>
+                            {c.hol ? tr('feriado') : c.sub}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
             <div className="al-lane">

@@ -21,8 +21,18 @@ import {
 } from '@/lib/alloc';
 
 export type TZoom = 'day' | 'week' | 'month';
-/** Pixels per day of each timeline zoom. */
-export const PPD: Record<TZoom, number> = { day: 34, week: 13, month: 3.4 };
+/** Days in view at each timeline zoom: 30 days · 4 weeks · 2 months. */
+export const FIT_DAYS: Record<TZoom, number> = { day: 30, week: 28, month: 61 };
+/** The smallest pixels per day, so the labels stay readable on narrow screens. */
+const MIN_PPD: Record<TZoom, number> = { day: 26, week: 64 / 7, month: 72 / 30 };
+/** Pixels per day so that the zoom's span fills the visible width (`vw`, without the name column). */
+export const fitPpd = (zoom: TZoom, vw: number) =>
+  Math.max(MIN_PPD[zoom], Math.floor((vw / FIT_DAYS[zoom]) * 100) / 100);
+/** Grid columns in view per zoom: 30 days · 4 weeks · 2 months · 4 quarters. */
+export const FIT_COLS: Record<Zoom, number> = { day: 30, week: 4, month: 2, quarter: 4 };
+const MIN_COLW: Record<Zoom, number> = { day: 26, week: 72, month: 80, quarter: 96 };
+export const fitColW = (zoom: Zoom, vw: number) =>
+  Math.max(MIN_COLW[zoom], Math.floor((vw / FIT_COLS[zoom]) * 100) / 100);
 export const ZOOMS: Array<[TZoom, string]> = [
   ['day', 'Dias'],
   ['week', 'Semanas'],
@@ -143,6 +153,12 @@ export function bands<C extends { a: Dn; b: Dn; band: string }>(cols: C[]) {
     } else out.push({ a: c.a, b: c.b, label: c.band, i, n: 1 });
   });
   return out;
+}
+/** A header column cut to the visible part (between `lo` and `hi`), so its label stays readable. */
+export function inView(l: number, r: number, lo: number, hi = Infinity) {
+  const left = Math.max(l, lo);
+  const width = Math.max(0, Math.min(r, hi) - left);
+  return { left, width, tiny: width < 20 };
 }
 /** Default window: 6 months before and 6 after today (whole months). */
 export function defaultWindow(): [Dn, Dn] {
