@@ -36,7 +36,8 @@ export type AlStore = {
   lo: Dn;
   hi: Dn;
   /** loads the bookings of [from, to] if not loaded yet */
-  ensure: (from: Dn, to: Dn) => void;
+  /** loads a range not loaded yet; resolves when it has arrived (the export waits for it) */
+  ensure: (from: Dn, to: Dn) => Promise<void>;
   /** applies a change (undoable unless `noUndo`) and queues it for the server */
   change: (c: AlChange, opts?: { noUndo?: boolean }) => void;
   undo: () => boolean;
@@ -128,7 +129,7 @@ export function AlProvider({ children }: { children: React.ReactNode }) {
   }, [fetchRange, merge]);
 
   const ensure = useCallback(
-    (from: Dn, to: Dn) => {
+    async (from: Dn, to: Dn) => {
       const w = winRef.current;
       if (!w) return;
       // whole months, a little beyond, so small moves don't refetch
@@ -138,11 +139,16 @@ export function AlProvider({ children }: { children: React.ReactNode }) {
       if (!parts.length) return;
       const nw: [Dn, Dn] = [Math.min(w[0], parts[0]![0]), Math.max(w[1], parts.at(-1)![1])];
       winRef.current = nw;
-      for (const [a, b] of parts)
-        fetchRange(a, b)
-          .then((r) => r && merge(r))
-          .catch(() => {});
       setWin(nw);
+      await Promise.all(
+        parts.map(([a, b]) =>
+          fetchRange(a, b)
+            .then((r) => {
+              if (r) merge(r);
+            })
+            .catch(() => {}),
+        ),
+      );
     },
     [fetchRange, merge],
   );

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { dnOf, isoOf, monthStart, todayIso, type Dn } from '@/lib/alloc';
+import { useRef, useState } from 'react';
+import { dnOf, isoOf, monthStart, todayIso, type Booking, type Dn } from '@/lib/alloc';
+import type { MgPerson } from '@/lib/mg';
 import { Modal, Segmented, useToast } from '@/components/ui';
 import type { Mg } from '../store';
 import type { Filters, View } from './AllocPage';
+import type { GroupBy } from './Timeline';
 import { DateField, Fld } from './Popovers';
 import { rangeLabel } from './shared';
 
@@ -26,15 +28,19 @@ export const DownloadIcon = () => (
 type Per = 'view' | 'month' | 'next3' | 'custom';
 
 /**
- * "Exportar para Excel" (design step): the period and a summary of what goes
- * into the file — the current team, view, grouping, filters and search. The
- * workbook (3 sheets: Dias, Semanas, Meses) is generated in a later step.
+ * "Exportar para Excel": the period and a summary of what goes into the file —
+ * the current team, view, grouping, filters and search. The workbook (3 sheets:
+ * Dias, Semanas, Meses, see ./xlsx.ts) is built here, in the browser, with
+ * exceljs loaded on click.
  */
 export function ExportDialog({
   mg,
   view,
   vis,
   groupLabel,
+  groupBy,
+  people,
+  bkFilter,
   fl,
   q,
   onClose,
@@ -43,12 +49,19 @@ export function ExportDialog({
   view: View;
   vis: [Dn, Dn];
   groupLabel: string | null;
+  groupBy: GroupBy;
+  people: MgPerson[];
+  bkFilter: (b: Booking) => boolean;
   fl: Filters;
   q: string;
   onClose: () => void;
 }) {
   const { tr, lang } = mg;
   const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  // the store after the range has loaded (read once the fetch is done)
+  const latest = useRef(mg);
+  latest.current = mg;
   const [per, setPer] = useState<Per>('view');
   const t = dnOf(todayIso());
   const [from, setFrom] = useState(isoOf(vis[0]));
@@ -79,6 +92,79 @@ export function ExportDialog({
     [!fl.hideAbs, 'Ausências'],
   ] as const;
 
+  const filterText = [
+    team ? team.name : tr('Todas as equipas'),
+    `${tr(VIEW[view])}${groupLabel ? ` · ${tr('agrupado por')} ${tr(groupLabel).toLowerCase()}` : ''}`,
+    ...filters,
+    q ? `${tr('Pesquisa')} «${q}»` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const run = async () => {
+    setBusy(true);
+    try {
+      const [F, T] = range;
+      await latest.current.AL.ensure(F, T);
+      // one render for the merged range to reach the store
+      await new Promise((r) => setTimeout(r, 60));
+      const m = latest.current;
+      const qq = q.toLowerCase();
+      const proj = view === 'proj';
+      const bookings = m.BK.filter(
+        (b) =>
+          bkFilter(b) &&
+          (!proj ||
+            !qq ||
+            `${m.pjById[b.project]?.code ?? ''} ${m.pjById[b.project]?.name ?? ''} ${b.role} ${m.pById[b.person]?.name ?? ''}`
+              .toLowerCase()
+              .includes(qq)),
+      );
+      const [mod, { buildAllocWorkbook, exportFileName }] = await Promise.all([
+        import('exceljs'),
+        import('./xlsx'),
+      ]);
+      const ExcelJS = ((mod as { default?: unknown }).default ?? mod) as Parameters<
+        typeof buildAllocWorkbook
+      >[0];
+      const wb = buildAllocWorkbook(ExcelJS, {
+        lang,
+        tr: m.tr,
+        from: F,
+        to: T,
+        people: proj ? m.P : people,
+        bookings,
+        absences: m.AB,
+        projects: m.PJ,
+        clients: m.D.clients,
+        teams: m.TEAMS,
+        levels: m.LV,
+        env: m.env,
+        groupBy: proj ? 'byProject' : groupBy,
+        showPh: !fl.hidePh,
+        showAbs: !fl.hideAbs,
+        filterText,
+        now: new Date(),
+      });
+      const buf = await wb.xlsx.writeBuffer();
+      const url = URL.createObjectURL(
+        new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      );
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = exportFileName(team ? team.name : tr('todas'), F, T);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      onClose();
+    } catch {
+      toast({ message: tr('Não foi possível exportar. Tente de novo.'), tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Modal
       open
@@ -95,15 +181,13 @@ export function ExportDialog({
           <button
             type="button"
             className="al-btn"
-            disabled={!ok}
+            disabled={!ok || busy}
+            aria-busy={busy || undefined}
             data-autofocus=""
-            onClick={() => {
-              toast({ message: tr('A exportação para Excel chega em breve.'), tone: 'info' });
-              onClose();
-            }}
+            onClick={() => void run()}
           >
-            <DownloadIcon />
-            {tr('Exportar .xlsx')}
+            {busy ? <span className="al-spin" aria-hidden /> : <DownloadIcon />}
+            {busy ? tr('A exportar…') : tr('Exportar .xlsx')}
           </button>
         </>
       }

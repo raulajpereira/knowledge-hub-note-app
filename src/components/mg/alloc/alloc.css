@@ -2150,3 +2150,23 @@ button.al-chip:hover {
 .al-exp-sheets .al-f-l {
   margin-right: 4px;
 }
+
+/* busy state of a button (Exportar .xlsx) */
+.al-spin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: al-spin 0.7s linear infinite;
+}
+@keyframes al-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .al-spin {
+    animation-duration: 2s;
+  }
+}

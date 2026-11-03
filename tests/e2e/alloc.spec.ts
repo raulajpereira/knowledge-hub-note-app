@@ -324,3 +324,33 @@ test('capacity: SAP areas over 12 months and what is still to decide', async ({ 
   await expect(page.locator('[data-area="FI / CO"] .al-cap-cell')).toHaveCount(12);
   await expect(page.getByRole('complementary', { name: 'O que falta decidir' })).toBeVisible();
 });
+
+test('export: Exportar → the dialog → a real .xlsx with the 3 sheets (built in the browser, under the CSP)', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /Content Security Policy|unsafe-eval/i.test(m.text())) errors.push(m.text());
+  });
+  await login(page);
+  await page.goto('app/mg-alloc?v=tl');
+  await page.getByRole('button', { name: 'Exportar', exact: true }).click();
+  const dlg = page.getByRole('dialog', { name: 'Exportar para Excel' });
+  await expect(dlg).toContainText('Todas as equipas');
+  await dlg.getByRole('radio', { name: 'Próximos 3 meses' }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    dlg.getByRole('button', { name: 'Exportar .xlsx' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^alocacoes_todas_\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}\.xlsx$/);
+  const ExcelJS = (await import('exceljs')).default;
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile((await download.path())!);
+  expect(wb.worksheets.map((w) => w.name)).toEqual(['Dias', 'Semanas', 'Meses']);
+  expect(String(wb.getWorksheet('Semanas')!.getCell(7, 4).value)).toMatch(
+    /^\d{2}\/\d{2} – \d{2}\/\d{2}\nS\d+/,
+  );
+  await expect(dlg).toBeHidden();
+  expect(errors).toEqual([]);
+});

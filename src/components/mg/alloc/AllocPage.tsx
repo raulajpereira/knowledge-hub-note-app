@@ -593,6 +593,9 @@ export function AllocPage({ mg }: { mg: Mg }) {
                 : (GROUPS.find(([k]) => k === groupBy)?.[1] ?? null)
               : null
           }
+          groupBy={groupBy}
+          people={people}
+          bkFilter={bkFilter}
           fl={fl}
           q={q.trim()}
           onClose={() => setExpOpen(false)}
