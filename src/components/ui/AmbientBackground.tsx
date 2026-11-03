@@ -1,9 +1,22 @@
 import { StatusBarColor } from './useStatusBarColor';
 
 // App background: warm gradient + four blurred colour blobs (ZNotes root),
-// or the user's photo with a dim layer. Presets from the prototype `AMB`.
+// or a photo with a dim layer: the user's own, or a built-in one (Noite).
+// Presets from the prototype `AMB`.
 // The light theme lays a pale veil over either (.kh-ambient::after) and dims
 // the photo towards white (--dim-rgb).
+type Ambient = {
+  base: string;
+  b1: string;
+  b2: string;
+  b3: string;
+  /** built-in photo (in /public), shown like the user's photo, with blur and dim */
+  photo?: string;
+  /** small picture for the picker */
+  thumb?: string;
+};
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 export const AMBIENTS = {
   Areia: {
     base: 'linear-gradient(160deg,#4a3c33 0%,#2b221d 55%,#1d1714 100%)',
@@ -23,7 +36,16 @@ export const AMBIENTS = {
     b2: '#3d5bb0',
     b3: '#9a6fd0',
   },
-} as const;
+  // a dark-blue starry sky
+  Noite: {
+    base: 'linear-gradient(160deg,#071027 0%,#0a1b45 55%,#16367a 100%)',
+    b1: '#2c4fb0',
+    b2: '#4a3a9e',
+    b3: '#2f7fc0',
+    photo: `${BASE}/bg/noite.jpg`,
+    thumb: `${BASE}/bg/noite-thumb.jpg`,
+  },
+} satisfies Record<string, Ambient>;
 
 export type AmbientName = keyof typeof AMBIENTS;
 
@@ -38,16 +60,18 @@ type Props = {
 };
 
 export function AmbientBackground({ ambient = 'Areia', photoUrl, dim = 20, blur = 0 }: Props) {
-  const a = AMBIENTS[ambient];
+  const a: Ambient = AMBIENTS[ambient] ?? AMBIENTS.Areia;
+  // the user's photo, else the preset's own picture
+  const src = photoUrl || a.photo || null;
   return (
     <div className="kh-ambient" style={{ background: a.base }} aria-hidden="true">
-      <StatusBarColor photoUrl={photoUrl} dim={dim} top={a.base.match(/#[0-9a-f]{6}/i)![0]} blob={a.b1} />
-      {photoUrl ? (
+      <StatusBarColor photoUrl={src} dim={dim} top={a.base.match(/#[0-9a-f]{6}/i)![0]} blob={a.b1} />
+      {src ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- signed, user-provided URL */}
           <img
             className="kh-ambient__photo"
-            src={photoUrl}
+            src={src}
             alt=""
             style={
               blur

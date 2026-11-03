@@ -43,7 +43,7 @@ export const NewsSource = z.object({
 export type NewsSource = z.infer<typeof NewsSource>;
 
 // Definições › Aparência (prototype AMB, FONTS, accent swatches, ranges).
-export const AMBIENT_NAMES = ['Areia', 'Grafite', 'Crepúsculo'] as const;
+export const AMBIENT_NAMES = ['Areia', 'Grafite', 'Crepúsculo', 'Noite'] as const;
 export const FONTS = [
   'Geist',
   'Plus Jakarta Sans',

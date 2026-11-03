@@ -85,6 +85,8 @@ export function LookTab() {
   const photoV = me.assets.background;
   const canPhoto = modules.has('bgphoto');
   const isPhoto = bg.mode === 'photo' && Boolean(photoV) && canPhoto;
+  // a built-in photo preset (Noite): its blur and darkening are set like the user's photo
+  const presetPhoto = bg.mode !== 'photo' && 'photo' in AMBIENTS[bg.mode];
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -139,44 +141,57 @@ export function LookTab() {
         <div className="kh-set__tiles">
           {AMBIENT_NAMES.map((name) => {
             const a = AMBIENTS[name];
+            const thumb = 'thumb' in a ? a.thumb : null;
             return (
               <button
                 key={name}
                 type="button"
                 className="kh-set__tile"
                 aria-pressed={!isPhoto && bg.mode === name}
-                onClick={() => setBg({ ...bg, mode: name })}
+                // a photo preset starts sharp and only slightly darkened (the sliders below adjust it)
+                onClick={() =>
+                  setBg(thumb && bg.mode !== name ? { mode: name, blur: 0, dim: 15 } : { ...bg, mode: name })
+                }
               >
-                <div className="kh-set__swatch" style={{ background: a.base }}>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      width: '70%',
-                      height: '90%',
-                      left: '-15%',
-                      top: '-30%',
-                      borderRadius: '50%',
-                      background: a.b1,
-                      filter: 'blur(18px)',
-                      opacity: 0.9,
-                    }}
+                {thumb ? (
+                  <img
+                    src={thumb}
+                    alt=""
+                    className="kh-set__swatch"
+                    style={{ display: 'block', width: '100%', objectFit: 'cover' }}
                   />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      width: '60%',
-                      height: '80%',
-                      right: '-10%',
-                      bottom: '-30%',
-                      borderRadius: '50%',
-                      background: a.b3,
-                      filter: 'blur(18px)',
-                      opacity: 0.7,
-                    }}
-                  />
-                </div>
+                ) : (
+                  <div className="kh-set__swatch" style={{ background: a.base }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        width: '70%',
+                        height: '90%',
+                        left: '-15%',
+                        top: '-30%',
+                        borderRadius: '50%',
+                        background: a.b1,
+                        filter: 'blur(18px)',
+                        opacity: 0.9,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        width: '60%',
+                        height: '80%',
+                        right: '-10%',
+                        bottom: '-30%',
+                        borderRadius: '50%',
+                        background: a.b3,
+                        filter: 'blur(18px)',
+                        opacity: 0.7,
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="kh-set__tileFoot">
-                  <span>{name}</span>
+                  <span>{t(`amb_${name}`)}</span>
                   <span className="kh-set__dot" />
                 </div>
               </button>
@@ -249,7 +264,7 @@ export function LookTab() {
           </div>
         )}
 
-        {isPhoto && (
+        {(isPhoto || presetPhoto) && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 14 }}>
             <div className="kh-set__range">
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
