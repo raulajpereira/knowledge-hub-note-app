@@ -127,12 +127,28 @@ const font = (o: Partial<Font> = {}): Partial<Font> => ({
 });
 const thin = (argb: string) => ({ style: 'thin' as const, color: { argb: `FF${argb}` } });
 const r2 = (v: number) => Math.round(v * 2) / 2;
-const fmtH = (v: number) => (Number.isInteger(v) ? '0' : '0.0');
-const num = (c: Cell, v: number) => {
+const num = (c: Cell, v: number | Formula) => {
   c.value = v;
-  c.numFmt = fmtH(v);
+  c.numFmt = HFMT;
 };
 const dmy = (n: Dn) => isoOf(n).split('-').reverse().join('/');
+/** hours: whole or one decimal, nothing for 0 (also for formulas) */
+const HFMT = '0.##;-0.##;""';
+/** column letter of a 1-based column number */
+const colL = (n: number) => {
+  let s = '';
+  for (let k = n; k > 0; k = Math.floor((k - 1) / 26)) s = String.fromCharCode(65 + ((k - 1) % 26)) + s;
+  return s;
+};
+/** SUM over single cells, split so no function gets more than 100 arguments */
+const sumOf = (refs: string[]) => {
+  if (!refs.length) return '0';
+  const parts: string[] = [];
+  for (let i = 0; i < refs.length; i += 100) parts.push(`SUM(${refs.slice(i, i + 100).join(',')})`);
+  return parts.join('+');
+};
+type Formula = { formula: string; result: number };
+const fx = (formula: string, result: number): Formula => ({ formula, result: r2(result) });
 
 // ── rows ─────────────────────────────────────────────────────────────────────
 type Row =
@@ -315,6 +331,12 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
   wb.creator = 'KnowledgeHub';
   wb.created = now;
   wb.title = tr('Alocações');
+  // every total is a formula: Excel / LibreOffice compute them on open (cached results for previews)
+  wb.calcProperties.fullCalcOnLoad = true;
+  const DIAS = tr('Dias');
+  /** a period cell of the Semanas / Meses sheets: the sum of its days on the Dias sheet (same row) */
+  const fromDias = (row: number, a: Dn, b: Dn, result: number) =>
+    fx(`SUM('${DIAS.replace(/'/g, "''")}'!${colL(4 + (a - F))}${row}:${colL(4 + (b - F))}${row})`, result);
 
   const SHEETS: Array<[string, Zoom, number, string]> = [
     [tr('Dias'), 'day', 5.2, tr('horas por dia')],
@@ -499,6 +521,18 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
     let cur: (typeof groups)[number] | null = null;
     const personRows: number[] = [];
     const bookingRows: number[] = [];
+    // a person's row, its hidden capacity row and its confirmed project rows (filled after the loop)
+    const persons: Array<{
+      pid: string;
+      row: number;
+      cap: number;
+      conf: number[];
+      complete: boolean;
+      l: ReturnType<typeof loads>;
+    }> = [];
+    let curP: (typeof persons)[number] | null = null;
+    /** the value of a period cell: the number on Dias, a SUM of Dias on the other sheets */
+    const periodVal = (row: number, c: Col, v: number) => (zoom === 'day' ? v : fromDias(row, c.a, c.b, v));
     const shade = (c: Col): Fill | null =>
       c.hol && zoom === 'day' ? solid(C.holiday) : c.weekend ? solid(C.weekend) : null;
     const baseRow = (row: number, h: number, fillAll?: string) => {
@@ -557,40 +591,26 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
         ws.getCell(r, 1).font = font({ size: 9.5, bold: true });
         ws.getCell(r, 2).value = [tr(p.role), x.levels[p.level]].filter(Boolean).join(' · ');
         ws.getCell(r, 2).font = font({ size: 8.5, color: { argb: `FF${C.muted}` } });
-        let tot = 0;
-        let cap = 0;
-        cols.forEach((c, i) => {
-          const h = sumArr(l.conf, c.a, c.b);
-          const k = sumArr(l.cap, c.a, c.b);
-          tot += h;
-          cap += k;
-          if (!h) return;
-          const cell = ws.getCell(r, c0 + i);
-          num(cell, h);
-          const pct = k ? h / k : 9;
-          cell.fill = solid(pct > 1.001 ? C.over : pct >= 0.9 ? C.ok : C.low);
-          cell.font = font({ bold: true, color: { argb: pct > 1.001 ? 'FFFFFFFF' : `FF${C.text}` } });
-        });
-        tot = r2(tot);
-        cap = r2(cap);
-        num(ws.getCell(r, cT), tot);
-        ws.getCell(r, cT).font = font({ bold: true, size: 9.5 });
-        num(ws.getCell(r, cT + 1), cap);
-        ws.getCell(r, cT + 1).font = font({ color: { argb: `FF${C.muted}` } });
-        const over = cap > 0 && tot > cap + 0.01;
-        const pc = ws.getCell(r, cT + 2);
-        pc.value = cap ? tot / cap : 0;
-        pc.numFmt = '0%';
-        pc.font = font({ bold: true, color: { argb: over ? 'FFFFFFFF' : `FF${C.text}` } });
-        pc.fill = solid(over ? C.over : tot / (cap || 1) >= 0.9 ? C.ok : C.low);
-        const lc = ws.getCell(r, 3);
-        lc.value = { formula: pc.address, result: cap ? tot / cap : 0 };
-        lc.numFmt = '0%';
-        lc.font = font({ bold: true, color: { argb: over ? `FF${C.over}` : `FF${C.text}` } });
-        lc.alignment = { horizontal: 'center', vertical: 'middle' };
+        // the period cells, totals and load colours are written after the loop (formulas over the project rows)
+        const mine = rows.filter(
+          (w) => w.k === 'b' && w.b.person === p.id && w.b.status === 'confirmed',
+        ).length;
+        const all = x.bookings.filter(
+          (b) => b.person === p.id && b.status === 'confirmed' && b.to >= isoOf(F) && b.from <= isoOf(T),
+        ).length;
+        curP = { pid: p.id, row: r, cap: r + 1, conf: [], complete: !row.only && mine === all, l };
+        persons.push(curP);
         cur?.people.push(r);
         personRows.push(r);
         if (cur) cur.lastRow = r;
+        r++;
+        // hidden: the person's capacity per period (what the load colours compare with)
+        ws.getRow(r).hidden = true;
+        ws.getCell(r, 1).value = `${p.name} · ${tr('capacidade')}`;
+        cols.forEach((c, i) => {
+          const k = sumArr(l.cap, c.a, c.b);
+          ws.getCell(r, c0 + i).value = periodVal(r, c, k);
+        });
         r++;
         continue;
       }
@@ -622,17 +642,22 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
         ws.getCell(r, 2).value = b.person || row.who != null ? fn : `${fn} (${tr('por atribuir')})`;
         ws.getCell(r, 2).font = font({ size: 8.5, color: { argb: `FF${C.muted}` } });
         let tot = 0;
+        const bA = dnOf(b.from);
+        const bB = dnOf(b.to);
         cols.forEach((c, i) => {
           const h = sumB(b, c.a, c.b);
           tot += h;
-          if (!h) return;
+          // the booking's days hold the hours (numbers on Dias, sums of Dias elsewhere)
+          if (c.b < bA || c.a > bB) return;
           const cell = ws.getCell(r, c0 + i);
-          num(cell, h);
+          num(cell, periodVal(r, c, h));
+          if (!h) return;
           cell.fill = tent ? hatch(col, tint(col, 0.6)) : solid(col);
           cell.font = font({ size: 8.5, bold: !tent, italic: tent, color: { argb: 'FF24180F' } });
           cell.border = { bottom: thin('FFFFFF'), left: thin('FFFFFF') };
         });
-        num(ws.getCell(r, cT), r2(tot));
+        num(ws.getCell(r, cT), fx(`SUM(${colL(c0)}${r}:${colL(cT - 1)}${r})`, tot));
+        if (curP && b.person === curP.pid && !tent) curP.conf.push(r);
         ws.getCell(r, cT).font = font({ italic: tent, color: { argb: tent ? 'FF8A62C9' : `FF${C.text}` } });
         bookingRows.push(r);
         if (cur) cur.lastRow = r;
@@ -675,21 +700,104 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
       r++;
     }
     // group subtotals (formulas, so edits in the sheet add up)
+    const valueOf = (v: unknown) =>
+      typeof v === 'number'
+        ? v
+        : v && typeof v === 'object' && 'result' in v
+          ? Number((v as Formula).result) || 0
+          : 0;
+    // the persons: period cells = SUM of their confirmed project rows (as the app counts),
+    // Total = SUM of the row, Capacidade = SUM of the hidden capacity row, % = Total / Capacidade
+    for (const pr of persons) {
+      const { row, cap, conf, complete, l } = pr;
+      cols.forEach((c, i) => {
+        const L = colL(c0 + i);
+        const h = sumArr(l.conf, c.a, c.b);
+        const cell = ws.getCell(row, c0 + i);
+        // complete: every confirmed booking of the person is a row here; else (one project of the person
+        // under a project / client group) the person's whole load, as the app shows it
+        num(
+          cell,
+          complete ? fx(sumOf(conf.map((rr) => `${L}${rr}`)), h) : zoom === 'day' ? h : periodVal(row, c, h),
+        );
+        cell.font = font({ bold: true });
+      });
+      const tot = sumArr(l.conf, F, T);
+      const capH = sumArr(l.cap, F, T);
+      const tc = ws.getCell(row, cT);
+      num(tc, fx(`SUM(${colL(c0)}${row}:${colL(cT - 1)}${row})`, tot));
+      tc.font = font({ bold: true, size: 9.5 });
+      const kc = ws.getCell(row, cT + 1);
+      num(kc, fx(`SUM(${colL(c0)}${cap}:${colL(cT - 1)}${cap})`, capH));
+      kc.font = font({ color: { argb: `FF${C.muted}` } });
+      const pc = ws.getCell(row, cT + 2);
+      pc.value = {
+        formula: `IFERROR(${colL(cT)}${row}/${colL(cT + 1)}${row},0)`,
+        result: capH ? tot / capH : 0,
+      };
+      pc.numFmt = '0%';
+      pc.font = font({ bold: true });
+      const lc = ws.getCell(row, 3);
+      lc.value = { formula: pc.address, result: capH ? tot / capH : 0 };
+      lc.numFmt = '0%';
+      lc.font = font({ bold: true });
+      lc.alignment = { horizontal: 'center', vertical: 'middle' };
+      // load colours as conditional formatting: they follow edits in the sheet
+      const band = (fill: string, ink: string, f: string, priority: number) => ({
+        type: 'expression' as const,
+        priority,
+        formulae: [f],
+        style: {
+          fill: { type: 'pattern' as const, pattern: 'solid' as const, bgColor: { argb: `FF${fill}` } },
+          font: { color: { argb: `FF${ink}` }, bold: true },
+        },
+      });
+      const D0 = `${colL(c0)}${row}`;
+      const K0 = `${colL(c0)}${cap}`;
+      ws.addConditionalFormatting({
+        ref: `${colL(c0)}${row}:${colL(cT - 1)}${row}`,
+        rules: [
+          band(C.over, 'FFFFFF', `AND(${D0}>0,${D0}>${K0}+0.001)`, 1),
+          band(C.ok, C.text, `AND(${D0}>0,${D0}>=0.9*${K0})`, 2),
+          band(C.low, C.text, `${D0}>0`, 3),
+        ],
+      });
+      const P0 = `${colL(cT + 2)}${row}`;
+      ws.addConditionalFormatting({
+        ref: P0,
+        rules: [
+          band(C.over, 'FFFFFF', `${P0}>1.001`, 1),
+          band(C.ok, C.text, `${P0}>=0.9`, 2),
+          band(C.low, C.text, 'TRUE', 3),
+        ],
+      });
+      ws.addConditionalFormatting({
+        ref: `C${row}`,
+        rules: [
+          {
+            type: 'expression',
+            priority: 1,
+            formulae: [`C${row}>1.001`],
+            style: { font: { color: { argb: `FF${C.over}` }, bold: true } },
+          },
+        ],
+      });
+    }
+    // group subtotals and the TOTAL row: SUM of the person rows (or the role lines)
     const sumCells = (row: number, refs: number[], ink: string) => {
       for (let i = 0; i <= N; i++) {
         const c = i < N ? c0 + i : cT;
-        const L = ws.getColumn(c).letter;
-        const v = r2(refs.reduce((s, rr) => s + (Number(ws.getCell(rr, c).value) || 0), 0));
+        const L = colL(c);
+        const v = refs.reduce((s, rr) => s + valueOf(ws.getCell(rr, c).value), 0);
         const cell = ws.getCell(row, c);
-        cell.value = refs.length ? { formula: refs.map((rr) => `${L}${rr}`).join('+'), result: v } : 0;
-        cell.numFmt = `${fmtH(v)};;""`;
+        num(cell, fx(sumOf(refs.map((rr) => `${L}${rr}`)), v));
         cell.font = font({ size: 8.5, bold: true, color: { argb: `FF${ink}` } });
       }
     };
     for (const g of groups)
       sumCells(
         g.row,
-        g.people.length ? g.people : Array.from({ length: g.lastRow - g.row }, (_, k) => g.row + 1 + k),
+        g.people.length ? g.people : bookingRows.filter((rr) => rr > g.row && rr <= g.lastRow),
         C.text,
       );
     // grand total (people; in Projetos the role lines)
