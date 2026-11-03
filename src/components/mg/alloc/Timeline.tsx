@@ -868,7 +868,10 @@ export function Timeline({
                 const r = Math.min(x(g.b) + ppd, view.l + view.w);
                 return r - l < 24 ? null : (
                   <div key={g.a} className="al-band" style={{ left: l, width: r - l }}>
-                    <span>{g.label}</span>
+                    <span>
+                      {g.label}
+                      {g.sub && <small>{g.sub}</small>}
+                    </span>
                   </div>
                 );
               })}
@@ -883,7 +886,7 @@ export function Timeline({
                     data-day={isoOf(c.a)}
                     title={c.hol ? holidayName(c.hol, lang) : undefined}
                   >
-                    <span className="lbl">{c.lbl}</span>
+                    <span className="lbl">{c.short && v.width < 104 ? c.short : c.lbl}</span>
                     {c.sub && (zoom === 'day' || zoom === 'week') && (
                       <span
                         className="sub"

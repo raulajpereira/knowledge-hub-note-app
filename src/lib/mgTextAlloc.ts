@@ -1,6 +1,23 @@
 // English text of the Alocações v2 screens (alloc2) — the screens are written in
 // Portuguese like the rest of Management; mgTr() looks here after MG_EX.
 export const MG_EX_AL: Record<string, string> = {
+  '3 folhas': '3 sheets',
+  'A exportação para Excel chega em breve.': 'Export to Excel is coming soon.',
+  'Este mês': 'This month',
+  Exportar: 'Export',
+  'Exportar .xlsx': 'Export .xlsx',
+  'Exportar para Excel': 'Export to Excel',
+  Inclui: 'Includes',
+  'O que está no ecrã, com as cores da app': "What is on screen, with the app's colours",
+  'O que vai no ficheiro': 'What goes in the file',
+  Personalizado: 'Custom',
+  Pesquisa: 'Search',
+  'Próximos 3 meses': 'Next 3 months',
+  'Vista atual': 'Current view',
+  'agrupado por': 'grouped by',
+  'horas por dia, semana e mês · legenda dos projetos e feriados':
+    'hours per day, week and month · legend of projects and holidays',
+  nenhum: 'none',
   Outra: 'Other',
   'Alterar ou eliminar': 'Change or delete',
   'Botão direito': 'Right-click',

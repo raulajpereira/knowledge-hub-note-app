@@ -461,7 +461,10 @@ export function ProjectsView({
                   const r = Math.min(x(g.b) + ppd, view.l + view.w);
                   return r - l < 24 ? null : (
                     <div key={g.a} className="al-band" style={{ left: l, width: r - l }}>
-                      <span>{g.label}</span>
+                      <span>
+                        {g.label}
+                        {g.sub && <small>{g.sub}</small>}
+                      </span>
                     </div>
                   );
                 })}
@@ -475,7 +478,7 @@ export function ProjectsView({
                         className={`al-hcol${c.today ? ' today' : ''}${c.top && i ? ' newgrp' : ''}${v.tiny ? ' tiny' : ''}`}
                         style={{ left: v.left, width: v.width }}
                       >
-                        <span className="lbl">{c.lbl}</span>
+                        <span className="lbl">{c.short && v.width < 104 ? c.short : c.lbl}</span>
                         {zoom === 'week' && (
                           <span className="sub" style={c.hol ? { color: 'var(--al-hol)' } : undefined}>
                             {c.hol ? tr('feriado') : c.sub}

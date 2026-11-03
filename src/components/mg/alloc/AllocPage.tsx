@@ -16,6 +16,7 @@ import { Popover, usePersistentState } from '@/components/ui';
 import { OPT } from '../css';
 import type { Mg } from '../store';
 import { AbsencePop, BookingPop, Fld } from './Popovers';
+import { DownloadIcon, ExportDialog } from './ExportDialog';
 import { Timeline, type GroupBy, type Nav, type Unit } from './Timeline';
 import { Grid, type GUnit } from './Grid';
 import { ProjectsView } from './ProjectsView';
@@ -87,6 +88,7 @@ export function AllocPage({ mg }: { mg: Mg }) {
   const [pop, setPop] = useState<Pop | null>(null);
   const filtBtn = useRef<HTMLButtonElement>(null);
   const [filtOpen, setFiltOpen] = useState(false);
+  const [expOpen, setExpOpen] = useState(false);
   const absHelpBtn = useRef<HTMLButtonElement>(null);
   const [absHelp, setAbsHelp] = useState(false);
   const want = sp.get('v');
@@ -330,7 +332,7 @@ export function AllocPage({ mg }: { mg: Mg }) {
               display: 'inline-flex',
               alignItems: 'center',
               flex: '0 1 212px',
-              minWidth: 140,
+              minWidth: 130,
             }}
           >
             <span
@@ -363,9 +365,28 @@ export function AllocPage({ mg }: { mg: Mg }) {
             {tr('Filtros')}
             {nFilters > 0 && <span className="n">{nFilters}</span>}
           </button>
+          {view !== 'cap' && (
+            <button type="button" className="al-pill" onClick={() => setExpOpen(true)} aria-haspopup="dialog">
+              <DownloadIcon />
+              {tr('Exportar')}
+            </button>
+          )}
           {(view === 'tl' || view === 'grid') && (
-            <label className="al-pill" style={{ paddingRight: 8 }}>
-              {tr('Agrupar')}:
+            <label className="al-pill" style={{ paddingRight: 8 }} title={tr('Agrupar')}>
+              {/* "Agrupar" as an icon: the toolbar keeps room for Exportar */}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden
+              >
+                <rect x="3" y="4" width="18" height="6" rx="2" />
+                <rect x="3" y="14" width="18" height="6" rx="2" />
+              </svg>
               <select
                 value={groupBy}
                 onChange={(e) => setGroupBy(e.target.value as GroupBy)}
@@ -558,6 +579,23 @@ export function AllocPage({ mg }: { mg: Mg }) {
                   setPop(null);
                 }
           }
+        />
+      )}
+      {expOpen && (
+        <ExportDialog
+          mg={mg}
+          view={view}
+          vis={vis}
+          groupLabel={
+            view === 'tl' || view === 'grid'
+              ? groupBy === 'none'
+                ? null
+                : (GROUPS.find(([k]) => k === groupBy)?.[1] ?? null)
+              : null
+          }
+          fl={fl}
+          q={q.trim()}
+          onClose={() => setExpOpen(false)}
         />
       )}
       {filtOpen && (

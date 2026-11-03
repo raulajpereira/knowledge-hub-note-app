@@ -65,6 +65,9 @@ export const monLong = (n: Dn, lang: string) => {
   const m = df(lang, { month: 'long' }).format(dt(n));
   return `${lang === 'en' ? m : m.toLowerCase()} ${yearOf(n)}`;
 };
+/** "09/11" */
+export const dm = (n: Dn) =>
+  `${String(dt(n).getUTCDate()).padStart(2, '0')}/${String(monthOf(n) + 1).padStart(2, '0')}`;
 /** "26 out" */
 export const dayMon = (n: Dn, lang: string) => `${dt(n).getUTCDate()} ${monShort(n, lang)}`;
 /** "26 out – 4 dez 2026" */
@@ -86,6 +89,10 @@ export type Col = Bucket & {
   top: string;
   /** the group the column belongs to (week · month · year), shown in the header's top band */
   band: string;
+  /** small second text of the band (the week number) */
+  bandSub?: string;
+  /** the label when the column is narrow (a week's first day instead of its range) */
+  short?: string;
   today: boolean;
   hol: string | null;
   weekend: boolean;
@@ -104,7 +111,9 @@ export function columns(zoom: Zoom, F: Dn, T: Dn, lang: string, holLbl: (k: stri
         lbl: String(dt(b.a).getUTCDate()),
         sub: h ? holLbl(h) : wdShort(b.a, lang),
         top: wd === 0 || !prev ? `S${w.w} · ${monShort(b.a, lang)}` : '',
-        band: `${lang === 'en' ? 'W' : 'S'}${w.w} · ${dayMon(b.a - wd, lang)} – ${dayMon(b.a - wd + 6, lang)}`,
+        // the week's dates first ("09/11 – 15/11"), its number as a small second text
+        band: `${dm(b.a - wd)} – ${dm(b.a - wd + 6)}`,
+        bandSub: `${lang === 'en' ? 'W' : 'S'}${w.w}`,
         today: b.a === t,
         hol: h,
         weekend: wd >= 5,
@@ -117,8 +126,9 @@ export function columns(zoom: Zoom, F: Dn, T: Dn, lang: string, holLbl: (k: stri
       const newM = !prev || monthOf(prev.a) !== monthOf(b.a);
       return {
         ...b,
-        lbl: `${String(dt(b.a).getUTCDate()).padStart(2, '0')}/${String(monthOf(b.a) + 1).padStart(2, '0')}`,
-        sub: `S${w.w}`,
+        lbl: `${dm(b.a)} – ${dm(b.a + 6)}`,
+        short: dm(b.a),
+        sub: `${lang === 'en' ? 'W' : 'S'}${w.w}`,
         top: newM
           ? `${monShort(b.a, lang)}${!prev || yearOf(prev.a) !== yearOf(b.a) ? ` ${yearOf(b.a)}` : ''}`
           : '',
@@ -143,14 +153,14 @@ export function columns(zoom: Zoom, F: Dn, T: Dn, lang: string, holLbl: (k: stri
   });
 }
 /** The header's top band: runs of consecutive columns of the same group, with their label. */
-export function bands<C extends { a: Dn; b: Dn; band: string }>(cols: C[]) {
-  const out: Array<{ a: Dn; b: Dn; label: string; i: number; n: number }> = [];
+export function bands<C extends { a: Dn; b: Dn; band: string; bandSub?: string }>(cols: C[]) {
+  const out: Array<{ a: Dn; b: Dn; label: string; sub?: string; i: number; n: number }> = [];
   cols.forEach((c, i) => {
     const last = out.at(-1);
     if (last && last.label === c.band) {
       last.b = c.b;
       last.n++;
-    } else out.push({ a: c.a, b: c.b, label: c.band, i, n: 1 });
+    } else out.push({ a: c.a, b: c.b, label: c.band, sub: c.bandSub, i, n: 1 });
   });
   return out;
 }

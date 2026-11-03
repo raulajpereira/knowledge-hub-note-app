@@ -862,7 +862,10 @@ export function Grid({
                     const r = Math.min(x(c0 + g.i) + g.n * colW, view.l + view.w - 84);
                     return r - l < 24 ? null : (
                       <div key={g.a} className="al-band" style={{ left: l, width: r - l }}>
-                        <span>{g.label}</span>
+                        <span>
+                          {g.label}
+                          {g.sub && <small>{g.sub}</small>}
+                        </span>
                       </div>
                     );
                   })}
@@ -876,7 +879,7 @@ export function Grid({
                         className={`al-hcol${c.today ? ' today' : ''}${c.top && ci ? ' newgrp' : ''}${c.weekend ? ' we' : ''}${c.hol && zoom === 'day' ? ' hol' : ''}${v.tiny ? ' tiny' : ''}`}
                         style={{ left: v.left, width: v.width }}
                       >
-                        <span className="lbl">{c.lbl}</span>
+                        <span className="lbl">{c.short && colW < 104 ? c.short : c.lbl}</span>
                         {(zoom === 'day' || zoom === 'week') && <span className="sub">{c.sub}</span>}
                         {zoom !== 'day' && (
                           <span

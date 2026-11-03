@@ -179,7 +179,7 @@
 .al-search {
   height: 38px;
   width: 212px;
-  min-width: 140px;
+  min-width: 130px;
   padding: 0 14px 0 36px;
   border-radius: 999px;
   border: 1px solid rgb(var(--w) / 0.14);
@@ -373,6 +373,12 @@
   box-sizing: border-box;
   overflow: hidden;
   pointer-events: none;
+}
+.al-band > span small {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  color: rgb(var(--t) / calc(0.55 * var(--t-k)));
 }
 .al-band > span {
   min-width: 0;
@@ -2100,4 +2106,47 @@ button.al-chip:hover {
 .al-caphdr .al-hcol {
   top: auto;
   bottom: auto;
+}
+
+/* Exportar para Excel (dialog) */
+.kh-modal.al-dlg--exp {
+  width: min(660px, 100%);
+}
+.al-exp-sum {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--d) / calc(0.2 * var(--d-k)));
+  font-size: 14px;
+}
+.al-exp-sum dt {
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+}
+.al-exp-sum dd {
+  margin: 0;
+  min-width: 0;
+}
+.al-exp-inc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.al-exp-inc span {
+  color: rgb(var(--t) / calc(0.5 * var(--t-k)));
+}
+.al-exp-inc span.on {
+  color: var(--ink);
+}
+.al-exp-sheets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.al-exp-sheets .al-f-l {
+  margin-right: 4px;
 }

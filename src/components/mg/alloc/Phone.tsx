@@ -20,7 +20,7 @@ import type { MgPerson } from '@/lib/mg';
 import { Sheet } from '@/components/ui';
 import { Av } from '../ui';
 import type { Mg } from '../store';
-import { ABS_LABEL, ABS_TYPE_LABEL, BAND_BG, BAND_FG, dayMon, groupOfArea, wdShort } from './shared';
+import { ABS_LABEL, ABS_TYPE_LABEL, BAND_BG, BAND_FG, dayMon, dm, groupOfArea, wdShort } from './shared';
 import './alloc.css';
 
 type PF = 'over' | 'free' | 'ph' | string;
@@ -89,11 +89,25 @@ export function PhoneAlloc({ mg }: { mg: Mg }) {
             ‹
           </button>
           <span className="t">
-            <b>{title}</b>
-            <span>
-              {dayMon(span[0], lang)} – {dayMon(mode === 'week' ? mon + 4 : span[1], lang)}{' '}
-              {new Date(span[1] * 864e5).getUTCFullYear()}
-            </span>
+            {mode === 'week' ? (
+              // the week's dates first, its number under them
+              <>
+                <b>
+                  {dm(mon)} – {dm(mon + 6)}
+                </b>
+                <span>
+                  {title} · {new Date(span[1] * 864e5).getUTCFullYear()}
+                </span>
+              </>
+            ) : (
+              <>
+                <b>{title}</b>
+                <span>
+                  {dayMon(span[0], lang)} – {dayMon(span[1], lang)}{' '}
+                  {new Date(span[1] * 864e5).getUTCFullYear()}
+                </span>
+              </>
+            )}
           </span>
           <button
             type="button"
