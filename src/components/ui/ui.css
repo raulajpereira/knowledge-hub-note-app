@@ -1458,7 +1458,6 @@ button.kh-table__th {
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  text-transform: capitalize;
   cursor: pointer;
 }
 .kh-dp__title:hover,

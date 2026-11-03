@@ -53,7 +53,8 @@ export function Popover({
       const vw = window.innerWidth;
       // never past the window's edges (narrow screens): slide it back inside
       const w = Math.min(width ?? ref.current?.offsetWidth ?? 0, vw - 16);
-      const h = ref.current?.offsetHeight ?? 0;
+      // the natural height (offsetHeight is already capped by the max height below the anchor)
+      const h = ref.current?.scrollHeight ?? 0;
       const up = flip && h > 0 && r.bottom + 6 + h > window.innerHeight - 8 && r.top - 6 - h >= 8;
       const top = up ? r.top - 6 - h : r.bottom + 6;
       setPos(

@@ -21,6 +21,8 @@ const ymOf = (n: number) => {
   const d = new Date(n * DAY);
   return { y: d.getUTCFullYear(), m: d.getUTCMonth() };
 };
+/** "novembro de 2026" → "Novembro de 2026" */
+const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const firstOf = (y: number, m: number) => Math.floor(Date.UTC(y, m, 1) / DAY);
 const todayDn = () => {
   const d = new Date();
@@ -178,7 +180,7 @@ export function DatePicker({
             setMode(mode === 'days' ? 'months' : 'days');
           }}
         >
-          {mode === 'days' ? fmt.title.format(new Date(firstOf(y, m) * DAY)) : yearView}
+          {mode === 'days' ? cap1(fmt.title.format(new Date(firstOf(y, m) * DAY))) : yearView}
         </button>
         <button
           type="button"

@@ -307,7 +307,7 @@ test('projects: start / end and phase dates take any day (typed or picked), not 
   await page.getByRole('button', { name: 'Escolher no calendário' }).first().click();
   const cal = page.getByRole('dialog', { name: 'Calendário' });
   await expect(cal).toBeVisible();
-  await expect(cal.locator('.kh-dp__title')).toHaveText(/novembro de 2026/i);
+  await expect(cal.locator('.kh-dp__title')).toHaveText('Novembro de 2026');
   await expect(cal.locator('[aria-selected="true"]')).toHaveText('11');
   await expect(cal.locator('[aria-selected="true"]')).toBeFocused();
   await page.keyboard.press('ArrowRight');
