@@ -2170,3 +2170,21 @@ button.al-chip:hover {
     animation-duration: 2s;
   }
 }
+
+/* the date field in Management's detail fields (Projetos, pedidos): compact */
+.al-date--sm {
+  width: 100%;
+}
+.al-date--sm .al-in {
+  height: 34px;
+  padding: 0 38px 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--w) / 0.12);
+  background: rgb(var(--w) / 0.06);
+  font-size: 13px;
+}
+.al-date--sm .al-date-btn {
+  width: 28px;
+  height: 28px;
+  right: 3px;
+}

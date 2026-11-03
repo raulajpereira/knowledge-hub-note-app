@@ -8,6 +8,7 @@ import { mgL } from '@/lib/mgText';
 import { dnOf, effortLabel, fmtDay, isIsoDay } from '@/lib/alloc';
 import { CHEV, OPT, css } from './css';
 import { Av, Chip, Dialog, Fields, Split, Trash, uid } from './ui';
+import { DateField } from './alloc/Popovers';
 import type { Mg } from './store';
 import { Popover, useConfirm } from '@/components/ui';
 import { ModChips, modChip, ModulePicker, moduleOptions } from './ModulePicker';
@@ -23,8 +24,6 @@ const PHC = [
   'oklch(0.74 0.14 40 / .6)',
   'oklch(0.7 0.1 300 / .55)',
 ];
-const WSEL =
-  'min-width:0;height:32px;padding:0 8px;border-radius:9px;border:1px solid rgb(var(--w) / .1);background-color:rgb(var(--w) / .06);color:var(--ink);font:inherit;font-size:12.5px;outline:none;appearance:none;-webkit-appearance:none;color-scheme: var(--scheme);cursor:pointer;';
 
 /** A new project as the prototype creates it (two phases over 13 weeks). */
 export function mgNewProject(mg: Mg, p: Partial<MgProject>): MgProject {
@@ -277,14 +276,11 @@ export function MgProjects({ mg }: { mg: Mg }) {
     [tr('Previsão final'), mgEur(tot), good],
     [tr('Desvio'), (over ? '+' : '') + mgEur(tot - sel.budget), good],
   ];
+  // any day (typed dd/mm/aaaa or picked in the calendar), no longer only Mondays
   const weekSel = (v: string, on: (v: string) => void, label: string) => (
-    <select value={v} aria-label={label} onChange={(e) => on(e.target.value)} style={css(WSEL)}>
-      {mg.weekOpts.map((o) => (
-        <option key={o.v} value={o.v} style={OPT}>
-          {o.l}
-        </option>
-      ))}
-    </select>
+    <span style={css('width:150px;flex:none;display:flex;')}>
+      <DateField size="sm" value={v} onChange={on} label={label} pickLabel={tr('Escolher no calendário')} />
+    </span>
   );
 
   const split = (
@@ -429,8 +425,20 @@ export function MgProjects({ mg }: { mg: Mg }) {
               unit: '€',
               onChange: set('budget', true),
             },
-            { label: tr('Início'), val: sel.from, opts: mg.weekOpts, onChange: set('from') },
-            { label: tr('Fim'), val: sel.to, opts: mg.weekOpts, onChange: set('to') },
+            {
+              label: tr('Início'),
+              val: sel.from,
+              type: 'date',
+              pick: tr('Escolher no calendário'),
+              onChange: set('from'),
+            },
+            {
+              label: tr('Fim'),
+              val: sel.to,
+              type: 'date',
+              pick: tr('Escolher no calendário'),
+              onChange: set('to'),
+            },
           ]}
         />
         <div style={css('display:flex;flex-direction:column;gap:10px;')}>

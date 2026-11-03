@@ -18,6 +18,11 @@ describe('management model', () => {
     expect(W.wk(1)).toBe('2026-10-12');
     expect(W.wi('2026-10-19')).toBe(2);
     expect(W.dIso(0, 4)).toBe('2026-10-09');
+    // any day falls in its own week (project and phase dates are no longer only Mondays)
+    expect(W.wi('2026-10-11')).toBe(0); // Sunday
+    expect(W.wi('2026-10-16')).toBe(1); // Friday
+    expect(W.wi('2026-10-04')).toBe(-1); // the Sunday before
+    expect(W.wi('2027-04-02')).toBe(25); // Friday, across the DST change
   });
 
   it('sample data is valid for every schema and all references resolve', () => {

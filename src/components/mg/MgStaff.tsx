@@ -8,6 +8,7 @@ import { AL_MASK_WK, dnOf, isIsoDay } from '@/lib/alloc';
 import { usePersistentState } from '@/components/ui';
 import { css } from './css';
 import { Av, Chip, PersonPop, Sel, Split, Trash, uid } from './ui';
+import { DateField } from './alloc/Popovers';
 import type { Mg } from './store';
 
 const SEL =
@@ -321,24 +322,20 @@ export function MgStaff({ mg }: { mg: Mg }) {
             </label>
             <label style={css('display:flex;flex-direction:column;gap:6px;min-width:0;')}>
               <span style={css(LBL)}>{tr('De')}</span>
-              <Sel
+              <DateField
                 value={sel.from}
                 onChange={(v) => upd((r) => void (r.from = v))}
-                opts={mg.weekOpts}
-                s={SEL}
                 label={tr('De')}
-                pos="right 12px center"
+                pickLabel={tr('Escolher no calendário')}
               />
             </label>
             <label style={css('display:flex;flex-direction:column;gap:6px;min-width:0;')}>
               <span style={css(LBL)}>{tr('Até')}</span>
-              <Sel
+              <DateField
                 value={sel.to}
                 onChange={(v) => upd((r) => void (r.to = v))}
-                opts={mg.weekOpts}
-                s={SEL}
                 label={tr('Até')}
-                pos="right 12px center"
+                pickLabel={tr('Escolher no calendário')}
               />
             </label>
             <label style={css('display:flex;flex-direction:column;gap:6px;min-width:0;')}>

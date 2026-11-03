@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { usePersistentState, useViewport } from '@/components/ui';
 import { BackBar } from '@/components/content/MobilePane';
 import { mgIni, wLbl, wLblY, type MgPerson } from '@/lib/mg';
+import { DateField } from './alloc/Popovers';
 import { effortLabel, fmtDay } from '@/lib/alloc';
 import { CHEV, OPT, css } from './css';
 import type { Mg } from './store';
@@ -451,6 +452,8 @@ export type Field = {
   placeholder?: string;
   /** shown as text (worked out, not edited) */
   readOnly?: boolean;
+  /** type 'date': the label of the calendar button */
+  pick?: string;
   title?: string;
 };
 /** Label | input rows inside a rounded box (prototype fld()). */
@@ -505,6 +508,15 @@ export function Fields({
               >
                 {f.val}
               </output>
+            ) : f.type === 'date' ? (
+              // any day: typed dd/mm/aaaa or picked in the calendar
+              <DateField
+                size="sm"
+                value={String(f.val)}
+                onChange={f.onChange}
+                label={f.label}
+                pickLabel={f.pick ?? f.label}
+              />
             ) : f.opts ? (
               <Sel
                 value={String(f.val)}

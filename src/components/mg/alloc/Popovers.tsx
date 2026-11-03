@@ -679,18 +679,21 @@ export function DateField({
   label,
   min,
   pickLabel,
+  size,
 }: {
   value: string;
   onChange: (iso: string) => void;
   label: string;
   min?: string;
   pickLabel: string;
+  /** sm: the compact size of the Management detail fields (34 px) */
+  size?: 'sm';
 }) {
   const [txt, setTxt] = useState(fmtField(value));
   const pick = useRef<HTMLInputElement>(null);
   useEffect(() => setTxt(fmtField(value)), [value]);
   return (
-    <span className="al-date">
+    <span className={`al-date${size ? ` al-date--${size}` : ''}`}>
       <input
         className="al-in mono"
         value={txt}

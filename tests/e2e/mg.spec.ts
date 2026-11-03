@@ -69,7 +69,9 @@ type Mg = {
     code: string;
     name: string;
     client: string;
-    phases: Array<{ name: string }>;
+    from: string;
+    to: string;
+    phases: Array<{ name: string; from: string; to: string }>;
     modules?: string[];
   }>;
   reqs: Array<{ id: string; status: string; assigned: string; skills: Array<{ k: string; l: number }> }>;
@@ -274,6 +276,31 @@ test('projects: new project with a new client, phases', async ({ page }) => {
       return [p?.name, d.clients.some((c) => c.name === 'Cliente Projeto E2E'), p?.phases.length];
     })
     .toEqual(['Projeto E2E', true, 3]);
+});
+
+test('projects: start / end and phase dates take any day (typed or picked), not only Mondays', async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto('app/mg-projects');
+  await page
+    .getByRole('button', { name: /^E2E-01/ })
+    .first()
+    .click();
+  // a Wednesday and a Friday
+  await page.getByLabel('Início', { exact: true }).fill('11/11/2026');
+  await page.getByLabel('Fim', { exact: true }).fill('19/03/2027');
+  const ph = page.getByLabel(/ · Fim$/).first();
+  await ph.fill('04/12/2026');
+  await ph.blur();
+  await expect(page.getByLabel('Início', { exact: true })).toHaveValue('11/11/2026');
+  await expect(page.getByRole('button', { name: 'Escolher no calendário' }).first()).toBeVisible();
+  await expect
+    .poll(async () => {
+      const p = (await mgData(page)).projects.find((x) => x.code === 'E2E-01');
+      return [p?.from, p?.to, p?.phases[0]?.to];
+    })
+    .toEqual(['2026-11-11', '2027-03-19', '2026-12-04']);
 });
 
 test('projects: SAP modules — two from the list and one of our own, chips, edit and filter', async ({

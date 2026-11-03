@@ -20,6 +20,7 @@ import {
   bookingSeries,
   bookingSum,
   dnOf,
+  mondayOf,
   loadBand,
   personLoads,
   sumDays,
@@ -252,7 +253,8 @@ export function useMg() {
       const p = pjById[pr];
       if (!p) return 0;
       const t0 = dnOf(todayIso());
-      const end = dnOf(p.to) + 6;
+      // to the end of the week of its last day (Monday dates of before mean that whole week)
+      const end = mondayOf(dnOf(p.to)) + 6;
       return BK.filter((b) => b.project === pr && b.person && b.status === 'confirmed').reduce(
         (s, b) => s + bookingSum(b, env, t0, end) * (pById[b.person]?.rate ?? 0),
         0,

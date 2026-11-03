@@ -25,7 +25,8 @@ export function mgWeeks(now = new Date()) {
     d.setDate(d.getDate() + 7 * i);
     return mgIso(d);
   };
-  const wi = (s: string) => Math.round((parse(s).getTime() - base.getTime()) / (7 * MG_DAY));
+  // the week of any day (dates are no longer only Mondays); +12 h absorbs the DST hour
+  const wi = (s: string) => Math.floor((parse(s).getTime() - base.getTime() + MG_DAY / 2) / (7 * MG_DAY));
   const dIso = (w: number, i: number) => {
     const x = new Date(base);
     x.setDate(x.getDate() + 7 * w + i);
