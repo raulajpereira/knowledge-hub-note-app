@@ -165,6 +165,72 @@ describe('alocações → xlsx', () => {
     expect(cf.length).toBeGreaterThan(10);
   });
 
+  it('grouped by project: the person row is still a formula (+ "Outros projetos"), equal to the app load', async () => {
+    const wb = await roundTrip(input({ groupBy: 'project' }));
+    const ws = wb.getWorksheet('Semanas')!;
+    let persons = 0;
+    let others = 0;
+    ws.eachRow((row) => {
+      const name = row.getCell(1).value;
+      if (typeof name === 'string' && name.trim() === 'Outros projetos') others++;
+      if (typeof name !== 'string' || !D.people.some((p) => p.name === name)) return;
+      persons++;
+      for (let c = 4; c < row.cellCount - 2; c++) {
+        const v = row.getCell(c).value;
+        if (v == null) continue;
+        expect(formulaOf(v)).toMatch(/^SUM\(|^0$/);
+      }
+    });
+    expect(persons).toBeGreaterThan(5);
+    expect(others).toBeGreaterThan(0);
+  });
+
+  it('tentative: a per-person subtotal, group and TOTAL lines, all formulas; capacity from Dias', async () => {
+    const wb = await roundTrip(input());
+    const ws = wb.getWorksheet('Semanas')!;
+    const daniela = D.people.find((p) => p.name === 'Daniela Freitas')!;
+    let at = 0;
+    ws.eachRow((row, rn) => {
+      if (row.getCell(1).value === daniela.name) at = rn;
+    });
+    expect(at).toBeGreaterThan(0);
+    let tRow = 0;
+    for (let rn = at + 1; rn < at + 8; rn++)
+      if (String(ws.getCell(rn, 1).value).trim() === 'Tentativo') tRow = rn;
+    expect(tRow).toBeGreaterThan(0);
+    expect(formulaOf(ws.getCell(tRow, 6).value)).toMatch(/^SUM\(F\d+\)$/);
+    expect(num(ws.getCell(tRow, 6).value)).toBeGreaterThan(0);
+    const total = ws.getColumn(1).values.findIndex((v) => v === 'TOTAL');
+    expect(String(ws.getCell(total + 1, 1).value)).toBe('TOTAL · tentativo');
+    expect(formulaOf(ws.getCell(total + 1, 6).value)).toMatch(/^SUM\(/);
+    // the hidden capacity row of a person: SUM of the Dias capacity row
+    expect(formulaOf(ws.getCell(at + 1, 4).value)).toMatch(new RegExp(`^SUM\\('Dias'!\\w+${at + 1}:`));
+  });
+
+  it('absences: days on Dias (Fér …), SUM of Dias on Semanas', async () => {
+    const wb = await roundTrip(input());
+    const dias = wb.getWorksheet('Dias')!;
+    const sem = wb.getWorksheet('Semanas')!;
+    let checked = false;
+    sem.eachRow((row, rn) => {
+      if (checked || String(row.getCell(1).value).trim() !== 'Ausências') return;
+      for (let c = 4; c < row.cellCount; c++) {
+        const v = row.getCell(c).value;
+        if (!formulaOf(v)) continue;
+        expect(formulaOf(v)).toMatch(/^SUM\('Dias'!/);
+        expect(row.getCell(c).numFmt).toMatch(/d"/);
+        checked = true;
+        break;
+      }
+      let any = false;
+      dias.getRow(rn).eachCell((cell, c) => {
+        if (c >= 4 && typeof cell.value === 'number') any = true;
+      });
+      expect(any).toBe(true);
+    });
+    expect(checked).toBe(true);
+  });
+
   it('legends: strips, the projects block and the holidays block', async () => {
     const t = texts((await roundTrip(input())).getWorksheet('Meses')!);
     expect(t.some((x) => x.startsWith('Legenda') && x.includes('Tentativo'))).toBe(true);

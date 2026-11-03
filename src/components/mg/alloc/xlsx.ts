@@ -155,6 +155,10 @@ type Row =
   | { k: 'g'; label: string; color: string; sub: string }
   | { k: 'p'; p: MgPerson; only?: (b: Booking) => boolean }
   | { k: 'b'; b: Booking; who?: string }
+  /** the person's other confirmed projects (not shown under this group): keeps the person row = the app's load */
+  | { k: 'o'; pid: string; shown: Booking[] }
+  /** the person's tentative subtotal */
+  | { k: 't'; pid: string }
   | { k: 'a'; pid: string };
 
 /** The rows of the export, grouped as on the screen. */
@@ -171,7 +175,9 @@ export function exportRows(x: XlsxInput): Row[] {
   const n = (k: number) => tr(k === 1 ? '1 pessoa' : `${k} pessoas`);
   const person = (p: MgPerson, only?: (b: Booking) => boolean) => {
     out.push({ k: 'p', p, only });
-    for (const b of bks) if (b.person === p.id && (!only || only(b))) out.push({ k: 'b', b });
+    const shown = bks.filter((b) => b.person === p.id && (!only || only(b)));
+    for (const b of shown) out.push({ k: 'b', b });
+    out.push({ k: 'o', pid: p.id, shown }, { k: 't', pid: p.id });
     if (absent(p.id)) out.push({ k: 'a', pid: p.id });
   };
   if (x.groupBy === 'byProject') {
@@ -517,7 +523,18 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
 
     // body
     let r = H + 2;
-    const groups: Array<{ row: number; lastRow: number; people: number[] }> = [];
+    const groups: Array<{
+      row: number;
+      /** the group's tentative line (hidden when there is none) */
+      tRow: number;
+      lastRow: number;
+      people: number[];
+      /** role lines of groups without persons (Por atribuir, Projetos) */
+      conf: number[];
+      tent: number[];
+      /** the persons' tentative subtotal rows */
+      ptent: number[];
+    }> = [];
     let cur: (typeof groups)[number] | null = null;
     const personRows: number[] = [];
     const bookingRows: number[] = [];
@@ -527,9 +544,17 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
       row: number;
       cap: number;
       conf: number[];
-      complete: boolean;
+      tent: number[];
       l: ReturnType<typeof loads>;
     }> = [];
+    const tentRows: number[] = [];
+    const pTentRows: number[] = [];
+    const valueOf = (v: unknown) =>
+      typeof v === 'number'
+        ? v
+        : v && typeof v === 'object' && 'result' in v
+          ? Number((v as Formula).result) || 0
+          : 0;
     let curP: (typeof persons)[number] | null = null;
     /** the value of a period cell: the number on Dias, a SUM of Dias on the other sheets */
     const periodVal = (row: number, c: Col, v: number) => (zoom === 'day' ? v : fromDias(row, c.a, c.b, v));
@@ -578,8 +603,13 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
           bottom: thin(C.lineStrong),
           left: { style: 'thick', color: { argb: `FF${row.color}` } },
         };
-        cur = { row: r, lastRow: r, people: [] };
+        cur = { row: r, tRow: r + 1, lastRow: r + 1, people: [], conf: [], tent: [], ptent: [] };
         groups.push(cur);
+        r++;
+        // the group's tentative hours (formula after the loop; hidden when there are none)
+        baseRow(r, 16);
+        ws.getCell(r, 1).value = `   ${tr('tentativo')}`;
+        ws.getCell(r, 1).font = font({ size: 8, italic: true, color: { argb: 'FF8A62C9' } });
         r++;
         continue;
       }
@@ -592,13 +622,7 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
         ws.getCell(r, 2).value = [tr(p.role), x.levels[p.level]].filter(Boolean).join(' · ');
         ws.getCell(r, 2).font = font({ size: 8.5, color: { argb: `FF${C.muted}` } });
         // the period cells, totals and load colours are written after the loop (formulas over the project rows)
-        const mine = rows.filter(
-          (w) => w.k === 'b' && w.b.person === p.id && w.b.status === 'confirmed',
-        ).length;
-        const all = x.bookings.filter(
-          (b) => b.person === p.id && b.status === 'confirmed' && b.to >= isoOf(F) && b.from <= isoOf(T),
-        ).length;
-        curP = { pid: p.id, row: r, cap: r + 1, conf: [], complete: !row.only && mine === all, l };
+        curP = { pid: p.id, row: r, cap: r + 1, conf: [], tent: [], l };
         persons.push(curP);
         cur?.people.push(r);
         personRows.push(r);
@@ -657,14 +681,83 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
           cell.border = { bottom: thin('FFFFFF'), left: thin('FFFFFF') };
         });
         num(ws.getCell(r, cT), fx(`SUM(${colL(c0)}${r}:${colL(cT - 1)}${r})`, tot));
-        if (curP && b.person === curP.pid && !tent) curP.conf.push(r);
+        if (curP && b.person === curP.pid) (tent ? curP.tent : curP.conf).push(r);
+        else if (cur) (tent ? cur.tent : cur.conf).push(r);
+        if (tent) tentRows.push(r);
         ws.getCell(r, cT).font = font({ italic: tent, color: { argb: tent ? 'FF8A62C9' : `FF${C.text}` } });
         bookingRows.push(r);
         if (cur) cur.lastRow = r;
         r++;
         continue;
       }
-      // the absences of the person above
+      if (row.k === 'o') {
+        // the person's confirmed hours on projects not shown here (values on Dias, SUM of Dias elsewhere)
+        const l = loads(row.pid);
+        const day = new Float64Array(T - F + 1);
+        for (let n = F; n <= T; n++) day[n - F] = l.conf[n - F]!;
+        for (const b of row.shown) {
+          if (b.status !== 'confirmed') continue;
+          const sb = ser(b);
+          for (let n = Math.max(F, sb.from); n <= Math.min(T, sb.from + sb.h.length - 1); n++)
+            day[n - F]! -= sb.h[n - sb.from]!;
+        }
+        const per = (a: Dn, z: Dn) => {
+          let t = 0;
+          for (let n = Math.max(a, F); n <= Math.min(z, T); n++) t += day[n - F]!;
+          return r2(t);
+        };
+        if (per(F, T) <= 0) continue;
+        baseRow(r, 16);
+        ws.getCell(r, 1).value = `   ${tr('Outros projetos')}`;
+        ws.getCell(r, 1).font = font({ size: 8.5, italic: true, color: { argb: `FF${C.muted}` } });
+        ws.getCell(r, 1).border = {
+          bottom: thin(C.line),
+          left: { style: 'thick', color: { argb: 'FFC9BEB4' } },
+        };
+        ws.getCell(r, 2).value = tr('fora do filtro · contam na carga');
+        ws.getCell(r, 2).font = font({ size: 8, italic: true, color: { argb: `FF${C.muted}` } });
+        cols.forEach((c, i) => {
+          const h = per(c.a, c.b);
+          const cell = ws.getCell(r, c0 + i);
+          num(cell, periodVal(r, c, h));
+          cell.font = font({ size: 8.5, italic: true, color: { argb: `FF${C.muted}` } });
+        });
+        num(ws.getCell(r, cT), fx(`SUM(${colL(c0)}${r}:${colL(cT - 1)}${r})`, per(F, T)));
+        ws.getCell(r, cT).font = font({ italic: true, color: { argb: `FF${C.muted}` } });
+        curP?.conf.push(r);
+        if (cur) cur.lastRow = r;
+        r++;
+        continue;
+      }
+      if (row.k === 't') {
+        // the person's tentative hours: SUM of their tentative rows (not in the confirmed load)
+        const pr = curP;
+        if (!pr || !pr.tent.length) continue;
+        baseRow(r, 16);
+        ws.getCell(r, 1).value = `   ${tr('Tentativo')}`;
+        ws.getCell(r, 1).font = font({ size: 8.5, italic: true, color: { argb: 'FF8A62C9' } });
+        ws.getCell(r, 1).border = {
+          bottom: thin(C.line),
+          left: { style: 'thick', color: { argb: 'FFB9A3E3' } },
+        };
+        ws.getCell(r, 2).value = tr('não conta na carga');
+        ws.getCell(r, 2).font = font({ size: 8, italic: true, color: { argb: `FF${C.muted}` } });
+        for (let i = 0; i <= N; i++) {
+          const cc = i < N ? c0 + i : cT;
+          const L = colL(cc);
+          const v = pr.tent.reduce((t, rr) => t + valueOf(ws.getCell(rr, cc).value), 0);
+          const cell = ws.getCell(r, cc);
+          num(cell, fx(sumOf(pr.tent.map((rr) => `${L}${rr}`)), v));
+          cell.font = font({ size: 8.5, italic: true, color: { argb: 'FF8A62C9' } });
+        }
+        cur?.ptent.push(r);
+        pTentRows.push(r);
+        if (cur) cur.lastRow = r;
+        r++;
+        continue;
+      }
+      // the absences of the person above: absent days on Dias (1 or ½, shown as Fér / Doe …),
+      // SUM of Dias on the other sheets
       baseRow(r, 17);
       ws.getCell(r, 1).value = `   ${tr('Ausências')}`;
       ws.getCell(r, 1).font = font({ size: 8.5, italic: true, color: { argb: `FF${C.muted}` } });
@@ -677,18 +770,22 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
       );
       ws.getCell(r, 2).font = font({ size: 8.5, color: { argb: `FF${C.muted}` } });
       let days = 0;
+      const q = (t: string) => t.replace(/"/g, '');
       cols.forEach((c, i) => {
         const ab = absIn(row.pid, c.a, c.b);
         if (!ab.days) return;
         days += ab.days;
         const cell = ws.getCell(r, c0 + i);
-        cell.value = zoom === 'day' ? (ABS_SHORT[ab.type] ?? '') : `${ABS[ab.type] ?? ''} ${ab.days}d`;
+        cell.value = periodVal(r, c, ab.days);
+        cell.numFmt =
+          zoom === 'day' ? `"${q(ABS_SHORT[ab.type] ?? '')}";;""` : `"${q(ABS[ab.type] ?? '')} "0.#"d";;""`;
         cell.fill = hatch(C.absence, C.absenceBg);
         cell.font = font({ size: zoom === 'day' ? 7 : 8, bold: true, color: { argb: 'FF5E554E' } });
         cell.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true };
       });
       const tc = ws.getCell(r, cT);
-      tc.value = `${days} ${tr('dias')}`;
+      tc.value = fx(`SUM(${colL(c0)}${r}:${colL(cT - 1)}${r})`, days);
+      tc.numFmt = `0.#" ${q(tr('dias'))}";;""`;
       tc.font = font({ size: 8.5, italic: true, color: { argb: `FF${C.muted}` } });
       tc.alignment = { horizontal: 'center', vertical: 'middle' };
       if (cur) cur.lastRow = r;
@@ -699,27 +796,16 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
       ws.getCell(r, 1).value = tr('Ninguém com estes filtros.');
       r++;
     }
-    // group subtotals (formulas, so edits in the sheet add up)
-    const valueOf = (v: unknown) =>
-      typeof v === 'number'
-        ? v
-        : v && typeof v === 'object' && 'result' in v
-          ? Number((v as Formula).result) || 0
-          : 0;
     // the persons: period cells = SUM of their confirmed project rows (as the app counts),
     // Total = SUM of the row, Capacidade = SUM of the hidden capacity row, % = Total / Capacidade
     for (const pr of persons) {
-      const { row, cap, conf, complete, l } = pr;
+      const { row, cap, conf, l } = pr;
       cols.forEach((c, i) => {
         const L = colL(c0 + i);
         const h = sumArr(l.conf, c.a, c.b);
         const cell = ws.getCell(row, c0 + i);
-        // complete: every confirmed booking of the person is a row here; else (one project of the person
-        // under a project / client group) the person's whole load, as the app shows it
-        num(
-          cell,
-          complete ? fx(sumOf(conf.map((rr) => `${L}${rr}`)), h) : zoom === 'day' ? h : periodVal(row, c, h),
-        );
+        // the confirmed project rows (+ "Outros projetos" when the group shows only some of them)
+        num(cell, fx(sumOf(conf.map((rr) => `${L}${rr}`)), h));
         cell.font = font({ bold: true });
       });
       const tot = sumArr(l.conf, F, T);
@@ -794,17 +880,29 @@ export function buildAllocWorkbook(ExcelJS: ExcelJSModule, x: XlsxInput): Workbo
         cell.font = font({ size: 8.5, bold: true, color: { argb: `FF${ink}` } });
       }
     };
-    for (const g of groups)
-      sumCells(
-        g.row,
-        g.people.length ? g.people : bookingRows.filter((rr) => rr > g.row && rr <= g.lastRow),
-        C.text,
-      );
-    // grand total (people; in Projetos the role lines)
+    const tentCells = (row: number, refs: number[], ink: string) => {
+      sumCells(row, refs, ink);
+      for (let c = c0; c <= cT; c++)
+        ws.getCell(row, c).font = font({ size: 8.5, italic: true, color: { argb: ink } });
+    };
+    for (const g of groups) {
+      sumCells(g.row, g.people.length ? g.people : g.conf, C.text);
+      const tr2 = g.people.length ? g.ptent : g.tent;
+      tentCells(g.tRow, tr2, 'FF8A62C9');
+      if (!tr2.length) ws.getRow(g.tRow).hidden = true;
+    }
+    // grand total (people; in Projetos the role lines) and its tentative line
+    const confRows = bookingRows.filter((rr) => !tentRows.includes(rr));
     baseRow(r, 22, C.title2);
     ws.getCell(r, 1).value = tr('TOTAL');
     ws.getCell(r, 1).font = font({ size: 9, bold: true, color: { argb: `FF${C.ink}` } });
-    sumCells(r, personRows.length ? personRows : bookingRows, C.ink);
+    sumCells(r, personRows.length ? personRows : confRows, C.ink);
+    for (let c = 1; c <= last; c++) ws.getCell(r, c).border = {};
+    r++;
+    baseRow(r, 18, C.title2);
+    ws.getCell(r, 1).value = `${tr('TOTAL')} · ${tr('tentativo')}`;
+    ws.getCell(r, 1).font = font({ size: 8.5, italic: true, color: { argb: 'FFC9B6F2' } });
+    tentCells(r, personRows.length ? pTentRows : tentRows, 'FFC9B6F2');
     for (let c = 1; c <= last; c++) ws.getCell(r, c).border = {};
 
     // legend blocks: the projects (colour, code, name, client) and the national holidays
