@@ -418,6 +418,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
                   label: tr('Data de contratação'),
                   val: sel.hired ?? '',
                   type: 'date',
+                  pick: tr('Escolher no calendário'),
                   onChange: set('hired'),
                 },
                 {

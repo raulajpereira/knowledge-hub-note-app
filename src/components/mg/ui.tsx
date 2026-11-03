@@ -515,7 +515,7 @@ export function Fields({
                 value={String(f.val)}
                 onChange={f.onChange}
                 label={f.label}
-                pickLabel={f.pick ?? f.label}
+                pickLabel={f.pick ?? `${f.label} · 📅`}
               />
             ) : f.opts ? (
               <Sel

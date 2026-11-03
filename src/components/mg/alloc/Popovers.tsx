@@ -655,14 +655,19 @@ export const newAbsence = (person: string, from: string, to = from): Absence => 
 });
 export { addDays, newBooking };
 
-/** 'YYYY-MM-DD' from what was typed: dd/mm/aaaa, d-m-aa or ISO; null when it is not a day. */
-export function parseDay(s: string): string | null {
+/**
+ * 'YYYY-MM-DD' from what was typed: dd/mm/aaaa, d-m-aa or ISO; null when it is not a day.
+ * `full`: only a 4-digit year (while typing, "12/11/20" must not jump to 2020).
+ */
+export function parseDay(s: string, full = false): string | null {
   const t = s.trim();
   let y: number;
   let m: number;
   let d: number;
   const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
-  const pt = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(t);
+  const pt = (
+    full ? /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/ : /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/
+  ).exec(t);
   if (iso) [y, m, d] = [+iso[1]!, +iso[2]!, +iso[3]!];
   else if (pt) [d, m, y] = [+pt[1]!, +pt[2]!, pt[3]!.length === 2 ? 2000 + +pt[3]! : +pt[3]!];
   else return null;
@@ -702,10 +707,15 @@ export function DateField({
         inputMode="numeric"
         onChange={(e) => {
           setTxt(e.target.value);
-          const d = parseDay(e.target.value);
+          const d = parseDay(e.target.value, true);
           if (d) onChange(d);
         }}
-        onBlur={() => setTxt(fmtField(value))}
+        onBlur={(e) => {
+          // a 2-digit year ("12/11/26") is taken when leaving the field
+          const d = parseDay(e.target.value);
+          if (d && d !== value) onChange(d);
+          setTxt(fmtField(d ?? value));
+        }}
       />
       <button
         type="button"

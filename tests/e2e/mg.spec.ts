@@ -282,13 +282,15 @@ test('projects: start / end and phase dates take any day (typed or picked), not 
   page,
 }) => {
   await login(page);
-  await page.goto('app/mg-projects');
-  await page
-    .getByRole('button', { name: /^E2E-01/ })
-    .first()
-    .click();
+  const id = (await mgData(page)).projects.find((x) => x.code === 'E2E-01')!.id;
+  await page.goto(`app/mg-projects?pj=${id}`);
+  await expect(page.getByLabel('Código', { exact: true })).toHaveValue('E2E-01');
+  await page.waitForLoadState('networkidle');
   // a Wednesday and a Friday
   await page.getByLabel('Início', { exact: true }).fill('11/11/2026');
+  await expect
+    .poll(async () => (await mgData(page)).projects.find((x) => x.code === 'E2E-01')?.from)
+    .toBe('2026-11-11');
   await page.getByLabel('Fim', { exact: true }).fill('19/03/2027');
   const ph = page.getByLabel(/ · Fim$/).first();
   await ph.fill('04/12/2026');
