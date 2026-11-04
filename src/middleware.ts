@@ -51,7 +51,7 @@ export const config = {
   matcher: [
     {
       // pages only: not the API, Next's static files or the icons/manifest
-      source: '/((?!api/|_next/static|_next/image|favicon|icon|apple-icon|manifest).*)',
+      source: '/((?!api/|_next/static|_next/image|favicon|icon|apple-icon|manifest|kh-sw\.js).*)',
       missing: [{ type: 'header', key: 'next-router-prefetch' }],
     },
   ],

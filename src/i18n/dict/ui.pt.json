@@ -1479,5 +1479,22 @@
   "xl_fail": "Não foi possível gerar o ficheiro Excel.",
   "xl_generated": "Gerado a",
   "xl_total": "Total",
-  "xl_filter": "Filtro:"
+  "xl_filter": "Filtro:",
+  "pu_title": "Notificações push",
+  "pu_desc": "Receba as notificações do sino no telemóvel ou no computador, mesmo com a app fechada.",
+  "pu_here": "Neste dispositivo",
+  "pu_hereOn": "Ligadas neste navegador.",
+  "pu_hereOff": "Desligadas neste navegador. Ao ligar, o navegador pede autorização.",
+  "pu_unsupported": "Este navegador não suporta notificações push.",
+  "pu_ios": "No iPhone/iPad, adicione primeiro a app ao ecrã principal (Partilhar › Adicionar ao ecrã principal) e abra-a a partir daí.",
+  "pu_denied": "As notificações estão bloqueadas para este site nas definições do navegador.",
+  "pu_fail": "Não foi possível ligar as notificações push.",
+  "pu_test": "Enviar teste",
+  "pu_testSent": "Teste enviado para {n} dispositivo(s).",
+  "pu_testNone": "Nenhum dispositivo recebeu o teste.",
+  "pu_testBody": "As notificações push estão a funcionar neste dispositivo.",
+  "pu_device": "Dispositivo",
+  "pu_since": "Desde {d}",
+  "pu_last": "última entrega {d}",
+  "pu_remove": "Remover"
 }

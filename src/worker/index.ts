@@ -14,6 +14,7 @@ import { runMonitor } from '@/server/jobs/monitor';
 import { expireTrash, pruneNoteImages, pruneOtherImages } from '@/server/jobs/trash';
 import { pruneNotifications, runNotify } from '@/server/notify/generate';
 import { runInbound } from '@/server/inbound/imap';
+import { pushConfigured, runPush } from '@/server/notify/push';
 import { inboundConfigured, pruneReleasedInboundCodes } from '@/server/notify/service';
 import { expireExports, runExport } from '@/server/jobs/export';
 import { backfill, startIndexer } from './search/indexer';
@@ -31,6 +32,8 @@ const handlers: Record<string, JobHandler> = {
   monitor: async () => runMonitor(),
   // the header bell: due / overdue tasks, reminders, meetings, invitations (+ emails, daily summary)
   notify: async () => runNotify(),
+  // Web Push: the new notifications to the people's devices (only scheduled when configured)
+  push: async () => runPush(),
   // "Email para a app": the inbound mailbox (only scheduled when configured)
   inbound: async () => runInbound(),
   // trials and renewals → suspended, reminders, expired codes, purge of revoked data (30 days),
@@ -72,6 +75,18 @@ async function main() {
     { every: 60_000 },
     { name: 'notify', opts: { removeOnComplete: 50, removeOnFail: 200 } },
   );
+
+  if (pushConfigured()) {
+    await queue(QUEUES.system).upsertJobScheduler(
+      'push',
+      { every: 60_000 },
+      { name: 'push', opts: { removeOnComplete: 50, removeOnFail: 200 } },
+    );
+    console.log('[push] on: new notifications sent to devices every minute');
+  } else {
+    await queue(QUEUES.system).removeJobScheduler('push');
+    console.log('[push] off: VAPID_PUBLIC_KEY / _PRIVATE_KEY / _SUBJECT not all set');
+  }
 
   if (inboundConfigured()) {
     await queue(QUEUES.system).upsertJobScheduler(

@@ -1479,5 +1479,22 @@
   "xl_fail": "Could not build the Excel file.",
   "xl_generated": "Generated on",
   "xl_total": "Total",
-  "xl_filter": "Filter:"
+  "xl_filter": "Filter:",
+  "pu_title": "Push notifications",
+  "pu_desc": "Get the bell's notifications on your phone or computer, even with the app closed.",
+  "pu_here": "On this device",
+  "pu_hereOn": "On in this browser.",
+  "pu_hereOff": "Off in this browser. Turning it on asks the browser for permission.",
+  "pu_unsupported": "This browser does not support push notifications.",
+  "pu_ios": "On iPhone/iPad, first add the app to the Home Screen (Share › Add to Home Screen) and open it from there.",
+  "pu_denied": "Notifications are blocked for this site in the browser settings.",
+  "pu_fail": "Could not turn on push notifications.",
+  "pu_test": "Send test",
+  "pu_testSent": "Test sent to {n} device(s).",
+  "pu_testNone": "No device received the test.",
+  "pu_testBody": "Push notifications are working on this device.",
+  "pu_device": "Device",
+  "pu_since": "Since {d}",
+  "pu_last": "last delivery {d}",
+  "pu_remove": "Remove"
 }
