@@ -9,6 +9,8 @@ import { useI18n } from '@/i18n/client';
 import { CHEV, OPT, css } from './css';
 import { Av, Glass, Split, uid } from './ui';
 import type { Mg } from './store';
+import { XlsxButton } from '@/components/content/XlsxButton';
+import { downloadTableXlsx, xlsxName } from '@/lib/client/xlsxTable';
 
 const SEG =
   'display:flex;gap:2px;padding:3px;border-radius:999px;background:rgb(var(--d) / calc(.22 * var(--d-k)));border:1px solid rgb(var(--w) / .12);';
@@ -89,6 +91,81 @@ export function MgTime({ mg }: { mg: Mg }) {
   const weekLbl =
     RG === '4w' && !isPerson ? `${wLbl(wk(w - 3))} → ${wLblY(wIso)}` : tr(`Semana de ${wLblY(wIso)}`);
 
+  // "Exportar .xlsx": one row per person × week × project for the weeks on screen
+  // (logged hours per day, total, planned, difference and status) — easy to pivot in Excel
+  const { t: tx } = useI18n();
+  const exportXlsx = () => {
+    const weeks = RG === '4w' && !isPerson ? [w - 3, w - 2, w - 1, w] : [w];
+    type XR = {
+      week: string;
+      person: string;
+      project: string;
+      d: number[];
+      plan: number;
+      status: string;
+    };
+    const rows: XR[] = [];
+    for (const wv of weeks)
+      for (const p of P) {
+        const e = entry(p.id, wk(wv));
+        const plan = new Map(plannedW(p.id, wv).map((x) => [x.project, x.hours]));
+        const prs = new Set([...Object.keys(e?.rows ?? {}), ...plan.keys()]);
+        for (const pr of prs)
+          rows.push({
+            week: wk(wv),
+            person: p.id,
+            project: pr,
+            d: [0, 1, 2, 3, 4].map((i) => +(e?.rows[pr]?.[i] ?? 0) || 0),
+            plan: plan.get(pr) ?? 0,
+            status: e?.status ?? 'Em falta',
+          });
+      }
+    const tot = (r: XR) => r.d.reduce((a, b) => a + b, 0);
+    return downloadTableXlsx({
+      title: tr('Folhas de Tempos'),
+      subtitle: weekLbl,
+      sheet: tr('Folhas de Tempos'),
+      lang,
+      totalLabel: tx('xl_total'),
+      generatedLabel: tx('xl_generated'),
+      fileName: xlsxName(`${tr('Folhas de Tempos')} ${wk(weeks[0]!)}`),
+      rows,
+      columns: [
+        { header: tr('Semana'), type: 'date', width: 12, value: (r) => r.week },
+        { header: tr('Pessoa'), width: 22, value: (r) => mg.pById[r.person]?.name ?? '' },
+        {
+          header: tr('Equipa'),
+          width: 20,
+          value: (r) => mg.tById[mg.pById[r.person]?.team ?? '']?.name ?? '',
+        },
+        { header: tr('Função'), width: 22, value: (r) => mg.pById[r.person]?.role ?? '' },
+        {
+          header: tr('Projeto'),
+          width: 30,
+          value: (r) => {
+            const pj = mg.pjById[r.project];
+            return pj ? `${pj.code} · ${pj.name}` : r.project;
+          },
+        },
+        {
+          header: tr('Cliente'),
+          width: 20,
+          value: (r) => mg.cById[mg.pjById[r.project]?.client ?? '']?.name ?? '',
+        },
+        ...DN.map((d, i) => ({
+          header: d,
+          type: 'hours' as const,
+          width: 9,
+          total: 'sum' as const,
+          value: (r: XR) => r.d[i] || null,
+        })),
+        { header: tr('Registado'), type: 'hours', width: 11, total: 'sum', value: (r) => tot(r) },
+        { header: tr('Planeado'), type: 'hours', width: 11, total: 'sum', value: (r) => r.plan },
+        { header: tr('Desvio'), type: 'hours', width: 10, total: 'sum', value: (r) => tot(r) - r.plan },
+        { header: tr('Estado'), width: 12, value: (r) => tr(r.status) },
+      ],
+    });
+  };
   let summary = tr(`${sub} de ${team.length} submetidos`);
   let body: React.ReactNode;
   if (isPerson) {
@@ -462,6 +539,7 @@ export function MgTime({ mg }: { mg: Mg }) {
             ›
           </button>
         </div>
+        <XlsxButton onExport={exportXlsx} />
         {!isPerson &&
           seg(
             RG,

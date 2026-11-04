@@ -1651,3 +1651,34 @@ label > .kh-di,
   width: 104px;
   color-scheme: var(--scheme);
 }
+
+/* "Exportar .xlsx" on the lists (components/content/XlsxButton.tsx) */
+.kh-xlsx-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.1);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kh-xlsx-btn[data-compact] {
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+}
+.kh-xlsx-btn:hover {
+  background: rgb(var(--w) / 0.16);
+}
+.kh-xlsx-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

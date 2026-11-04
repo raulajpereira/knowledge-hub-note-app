@@ -1473,5 +1473,11 @@
   "imp_okN": "{n} notes imported",
   "imp_imgLost": "{n} images could not be brought in",
   "imp_failed": "Could not import:",
-  "imp_btn": "Import notes"
+  "imp_btn": "Import notes",
+  "xl_export": "Export .xlsx",
+  "xl_busy": "Building…",
+  "xl_fail": "Could not build the Excel file.",
+  "xl_generated": "Generated on",
+  "xl_total": "Total",
+  "xl_filter": "Filter:"
 }

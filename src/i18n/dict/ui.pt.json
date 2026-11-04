@@ -1473,5 +1473,11 @@
   "imp_okN": "{n} notas importadas",
   "imp_imgLost": "{n} imagens não puderam ser trazidas",
   "imp_failed": "Não foi possível importar:",
-  "imp_btn": "Importar notas"
+  "imp_btn": "Importar notas",
+  "xl_export": "Exportar .xlsx",
+  "xl_busy": "A gerar…",
+  "xl_fail": "Não foi possível gerar o ficheiro Excel.",
+  "xl_generated": "Gerado a",
+  "xl_total": "Total",
+  "xl_filter": "Filtro:"
 }
