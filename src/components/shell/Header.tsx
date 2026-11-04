@@ -32,7 +32,9 @@ function useClock(lang: string) {
 export function Header({ onActivity, activityOpen }: { onActivity: () => void; activityOpen: boolean }) {
   const { t, lang } = useI18n();
   const [tcOpen, setTcOpen] = useState(false);
-  const { modules, me, focus, toggleFocus, lock } = useShell();
+  const { modules, me, focus, toggleFocus, lock, openPalette } = useShell();
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => setIsMac(/Mac|iP/.test(navigator.platform)), []);
   const counts = useCounts();
   const path = usePathname();
   const { clock, date } = useClock(lang);
@@ -59,7 +61,20 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
         )}
       </Link>
 
-      <HeaderSearch className="kh-hdr__search kh-hdr__glass" />
+      <HeaderSearch className="kh-hdr__search kh-hdr__glass">
+        <button
+          type="button"
+          className="kh-hdr__kbd"
+          title={t('cmdk_title')}
+          aria-label={t('cmdk_title')}
+          onClick={(e) => {
+            e.preventDefault();
+            openPalette();
+          }}
+        >
+          {isMac ? '⌘' : 'Ctrl'} K
+        </button>
+      </HeaderSearch>
 
       {modules.has('tcodes') && (
         <button

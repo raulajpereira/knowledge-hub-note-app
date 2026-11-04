@@ -11,6 +11,8 @@ export type ShellApi = {
   lock: () => void;
   openAccount: () => void;
   openAbout: () => void;
+  /** Command palette (Ctrl/⌘ + K). */
+  openPalette: () => void;
   /** Header search box: the global search (HeaderSearch) and the Notes list read it. */
   query: string;
   setQuery: (q: string) => void;
