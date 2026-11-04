@@ -25,9 +25,9 @@ import type { GUnit } from './Grid';
 import { Floating } from './Popovers';
 import { bands, columns, dayMon, fitPpd, inView, type TZoom } from './shared';
 import type { Nav } from './Timeline';
+import { NameGrip, useNameW } from './NameGrip';
 
 const HEAD = 66;
-const NAMEW = 250;
 type PRow =
   | { k: 'pj'; key: string; pj: MgProject; y: number; h: number }
   | { k: 'r'; key: string; b: Booking; pj: MgProject; y: number; h: number };
@@ -81,6 +81,7 @@ export function ProjectsView({
   const [F, T] = win;
   const scRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ l: 0, w: 900, t: 0, h: 600 });
+  const { w: NAMEW, grip } = useNameW('proj', 250, view.w);
   // 4 weeks · 2 months fill the visible width
   const ppd = fitPpd(zoom, view.w - NAMEW);
   const [pick, setPick] = useState<string | null>(null);
@@ -455,7 +456,10 @@ export function ProjectsView({
             }}
           >
             <div className="al-hdr" style={{ height: HEAD, width: NAMEW + width }}>
-              <div className="al-corner">{tr('Projeto · função')}</div>
+              <div className="al-corner" style={{ width: NAMEW }}>
+                {tr('Projeto · função')}
+                <NameGrip {...grip} label={tr('Ajustar a largura da coluna')} />
+              </div>
               <div className="al-lane">
                 {bands(cols.filter((c) => x(c.b) + ppd >= xa && x(c.a) <= xb)).map((g) => {
                   const l = Math.max(x(g.a), view.l + NAMEW);

@@ -37,6 +37,7 @@ import {
   splitBooking,
   type TZoom,
 } from './shared';
+import { NameGrip, useNameW } from './NameGrip';
 
 export type Unit = 'hpd' | 'pct' | 'total';
 export type GroupBy = 'team' | 'project' | 'client' | 'module' | 'none';
@@ -102,7 +103,9 @@ export function Timeline({
   const [F, T] = win;
   const scRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ l: 0, t: 0, w: 1200, h: 700 });
-  const [nameW, setNameW] = useState(236);
+  // default width of the people column (CSS: smaller on tablets); the user can drag it
+  const [defW, setDefW] = useState(236);
+  const { w: nameW, grip } = useNameW('tl', defW, view.w);
   // the zoom's span (30 days · 4 weeks · 2 months) fills the visible width
   const ppd = fitPpd(zoom, view.w - nameW);
   const [sel, setSel] = useState<{ kind: 'bk' | 'ab'; id: string } | null>(null);
@@ -233,7 +236,7 @@ export function Timeline({
     if (!el) return;
     const ro = new ResizeObserver(() => {
       onScroll();
-      setNameW(parseFloat(getComputedStyle(el).getPropertyValue('--al-name')) || 236);
+      setDefW(parseFloat(getComputedStyle(el).getPropertyValue('--al-name')) || 236);
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -857,10 +860,16 @@ export function Timeline({
   return (
     <div className="kh-well al-well" tabIndex={0} onKeyDown={onKey} aria-label={tr('Timeline de alocações')}>
       <div className="al-scroll" ref={scRef} onScroll={onUserScroll} data-al-scroll>
-        <div className="al-canvas" style={{ width: nameW + width, height: totalH }}>
+        <div
+          className="al-canvas"
+          style={{ width: nameW + width, height: totalH, ['--al-name' as string]: `${nameW}px` }}
+        >
           {/* header */}
           <div className="al-hdr" style={{ height: HEAD, width: nameW + width }}>
-            <div className="al-corner">{groupBy === 'none' ? tr('Pessoa') : tr('Pessoa')}</div>
+            <div className="al-corner" style={{ width: nameW }}>
+              {tr('Pessoa')}
+              <NameGrip {...grip} label={tr('Ajustar a largura da coluna')} />
+            </div>
             <div className="al-lane">
               {bands(vcols).map((g) => {
                 // cut to what is right of the people column, so the label always starts there

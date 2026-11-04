@@ -302,6 +302,7 @@ export const MG_EX_AL: Record<string, string> = {
   '1 dia': '1 day',
   'Área · FTE por período': 'Area · FTE per period',
   'Equipa · ocupação confirmada': 'Team · confirmed utilisation',
+  'Ajustar a largura da coluna': 'Resize the column',
   'Horas semanais': 'Weekly hours',
   'Outra pessoa alterou estas alocações entretanto — recarregado.':
     'Someone else changed these allocations meanwhile — reloaded.',

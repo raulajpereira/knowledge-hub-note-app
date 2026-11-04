@@ -43,10 +43,10 @@ import {
   type Col,
 } from './shared';
 import type { GroupBy, Nav } from './Timeline';
+import { NameGrip, useNameW } from './NameGrip';
 
 export type GUnit = 'h' | 'pct' | 'fte';
 const HEAD = 78;
-const NAMEW = 262;
 
 type GRow =
   | { k: 'g'; key: string; label: string; dot: string; sub: string; people: string[] }
@@ -108,6 +108,7 @@ export function Grid({
   const scRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ l: 0, w: 1100, t: 0, h: 600 });
+  const { w: NAMEW, grip } = useNameW('grid', 262, view.w);
   // 30 days · 4 weeks · 2 months · 4 quarters fill the width between the name and Total columns
   const colW = fitColW(zoom, view.w - NAMEW - 84);
   const [openP, setOpenP] = useState<Record<string, boolean>>({});
@@ -854,6 +855,7 @@ export function Grid({
                   >
                     {tr(unit === 'fte' ? 'Área · FTE por período' : 'Equipa · ocupação confirmada')}
                   </span>
+                  <NameGrip {...grip} label={tr('Ajustar a largura da coluna')} />
                 </div>
                 <div className="al-lane al-lane--g">
                   {bands(visCols).map((g) => {
