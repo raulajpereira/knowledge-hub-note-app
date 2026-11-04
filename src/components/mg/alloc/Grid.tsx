@@ -838,7 +838,7 @@ export function Grid({
                     width: NAMEW,
                     flexDirection: 'column',
                     alignItems: 'flex-start',
-                    justifyContent: 'flex-end',
+                    justifyContent: 'center',
                     gap: 4,
                   }}
                 >

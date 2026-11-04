@@ -319,6 +319,9 @@
   overflow: auto;
   position: relative;
   overscroll-behavior: contain;
+  /* as the app's tables (.kh-table): everything cut to the well's rounded corners */
+  isolation: isolate;
+  clip-path: inset(0 round 21px);
 }
 .al-canvas {
   position: relative;
@@ -328,8 +331,9 @@
   position: sticky;
   top: 0;
   z-index: 8;
+  /* as the app's table heads (.kh-table__head): rounded top corners */
+  border-radius: 21px 21px 0 0;
   background: var(--kh-sticky-bg);
-  /* as the app's table heads (.kh-table__head) */
   border-bottom: 1px solid rgb(var(--w) / 0.16);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
@@ -339,6 +343,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
+  border-radius: inherit;
   pointer-events: none;
   backdrop-filter: var(--kh-sticky-filter);
   -webkit-backdrop-filter: var(--kh-sticky-filter);
@@ -349,16 +354,17 @@
   z-index: 9;
   width: var(--al-name);
   height: 100%;
+  /* a header cell like .kh-table__th: label centred, 11px caps */
   display: flex;
-  align-items: flex-end;
-  padding: 0 18px 14px;
+  align-items: center;
+  padding: 0 14px;
+  border-top-left-radius: 21px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink);
-  border-right: 1px solid var(--kh-divider);
-  /* part of the header's glass strip (the columns are cut at its edge) */
+  /* part of the header's one glass strip: no box or divider of its own */
   background: none;
 }
 /* top row: one band per week / month / year, its label kept in view */
