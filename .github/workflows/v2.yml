@@ -175,6 +175,8 @@ jobs:
             docker compose pull web worker migrate postgres
             # postgres first (a new image, e.g. pgvector, is applied before the migrations need it)
             docker compose up -d --wait postgres
+            # safety copy of the database BEFORE any migration; if it fails the deploy stops here
+            bash infra/backup/pre-deploy.sh "$KH_IMAGE_TAG"
             docker compose run --rm migrate
             docker compose run --rm migrate node dist/seed.mjs
             docker compose up -d --remove-orphans

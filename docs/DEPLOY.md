@@ -249,6 +249,33 @@ docker compose up -d
 ```
 (Alternativa automática fora da VPS, diária: `infra/backup/backup.sh` com restic + Backblaze B2.)
 
+## 6d. Cópia da base de dados antes de cada deploy
+
+Cada deploy, **antes de correr as migrações**, faz uma cópia completa da base de
+dados (`infra/backup/pre-deploy.sh`, chamado pelo workflow v2):
+
+- vai para `/var/backups/knowledgehub/pre-deploy/knowledgehub-<data UTC>-<commit>.dump`
+  (formato `pg_dump -Fc`, só legível pelo dono);
+- é verificada (tamanho e leitura com `pg_restore --list`): se falhar, **o deploy
+  pára e nenhuma migração corre**;
+- o log do deploy mostra o número de linhas das tabelas principais antes das migrações;
+- **nada é apagado automaticamente** — as cópias ficam até alguém as remover à mão
+  (ver o espaço com `du -sh /var/backups/knowledgehub/pre-deploy`).
+
+Repor uma cópia (só em caso de desastre, com a app parada):
+
+```bash
+cd /opt/knowledgehub-v2
+docker compose stop web worker
+# 1) primeiro numa base à parte, para confirmar o conteúdo
+docker compose exec -T postgres sh -c 'createdb -U "$POSTGRES_USER" kh_restore_check'
+docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d kh_restore_check --no-owner' < /var/backups/knowledgehub/pre-deploy/<ficheiro>.dump
+# 2) só depois de confirmado, e com decisão explícita, repor sobre a base principal
+```
+
+Estas cópias ficam no mesmo servidor: para estarem a salvo de uma avaria da VPS
+copie-as também para fora (`infra/backup/pull-to-pc.ps1`, §6).
+
 ## 6b. Monitorização (leve, sem serviços extra)
 - O **worker** verifica a cada 5 minutos a base de dados, o Redis, o MinIO, o endereço público (`APP_URL/api/health`), a fila de emails e os erros do servidor da última hora. Quando algo falha, envia email ao Manager e aos Administradores da consola (de novo a cada 6 h enquanto durar) e outro quando volta ao normal. Precisa do SMTP configurado (§5c).
 - Se o próprio worker parar, quem avisa é um monitor externo. Sugestão grátis: **UptimeRobot** (ou BetterStack) → novo monitor HTTP(s) para `https://knowledge-hub.cloud/v2/api/health?strict=1` (depois do corte, sem `/v2`), intervalo 5 min, alerta por email. Com `strict=1` a resposta é 503 também quando o worker não dá sinal há mais de 3 minutos.
