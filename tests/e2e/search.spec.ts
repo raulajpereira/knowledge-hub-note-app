@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { loadTestFont } from '../fixtures/testFont';
 
 // Pesquisa por significado e OCR: the status card in Definições › Assistente IA (with the
 // rate-limited "Reindexar") and the text the worker recognises in an image of Ficheiros.
@@ -92,7 +93,7 @@ test('text in an image of Ficheiros is recognised and shown under the preview', 
   g.fillStyle = '#fff';
   g.fillRect(0, 0, 900, 160);
   g.fillStyle = '#000';
-  g.font = '44px sans-serif';
+  g.font = `44px "${await loadTestFont()}"`;
   g.fillText('Fatura FT 2026/118 paga', 20, 95);
   await page.goto('app/files');
   await page

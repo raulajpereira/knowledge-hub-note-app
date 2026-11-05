@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { makePdf } from '../fixtures/makePdf';
+import { loadTestFont } from '../fixtures/testFont';
 
 // OCR building blocks on real files: a PNG with known text, and a PDF with one
 // page that has a text layer (read as is, no OCR) and one that is only a
@@ -14,7 +15,7 @@ async function textImage(lines: string[], type: 'png' | 'jpeg' = 'png') {
   g.fillStyle = '#fff';
   g.fillRect(0, 0, cv.width, cv.height);
   g.fillStyle = '#111';
-  g.font = '40px sans-serif';
+  g.font = `40px "${await loadTestFont()}"`;
   lines.forEach((l, i) => g.fillText(l, 24, 80 + i * 60));
   return {
     buf: type === 'png' ? await cv.encode('png') : await cv.encode('jpeg', 92),

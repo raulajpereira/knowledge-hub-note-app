@@ -6,6 +6,7 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { sql } from 'drizzle-orm';
+import { loadTestFont } from '../fixtures/testFont';
 
 // Semantic search + OCR through the real services and the real worker code
 // (queue triggers → indexer → pgvector under RLS → hybrid retrieval), with a
@@ -318,7 +319,7 @@ describe.skipIf(!enabled)('semantic search and OCR', () => {
     g.fillStyle = '#fff';
     g.fillRect(0, 0, 900, 160);
     g.fillStyle = '#000';
-    g.font = '44px sans-serif';
+    g.font = `44px "${await loadTestFont()}"`;
     g.fillText('Encomenda XPTO 4711 aprovada', 20, 95);
     const png = await cv.encode('png');
 
