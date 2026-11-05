@@ -107,7 +107,8 @@ test('link a file from a note, a task and a meeting; open it; "Ligado a"; unlink
 
   // opening it goes to its preview in Ficheiros, which lists what it's linked to
   await chip.locator('.kh-cx__t').click();
-  await page.waitForURL(new RegExp(`/app/files\\?f=${fileId}`));
+  // a client-side navigation (router.push): only the address changes, so no waiting for a page "load"
+  await expect(page).toHaveURL(new RegExp(`/app/files\\?f=${fileId}`));
   await expect(page.locator('.kh-fl-text')).toContainText('Requisitos do projeto Atlas');
   for (const t of ['Plano Atlas', 'Rever caderno', 'Kick-off Atlas'])
     await expect(linked.locator('.kh-cx__link', { hasText: t })).toBeVisible();
