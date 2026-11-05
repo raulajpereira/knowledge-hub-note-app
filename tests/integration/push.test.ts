@@ -142,7 +142,7 @@ describe.skipIf(!enabled)('web push', () => {
     expect(sent[0]!.payload).toMatchObject({
       title: 'Tarefa para hoje',
       body: 'Fechar SM37',
-      url: '/v2/app/tasks?t=0190a0a0-0000-7000-8000-000000000001',
+      url: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/app/tasks?t=0190a0a0-0000-7000-8000-000000000001`,
     });
     // again: nothing new
     expect(await push.runPush()).toMatchObject({ claimed: 0 });
