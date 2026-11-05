@@ -10,6 +10,9 @@ import { CHEV, OPT, css } from './css';
 import { Av, Chip, Dialog, Fields, Split, Trash, uid } from './ui';
 import { DateField } from './alloc/Popovers';
 import type { Mg } from './store';
+import { XlsxButton } from '@/components/content/XlsxButton';
+import { downloadTableXlsx, xlsxName } from '@/lib/client/xlsxTable';
+import { ProjectProfit } from './ProjectProfit';
 import { Popover, useConfirm } from '@/components/ui';
 import { ModChips, modChip, ModulePicker, moduleOptions } from './ModulePicker';
 import { useI18n } from '@/i18n/client';
@@ -79,6 +82,65 @@ export function MgProjects({ mg }: { mg: Mg }) {
   useEffect(() => {
     if (isIsoDay(pf) && isIsoDay(pt) && pf <= pt) ensure(dnOf(pf), dnOf(pt) + 6);
   }, [ensure, pf, pt]);
+  // "Exportar .xlsx": the projects of the list, with budget, spent, forecast and margin
+  const mgRef = useRef(mg);
+  mgRef.current = mg;
+  const exportXlsx = async () => {
+    const rows = list.slice();
+    const days = rows.filter((p) => isIsoDay(p.from) && isIsoDay(p.to) && p.from <= p.to);
+    if (days.length)
+      await ensure(Math.min(...days.map((p) => dnOf(p.from))), Math.max(...days.map((p) => dnOf(p.to))) + 6);
+    // the allocations just loaded reach the store on the next render
+    await new Promise((r) => setTimeout(r, 50));
+    const m = mgRef.current;
+    const cost = (pr: string) => {
+      let v = 0;
+      for (const e of m.D.ts) {
+        const r = e.rows[pr];
+        if (r) v += r.reduce((x, y) => x + (+y || 0), 0) * (m.pById[e.person]?.cost ?? 0);
+      }
+      return v;
+    };
+    const data = rows.map((p) => {
+      const u = m.tsHours(p.id);
+      const fc = m.forecast(p.id);
+      const c = cost(p.id);
+      return { p, h: u.h, spent: u.v, fin: u.v + fc, cost: c };
+    });
+    await downloadTableXlsx({
+      title: L(28),
+      subtitle: [stF !== 'all' && tr(stF), modF, qq && `“${q.trim()}”`].filter(Boolean).join(' · '),
+      sheet: L(28),
+      lang,
+      totalLabel: tx('xl_total'),
+      generatedLabel: tx('xl_generated'),
+      fileName: xlsxName(L(28)),
+      rows: data,
+      columns: [
+        { header: tr('Código'), width: 14, value: (r) => r.p.code },
+        { header: tr('Nome'), width: 32, value: (r) => r.p.name },
+        { header: tr('Cliente'), width: 22, value: (r) => m.cById[r.p.client]?.name ?? '' },
+        { header: tr('Estado'), width: 13, value: (r) => tr(r.p.status) },
+        { header: tr('Gestor'), width: 20, value: (r) => m.pById[r.p.manager]?.name ?? '' },
+        { header: tr('Início'), type: 'date', width: 12, value: (r) => r.p.from },
+        { header: tr('Fim'), type: 'date', width: 12, value: (r) => r.p.to },
+        { header: tr('Módulos'), width: 16, value: (r) => (r.p.modules ?? []).join(', ') },
+        { header: tr('Orçamento'), type: 'eur', total: 'sum', value: (r) => r.p.budget },
+        { header: tr('Horas registadas'), type: 'hours', total: 'sum', value: (r) => r.h },
+        { header: tr('Consumido'), type: 'eur', total: 'sum', value: (r) => r.spent },
+        { header: tr('Previsão final'), type: 'eur', total: 'sum', value: (r) => r.fin },
+        { header: tr('Desvio'), type: 'eur', total: 'sum', value: (r) => r.fin - r.p.budget },
+        { header: tr('% consumido'), type: 'pct', value: (r) => (r.p.budget ? r.spent / r.p.budget : null) },
+        { header: tr('Custo até hoje'), type: 'eur', total: 'sum', value: (r) => r.cost },
+        { header: tr('Margem até hoje'), type: 'eur', total: 'sum', value: (r) => r.spent - r.cost },
+        {
+          header: tr('Margem %'),
+          type: 'pct',
+          value: (r) => (r.spent ? (r.spent - r.cost) / r.spent : null),
+        },
+      ],
+    });
+  };
   const cOpts = D.clients.map((c) => ({
     v: c.id,
     l: c.name + (c.type === 'Interno' ? tr(' (interno)') : ''),
@@ -91,6 +153,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
           <h1 style={css('margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em;margin-right:auto;')}>
             {L(28)}
           </h1>
+          <XlsxButton compact onExport={exportXlsx} />
           <button
             type="button"
             title={L(67)}
@@ -441,6 +504,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
             },
           ]}
         />
+        <ProjectProfit mg={mg} sel={sel} />
         <div style={css('display:flex;flex-direction:column;gap:10px;')}>
           <div style={css('display:flex;align-items:center;gap:10px;')}>
             <span style={css('font-size:16px;font-weight:600;margin-right:auto;')}>{L(31)}</span>

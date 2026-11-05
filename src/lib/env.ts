@@ -72,6 +72,19 @@ export const serverEnvSchema = z.object({
   INBOUND_IMAP_PASSWORD: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
   INBOUND_ADDRESS: z.preprocess((v) => (v === '' ? undefined : v), z.email().optional()),
 
+  // Web Push (notifications on the person's phone / computer): the VAPID key
+  // pair (`npx web-push generate-vapid-keys`) and a contact (mailto: or https:)
+  // for the push services. All optional: without them the feature is hidden.
+  VAPID_PUBLIC_KEY: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(40).optional()),
+  VAPID_PRIVATE_KEY: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(20).optional()),
+  VAPID_SUBJECT: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .regex(/^(mailto:|https:\/\/)/)
+      .optional(),
+  ),
+
   // Have I Been Pwned check on new passwords (k-anonymity; off in tests).
   HIBP_CHECK: bool.default(true),
 

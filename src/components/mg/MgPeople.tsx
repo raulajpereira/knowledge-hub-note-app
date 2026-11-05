@@ -23,6 +23,9 @@ import { mgL } from '@/lib/mgText';
 import { CHEV, OPT, css } from './css';
 import { Av, Chip, Fields, Sel, Split, Trash, uid } from './ui';
 import type { Mg } from './store';
+import { useI18n } from '@/i18n/client';
+import { XlsxButton } from '@/components/content/XlsxButton';
+import { downloadTableXlsx, xlsxName } from '@/lib/client/xlsxTable';
 import { PersonPhoto } from './PersonPhoto';
 
 // Recursos (prototype isPeople): people with role, team, area, seniority,
@@ -46,6 +49,60 @@ export function MgPeople({ mg }: { mg: Mg }) {
   );
   const sel = mg.pById[sp.get('p') ?? ''] ?? list[0];
   const select = (id: string) => mg.nav('mg_people', { p: id });
+
+  // "Exportar .xlsx": the people of the list with their rates, capacity, load and skills
+  const { t: tx } = useI18n();
+  const exportXlsx = () =>
+    downloadTableXlsx({
+      title: tr('Recursos'),
+      subtitle: [ppTeam && mg.tById[ppTeam]?.name, stF && tr(stF), lvF ? LV[lvF] : '', qq && `“${q.trim()}”`]
+        .filter(Boolean)
+        .join(' · '),
+      sheet: tr('Recursos'),
+      lang,
+      totalLabel: tx('xl_total'),
+      generatedLabel: tx('xl_generated'),
+      fileName: xlsxName(tr('Recursos')),
+      rows: list,
+      columns: [
+        { header: tr('Nome'), width: 24, value: (p) => p.name },
+        { header: tr('Equipa'), width: 22, value: (p) => mg.tOf(p).tn },
+        { header: tr('Função'), width: 24, value: (p) => p.role },
+        { header: tr('Área principal'), width: 14, value: (p) => SKN[p.area] ?? p.area },
+        { header: tr('Senioridade'), width: 12, value: (p) => LV[p.level] ?? '' },
+        { header: tr('Estado'), width: 11, value: (p) => tr(p.status ?? 'Ativo') },
+        { header: tr('Custo interno'), type: 'eur', total: 'avg', value: (p) => p.cost },
+        { header: tr('Preço de venda'), type: 'eur', total: 'avg', value: (p) => p.rate },
+        { header: tr('Horas semanais'), type: 'hours', total: 'sum', value: (p) => p.cap },
+        {
+          header: tr('Ocupação (4 semanas)'),
+          type: 'pct',
+          value: (p) => {
+            const c = mg.avgCap(p.id, 0, 3);
+            return c ? mg.avgLoad(p.id, 0, 3) / c : null;
+          },
+        },
+        { header: tr('Localização'), width: 14, value: (p) => p.loc },
+        { header: tr('Data de contratação'), type: 'date', width: 13, value: (p) => p.hired },
+        {
+          header: tr('Anos de experiência'),
+          type: 'int',
+          value: (p) => (p.expYears === '' ? null : p.expYears),
+        },
+        { header: tr('Email'), width: 26, value: (p) => p.email },
+        { header: tr('Telefone'), width: 16, value: (p) => p.phone },
+        {
+          header: tr('Competências'),
+          width: 40,
+          value: (p) =>
+            Object.entries(p.skills)
+              .filter(([, v]) => v > 0)
+              .sort((a, b) => b[1] - a[1])
+              .map(([k, v]) => `${SKN[k] ?? k} ${v}`)
+              .join(', '),
+        },
+      ],
+    });
 
   /** prototype addArea / addLevel (the "+ Nova…" option of the selects) */
   const addArea = () => {
@@ -106,6 +163,7 @@ export function MgPeople({ mg }: { mg: Mg }) {
           >
             {tr(`${list.length} pessoas`)}
           </span>
+          <XlsxButton compact onExport={exportXlsx} />
           <button
             type="button"
             title={L(62)}

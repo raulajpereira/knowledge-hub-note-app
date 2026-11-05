@@ -76,7 +76,14 @@ export async function addNotification(
     n.stamp
       ? q.onConflictDoUpdate({
           target,
-          set: { kind: row.kind, title: row.title, meta, createdAt: sql`now()`, readAt: null },
+          set: {
+            kind: row.kind,
+            title: row.title,
+            meta,
+            createdAt: sql`now()`,
+            readAt: null,
+            pushedAt: null,
+          },
           setWhere: sql`${notifications.meta}->>'stamp' is distinct from ${n.stamp}`,
         })
       : q.onConflictDoNothing({ target })

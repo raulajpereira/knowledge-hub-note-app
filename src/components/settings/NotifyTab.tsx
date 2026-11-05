@@ -14,6 +14,7 @@ import {
 import { useConfirm, useToast } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
 import '@/components/sap/sap.css';
+import { PushCard } from './PushCard';
 
 // Definições › Notificações: what goes to the header bell, by email and in
 // the daily summary; and "Email para a app" (inbound address) when the
@@ -45,7 +46,15 @@ const CODE_MSG: Partial<Record<CodeState, string>> = {
 };
 type Settings = { prefs: NotifyPrefs; tz: string; inbound: Inbound | null };
 
-function Toggle({ on, label, onChange }: { on: boolean; label: string; onChange: (v: boolean) => void }) {
+export function Toggle({
+  on,
+  label,
+  onChange,
+}: {
+  on: boolean;
+  label: string;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <button
       type="button"
@@ -58,7 +67,7 @@ function Toggle({ on, label, onChange }: { on: boolean; label: string; onChange:
   );
 }
 
-function Row({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+export function Row({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
     <div className="kh-nf__row">
       <div className="kh-nf__lbl">
@@ -279,6 +288,8 @@ export function NotifyTab() {
           <span>{t('nf_tz').replace('{tz}', s.tz)}</span>
         </div>
       </div>
+
+      <PushCard />
 
       {ib && ibModules && (
         <div className="kh-set__card" data-testid="inbound-card">

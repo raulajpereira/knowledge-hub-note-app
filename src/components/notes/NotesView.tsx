@@ -19,6 +19,7 @@ import { ColHandle } from '@/components/content/ColHandle';
 import { BackButton, FoldersButton, useListDetail } from '@/components/content/MobilePane';
 import { ChecklistBar, EditorContent, EditorToolbar, InsertBar, useNoteEditor } from './NoteEditor';
 import { NoteHistory } from './NoteHistory';
+import { ImportDialog } from './ImportDialog';
 import { NoteFiltersActive, NoteFiltersButton, type NoteExtra } from './NoteFilters';
 import { NOTE_VIEW_KEYS, noteViewFromParams, noteViewParams } from '@/lib/views';
 import { saveView, ViewNameDialog } from '@/components/views/Views';
@@ -822,6 +823,9 @@ export function NotesView() {
   const [histOpen, setHistOpen] = useState(false);
   // bumped by a restore: the editor is rebuilt with the restored document
   const [rev, setRev] = useState(0);
+  // "Importar notas" (also ?import=1, from the command palette); listRev reloads the list after it
+  const [importOpen, setImportOpen] = useState(false);
+  const [listRev, setListRev] = useState(0);
   const activeId = sp.get('n');
   const md = useListDetail('n');
   const mdGo = md.go;
@@ -919,7 +923,12 @@ export function NotesView() {
       clearTimeout(h);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- listKey covers filter + query + view filters
-  }, [listKey]);
+  }, [listKey, listRev]);
+  useEffect(() => {
+    if (!sp.has('import')) return;
+    setImportOpen(true);
+    replaceParams((p) => p.delete('import'));
+  }, [sp, replaceParams]);
 
   // Open the first note when none is selected (prototype: NOTES[0]); phones show the list instead.
   useEffect(() => {
@@ -1204,8 +1213,48 @@ export function NotesView() {
           onNew={() => void newNote(validFilter !== 'all' && validFilter !== 'fav' ? validFilter : null)}
           onMore={next ? () => void loadMore() : undefined}
           onFolders={md.compact ? () => setFoldersOpen(true) : undefined}
-          tools={<NoteFiltersButton value={extra} onChange={setExtra} onSave={() => setSaveOpen(true)} />}
+          tools={
+            <>
+              <button
+                type="button"
+                className="kh-vf-toggle"
+                title={t('imp_btn')}
+                aria-label={t('imp_btn')}
+                onClick={() => setImportOpen(true)}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 4v11" />
+                  <path d="M7 10l5 5 5-5" />
+                  <path d="M5 20h14" />
+                </svg>
+              </button>
+              <NoteFiltersButton value={extra} onChange={setExtra} onSave={() => setSaveOpen(true)} />
+            </>
+          }
           below={<NoteFiltersActive value={extra} onChange={setExtra} />}
+        />
+        <ImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          folders={folders?.folders ?? []}
+          folderId={!shId && validFilter !== 'all' && validFilter !== 'fav' ? validFilter : null}
+          onDone={(fid, n, first) => {
+            toast({ message: t('imp_okN').replace('{n}', String(n)), tone: 'success' });
+            setFilter(fid ?? 'all');
+            setListRev((r) => r + 1);
+            void loadFolders();
+            if (first) open(first);
+          }}
         />
         <ViewNameDialog
           open={saveOpen}

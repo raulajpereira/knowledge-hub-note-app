@@ -38,6 +38,8 @@ import {
 } from './ticketUi';
 import '../sap/sap.css';
 import './tickets.css';
+import { XlsxButton } from '@/components/content/XlsxButton';
+import { downloadTableXlsx, xlsxName } from '@/lib/client/xlsxTable';
 
 // Tickets (SAP › Tickets): the table (or a Kanban by status) on the left and
 // the open ticket on the right, like Notes. Folders and shared folders as a
@@ -53,7 +55,7 @@ const SO: Record<TicketStatus, number> = Object.fromEntries(STATUSES.map((s, i) 
 >;
 
 export function TicketsView() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
   const pathname = usePathname();
@@ -727,6 +729,39 @@ export function TicketsView() {
           <span className="kh-ot-count">
             {list.length} / {all.length}
           </span>
+          <XlsxButton
+            onExport={() =>
+              downloadTableXlsx({
+                title: t('nav_tickets'),
+                subtitle: [query && `“${q.trim()}”`, nAct > 0 && `${nAct} ${t('xl_filter').replace(':', '')}`]
+                  .filter(Boolean)
+                  .join(' · '),
+                sheet: t('nav_tickets'),
+                lang,
+                totalLabel: t('xl_total'),
+                generatedLabel: t('xl_generated'),
+                fileName: xlsxName(t('nav_tickets')),
+                rows: sorted,
+                columns: [
+                  { header: t('tk_numberShort'), width: 14, value: (x) => x.number },
+                  { header: t('tk_summary'), width: 46, value: (x) => x.summary },
+                  {
+                    header: t('tk_parent'),
+                    width: 30,
+                    value: (x) => [x.parentNumber, x.parentSummary].filter(Boolean).join(' — '),
+                  },
+                  { header: t('tk_client'), width: 22, value: (x) => x.clientName },
+                  { header: t('tk_priority'), width: 14, value: (x) => prioLabel(t, x.priority) },
+                  { header: t('tk_type'), width: 18, value: (x) => typeName(x.typeId) },
+                  { header: t('tk_status'), width: 22, value: (x) => statusLabel(t, x.status) },
+                  { header: t('tk_resp'), width: 22, value: (x) => x.responsibleName },
+                  { header: t('tk_opened'), type: 'datetime', width: 17, value: (x) => x.openedAt },
+                  { header: t('tk_due'), type: 'date', width: 13, value: (x) => x.dueOn },
+                  { header: t('tk_resolved'), type: 'datetime', width: 17, value: (x) => x.resolvedAt },
+                ],
+              })
+            }
+          />
         </div>
 
         {view === 'table' ? (

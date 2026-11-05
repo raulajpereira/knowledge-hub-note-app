@@ -192,6 +192,23 @@ O worker trata **todas** as mensagens da Caixa de entrada (lidas ou não) e tira
 de lá depois (no Gmail ficam arquivadas em "Todo o correio"); por isso a conta não
 deve ser usada para mais nada.
 
+## 5e. Notificações push (Web Push, opcional)
+
+Cada pessoa pode receber as notificações do sino no telemóvel ou no computador,
+mesmo com a app fechada (Definições › Notificações › **Neste dispositivo**). O
+worker envia, a cada minuto, as notificações novas a cada navegador onde a
+pessoa as ligou; uma notificação com mais de 15 minutos nunca é enviada atrasada.
+
+1. Na VPS, uma única vez: `cd /opt/knowledgehub-v2 && npx --yes web-push generate-vapid-keys`.
+2. No `.env`: `VAPID_PUBLIC_KEY=` e `VAPID_PRIVATE_KEY=` com as duas chaves e
+   `VAPID_SUBJECT=mailto:<um email de contacto>` (os serviços de push usam-no para
+   avisar de problemas). As chaves nunca vão para o código nem para o Git.
+3. Reiniciar (`docker compose up -d`). Sem as três variáveis a opção não aparece.
+
+Mudar as chaves depois obriga cada pessoa a ligar de novo. No iPhone/iPad, o
+iOS só permite notificações à app instalada no ecrã principal (Partilhar ›
+Adicionar ao ecrã principal), iOS 16.4 ou superior.
+
 ## 6. Backups (semanais, para o PC — D67)
 
 Todos os domingos às 03:15 a VPS faz um arquivo **cifrado** (7-Zip AES-256, nomes

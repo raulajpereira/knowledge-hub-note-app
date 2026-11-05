@@ -55,6 +55,8 @@ export const notifications = pgTable(
     dedupeKey: text('dedupe_key').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     readAt: timestamp('read_at', { withTimezone: true }),
+    /** sent to the person's devices (Web Push) — or let go: too old, or no device */
+    pushedAt: timestamp('pushed_at', { withTimezone: true }),
   },
   (t) => [
     uniqueIndex('notifications_dedupe').on(t.userId, t.dedupeKey),
@@ -141,5 +143,36 @@ export const inboundReleasedCodes = pgTable(
       'inbound_released_code_chk',
       sql`${t.code} ~ '^[a-z0-9][a-z0-9._-]{1,28}[a-z0-9]$' and position('..' in ${t.code}) = 0`,
     ),
+  ],
+);
+
+/**
+ * Web Push (0051): one row per browser of a person that allowed notifications
+ * (the Push API endpoint and its keys). Owner-only under RLS; the worker reads
+ * them through kh_push_targets and drops the ones the push service refuses.
+ */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`uuid_generate_v7()`),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    /** "Chrome · Windows": what the person sees in Definições */
+    device: text('device').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastOkAt: timestamp('last_ok_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('push_subscriptions_endpoint').on(t.endpoint),
+    index('push_subscriptions_user').on(t.userId),
   ],
 );

@@ -25,6 +25,7 @@ import { Ticker } from './Ticker';
 import type { ShellMe } from './types';
 import './shell.css';
 import './mobile.css';
+import { CommandPalette, useCommandPaletteKey } from './CommandPalette';
 
 // ZNotes root: 64px header · content · 36px ticker; sidebar + content
 // columns with a drag handle (double-click resets). Pages that need the
@@ -56,6 +57,8 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const toggleAi = useCallback(() => setAiOpen((o) => !o), []);
   const closeAi = useCallback(() => setAiOpen(false), []);
   const [query, setQuery] = useState('');
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const togglePalette = useCallback(() => setCmdOpen((o) => !o), []);
   // phones/tablets (D68): compact header + drawer; phones also the bottom bar
   const vp = useViewport();
   const compact = vp !== 'desktop';
@@ -145,6 +148,7 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
       lock,
       openAccount: () => setAccOpen(true),
       openAbout: () => setAboutOpen(true),
+      openPalette: () => setCmdOpen(true),
       query,
       setQuery,
     }),
@@ -211,6 +215,8 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
         <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
         <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />
         <AiPanel open={aiOpen} onClose={closeAi} />
+        {!locked && <PaletteKey onToggle={togglePalette} />}
+        <CommandPalette open={cmdOpen && !locked} onClose={() => setCmdOpen(false)} />
         {!locked && !focus && <AiFab open={aiOpen} onToggle={toggleAi} />}
         {compact && !locked && (
           <NavDrawer open={navOpen} onClose={closeNav} onActivity={() => setActOpen(true)} />
@@ -230,4 +236,10 @@ export function AppShell({ me, prefs, children }: { me: ShellMe; prefs: Prefs; c
       <Shell me={me}>{children}</Shell>
     </PrefsProvider>
   );
+}
+
+/** Ctrl/⌘ + K opens (or closes) the command palette while the app is unlocked. */
+function PaletteKey({ onToggle }: { onToggle: () => void }) {
+  useCommandPaletteKey(onToggle);
+  return null;
 }
