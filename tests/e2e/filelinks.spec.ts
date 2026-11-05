@@ -74,6 +74,8 @@ test('link a file from a note, a task and a meeting; open it; "Ligado a"; unlink
     buffer: Buffer.from('Requisitos do projeto Atlas\n'),
   });
   await expect(page.locator('.kh-fl-item:not(.kh-fl-item--up)')).toHaveCount(1, { timeout: 30_000 });
+  // the new file opens (?f=<id>) right after the upload: wait for the address before reading it
+  await expect(page).toHaveURL(/[?&]f=[0-9a-f-]{36}/);
   const fileId = new URL(page.url()).searchParams.get('f')!;
   // nothing linked yet
   const linked = page.getByRole('group', { name: 'Ligado a' });
