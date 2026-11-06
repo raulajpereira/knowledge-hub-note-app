@@ -50,7 +50,7 @@ só muda o ambiente a que pertence.
 | 1 | Fundação invisível: tabela `workspaces`, "Meu Ambiente", `workspace_id` nos itens, limites por plano (migração 0052) | ✅ em produção (06/11/2026 07:02 UTC; contagens iguais antes/depois; 2 ambientes, 0 itens sem ambiente) |
 | 2a | Seletor no cabeçalho + personalização; aparência por ambiente; ambiente ativo por dispositivo (cookie kh_ws) | ✅ produção 06/11 07:28 UTC (contagens iguais) |
 | 2b | Criar/apagar ambientes (só vazio, nunca o último; limite do plano), módulos por ambiente; Notas, pastas, Tarefas, Registos Reuniões, Ficheiros, Notas de Voz, Calendário, Etiquetas, Lixo, contadores, pesquisa, IA e Início só do ambiente ativo; mover itens/pastas com aviso das ligações | ✅ produção 06/11 10:01 UTC (dcb1c05; cópia pre-deploy; contagens iguais) |
-| 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA (migração 0054; pastas de Emails/Artefactos/API; Notícias únicas por ambiente; mover artefactos, tarefas de projeto, emails, snippets, quadros, pastas) | aprovada 06/11; em deploy |
+| 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA (migração 0054; pastas de Emails/Artefactos/API; Notícias únicas por ambiente; mover artefactos, tarefas de projeto, emails, snippets, quadros, pastas) | ✅ produção 06/11 12:09 UTC (cb66b84; cópia pre-deploy; contagens iguais) |
 | 3b | SAP e Tickets | — |
 | 3c | Management | — |
 | 4 | Cofre por ambiente | — |
