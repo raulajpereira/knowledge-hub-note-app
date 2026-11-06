@@ -3,9 +3,16 @@ import { ApiError, currentRequest } from '@/server/http';
 import { SESSION_COOKIE, resolveSession, type AuthContext } from './session';
 
 /** Session of the current request (route handlers / server components), or null. */
+/** Ambientes: the active workspace of this device (docs/AMBIENTES.md). */
+export const WORKSPACE_COOKIE = 'kh_ws';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function getAuth(): Promise<AuthContext | null> {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  return resolveSession(token);
+  const jar = await cookies();
+  const auth = await resolveSession(jar.get(SESSION_COOKIE)?.value);
+  if (!auth) return null;
+  const ws = jar.get(WORKSPACE_COOKIE)?.value;
+  return { ...auth, workspaceId: ws && UUID.test(ws) ? ws : null };
 }
 
 export async function requireAuth(): Promise<AuthContext> {

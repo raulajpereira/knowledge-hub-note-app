@@ -1496,5 +1496,21 @@
   "pu_device": "Dispositivo",
   "pu_since": "Desde {d}",
   "pu_last": "última entrega {d}",
-  "pu_remove": "Remover"
+  "pu_remove": "Remover",
+  "ws_title": "Ambientes",
+  "ws_active": "Ambiente ativo",
+  "ws_switch": "Mudar para este ambiente",
+  "ws_switchFail": "Não foi possível mudar de ambiente.",
+  "ws_customize": "Personalizar ambiente",
+  "ws_customizeSub": "Nome, cor, ícone e aparência",
+  "ws_customizeDesc": "O nome, a cor e o ícone identificam este ambiente no cabeçalho.",
+  "ws_name": "Nome",
+  "ws_color": "Cor",
+  "ws_icon": "Ícone",
+  "ws_save": "Guardar",
+  "ws_saved": "Ambiente atualizado.",
+  "ws_saveFail": "Não foi possível guardar o ambiente.",
+  "ws_lookHint": "O fundo, o tema, a cor de destaque, o menu lateral, a página inicial e os cartões do Início são deste ambiente.",
+  "ws_lookOpen": "Aparência",
+  "ws_lookNote": "Estas definições aplicam-se ao ambiente «{name}»."
 }

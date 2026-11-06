@@ -19,6 +19,7 @@ import { NotificationBell } from './NotificationBell';
 import { HeaderSearch } from '@/components/search/HeaderSearch';
 import { useShell } from './ShellContext';
 import { Sidebar } from './Sidebar';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
 // Phones and tablets (D68): compact header, the sidebar as an off-canvas
 // drawer, and (phones) a bottom bar with a quick-capture "+" sheet. Desktop
@@ -140,6 +141,7 @@ export function MobileHeader({ onMenu, menuOpen }: { onMenu: () => void; menuOpe
           )}
         </span>
       </Link>
+      <WorkspaceSwitcher compact />
       <button
         type="button"
         className="kh-hdr__btn kh-hdr__glass"

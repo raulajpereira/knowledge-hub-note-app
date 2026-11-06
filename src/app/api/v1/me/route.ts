@@ -5,10 +5,10 @@ import { admins } from '@/db/schema';
 import { body, handler, json } from '@/server/http';
 import { requireAuth } from '@/server/auth/request';
 import { getEntitlements } from '@/server/licensing/entitlements';
-import { getPrefs } from '@/server/prefs';
 import { deleteAccount, updateProfile } from '@/server/account';
 import { clientIp } from '@/server/http';
 import { clearSessionCookie } from '@/server/auth/route-utils';
+import { prefsFor } from '@/server/workspaces';
 
 // GET /me → user, tenant, plan, entitlements, prefs (API.md). The UI gates
 // the sidebar with `entitlements.modules`; the server re-checks on every call.
@@ -21,7 +21,7 @@ export const GET = handler(async () => {
       .from(admins)
       .where(eq(admins.userId, auth.user.id))
       .limit(1),
-    getPrefs(auth.user.id),
+    prefsFor(auth).then((r) => r.prefs),
   ]);
   return json({
     user: auth.user,

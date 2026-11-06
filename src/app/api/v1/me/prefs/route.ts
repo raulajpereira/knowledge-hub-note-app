@@ -1,12 +1,12 @@
 import { handler, json } from '@/server/http';
 import { requireAuth } from '@/server/auth/request';
-import { getPrefs, patchPrefs } from '@/server/prefs';
+import { patchPrefsFor, prefsFor } from '@/server/workspaces';
 import { getEntitlements } from '@/server/licensing/entitlements';
 
 // GET|PUT /me/prefs (API.md). PUT takes a merge-patch: { key: value | null }.
 export const GET = handler(async () => {
   const auth = await requireAuth();
-  return json({ prefs: await getPrefs(auth.user.id) });
+  return json({ prefs: (await prefsFor(auth)).prefs });
 });
 
 export const PUT = handler(async (req) => {
@@ -18,5 +18,5 @@ export const PUT = handler(async (req) => {
     return json({ error: { code: 'invalid_json', message: 'Invalid JSON' } }, { status: 400 });
   }
   const { modules } = await getEntitlements(auth.tenant.id);
-  return json({ prefs: await patchPrefs(auth.user.id, patch, new Set(modules)) });
+  return json({ prefs: await patchPrefsFor(auth, patch, new Set(modules)) });
 });

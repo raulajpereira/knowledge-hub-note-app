@@ -116,8 +116,15 @@ export function LookTab() {
     void api('/me', { lang: l }, 'PATCH').catch(() => {});
   };
 
+  const activeWs = me.workspaces.list.find((w) => w.id === me.workspaces.active);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {activeWs && (
+        <div className="kh-sg-tip" data-testid="ws-look-note">
+          <span>{t('ws_lookNote').replace('{name}', activeWs.name)}</span>
+          <span>{t('ws_lookHint')}</span>
+        </div>
+      )}
       <Card
         title={t('set_themeTitle')}
         desc={t('set_themeDesc')}

@@ -1496,5 +1496,21 @@
   "pu_device": "Device",
   "pu_since": "Since {d}",
   "pu_last": "last delivery {d}",
-  "pu_remove": "Remove"
+  "pu_remove": "Remove",
+  "ws_title": "Workspaces",
+  "ws_active": "Active workspace",
+  "ws_switch": "Switch to this workspace",
+  "ws_switchFail": "Could not switch workspace.",
+  "ws_customize": "Customize workspace",
+  "ws_customizeSub": "Name, colour, icon and appearance",
+  "ws_customizeDesc": "The name, colour and icon identify this workspace in the header.",
+  "ws_name": "Name",
+  "ws_color": "Colour",
+  "ws_icon": "Icon",
+  "ws_save": "Save",
+  "ws_saved": "Workspace updated.",
+  "ws_saveFail": "Could not save the workspace.",
+  "ws_lookHint": "The background, theme, accent colour, sidebar, start page and Home cards belong to this workspace.",
+  "ws_lookOpen": "Appearance",
+  "ws_lookNote": "These settings apply to the «{name}» workspace."
 }

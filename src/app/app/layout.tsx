@@ -5,11 +5,11 @@ import { admins, users } from '@/db/schema';
 import { getAuth } from '@/server/auth/request';
 import { getEntitlements } from '@/server/licensing/entitlements';
 import { cookies } from 'next/headers';
-import { getPrefs } from '@/server/prefs';
 import { SIZE_COOKIE, withDeviceSize } from '@/lib/deviceSize';
 import { listAssets } from '@/server/assets';
 import { AppShell } from '@/components/shell/AppShell';
 import type { ShellMe } from '@/components/shell/types';
+import { prefsFor } from '@/server/workspaces';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,14 +18,14 @@ export const dynamic = 'force-dynamic';
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const auth = await getAuth();
   if (!auth) redirect('/login?next=/app');
-  const [ent, admin, prefs, u, assets] = await Promise.all([
+  const [ent, admin, { prefs, ws }, u, assets] = await Promise.all([
     getEntitlements(auth.tenant.id),
     db()
       .select({ role: admins.role, status: admins.status })
       .from(admins)
       .where(eq(admins.userId, auth.user.id))
       .limit(1),
-    getPrefs(auth.user.id),
+    prefsFor(auth),
     db().select({ createdAt: users.createdAt }).from(users).where(eq(users.id, auth.user.id)).limit(1),
     listAssets(auth.user.id),
   ]);
@@ -47,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     modules: ent.modules,
     admin: admin[0]?.status === 'active' ? { role: admin[0].role } : null,
     assets,
+    workspaces: { list: ws.list, active: ws.active.id },
   };
   return (
     <AppShell me={me} prefs={withDeviceSize(prefs, (await cookies()).get(SIZE_COOKIE)?.value)}>

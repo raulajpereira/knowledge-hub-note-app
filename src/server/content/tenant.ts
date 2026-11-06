@@ -15,7 +15,7 @@ type RawTx = Parameters<Parameters<ReturnType<typeof db>['transaction']>[0]>[0];
 const afterCommitQueues = new WeakMap<object, Array<() => Promise<unknown>>>();
 
 function scoped<T>(
-  ctx: { tenantId: string; userId: string; share?: boolean },
+  ctx: { tenantId: string; userId: string; share?: boolean; workspaceId?: string | null },
   fn: (tx: RawTx) => Promise<T>,
 ): Promise<T> {
   const queue: Array<() => Promise<unknown>> = [];
@@ -30,7 +30,7 @@ function scoped<T>(
 
 /** Runs `fn` in a transaction scoped by RLS to the caller's tenant and user. */
 export function asUser<T>(auth: AuthContext, fn: (tx: RawTx) => Promise<T>) {
-  return scoped({ tenantId: auth.tenant.id, userId: auth.user.id }, fn);
+  return scoped({ tenantId: auth.tenant.id, userId: auth.user.id, workspaceId: auth.workspaceId }, fn);
 }
 
 /**
@@ -39,7 +39,10 @@ export function asUser<T>(auth: AuthContext, fn: (tx: RawTx) => Promise<T>) {
  * RLS). Only for single-item reads/writes and explicit shared-folder lists.
  */
 export function asSharer<T>(auth: AuthContext, fn: (tx: RawTx) => Promise<T>) {
-  return scoped({ tenantId: auth.tenant.id, userId: auth.user.id, share: true }, fn);
+  return scoped(
+    { tenantId: auth.tenant.id, userId: auth.user.id, share: true, workspaceId: auth.workspaceId },
+    fn,
+  );
 }
 
 export type Tx = Parameters<Parameters<typeof asUser>[1]>[0];

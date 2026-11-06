@@ -1,0 +1,203 @@
+/* Ambientes: the pill next to the logo, its menu and the "Personalizar" dialog (WorkspaceSwitcher.tsx) */
+.kh-ws-pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 44px;
+  max-width: 230px;
+  padding: 0 14px 0 13px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.2);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.22 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
+  backdrop-filter: blur(var(--kh-blur-header, 24px)) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kh-ws-pill[data-compact] {
+  height: 38px;
+  padding: 0 10px;
+  gap: 6px;
+}
+.kh-ws-pill:hover {
+  background: rgb(var(--w) / 0.16);
+}
+.kh-ws-pill__n {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-ws-pill__ic {
+  font-size: 16px;
+  line-height: 1;
+}
+.kh-ws-pill svg {
+  flex: none;
+  opacity: 0.6;
+}
+.kh-ws-dot {
+  flex: none;
+  display: inline-block;
+  border-radius: 50%;
+}
+.kh-ws-menu {
+  padding: 8px;
+  gap: 2px;
+}
+.kh-ws-menu__h {
+  padding: 8px 12px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--t) / calc(0.62 * var(--t-k)));
+}
+.kh-ws-menu__sep {
+  height: 1px;
+  margin: 6px 8px;
+  background: rgb(var(--w) / 0.14);
+}
+.kh-ws-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kh-ws-item:hover,
+.kh-ws-item[data-on] {
+  background: rgb(var(--w) / 0.14);
+}
+.kh-ws-item[data-on] {
+  box-shadow: inset 0 0 0 1px rgb(var(--w) / 0.14);
+}
+.kh-ws-item__ic {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+.kh-ws-item__ic--plain {
+  background: rgb(var(--w) / 0.12);
+}
+.kh-ws-item__t {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.kh-ws-item__t b {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-ws-item__t span {
+  font-size: 12px;
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+}
+.kh-ws-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.kh-ws-form__f {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kh-ws-form__l {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+}
+.kh-ws-form__in {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--d) / calc(0.22 * var(--d-k)));
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  outline: none;
+}
+.kh-ws-form__in:focus {
+  border-color: rgb(var(--w) / 0.45);
+}
+.kh-ws-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.kh-ws-sw {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.kh-ws-sw[data-on] {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.25);
+}
+.kh-ws-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--w) / 0.18);
+  background: rgb(var(--w) / 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+}
+.kh-ws-ic[data-on] {
+  background: var(--ink);
+  border-color: transparent;
+}
+.kh-ws-form__look {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgb(var(--w) / 0.14);
+  background: rgb(var(--w) / 0.06);
+  font-size: 13px;
+  color: rgb(var(--t) / calc(0.8 * var(--t-k)));
+}
+.kh-ws-form__look span {
+  flex: 1;
+}
+@media (max-width: 1100px) {
+  .kh-ws-pill {
+    max-width: 160px;
+  }
+}

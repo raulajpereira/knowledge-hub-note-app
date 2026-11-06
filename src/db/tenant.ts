@@ -6,6 +6,8 @@ export type TenantContext = {
   userId?: string | null;
   /** widen notes/tasks/artifacts to the shared folders the user can access (migration 0022) */
   share?: boolean;
+  /** Ambientes: the active workspace (new items go there; the database checks it is the user's) */
+  workspaceId?: string | null;
 };
 
 // Every tenant-scoped query runs inside this: a transaction whose
@@ -19,7 +21,7 @@ export async function withTenant<TDb extends PgDatabase<PgQueryResultHKT, Record
   if (!/^[0-9a-f-]{36}$/i.test(ctx.tenantId)) throw new Error('withTenant: invalid tenantId');
   return database.transaction(async (tx) => {
     await tx.execute(
-      sql`select set_config('app.tenant_id', ${ctx.tenantId}, true), set_config('app.user_id', ${ctx.userId ?? ''}, true), set_config('app.share', ${ctx.share ? 'on' : ''}, true)`,
+      sql`select set_config('app.tenant_id', ${ctx.tenantId}, true), set_config('app.user_id', ${ctx.userId ?? ''}, true), set_config('app.share', ${ctx.share ? 'on' : ''}, true), set_config('app.workspace_id', ${ctx.workspaceId ?? ''}, true)`,
     );
     return fn(tx as Parameters<Parameters<TDb['transaction']>[0]>[0]);
   });

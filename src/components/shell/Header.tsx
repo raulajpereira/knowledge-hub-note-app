@@ -12,6 +12,7 @@ import { useCounts } from './counts';
 import { TcodesPopup } from '@/components/sap/TcodesPopup';
 import { NotificationBell } from './NotificationBell';
 import { HeaderSearch } from '@/components/search/HeaderSearch';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
 function useClock(lang: string) {
   // Client-only (server and browser clocks differ → no hydration mismatch).
@@ -60,6 +61,8 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
           </>
         )}
       </Link>
+
+      <WorkspaceSwitcher />
 
       <HeaderSearch className="kh-hdr__search kh-hdr__glass">
         <button

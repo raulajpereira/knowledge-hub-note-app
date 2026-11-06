@@ -1,3 +1,5 @@
+import type { Workspace } from '@/lib/workspaces';
+
 export type ShellMe = {
   user: { id: string; name: string; email: string; totpEnabled: boolean; createdAt: string };
   tenant: {
@@ -11,4 +13,6 @@ export type ShellMe = {
   admin: { role: string } | null;
   /** Uploaded images → version (ms) for cache-busting URLs. */
   assets: Partial<Record<'avatar' | 'background' | 'logo', number>>;
+  /** Ambientes: the person's workspaces and the one active on this device */
+  workspaces: { list: Workspace[]; active: string };
 };

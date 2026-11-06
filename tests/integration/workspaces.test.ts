@@ -23,6 +23,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
   let notesSvc: typeof import('@/server/content/notes');
   let tasksSvc: typeof import('@/server/content/tasks');
   let tenant: typeof import('@/server/content/tenant');
+  let wsSvc: typeof import('@/server/workspaces');
   let dbm: typeof import('@/db/client');
   let admin: postgres.Sql;
 
@@ -32,7 +33,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     await admin.unsafe(
       `ALTER ROLE kh_app LOGIN PASSWORD '${decodeURIComponent(new URL(appUrl!).password).replace(/'/g, "''")}'`,
     );
-    [svc, codesSvc, session, seed, notesSvc, tasksSvc, tenant, dbm] = await Promise.all([
+    [svc, codesSvc, session, seed, notesSvc, tasksSvc, tenant, dbm, wsSvc] = await Promise.all([
       import('@/server/auth/service'),
       import('@/server/licensing/codes'),
       import('@/server/auth/session'),
@@ -41,6 +42,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
       import('@/server/content/tasks'),
       import('@/server/content/tenant'),
       import('@/db/client'),
+      import('@/server/workspaces'),
     ]);
   });
 
@@ -124,5 +126,59 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     await notesSvc.createNote(ana, { title: 'x' });
     await admin`delete from users where id = ${ana.user.id}`;
     expect(await wsOf(ana.user.id)).toHaveLength(0);
+  });
+
+  it('the look is kept per workspace, the rest of the prefs per person; new items go to the active one', async () => {
+    const ana = await signedIn('ana5@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const [w2] = await admin<{ id: string }[]>`
+      insert into workspaces (tenant_id, owner_id, name) values (${ana.tenant.id}, ${ana.user.id}, 'Pessoal') returning id`;
+    const mods = new Set(['typeface']);
+    // in "Meu Ambiente": a dark Noite and the typeface
+    await wsSvc.patchPrefsFor(
+      { ...ana, workspaceId: w1!.id },
+      { bg: { mode: 'Noite', blur: 0, dim: 15 }, font: 'Manrope' },
+      mods,
+    );
+    // in "Pessoal": Areia — the typeface is the same everywhere
+    await wsSvc.patchPrefsFor(
+      { ...ana, workspaceId: w2!.id },
+      { bg: { mode: 'Areia', blur: 0, dim: 15 } },
+      mods,
+    );
+    const p1 = (await wsSvc.prefsFor({ ...ana, workspaceId: w1!.id })).prefs;
+    const p2 = (await wsSvc.prefsFor({ ...ana, workspaceId: w2!.id })).prefs;
+    expect(p1.bg?.mode).toBe('Noite');
+    expect(p2.bg?.mode).toBe('Areia');
+    expect(p1.font).toBe('Manrope');
+    expect(p2.font).toBe('Manrope');
+    // nothing written to user_prefs for the look keys
+    const [g] = await admin`select data from user_prefs where user_id = ${ana.user.id}`;
+    expect((g!.data as Record<string, unknown>).bg).toBeUndefined();
+    // a new note made while "Pessoal" is active goes there
+    const note = await notesSvc.createNote({ ...ana, workspaceId: w2!.id }, { title: 'Ginásio' });
+    const [n] = await admin`select workspace_id from notes where id = ${note.id}`;
+    expect(n!.workspace_id).toBe(w2!.id);
+    // someone else's workspace id is ignored (the note goes to the person's first one)
+    const rui = await signedIn('rui5@ws.pt');
+    const note2 = await notesSvc.createNote(
+      { ...ana, workspaceId: (await wsOf(rui.user.id))[0]!.id },
+      { title: 'x' },
+    );
+    const [n2] = await admin`select workspace_id from notes where id = ${note2.id}`;
+    expect(n2!.workspace_id).toBe(w1!.id);
+    // rename / colour / icon, validated
+    const w = await wsSvc.updateWorkspace(ana, w2!.id, {
+      name: '  Casa  ',
+      color: 'oklch(0.8 0.15 150)',
+      icon: '🏡',
+    });
+    expect(w).toMatchObject({ name: 'Casa', icon: '🏡' });
+    await expect(wsSvc.updateWorkspace(ana, w2!.id, { color: 'red' })).rejects.toMatchObject({
+      code: 'validation',
+    });
+    await expect(wsSvc.updateWorkspace(rui, w2!.id, { name: 'x' })).rejects.toMatchObject({
+      code: 'not_found',
+    });
   });
 });

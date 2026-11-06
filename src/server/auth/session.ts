@@ -23,6 +23,8 @@ export type AccessProblem =
 
 export type AuthContext = {
   sessionId: string;
+  /** Ambientes: this device's active workspace (cookie kh_ws; the database checks it is the person's) */
+  workspaceId?: string | null;
   user: {
     id: string;
     name: string;
