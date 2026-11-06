@@ -49,7 +49,7 @@ só muda o ambiente a que pertence.
 | 0 | Cópia da BD antes das migrações em cada deploy (`infra/backup/pre-deploy.sh`), sem apagar cópias | ✅ em produção (06/11/2026, 1.ª cópia 3,5 MB) |
 | 1 | Fundação invisível: tabela `workspaces`, "Meu Ambiente", `workspace_id` nos itens, limites por plano (migração 0052) | ✅ em produção (06/11/2026 07:02 UTC; contagens iguais antes/depois; 2 ambientes, 0 itens sem ambiente) |
 | 2a | Seletor no cabeçalho + personalização; aparência por ambiente; ambiente ativo por dispositivo (cookie kh_ws) | ✅ produção 06/11 07:28 UTC (contagens iguais) |
-| 2b | Criar/apagar ambientes (só vazio, nunca o último; limite do plano), módulos por ambiente; Notas, pastas, Tarefas, Registos Reuniões, Ficheiros, Notas de Voz, Calendário, Etiquetas, Lixo, contadores, pesquisa, IA e Início só do ambiente ativo; mover itens/pastas com aviso das ligações | aprovada 06/11; em deploy |
+| 2b | Criar/apagar ambientes (só vazio, nunca o último; limite do plano), módulos por ambiente; Notas, pastas, Tarefas, Registos Reuniões, Ficheiros, Notas de Voz, Calendário, Etiquetas, Lixo, contadores, pesquisa, IA e Início só do ambiente ativo; mover itens/pastas com aviso das ligações | ✅ produção 06/11 10:01 UTC (dcb1c05; cópia pre-deploy; contagens iguais) |
 | 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA | — |
 | 3b | SAP e Tickets | — |
 | 3c | Management | — |
