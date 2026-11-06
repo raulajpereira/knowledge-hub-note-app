@@ -283,6 +283,25 @@ export function Plans() {
                     </span>
                   </span>
                 </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+                  <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 600 }}>{A('Ambientes por pessoa')}</span>
+                    <span className="kh-ad-td__sub" style={{ whiteSpace: 'normal' }}>
+                      {A('vazio = sem limite')}
+                    </span>
+                  </span>
+                  <NumberField
+                    label=""
+                    ariaLabel={`${p.code} · ${A('Ambientes por pessoa')}`}
+                    value={p.limits.workspaces ?? null}
+                    min={1}
+                    max={1000}
+                    width={90}
+                    placeholder="∞"
+                    disabled={!w}
+                    onSave={(v) => void save(`/plans/${p.code}/limits`, { workspaces: v }, 'PUT')}
+                  />
+                </div>
                 {p.code === 'FREE' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>

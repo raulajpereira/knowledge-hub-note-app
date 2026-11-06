@@ -14,7 +14,16 @@ import type { AdminCtx } from './guard';
 // "pacote individual" (per module group). Changes reach every client of the
 // plan at once (entitlements are recomputed).
 
-export const LIMIT_KEYS = ['notes', 'tasks', 'artifacts', 'whiteboards', 'snippets', 'voice'] as const;
+/** creation limits; 'workspaces' (Ambientes) is set for every plan, the others for FREE. Empty = no limit. */
+export const LIMIT_KEYS = [
+  'notes',
+  'tasks',
+  'artifacts',
+  'whiteboards',
+  'snippets',
+  'voice',
+  'workspaces',
+] as const;
 
 export type PlanFull = {
   code: string;

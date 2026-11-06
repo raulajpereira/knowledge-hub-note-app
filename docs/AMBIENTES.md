@@ -40,13 +40,14 @@ só muda o ambiente a que pertence.
 | 12 | Management | Privado de cada pessoa |
 | 13 | Lixo | Um por ambiente |
 | 14 | Ligações entre itens de ambientes diferentes | Mantêm-se; ao mover, avisar e oferecer mover também os itens ligados |
+| 15 | Dados da conta (SAP: sistemas, transações, OT, Code Library SAP, Notas SAP, Funcional; Clientes) | Separados por ambiente (opção b) — fase 3b/3c |
 
 ## Fases
 
 | Fase | Conteúdo | Estado |
 |---|---|---|
-| 0 | Cópia da BD antes das migrações em cada deploy (`infra/backup/pre-deploy.sh`), sem apagar cópias | em curso |
-| 1 | Fundação invisível: tabela `workspaces`, "Meu Ambiente", `workspace_id` nos itens, limites por plano | — |
+| 0 | Cópia da BD antes das migrações em cada deploy (`infra/backup/pre-deploy.sh`), sem apagar cópias | ✅ em produção (06/11/2026, 1.ª cópia 3,5 MB) |
+| 1 | Fundação invisível: tabela `workspaces`, "Meu Ambiente", `workspace_id` nos itens, limites por plano (migração 0052) | aprovada; em deploy |
 | 2a | Seletor no cabeçalho + personalização | — |
 | 2b | Criar/apagar ambientes, módulos, separação nos módulos principais, mover | — |
 | 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA | — |
@@ -55,3 +56,10 @@ só muda o ambiente a que pertence.
 | 4 | Cofre por ambiente | — |
 | 5 | Vista combinada (Calendário, Início, Pesquisa) | — |
 | 6 | Notificações/push por ambiente, atalhos, contadores | — |
+
+## Produção antes da fase 1 (log do deploy de 06/11/2026 00:08 UTC)
+
+tenants 2 · users 2 · folders 11 · notes 24 · tasks 17 · meetings 5 · voice_notes 0 ·
+drive_files 8 · emails 1 · vault_items 7 · tickets 1 · issues 0 · artifacts 27 ·
+snippets 0 · whiteboards 1 · sap_objects 8 · sap_transports 26 · mg_people 6 ·
+mg_projects 3 · mg_bookings 2

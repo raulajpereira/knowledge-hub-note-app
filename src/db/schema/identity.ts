@@ -369,3 +369,35 @@ export const consoleSettings = pgTable('console_settings', {
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Ambientes (workspaces, 0052): separate spaces of one person inside the same
+ * account — each item of a person belongs to one of them (workspace_id).
+ * Owner-only under RLS. Everyone always has at least one (a trigger refuses
+ * deleting the last; new users get "Meu Ambiente"). docs/AMBIENTES.md
+ */
+export const workspaces = pgTable(
+  'workspaces',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`uuid_generate_v7()`),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    color: text('color').notNull().default(''),
+    icon: text('icon').notNull().default(''),
+    sort: integer('sort').notNull().default(0),
+    /** modules shown in this workspace (null = all of the plan) */
+    modules: text('modules').array(),
+    /** appearance and sidebar of this workspace */
+    look: jsonb('look').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('workspaces_owner_idx').on(t.tenantId, t.ownerId, t.sort)],
+);

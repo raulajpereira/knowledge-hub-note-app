@@ -389,5 +389,6 @@
   "Limites de ficheiros guardados.": "File limits saved.",
   "O código deixa de aceitar novos registos. Quem já entrou com ele mantém o acesso e nada é apagado.": "The code stops accepting new sign-ups. Whoever already joined with it keeps access and nothing is deleted.",
   "Reenviar confirmação": "Resend confirmation",
-  "Email de confirmação reenviado.": "Confirmation email resent."
+  "Email de confirmação reenviado.": "Confirmation email resent.",
+  "Ambientes por pessoa": "Workspaces per person"
 }
