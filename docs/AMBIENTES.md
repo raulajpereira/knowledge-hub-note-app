@@ -47,9 +47,10 @@ só muda o ambiente a que pertence.
 | Fase | Conteúdo | Estado |
 |---|---|---|
 | 0 | Cópia da BD antes das migrações em cada deploy (`infra/backup/pre-deploy.sh`), sem apagar cópias | ✅ em produção (06/11/2026, 1.ª cópia 3,5 MB) |
-| 1 | Fundação invisível: tabela `workspaces`, "Meu Ambiente", `workspace_id` nos itens, limites por plano (migração 0052) | aprovada; em deploy |
-| 2a | Seletor no cabeçalho + personalização | — |
-| 2b | Criar/apagar ambientes, módulos, separação nos módulos principais, mover | — |
+| 1 | Fundação invisível: tabela `workspaces`, "Meu Ambiente", `workspace_id` nos itens, limites por plano (migração 0052) | ✅ em produção (06/11/2026 07:02 UTC; contagens iguais antes/depois; 2 ambientes, 0 itens sem ambiente) |
+| 2a | Seletor no cabeçalho + personalização; aparência por ambiente; ambiente ativo por dispositivo (cookie kh_ws) | aprovada; em deploy |
+| 2b-1 | Criar/apagar ambientes, módulos por ambiente, Notas (pastas), Tarefas, Etiquetas, Lixo, contadores, pesquisa; mover (com aviso das ligações) | — |
+| 2b-2 | Calendário, Registos Reuniões, Ficheiros, Notas de Voz, Início | — |
 | 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA | — |
 | 3b | SAP e Tickets | — |
 | 3c | Management | — |
