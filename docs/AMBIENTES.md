@@ -48,9 +48,8 @@ só muda o ambiente a que pertence.
 |---|---|---|
 | 0 | Cópia da BD antes das migrações em cada deploy (`infra/backup/pre-deploy.sh`), sem apagar cópias | ✅ em produção (06/11/2026, 1.ª cópia 3,5 MB) |
 | 1 | Fundação invisível: tabela `workspaces`, "Meu Ambiente", `workspace_id` nos itens, limites por plano (migração 0052) | ✅ em produção (06/11/2026 07:02 UTC; contagens iguais antes/depois; 2 ambientes, 0 itens sem ambiente) |
-| 2a | Seletor no cabeçalho + personalização; aparência por ambiente; ambiente ativo por dispositivo (cookie kh_ws) | aprovada; em deploy |
-| 2b-1 | Criar/apagar ambientes, módulos por ambiente, Notas (pastas), Tarefas, Etiquetas, Lixo, contadores, pesquisa; mover (com aviso das ligações) | — |
-| 2b-2 | Calendário, Registos Reuniões, Ficheiros, Notas de Voz, Início | — |
+| 2a | Seletor no cabeçalho + personalização; aparência por ambiente; ambiente ativo por dispositivo (cookie kh_ws) | ✅ produção 06/11 07:28 UTC (contagens iguais) |
+| 2b | Criar/apagar ambientes (só vazio, nunca o último; limite do plano), módulos por ambiente; Notas, pastas, Tarefas, Registos Reuniões, Ficheiros, Notas de Voz, Calendário, Etiquetas, Lixo, contadores, pesquisa, IA e Início só do ambiente ativo; mover itens/pastas com aviso das ligações | aprovada 06/11; em deploy |
 | 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA | — |
 | 3b | SAP e Tickets | — |
 | 3c | Management | — |
@@ -64,3 +63,27 @@ tenants 2 · users 2 · folders 11 · notes 24 · tasks 17 · meetings 5 · voic
 drive_files 8 · emails 1 · vault_items 7 · tickets 1 · issues 0 · artifacts 27 ·
 snippets 0 · whiteboards 1 · sap_objects 8 · sap_transports 26 · mg_people 6 ·
 mg_projects 3 · mg_bookings 2
+
+## Fase 2b — como funciona (migração 0053)
+
+- A separação é feita pela base de dados: uma política RLS **restritiva** em
+  folders (tipos notes/tasks/files/meetings), notes, tasks, meetings,
+  drive_files e voice_notes. Quando o pedido da app liga `app.ws_strict`
+  (getAuth → `wsScope`), os itens **da própria pessoa** só aparecem no ambiente
+  ativo (`kh_workspace_for`). Itens de outras pessoas (pastas partilhadas) não
+  são afetados. Trabalho em segundo plano (notificações, indexação, exportação)
+  não liga o modo e vê tudo. Nenhum dado é alterado pela migração.
+- `allWorkspaces(tx, fn)` desliga o modo dentro de uma transação: limites do
+  plano e quota de ficheiros contam todos os ambientes; mover itens.
+- Módulos: `wsModules` — fora do primeiro ambiente só os módulos já separados
+  (calendar, notes, voice, tasks, meetings, files) + funcionalidades sem itens
+  (ai, share, personalização); a escolha do ambiente (`workspaces.modules`)
+  restringe mais. Aplicado no menu, nas páginas e na API (`entitlementsFor`,
+  `requireModuleFor`).
+- Mover (`POST /workspaces/move`, com `preview`): pasta leva subpastas e as
+  suas notas/ficheiros/reuniões; item movido sozinho sai da pasta; itens
+  ligados (um nível) só com `withLinked`; ligações mantêm-se.
+- Pendente para fases seguintes: os outros módulos (3a–4); escolher o ambiente
+  ao aceitar uma pasta partilhada de outra pessoa (hoje aparece em todos);
+  notificações por ambiente (6). Pergunta em aberto: Atalhos do Início por
+  ambiente?
