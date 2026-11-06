@@ -149,7 +149,11 @@ export function MoveDialog({
             <p className="kh-ws-form__info">{t('ws_moveWill').replace('{what}', what)}</p>
             {preview.linked.length > 0 && (
               <div className="kh-ws-linked">
-                <span>{t('ws_moveLinked').replace('{n}', String(preview.linked.length))}</span>
+                <span>
+                  {preview.linked.length === 1
+                    ? t('ws_moveLinked1')
+                    : t('ws_moveLinked').replace('{n}', String(preview.linked.length))}
+                </span>
                 <ul>
                   {preview.linked.map((l) => (
                     <li key={l.id}>

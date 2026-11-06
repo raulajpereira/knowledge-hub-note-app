@@ -1549,5 +1549,6 @@
   "ws_k1_task": "task",
   "ws_k1_voice": "voice note",
   "ws_k1_meeting": "meeting",
-  "ws_k1_file": "file"
+  "ws_k1_file": "file",
+  "ws_moveLinked1": "It is linked to 1 item of this workspace:"
 }

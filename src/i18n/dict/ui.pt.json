@@ -1549,5 +1549,6 @@
   "ws_k1_task": "tarefa",
   "ws_k1_voice": "nota de voz",
   "ws_k1_meeting": "reunião",
-  "ws_k1_file": "ficheiro"
+  "ws_k1_file": "ficheiro",
+  "ws_moveLinked1": "Está ligado a 1 item deste ambiente:"
 }
