@@ -152,6 +152,21 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     expect(p2.bg?.mode).toBe('Areia');
     expect(p1.font).toBe('Manrope');
     expect(p2.font).toBe('Manrope');
+    // the Home cards and their shortcuts are per workspace too
+    await wsSvc.patchPrefsFor(
+      { ...ana, workspaceId: w2!.id },
+      {
+        home: {
+          widgets: [{ id: 'w1', type: 'shortcuts', size: 'M' }],
+          shortcuts: [{ id: 'g', title: 'Ginásio', url: 'https://gym.example.com' }],
+        },
+      },
+      mods,
+    );
+    const h1 = (await wsSvc.prefsFor({ ...ana, workspaceId: w1!.id })).prefs.home;
+    const h2 = (await wsSvc.prefsFor({ ...ana, workspaceId: w2!.id })).prefs.home;
+    expect(h2?.shortcuts?.map((x) => x.title)).toEqual(['Ginásio']);
+    expect(h1).toBeUndefined();
     // nothing written to user_prefs for the look keys
     const [g] = await admin`select data from user_prefs where user_id = ${ana.user.id}`;
     expect((g!.data as Record<string, unknown>).bg).toBeUndefined();
