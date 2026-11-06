@@ -50,7 +50,7 @@ só muda o ambiente a que pertence.
 | 1 | Fundação invisível: tabela `workspaces`, "Meu Ambiente", `workspace_id` nos itens, limites por plano (migração 0052) | ✅ em produção (06/11/2026 07:02 UTC; contagens iguais antes/depois; 2 ambientes, 0 itens sem ambiente) |
 | 2a | Seletor no cabeçalho + personalização; aparência por ambiente; ambiente ativo por dispositivo (cookie kh_ws) | ✅ produção 06/11 07:28 UTC (contagens iguais) |
 | 2b | Criar/apagar ambientes (só vazio, nunca o último; limite do plano), módulos por ambiente; Notas, pastas, Tarefas, Registos Reuniões, Ficheiros, Notas de Voz, Calendário, Etiquetas, Lixo, contadores, pesquisa, IA e Início só do ambiente ativo; mover itens/pastas com aviso das ligações | ✅ produção 06/11 10:01 UTC (dcb1c05; cópia pre-deploy; contagens iguais) |
-| 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA | — |
+| 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA (migração 0054; pastas de Emails/Artefactos/API; Notícias únicas por ambiente; mover artefactos, tarefas de projeto, emails, snippets, quadros, pastas) | aprovada 06/11; em deploy |
 | 3b | SAP e Tickets | — |
 | 3c | Management | — |
 | 4 | Cofre por ambiente | — |
@@ -87,3 +87,16 @@ mg_projects 3 · mg_bookings 2
   ao aceitar uma pasta partilhada de outra pessoa (hoje aparece em todos);
   notificações por ambiente (6). Pergunta em aberto: Atalhos do Início por
   ambiente?
+
+## Fase 3a — notas
+
+- Migração 0054: política restritiva em emails, artifacts, snippets,
+  api_requests, api_envs, whiteboards, issues, user_templates, saved_views,
+  news_saved, ai_chats; `folders_workspace_scope` passa a incluir os tipos
+  emails, artifacts e api; índice único `news_saved_owner_ws_link_uq`
+  (owner, workspace, link) criado antes de retirar o antigo.
+- Fora do primeiro ambiente ficam por agora Management, SAP, Tickets e
+  Passwords (fases 3b, 3c, 4).
+- Mover na interface: Ligações (artefactos, tarefas de projeto) e Emails; no
+  servidor também snippets, quadros e pastas de Emails/Artefactos/API (botões
+  nesses ecrãs: a seguir).
