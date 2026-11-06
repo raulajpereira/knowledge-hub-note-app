@@ -154,7 +154,10 @@ export function EmailsView() {
   }, [load]);
 
   useEffect(() => {
-    if (!activeId) return setFull(null);
+    // the previous email's detail goes at once: its buttons (Eliminar, Criar
+    // Tarefa…) must never act on it while the new one is loading
+    setFull((cur) => (cur && cur.id === activeId ? cur : null));
+    if (!activeId) return;
     let live = true;
     api<{ email: Full }>(`/emails/${activeId}`)
       .then((r) => live && setFull(r.email))
