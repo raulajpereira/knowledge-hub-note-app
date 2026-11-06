@@ -178,6 +178,8 @@ jobs:
             # safety copy of the database BEFORE any migration; if it fails the deploy stops here
             bash infra/backup/pre-deploy.sh "$KH_IMAGE_TAG"
             docker compose run --rm migrate
+            echo "==> rows after the migrations (exact):"
+            bash infra/backup/row-counts.sh after || echo "(warning: the counts after the migrations could not be read)"
             docker compose run --rm migrate node dist/seed.mjs
             docker compose up -d --remove-orphans
             docker logout ghcr.io
