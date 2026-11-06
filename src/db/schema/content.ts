@@ -678,6 +678,7 @@ export const newsSaved = pgTable(
   },
   (t) => [
     index('news_saved_owner_idx').on(t.ownerId, t.createdAt),
+    // migration 0054: unique per (owner_id, workspace_id, link) — news_saved_owner_ws_link_uq
     uniqueIndex('news_saved_owner_link_uq').on(t.ownerId, t.link),
     check('news_saved_len', sql`char_length(${t.link}) <= 2000 and pg_column_size(${t.item}) <= 400000`),
   ],

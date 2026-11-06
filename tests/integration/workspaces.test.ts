@@ -232,9 +232,16 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     await invalidateEntitlements(ana.tenant.id);
     await expect(notesSvc.createNote(a1, { title: 'x' })).rejects.toMatchObject({ code: 'limit_reached' });
     // modules: outside the first workspace only the separated ones (and the features)
-    const ent = ['notes', 'tasks', 'calendar', 'emails', 'mg_people', 'ai', 'sidebar'];
+    const ent = ['notes', 'tasks', 'calendar', 'emails', 'mg_people', 'tickets', 'ai', 'sidebar'];
     expect(await wsSvc.modulesFor(a1, ent)).toEqual(ent);
-    expect(await wsSvc.modulesFor(a2, ent)).toEqual(['notes', 'tasks', 'calendar', 'ai', 'sidebar']);
+    expect(await wsSvc.modulesFor(a2, ent)).toEqual([
+      'notes',
+      'tasks',
+      'calendar',
+      'emails',
+      'ai',
+      'sidebar',
+    ]);
     await wsSvc.updateWorkspace(a2, w2.id, { modules: ['notes'] });
     expect(await wsSvc.modulesFor(a2, ent)).toEqual(['notes', 'ai', 'sidebar']);
   });
@@ -249,7 +256,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     await invalidateEntitlements(ana.tenant.id);
     const a1 = inWs(ana, w1!.id);
     const w2 = await wsSvc.createWorkspace(a1, { name: 'Formação' });
-    expect(w2.modules).toEqual(['calendar', 'notes', 'voice', 'tasks', 'meetings', 'files']);
+    expect(w2.modules).toEqual([...(await import('@/lib/workspaces')).WS_SEPARATED]);
     await expect(wsSvc.createWorkspace(a1, { name: 'Terceiro' })).rejects.toMatchObject({
       code: 'limit_reached',
     });
@@ -350,5 +357,49 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
         mods,
       ),
     ).toHaveLength(0);
+  });
+
+  it('3a: Artefactos, Tarefas de Projeto, Snippets e Notícias guardadas são de cada ambiente; movem-se', async () => {
+    const ana = await signedIn('ana10@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const a1 = inWs(ana, w1!.id);
+    const w2 = await wsSvc.createWorkspace(a1, { name: 'Pessoal' });
+    const a2 = inWs(ana, w2.id);
+    const [art, iss, snip] = await Promise.all([
+      import('@/server/content/artifacts'),
+      import('@/server/content/issues'),
+      import('@/server/content/snippets'),
+    ]);
+    const f = await art.createArtifactFolder(a1, 'Relatórios');
+    const ar = await art.createArtifact(a1, { title: 'Dashboard', folderId: f.id });
+    await iss.createIssue(a2, { title: 'Bug do ginásio' });
+    await snip.createSnippet(a1, { title: 'SELECT', type: 'snippet', lang: 'sql' });
+    expect((await art.listArtifacts(a1)).map((x) => x.title)).toEqual(['Dashboard']);
+    expect(await art.listArtifacts(a2)).toHaveLength(0);
+    expect((await iss.listIssues(a2)).map((x) => x.title)).toEqual(['Bug do ginásio']);
+    expect(await iss.listIssues(a1)).toHaveLength(0);
+    expect(await snip.listSnippets(a2)).toHaveLength(0);
+    // the same article saved in both workspaces
+    const { saveItem, listSaved } = await import('@/server/news/saved');
+    const item = {
+      title: 'S/4',
+      link: 'https://news.example.com/a',
+      src: 'sap',
+      date: '',
+      author: '',
+      img: '',
+      excerpt: '',
+      html: '<p>x</p>',
+    };
+    await saveItem(a1, item);
+    await saveItem(a2, item);
+    await saveItem(a2, item); // twice in one workspace: still one
+    expect(await listSaved(a1)).toHaveLength(1);
+    expect(await listSaved(a2)).toHaveLength(1);
+    // moving the artifact folder takes the artifact with it
+    const r = await wsSvc.moveItems(a1, { items: [{ type: 'folder', id: f.id }], target: w2.id });
+    expect(r.moved).toMatchObject({ folder: 1, artifact: 1 });
+    expect((await art.listArtifacts(a2)).map((x) => x.id)).toEqual([ar.id]);
+    expect(await art.listArtifacts(a1)).toHaveLength(0);
   });
 });

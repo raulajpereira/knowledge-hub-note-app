@@ -86,7 +86,7 @@ export const itemHref = (type: ItemType, id: string) =>
   })[type];
 
 /** Ambientes: the items that can move to another workspace from here. */
-const MOVABLE = new Set<ItemType>(['note', 'task', 'voice', 'meeting', 'file']);
+const MOVABLE = new Set<ItemType>(['note', 'task', 'voice', 'meeting', 'file', 'issue', 'artifact']);
 
 export function Connections({
   type,

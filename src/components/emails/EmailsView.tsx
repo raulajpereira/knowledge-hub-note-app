@@ -12,6 +12,7 @@ import { refreshCounts } from '@/components/shell/counts';
 import { ColHandle } from '@/components/content/ColHandle';
 import { useWhen } from '@/components/content/useWhen';
 import { BackBar, FoldersButton, useListDetail } from '@/components/content/MobilePane';
+import { MoveDialog } from '@/components/shell/MoveToWorkspace';
 import './emails.css';
 
 // Emails — ZNotes.dc.html `isMail`: import Outlook .msg / .eml files (parsed
@@ -105,7 +106,8 @@ export function EmailsView() {
   const confirm = useConfirm();
   const path = usePathname();
   const sp = useSearchParams();
-  const { focus, modules } = useShell();
+  const { focus, modules, me } = useShell();
+  const [moving, setMoving] = useState<string | null>(null);
   const when = useWhen();
   const [cols, setCols] = usePref<Cols>('cols', {});
   const [liveList, setLiveList] = useState<number | null>(null);
@@ -593,6 +595,17 @@ export function EmailsView() {
                       <Svg d={taskFlash ? I.ok : I.task} />
                     </button>
                   )}
+                  {me.workspaces.list.length > 1 && (
+                    <button
+                      type="button"
+                      className="kh-em-act"
+                      title={t('ws_move')}
+                      aria-label={t('ws_move')}
+                      onClick={() => setMoving(full.id)}
+                    >
+                      <Svg d="M5 12h14M13 6l6 6-6 6" />
+                    </button>
+                  )}
                   <a
                     className="kh-em-act"
                     href={`${BASE}/api/v1/emails/${full.id}/original`}
@@ -716,6 +729,7 @@ export function EmailsView() {
           {folders$}
         </Sheet>
       )}
+      {moving && <MoveDialog items={[{ type: 'email', id: moving }]} onClose={() => setMoving(null)} />}
     </div>
   );
 }

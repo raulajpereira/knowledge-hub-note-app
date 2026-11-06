@@ -379,6 +379,13 @@
       "when": 1793952000000,
       "tag": "0053_workspace_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793980800000,
+      "tag": "0054_workspace_scope_content",
+      "breakpoints": true
     }
   ]
 }

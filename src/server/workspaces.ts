@@ -245,6 +245,11 @@ const TABLE: Record<Exclude<WsMovable, 'folder'>, string> = {
   voice: 'voice_notes',
   meeting: 'meetings',
   file: 'drive_files',
+  issue: 'issues',
+  artifact: 'artifacts',
+  email: 'emails',
+  snippet: 'snippets',
+  whiteboard: 'whiteboards',
 };
 const TITLE: Record<Exclude<WsMovable, 'folder'>, string> = {
   note: 'title',
@@ -252,7 +257,16 @@ const TITLE: Record<Exclude<WsMovable, 'folder'>, string> = {
   voice: 'title',
   meeting: 'title',
   file: 'name',
+  issue: 'title',
+  artifact: 'title',
+  email: 'subject',
+  snippet: 'title',
+  whiteboard: 'name',
 };
+/** the items kept in folders (they leave theirs when moved alone) */
+const IN_FOLDER = new Set<string>(['note', 'meeting', 'file', 'artifact', 'email']);
+/** folder kinds that move, and the tables of what they hold */
+const FOLDER_KINDS = ['notes', 'files', 'meetings', 'emails', 'artifacts', 'api'];
 const uuids = (ids: string[]): SQL =>
   ids.length
     ? sql`ARRAY[${sql.join(
@@ -260,6 +274,10 @@ const uuids = (ids: string[]): SQL =>
         sql`,`,
       )}]::uuid[]`
     : sql`ARRAY[]::uuid[]`;
+const FOLDER_KINDS_SQL = sql`ARRAY[${sql.join(
+  FOLDER_KINDS.map((k) => sql`${k}`),
+  sql`,`,
+)}]::text[]`;
 const rowsOf = <T>(r: unknown) => [...(r as Iterable<T>)];
 
 /**
@@ -278,7 +296,7 @@ async function plan(tx: Tx, refs: Ref[]) {
           with recursive f as (
             select id from folders
              where id = any(${uuids(roots)}) and owner_id = kh_user_id() and deleted_at is null
-               and kind in ('notes','files','meetings')
+               and kind = any(${FOLDER_KINDS_SQL})
             union
             select c.id from folders c join f on c.parent_id = f.id where c.deleted_at is null
           ) select id from f`),
@@ -309,6 +327,16 @@ async function plan(tx: Tx, refs: Ref[]) {
     voice: new Set(await own('voice', pick('voice'))),
     meeting: new Set([...(await own('meeting', pick('meeting'))), ...(await inFolders('meetings'))]),
     file: new Set([...(await own('file', pick('file'))), ...(await inFolders('drive_files'))]),
+    issue: new Set(await own('issue', pick('issue'))),
+    artifact: new Set([...(await own('artifact', pick('artifact'))), ...(await inFolders('artifacts'))]),
+    email: new Set([...(await own('email', pick('email'))), ...(await inFolders('emails'))]),
+    snippet: new Set(await own('snippet', pick('snippet'))),
+    whiteboard: new Set(await own('whiteboard', pick('whiteboard'))),
+  };
+  // API Playground: the requests and environments of the folders that move
+  const api = {
+    requests: await inFolders('api_requests'),
+    envs: await inFolders('api_envs'),
   };
   // linked items (one step) that are here and can move
   const moving = Object.entries(items).flatMap(([type, ids]) => [...ids].map((id) => ({ type, id })));
@@ -336,7 +364,7 @@ async function plan(tx: Tx, refs: Ref[]) {
       if (r) linked.push({ type, id: o.id, title: r.title });
     }
   }
-  return { roots, folderIds, items, linked };
+  return { roots, folderIds, items, linked, api };
 }
 
 const counts = (p: Awaited<ReturnType<typeof plan>>) => ({
@@ -346,6 +374,12 @@ const counts = (p: Awaited<ReturnType<typeof plan>>) => ({
   voice: p.items.voice.size,
   meeting: p.items.meeting.size,
   file: p.items.file.size,
+  issue: p.items.issue.size,
+  artifact: p.items.artifact.size,
+  email: p.items.email.size,
+  snippet: p.items.snippet.size,
+  whiteboard: p.items.whiteboard.size,
+  request: p.api.requests.length,
 });
 
 /**
@@ -380,14 +414,21 @@ export async function moveItems(
         const ids = [...p.items[type]];
         if (!ids.length) continue;
         // an item leaves its folder, unless the folder moves with it
-        const folder =
-          type === 'note' || type === 'meeting' || type === 'file'
-            ? sql`, folder_id = case when folder_id = any(${folderSet}) then folder_id else null end`
-            : sql``;
+        const folder = IN_FOLDER.has(type)
+          ? sql`, folder_id = case when folder_id = any(${folderSet}) then folder_id else null end`
+          : sql``;
         await tx.execute(
           sql`update ${sql.identifier(TABLE[type])} set workspace_id = ${t.id}${folder} where id = any(${uuids(ids)}) and owner_id = kh_user_id()`,
         );
       }
+      for (const [table, ids] of [
+        ['api_requests', p.api.requests],
+        ['api_envs', p.api.envs],
+      ] as const)
+        if (ids.length)
+          await tx.execute(
+            sql`update ${sql.identifier(table)} set workspace_id = ${t.id} where id = any(${uuids(ids)}) and owner_id = kh_user_id()`,
+          );
     });
     return { moved: counts(p), linked: input.withLinked ? p.linked : [], target: t };
   });

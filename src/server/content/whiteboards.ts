@@ -20,7 +20,7 @@ import { sniffImage } from '@/server/assets';
 import { s3 } from '@/lib/storage';
 import { assertWithinLimit } from '@/server/licensing/entitlements';
 import type { AuthContext } from '@/server/auth/session';
-import { asUser, type Tx, lockLimit, removeFilesAfterCommit } from './tenant';
+import { allWorkspaces, asUser, type Tx, lockLimit, removeFilesAfterCommit } from './tenant';
 
 // Whiteboard (Whiteboard.dc.html): several boards per user, each an element
 // list saved as a whole ("last write wins" + conflict warning by updated_at,
@@ -108,11 +108,14 @@ export async function listBoards(auth: AuthContext, types: LinkType[]) {
   });
 }
 
+/** The person's boards in every workspace (the plan limit counts them all). */
 async function countBoards(tx: Tx) {
-  const [{ n }] = (await tx
-    .select({ n: sql<number>`count(*)::int` })
-    .from(whiteboards)
-    .where(isNull(whiteboards.deletedAt))) as [{ n: number }];
+  const [{ n }] = (await allWorkspaces(tx, () =>
+    tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(whiteboards)
+      .where(isNull(whiteboards.deletedAt)),
+  )) as [{ n: number }];
   return n;
 }
 

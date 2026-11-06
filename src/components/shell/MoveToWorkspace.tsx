@@ -16,9 +16,26 @@ import './workspaces.css';
 
 type Ref = { type: WsMovable; id: string };
 type Linked = { type: Exclude<WsMovable, 'folder'>; id: string; title: string };
-type Preview = { moved: Record<WsMovable, number>; linked: Linked[]; target: { id: string; name: string } };
+type Preview = {
+  moved: Record<WsMovable | 'request', number>;
+  linked: Linked[];
+  target: { id: string; name: string };
+};
 
-const ORDER: WsMovable[] = ['folder', 'note', 'task', 'meeting', 'voice', 'file'];
+const ORDER: Array<WsMovable | 'request'> = [
+  'folder',
+  'note',
+  'task',
+  'meeting',
+  'voice',
+  'file',
+  'issue',
+  'artifact',
+  'email',
+  'snippet',
+  'whiteboard',
+  'request',
+];
 
 /** The button (shown only when the person has more than one workspace). */
 export function MoveToWorkspace({ items, onMoved }: { items: Ref[]; onMoved?: () => void }) {
