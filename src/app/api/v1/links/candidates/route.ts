@@ -1,7 +1,7 @@
 import { handler, json } from '@/server/http';
 import { itemRef, LINK_TYPES, moduleOfType, requireContent } from '@/server/content/guard';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { linkCandidates } from '@/server/content/notes';
+import { entitlementsFor } from '@/server/workspaces';
 
 // GET /links/candidates?type=&id=&q=[&kind=tr|file]
 // kind=tr: transports only ("Ordens de Transporte"); kind=file: the caller's
@@ -15,7 +15,7 @@ export const GET = handler(async (req) => {
   const ref = itemRef.parse({ type: sp.get('type'), id: sp.get('id') });
   const auth = await requireContent(moduleOfType(ref.type));
   // Only item types whose module is in the plan can be offered.
-  const { modules } = await getEntitlements(auth.tenant.id);
+  const { modules } = await entitlementsFor(auth);
   const kind = sp.get('kind');
   const group = kind === 'tr' || kind === 'file' ? kind : '';
   const types = LINK_TYPES.filter(

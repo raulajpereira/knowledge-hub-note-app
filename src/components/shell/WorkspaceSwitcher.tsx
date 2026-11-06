@@ -4,14 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useId, useRef, useState } from 'react';
 import { Button, Modal, Popover, useToast } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
-import { api } from '@/lib/client/api';
-import { WS_COLORS, WS_ICONS, wsTint, type Workspace } from '@/lib/workspaces';
+import { api, isApiFailure } from '@/lib/client/api';
+import { WS_COLORS, WS_EVERYWHERE, WS_ICONS, WS_SEPARATED, wsTint, type Workspace } from '@/lib/workspaces';
 import { useShell } from './ShellContext';
 import './workspaces.css';
 
 // Ambientes (docs/AMBIENTES.md): the pill next to the logo shows the active
-// workspace (its colour and name); its menu lists the person's workspaces and
-// opens "Personalizar". Creating more arrives with phase 2b.
+// workspace (its colour and name); its menu lists the person's workspaces,
+// creates a new one and opens "Personalizar" (name, colour, icon, modules,
+// delete an empty one).
 
 export function WorkspaceDot({ w, size = 10 }: { w: Pick<Workspace, 'color'>; size?: number }) {
   const c = wsTint(w);
@@ -31,7 +32,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   const { me } = useShell();
   const btn = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Workspace | null>(null);
+  const [editing, setEditing] = useState<Workspace | 'new' | null>(null);
   const list = me.workspaces.list;
   const active = list.find((w) => w.id === me.workspaces.active) ?? list[0];
   if (!active) return null;
@@ -115,6 +116,33 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
             className="kh-ws-item"
             onClick={() => {
               setOpen(false);
+              setEditing('new');
+            }}
+          >
+            <span className="kh-ws-item__ic kh-ws-item__ic--plain">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </span>
+            <span className="kh-ws-item__t">
+              <b>{t('ws_new')}</b>
+              <span>{t('ws_newSub')}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="kh-ws-item"
+            onClick={() => {
+              setOpen(false);
               setEditing(active);
             }}
           >
@@ -141,7 +169,11 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
       )}
       {editing && (
         <WorkspaceDialog
-          w={editing}
+          w={editing === 'new' ? null : editing}
+          first={editing !== 'new' && editing.id === list[0]?.id}
+          canDelete={editing !== 'new' && list.length > 1}
+          isActive={editing !== 'new' && editing.id === active.id}
+          planModules={me.workspaces.planModules}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -153,12 +185,31 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   );
 }
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
+/** The modules a workspace can show: all of the plan in the first one, the separated ones in the others. */
+function choosable(planModules: string[], first: boolean) {
+  const everywhere = WS_EVERYWHERE as readonly string[];
+  return planModules.filter(
+    (m) => !everywhere.includes(m) && (first || (WS_SEPARATED as readonly string[]).includes(m)),
+  );
+}
+
 function WorkspaceDialog({
   w,
+  first,
+  canDelete,
+  isActive,
+  planModules,
   onClose,
   onSaved,
 }: {
-  w: Workspace;
+  /** null: a new workspace */
+  w: Workspace | null;
+  first: boolean;
+  canDelete: boolean;
+  isActive: boolean;
+  planModules: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -166,19 +217,66 @@ function WorkspaceDialog({
   const toast = useToast();
   const router = useRouter();
   const id = useId();
-  const [name, setName] = useState(w.name);
-  const [color, setColor] = useState(w.color || WS_COLORS[0]);
-  const [icon, setIcon] = useState(w.icon);
+  const options = choosable(planModules, first);
+  const [name, setName] = useState(w?.name ?? '');
+  const [color, setColor] = useState(w?.color || WS_COLORS[w ? 0 : 1]);
+  const [icon, setIcon] = useState(w?.icon ?? '');
+  const [mods, setMods] = useState<string[]>(() =>
+    w?.modules ? options.filter((m) => w.modules!.includes(m)) : options,
+  );
   const [busy, setBusy] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [problem, setProblem] = useState('');
+
+  const toggle = (m: string) => setMods((x) => (x.includes(m) ? x.filter((y) => y !== m) : [...x, m]));
   const save = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || busy) return;
     setBusy(true);
+    setProblem('');
+    // every module chosen in the first workspace: none listed (it keeps the plan's new ones too)
+    const modules = first && mods.length === options.length ? null : mods;
     try {
-      await api(`/workspaces/${w.id}`, { name: name.trim(), color, icon }, 'PATCH');
+      if (!w) {
+        const r = await api<{ workspace: Workspace }>('/workspaces', {
+          name: name.trim(),
+          color,
+          icon,
+          modules,
+        });
+        toast({ message: t('ws_created').replace('{name}', r.workspace.name), tone: 'success' });
+        // straight into the new workspace
+        await api('/workspaces/active', { id: r.workspace.id }, 'PUT');
+        window.location.assign(`${BASE}/app`);
+        return;
+      }
+      await api(`/workspaces/${w.id}`, { name: name.trim(), color, icon, modules }, 'PATCH');
       toast({ message: t('ws_saved'), tone: 'success' });
       onSaved();
-    } catch {
-      toast({ message: t('ws_saveFail'), tone: 'error' });
+    } catch (e) {
+      if (isApiFailure(e) && e.code === 'limit_reached')
+        setProblem(t('ws_limit').replace('{max}', String(e.data?.max ?? '')));
+      else toast({ message: t(w ? 'ws_saveFail' : 'ws_createFail'), tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async () => {
+    if (!w || busy) return;
+    setBusy(true);
+    setProblem('');
+    try {
+      await api(`/workspaces/${w.id}`, undefined, 'DELETE');
+      toast({ message: t('ws_deleted'), tone: 'success' });
+      if (isActive) window.location.assign(`${BASE}/app`);
+      else onSaved();
+    } catch (e) {
+      setConfirmDel(false);
+      if (isApiFailure(e) && e.code === 'workspace_not_empty') {
+        const items = (e.data?.items ?? {}) as Record<string, number>;
+        const n = Object.values(items).reduce((a, b) => a + b, 0);
+        setProblem(t('ws_notEmpty').replace('{n}', String(n)));
+      } else if (isApiFailure(e) && e.code === 'last_workspace') setProblem(t('ws_last'));
+      else toast({ message: t('ws_deleteFail'), tone: 'error' });
     } finally {
       setBusy(false);
     }
@@ -187,21 +285,44 @@ function WorkspaceDialog({
     <Modal
       open
       onClose={onClose}
-      title={t('ws_customize')}
-      subtitle={t('ws_customizeDesc')}
+      title={w ? t('ws_customize') : t('ws_new')}
+      subtitle={w ? t('ws_customizeDesc') : t('ws_newDesc')}
       closeLabel={t('i_close')}
       footer={
         <>
+          {w && canDelete && (
+            <span className="kh-ws-form__del">
+              {confirmDel ? (
+                <Button variant="danger" onClick={() => void remove()} disabled={busy}>
+                  {t('ws_delete')}
+                </Button>
+              ) : (
+                <Button variant="danger-ghost" onClick={() => setConfirmDel(true)} disabled={busy}>
+                  {t('ws_delete')}
+                </Button>
+              )}
+            </span>
+          )}
           <Button variant="glass" onClick={onClose}>
             {t('tr_cancel')}
           </Button>
           <Button variant="primary" onClick={() => void save()} disabled={busy || !name.trim()}>
-            {t('ws_save')}
+            {w ? t('ws_save') : t('ws_create')}
           </Button>
         </>
       }
     >
       <div className="kh-ws-form">
+        {confirmDel && w && (
+          <p className="kh-ws-form__warn" role="alert">
+            {t('ws_deleteAsk').replace('{name}', w.name)}
+          </p>
+        )}
+        {problem && (
+          <p className="kh-ws-form__warn" role="alert">
+            {problem}
+          </p>
+        )}
         <label className="kh-ws-form__f" htmlFor={`${id}-n`}>
           <span className="kh-ws-form__l">{t('ws_name')}</span>
           <input
@@ -260,18 +381,34 @@ function WorkspaceDialog({
             ))}
           </div>
         </div>
-        <div className="kh-ws-form__look">
-          <span>{t('ws_lookHint')}</span>
-          <Button
-            variant="glass"
-            onClick={() => {
-              onClose();
-              router.push('/app/settings?tab=look');
-            }}
-          >
-            {t('ws_lookOpen')}
-          </Button>
-        </div>
+        {options.length > 0 && (
+          <div className="kh-ws-form__f">
+            <span className="kh-ws-form__l">{t('ws_modules')}</span>
+            <div className="kh-ws-mods">
+              {options.map((m) => (
+                <label key={m} className="kh-ws-mod" data-on={mods.includes(m) || undefined}>
+                  <input type="checkbox" checked={mods.includes(m)} onChange={() => toggle(m)} />
+                  <span>{t(`nav_${m}`)}</span>
+                </label>
+              ))}
+            </div>
+            {!first && <span className="kh-ws-form__hint">{t('ws_modulesFirst')}</span>}
+          </div>
+        )}
+        {w && (
+          <div className="kh-ws-form__look">
+            <span>{t('ws_lookHint')}</span>
+            <Button
+              variant="glass"
+              onClick={() => {
+                onClose();
+                router.push('/app/settings?tab=look');
+              }}
+            >
+              {t('ws_lookOpen')}
+            </Button>
+          </div>
+        )}
       </div>
     </Modal>
   );

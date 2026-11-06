@@ -4,8 +4,8 @@ import { listSystems } from '@/server/content/sap';
 import { listTransports } from '@/server/content/transports';
 import { mgOptions } from '@/server/content/mg';
 import { createSapNote, listSapNotes, usedComponents } from '@/server/content/sapNotes';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { SapNoteFields } from '@/lib/sapNotes';
+import { entitlementsFor } from '@/server/workspaces';
 
 /**
  * GET /sap/notes — the tenant's SAP notes with their status per system, plus
@@ -14,7 +14,7 @@ import { SapNoteFields } from '@/lib/sapNotes';
  */
 export const GET = handler(async () => {
   const auth = await requireContent('sapnotes');
-  const { modules } = await getEntitlements(auth.tenant.id);
+  const { modules } = await entitlementsFor(auth);
   const [notes, systems, transports, mg, components] = await Promise.all([
     listSapNotes(auth),
     listSystems(auth),

@@ -14,5 +14,10 @@ export type ShellMe = {
   /** Uploaded images → version (ms) for cache-busting URLs. */
   assets: Partial<Record<'avatar' | 'background' | 'logo', number>>;
   /** Ambientes: the person's workspaces and the one active on this device */
-  workspaces: { list: Workspace[]; active: string };
+  workspaces: {
+    list: Workspace[];
+    active: string;
+    /** the modules of the plan (each workspace shows some of them) */
+    planModules: string[];
+  };
 };

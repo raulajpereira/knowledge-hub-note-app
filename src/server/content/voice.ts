@@ -8,7 +8,7 @@ import { s3 } from '@/lib/storage';
 import { ApiError } from '@/server/errors';
 import { assertWithinLimit } from '@/server/licensing/entitlements';
 import type { AuthContext } from '@/server/auth/session';
-import { asUser, lockLimit } from './tenant';
+import { asUser, lockLimit, allWorkspaces } from './tenant';
 
 // Voice notes (prototype isVoice). The audio is recorded in the browser
 // (MediaRecorder), uploaded once and streamed back only to its owner.
@@ -103,10 +103,12 @@ export async function createVoice(
   if (!mime) throw new ApiError(415, 'unsupported_audio');
   return asUser(auth, async (tx) => {
     await lockLimit(tx, auth.tenant.id, 'voice');
-    const [{ n }] = (await tx
-      .select({ n: sql<number>`count(*)::int` })
-      .from(voiceNotes)
-      .where(isNull(voiceNotes.deletedAt))) as [{ n: number }];
+    const [{ n }] = (await allWorkspaces(tx, () =>
+      tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(voiceNotes)
+        .where(isNull(voiceNotes.deletedAt)),
+    )) as [{ n: number }];
     await assertWithinLimit(auth.tenant.id, 'voice', n);
     const key = `tenants/${auth.tenant.id}/voice/${randomToken(16)}`;
     await s3().send(

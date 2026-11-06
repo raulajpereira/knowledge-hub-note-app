@@ -2,10 +2,9 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { HomeView } from '@/components/home/HomeView';
 import { getAuth } from '@/server/auth/request';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { LAST_PAGE_KEY } from '@/lib/prefs';
 import { startPath } from '@/lib/startPage';
-import { prefsFor } from '@/server/workspaces';
+import { prefsFor, entitlementsFor } from '@/server/workspaces';
 
 export const metadata = { title: 'KnowledgeHub' };
 
@@ -36,7 +35,7 @@ async function startPage(): Promise<string | null> {
   if (!doc) return null;
   const auth = await getAuth();
   if (!auth) return null;
-  const [{ prefs }, ent] = await Promise.all([prefsFor(auth), getEntitlements(auth.tenant.id)]);
+  const [{ prefs }, ent] = await Promise.all([prefsFor(auth), entitlementsFor(auth)]);
   if (!prefs.startPage || prefs.startPage === 'home') return null;
   return startPath(prefs.startPage, prefs[LAST_PAGE_KEY], new Set(ent.modules));
 }

@@ -50,7 +50,7 @@ import { audit } from '@/server/audit';
 import { assertWithinLimit } from '@/server/licensing/entitlements';
 import { sniffImage } from '@/server/assets';
 import type { AuthContext } from '@/server/auth/session';
-import { asSharer, asUser, lockLimit, removeFilesAfterCommit } from './tenant';
+import { asSharer, asUser, lockLimit, removeFilesAfterCommit, allWorkspaces } from './tenant';
 import { folderError } from './folderError';
 
 export { folderError };
@@ -203,10 +203,12 @@ export async function duplicateFolder(auth: AuthContext, id: string, copySuffix:
       .from(notes)
       .where(and(eq(notes.folderId, id), isNull(notes.deletedAt)));
     await lockLimit(tx, auth.tenant.id, 'notes');
-    const [{ n }] = (await tx
-      .select({ n: sql<number>`count(*)::int` })
-      .from(notes)
-      .where(isNull(notes.deletedAt))) as [{ n: number }];
+    const [{ n }] = (await allWorkspaces(tx, () =>
+      tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(notes)
+        .where(isNull(notes.deletedAt)),
+    )) as [{ n: number }];
     await assertWithinLimit(auth.tenant.id, 'notes', n + srcNotes.length - 1);
     const [f] = await tx
       .insert(folders)
@@ -381,10 +383,12 @@ export async function createNote(
 ) {
   return asUser(auth, async (tx) => {
     await lockLimit(tx, auth.tenant.id, 'notes');
-    const [{ n }] = (await tx
-      .select({ n: sql<number>`count(*)::int` })
-      .from(notes)
-      .where(isNull(notes.deletedAt))) as [{ n: number }];
+    const [{ n }] = (await allWorkspaces(tx, () =>
+      tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(notes)
+        .where(isNull(notes.deletedAt)),
+    )) as [{ n: number }];
     await assertWithinLimit(auth.tenant.id, 'notes', n);
     const [row] = await tx
       .insert(notes)
@@ -467,10 +471,12 @@ export async function duplicateNote(auth: AuthContext, id: string, copySuffix: s
       .where(and(eq(notes.id, id), isNull(notes.deletedAt)));
     if (!src) throw new ApiError(404, 'not_found');
     await lockLimit(tx, auth.tenant.id, 'notes');
-    const [{ n }] = (await tx
-      .select({ n: sql<number>`count(*)::int` })
-      .from(notes)
-      .where(isNull(notes.deletedAt))) as [{ n: number }];
+    const [{ n }] = (await allWorkspaces(tx, () =>
+      tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(notes)
+        .where(isNull(notes.deletedAt)),
+    )) as [{ n: number }];
     await assertWithinLimit(auth.tenant.id, 'notes', n);
     const [row] = await tx
       .insert(notes)

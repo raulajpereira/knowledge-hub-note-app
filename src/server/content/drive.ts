@@ -17,7 +17,7 @@ import { randomToken } from '@/lib/crypto';
 import { cleanName, FILES_MAX_MB, FILES_QUOTA_MB, UPLOAD_PART } from '@/lib/drive';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
-import { asSharer, asUser, removeFilesAfterCommit, type Tx } from './tenant';
+import { allWorkspaces, asSharer, asUser, removeFilesAfterCommit, type Tx } from './tenant';
 import {
   checkKindFolder,
   createKindFolder,
@@ -91,10 +91,13 @@ export async function limitsTx(tx: Tx, auth: AuthContext): Promise<DriveLimits> 
     .select({ q: users.filesQuotaMb, m: users.filesMaxMb })
     .from(users)
     .where(eq(users.id, auth.user.id));
-  const [{ used }] = (await tx
-    .select({ used: sql<string>`coalesce(sum(${driveFiles.size}), 0)` })
-    .from(driveFiles)
-    .where(eq(driveFiles.ownerId, auth.user.id))) as [{ used: string }];
+  // the quota counts the files of every workspace
+  const [{ used }] = (await allWorkspaces(tx, () =>
+    tx
+      .select({ used: sql<string>`coalesce(sum(${driveFiles.size}), 0)` })
+      .from(driveFiles)
+      .where(eq(driveFiles.ownerId, auth.user.id)),
+  )) as [{ used: string }];
   const [{ tk }] = (await tx
     .select({ tk: sql<string>`coalesce(sum(${ticketAttachments.size}), 0)` })
     .from(ticketAttachments)

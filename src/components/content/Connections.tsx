@@ -6,6 +6,7 @@ import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { Icon } from '@/components/shell/icons';
 import { ShellContext } from '@/components/shell/ShellContext';
+import { MoveToWorkspace } from '@/components/shell/MoveToWorkspace';
 import { extOf, fmtBytes, tintOf } from '@/lib/drive';
 import { useWhen } from './useWhen';
 import './content.css';
@@ -84,6 +85,9 @@ export const itemHref = (type: ItemType, id: string) =>
     ticket: `/app/tickets?k=${id}`,
   })[type];
 
+/** Ambientes: the items that can move to another workspace from here. */
+const MOVABLE = new Set<ItemType>(['note', 'task', 'voice', 'meeting', 'file']);
+
 export function Connections({
   type,
   id,
@@ -149,6 +153,7 @@ export function Connections({
       {box('cx')}
       {showFiles && box('file')}
       {showTr && box('tr')}
+      {MOVABLE.has(type) && <MoveToWorkspace items={[{ type: type as 'note', id }]} />}
     </>
   );
 }

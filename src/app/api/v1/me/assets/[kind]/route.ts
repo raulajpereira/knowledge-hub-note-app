@@ -3,8 +3,8 @@ import { handler, json } from '@/server/http';
 import { ApiError } from '@/server/errors';
 import { requireAuth } from '@/server/auth/request';
 import { allow } from '@/server/auth/rateLimit';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { assetLimit, deleteAsset, isAssetKind, putAsset, readAsset } from '@/server/assets';
+import { entitlementsFor } from '@/server/workspaces';
 
 type Ctx = { params: Promise<{ kind: string }> };
 
@@ -40,7 +40,7 @@ export const PUT = handler(async (req, ctx: Ctx) => {
   if (declared > assetLimit(kind))
     throw new ApiError(413, 'file_too_large', undefined, { max: assetLimit(kind) });
   const data = new Uint8Array(await req.arrayBuffer());
-  const { modules } = await getEntitlements(auth.tenant.id);
+  const { modules } = await entitlementsFor(auth);
   const v = await putAsset(auth, kind, data, new Set(modules));
   return json({ kind, v });
 });

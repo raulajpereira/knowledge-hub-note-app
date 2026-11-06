@@ -4,7 +4,14 @@
 // { code, ... } from the server's { error: { code } } envelope).
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
-export type ApiFailure = { code: string; status: number; retryAfter?: number; siteKey?: string };
+export type ApiFailure = {
+  code: string;
+  status: number;
+  retryAfter?: number;
+  siteKey?: string;
+  /** the rest of the error's fields (e.g. `max` of limit_reached) */
+  data?: Record<string, unknown>;
+};
 
 export function api<T = unknown>(
   path: string,
@@ -44,12 +51,15 @@ async function request<T>(url: string, body: unknown, method: string): Promise<T
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const e = (data as { error?: { code?: string; retryAfter?: number; siteKey?: string } }).error ?? {};
+    const e =
+      (data as { error?: { code?: string; retryAfter?: number; siteKey?: string } & Record<string, unknown> })
+        .error ?? {};
     throw {
       code: e.code ?? 'internal',
       status: res.status,
       retryAfter: e.retryAfter,
       siteKey: e.siteKey,
+      data: e,
     } satisfies ApiFailure;
   }
   return data as T;

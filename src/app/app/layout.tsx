@@ -3,13 +3,13 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { admins, users } from '@/db/schema';
 import { getAuth } from '@/server/auth/request';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { cookies } from 'next/headers';
 import { SIZE_COOKIE, withDeviceSize } from '@/lib/deviceSize';
 import { listAssets } from '@/server/assets';
 import { AppShell } from '@/components/shell/AppShell';
 import type { ShellMe } from '@/components/shell/types';
-import { prefsFor } from '@/server/workspaces';
+import { prefsFor, entitlementsFor } from '@/server/workspaces';
+import { getEntitlements } from '@/server/licensing/entitlements';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,8 @@ export const dynamic = 'force-dynamic';
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const auth = await getAuth();
   if (!auth) redirect('/login?next=/app');
-  const [ent, admin, { prefs, ws }, u, assets] = await Promise.all([
+  const [ent, plan, admin, { prefs, ws }, u, assets] = await Promise.all([
+    entitlementsFor(auth),
     getEntitlements(auth.tenant.id),
     db()
       .select({ role: admins.role, status: admins.status })
@@ -47,7 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     modules: ent.modules,
     admin: admin[0]?.status === 'active' ? { role: admin[0].role } : null,
     assets,
-    workspaces: { list: ws.list, active: ws.active.id },
+    workspaces: { list: ws.list, active: ws.active.id, planModules: plan.modules },
   };
   return (
     <AppShell me={me} prefs={withDeviceSize(prefs, (await cookies()).get(SIZE_COOKIE)?.value)}>

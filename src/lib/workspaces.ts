@@ -31,3 +31,35 @@ export const wsColor = (c: string) => c === '' || (WS_COLORS as readonly string[
 export const wsIcon = (i: string) => i === '' || (WS_ICONS as readonly string[]).includes(i);
 /** the colour a workspace is shown with */
 export const wsTint = (w: Pick<Workspace, 'color'>) => w.color || WS_COLORS[0];
+
+/**
+ * Modules already separated per workspace (fase 2b). The others still show
+ * everything the person has, so (never mixing workspaces) they are offered
+ * only in the first workspace until their phase (docs/AMBIENTES.md).
+ */
+export const WS_SEPARATED = ['calendar', 'notes', 'voice', 'tasks', 'meetings', 'files'] as const;
+/** Features with no items of their own: available in every workspace. */
+export const WS_EVERYWHERE = [
+  'ai',
+  'share',
+  'brand',
+  'bgphoto',
+  'typeface',
+  'glass',
+  'accent',
+  'sidebar',
+] as const;
+
+/** The modules a workspace shows: the plan's, the ones chosen for it, and (outside the first one) only the separated ones. */
+export function wsModules(entitled: readonly string[], w: Pick<Workspace, 'modules'>, isFirst: boolean) {
+  const ok = new Set<string>([...WS_SEPARATED, ...WS_EVERYWHERE]);
+  return entitled.filter(
+    (m) =>
+      (isFirst || ok.has(m)) &&
+      ((WS_EVERYWHERE as readonly string[]).includes(m) || !w.modules || w.modules.includes(m)),
+  );
+}
+
+/** What can be moved between workspaces (fase 2b). */
+export const WS_MOVABLE = ['note', 'task', 'voice', 'meeting', 'file', 'folder'] as const;
+export type WsMovable = (typeof WS_MOVABLE)[number];

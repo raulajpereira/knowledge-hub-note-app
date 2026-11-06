@@ -19,7 +19,7 @@ import {
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser, type Tx } from '@/server/content/tenant';
-import { requireModule } from '@/server/licensing/entitlements';
+import { requireModuleFor } from '@/server/workspaces';
 
 // The notification centre (header bell) and Definições › Notificações.
 // Everything runs as the caller under RLS: a person only ever sees and
@@ -254,7 +254,7 @@ export async function updateNotifySettings(auth: AuthContext, patch: NotifySetti
   if (patch.tz !== undefined && !validTz(patch.tz)) throw new ApiError(400, 'invalid_tz');
   const prefsPatch = patch.prefs ? NotifyPrefs.partial().parse(patch.prefs) : undefined;
   if (patch.inbound && !inboundConfigured()) throw new ApiError(404, 'inbound_not_configured');
-  if (patch.inbound?.target === 'email') await requireModule(auth.tenant.id, 'emails');
+  if (patch.inbound?.target === 'email') await requireModuleFor(auth, 'emails');
   return asUser(auth, async (tx) => {
     const cur = await ensureRow(tx, auth);
     const set: Partial<typeof notifySettings.$inferInsert> = { updatedAt: new Date() };

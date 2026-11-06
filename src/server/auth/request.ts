@@ -12,7 +12,7 @@ export async function getAuth(): Promise<AuthContext | null> {
   const auth = await resolveSession(jar.get(SESSION_COOKIE)?.value);
   if (!auth) return null;
   const ws = jar.get(WORKSPACE_COOKIE)?.value;
-  return { ...auth, workspaceId: ws && UUID.test(ws) ? ws : null };
+  return { ...auth, workspaceId: ws && UUID.test(ws) ? ws : null, wsScope: true };
 }
 
 export async function requireAuth(): Promise<AuthContext> {

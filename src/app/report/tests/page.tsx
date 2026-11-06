@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getAuth } from '@/server/auth/request';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { listAssets } from '@/server/assets';
 import { getLang } from '@/i18n/server';
 import { translate, type AppKey } from '@/i18n';
@@ -14,6 +13,7 @@ import { FN, FN_RC, type FnRow } from '@/lib/functional';
 import { Logo } from '@/components/brand/Logo';
 import { PrintButton } from '@/components/report/PrintButton';
 import '@/components/report/report.css';
+import { entitlementsFor } from '@/server/workspaces';
 
 export const metadata: Metadata = { title: 'KnowledgeHub · Relatório de testes', robots: { index: false } };
 export const dynamic = 'force-dynamic';
@@ -38,7 +38,7 @@ export default async function TestReportPage({
   const lang = await getLang();
   const t = (k: string) => translate(lang, k as AppKey) as string;
   const tr = (o: { pt: string; en: string }) => (lang === 'en' ? o.en : o.pt);
-  const ent = await getEntitlements(auth.tenant.id);
+  const ent = await entitlementsFor(auth);
   if (!ent.modules.includes('fn_test'))
     return <div className="kh-rep kh-rep--empty">{t('soon_notInPlan')}</div>;
   const sp = await searchParams;

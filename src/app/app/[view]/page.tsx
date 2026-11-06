@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import { getAuth } from '@/server/auth/request';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { getLang } from '@/i18n/server';
 import { translate } from '@/i18n';
 import { idFromSegment, isKnownItem, moduleOf } from '@/components/shell/nav';
 import { Placeholder } from '@/components/shell/Placeholder';
+import { entitlementsFor } from '@/server/workspaces';
 
 // Every module of a later phase answers with a placeholder, but only when
 // the plan includes it — the gate is enforced here, on the server.
@@ -20,7 +20,7 @@ export default async function ViewPage({ params }: { params: Promise<{ view: str
 
   const auth = await getAuth();
   if (!auth) notFound();
-  const [ent, lang] = await Promise.all([getEntitlements(auth.tenant.id), getLang()]);
+  const [ent, lang] = await Promise.all([entitlementsFor(auth), getLang()]);
   const mod = extra ? extra.module : moduleOf(id);
   const allowed = mod === null || ent.modules.includes(mod);
   const title = extra ? translate(lang, extra.label) : translate(lang, `nav_${id}`);

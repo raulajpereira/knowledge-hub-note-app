@@ -20,6 +20,7 @@ import { BackButton, FoldersButton, useListDetail } from '@/components/content/M
 import { ChecklistBar, EditorContent, EditorToolbar, InsertBar, useNoteEditor } from './NoteEditor';
 import { NoteHistory } from './NoteHistory';
 import { ImportDialog } from './ImportDialog';
+import { MoveDialog } from '@/components/shell/MoveToWorkspace';
 import { NoteFiltersActive, NoteFiltersButton, type NoteExtra } from './NoteFilters';
 import { NOTE_VIEW_KEYS, noteViewFromParams, noteViewParams } from '@/lib/views';
 import { saveView, ViewNameDialog } from '@/components/views/Views';
@@ -76,6 +77,7 @@ function FoldersPanel({
   onNewNote,
   onDuplicate,
   onDelete,
+  onMove,
   onDropNote,
   shared,
   canShare,
@@ -97,6 +99,8 @@ function FoldersPanel({
   onNewNote: (f: Folder) => void;
   onDuplicate: (f: Folder) => void;
   onDelete: (f: Folder) => void;
+  /** Ambientes: move the folder (and its notes) to another workspace; absent with one workspace */
+  onMove?: (f: Folder) => void;
   onDropNote: (noteId: string, target: string) => void;
 }) {
   const { t } = useI18n();
@@ -272,6 +276,19 @@ function FoldersPanel({
                 >
                   <Svg d={P.dup} />
                 </button>
+                {onMove && (
+                  <button
+                    type="button"
+                    title={t('ws_move')}
+                    aria-label={t('ws_move')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMove(r.f!);
+                    }}
+                  >
+                    <Svg d="M5 12h14M13 6l6 6-6 6" />
+                  </button>
+                )}
                 <button
                   type="button"
                   title={t('del')}
@@ -833,6 +850,7 @@ export function NotesView() {
 
   const sh = useSharedFolders('notes');
   const [fs, setFs] = useState<{ folderId?: string; sharedId?: string; title?: string } | null>(null);
+  const [moving, setMoving] = useState<Folder | null>(null);
   const folderMap = useMemo(() => new Map((folders?.folders ?? []).map((f) => [f.id, f])), [folders]);
   const validFilter =
     filter === 'all' ||
@@ -1175,6 +1193,7 @@ export function NotesView() {
         if (note?.folderId === f.id) open(null);
         await loadFolders();
       }}
+      onMove={me.workspaces.list.length > 1 ? (f) => setMoving(f) : undefined}
       onDropNote={(id, target) => void dropNote(id, target)}
       shared={sh.folders}
       canShare={sh.canShare}
@@ -1384,6 +1403,7 @@ export function NotesView() {
           {folders$}
         </Sheet>
       )}
+      {moving && <MoveDialog items={[{ type: 'folder', id: moving.id }]} onClose={() => setMoving(null)} />}
       {fs && (
         <FolderShareDialog
           kind="notes"

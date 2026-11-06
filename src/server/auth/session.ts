@@ -25,6 +25,12 @@ export type AuthContext = {
   sessionId: string;
   /** Ambientes: this device's active workspace (cookie kh_ws; the database checks it is the person's) */
   workspaceId?: string | null;
+  /**
+   * Ambientes, fase 2b: the person's own items of the separated modules are
+   * seen only in the active workspace (RLS, migration 0053). Set for requests
+   * of the app (getAuth); background work leaves it off and sees everything.
+   */
+  wsScope?: boolean;
   user: {
     id: string;
     name: string;

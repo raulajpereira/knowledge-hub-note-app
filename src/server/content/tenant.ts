@@ -15,7 +15,13 @@ type RawTx = Parameters<Parameters<ReturnType<typeof db>['transaction']>[0]>[0];
 const afterCommitQueues = new WeakMap<object, Array<() => Promise<unknown>>>();
 
 function scoped<T>(
-  ctx: { tenantId: string; userId: string; share?: boolean; workspaceId?: string | null },
+  ctx: {
+    tenantId: string;
+    userId: string;
+    share?: boolean;
+    workspaceId?: string | null;
+    wsScope?: boolean;
+  },
   fn: (tx: RawTx) => Promise<T>,
 ): Promise<T> {
   const queue: Array<() => Promise<unknown>> = [];
@@ -30,7 +36,10 @@ function scoped<T>(
 
 /** Runs `fn` in a transaction scoped by RLS to the caller's tenant and user. */
 export function asUser<T>(auth: AuthContext, fn: (tx: RawTx) => Promise<T>) {
-  return scoped({ tenantId: auth.tenant.id, userId: auth.user.id, workspaceId: auth.workspaceId }, fn);
+  return scoped(
+    { tenantId: auth.tenant.id, userId: auth.user.id, workspaceId: auth.workspaceId, wsScope: auth.wsScope },
+    fn,
+  );
 }
 
 /**
@@ -40,9 +49,39 @@ export function asUser<T>(auth: AuthContext, fn: (tx: RawTx) => Promise<T>) {
  */
 export function asSharer<T>(auth: AuthContext, fn: (tx: RawTx) => Promise<T>) {
   return scoped(
-    { tenantId: auth.tenant.id, userId: auth.user.id, share: true, workspaceId: auth.workspaceId },
+    {
+      tenantId: auth.tenant.id,
+      userId: auth.user.id,
+      share: true,
+      workspaceId: auth.workspaceId,
+      wsScope: auth.wsScope,
+    },
     fn,
   );
+}
+
+/**
+ * Like asUser but across all the person's workspaces (Ambientes): for moving
+ * an item between workspaces and for the counts of the workspace menu.
+ */
+export function asUserAllWorkspaces<T>(auth: AuthContext, fn: (tx: RawTx) => Promise<T>) {
+  return scoped({ tenantId: auth.tenant.id, userId: auth.user.id, workspaceId: auth.workspaceId }, fn);
+}
+
+/**
+ * Runs `fn` inside `tx` across all the person's workspaces (the RLS scope of
+ * migration 0053 off, then back as it was): plan limits and quotas count
+ * everything the person has, not only the active workspace.
+ */
+export async function allWorkspaces<T>(tx: RawTx, fn: () => Promise<T>): Promise<T> {
+  const [r] = (await tx.execute(
+    sql`select current_setting('app.ws_strict', true) as v, set_config('app.ws_strict', '', true)`,
+  )) as unknown as Array<{ v: string | null }>;
+  try {
+    return await fn();
+  } finally {
+    await tx.execute(sql`select set_config('app.ws_strict', ${r?.v ?? ''}, true)`);
+  }
 }
 
 export type Tx = Parameters<Parameters<typeof asUser>[1]>[0];

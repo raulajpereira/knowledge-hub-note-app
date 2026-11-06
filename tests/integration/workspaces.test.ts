@@ -48,7 +48,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE workspaces, task_subtasks, tasks, note_attachments, notes, folders, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE item_links, workspaces, task_subtasks, tasks, note_attachments, notes, folders, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -180,5 +180,127 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     await expect(wsSvc.updateWorkspace(rui, w2!.id, { name: 'x' })).rejects.toMatchObject({
       code: 'not_found',
     });
+  });
+  // ── fase 2b ────────────────────────────────────────────────────────────
+  const inWs = (a: Awaited<ReturnType<typeof signedIn>>, workspaceId: string) => ({
+    ...a,
+    workspaceId,
+    wsScope: true,
+  });
+
+  it('2b: the app sees only the active workspace; background work and plan limits see everything', async () => {
+    const ana = await signedIn('ana6@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const w2 = await wsSvc.createWorkspace(inWs(ana, w1!.id), { name: 'Pessoal', icon: '🏡' });
+    const a1 = inWs(ana, w1!.id);
+    const a2 = inWs(ana, w2.id);
+    await notesSvc.createNote(a1, { title: 'Trabalho' });
+    await notesSvc.createNote(a2, { title: 'Ginásio' });
+    await tasksSvc.createTask(a2, { title: 'Comprar fruta' });
+    const titles = async (a: typeof a1) => (await notesSvc.listNotes(a, {})).map((n) => n.title).sort();
+    expect(await titles(a1)).toEqual(['Trabalho']);
+    expect(await titles(a2)).toEqual(['Ginásio']);
+    expect((await tasksSvc.listTasks(a1)).map((t) => t.title)).toEqual([]);
+    expect((await tasksSvc.listTasks(a2)).map((t) => t.title)).toEqual(['Comprar fruta']);
+    // a note of the other workspace can't be read or changed from here
+    const other = (await notesSvc.listNotes(a2, {}))[0]!;
+    await expect(notesSvc.updateNote(a1, other.id, { title: 'x' })).rejects.toMatchObject({
+      code: 'not_found',
+    });
+    // background work (no wsScope) sees both
+    expect(await titles(ana as typeof a1)).toEqual(['Ginásio', 'Trabalho']);
+    // the plan limit counts every workspace: with max 2 notes, the third fails in either
+    const [plan] = await admin`select id from plans where code = 'PRO'`;
+    await admin`insert into plan_limits (plan_id, resource, max) values (${plan!.id}, 'notes', 2)
+                on conflict (plan_id, resource) do update set max = 2`;
+    const { invalidateEntitlements } = await import('@/server/licensing/entitlements');
+    await invalidateEntitlements(ana.tenant.id);
+    await expect(notesSvc.createNote(a1, { title: 'x' })).rejects.toMatchObject({ code: 'limit_reached' });
+    // modules: outside the first workspace only the separated ones (and the features)
+    const ent = ['notes', 'tasks', 'calendar', 'emails', 'mg_people', 'ai', 'sidebar'];
+    expect(await wsSvc.modulesFor(a1, ent)).toEqual(ent);
+    expect(await wsSvc.modulesFor(a2, ent)).toEqual(['notes', 'tasks', 'calendar', 'ai', 'sidebar']);
+    await wsSvc.updateWorkspace(a2, w2.id, { modules: ['notes'] });
+    expect(await wsSvc.modulesFor(a2, ent)).toEqual(['notes', 'ai', 'sidebar']);
+  });
+
+  it('2b: creating within the plan; deleting only an empty workspace, never the last', async () => {
+    const ana = await signedIn('ana7@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const [plan] = await admin`select id from plans where code = 'PRO'`;
+    await admin`insert into plan_limits (plan_id, resource, max) values (${plan!.id}, 'workspaces', 2)
+                on conflict (plan_id, resource) do update set max = 2`;
+    const { invalidateEntitlements } = await import('@/server/licensing/entitlements');
+    await invalidateEntitlements(ana.tenant.id);
+    const a1 = inWs(ana, w1!.id);
+    const w2 = await wsSvc.createWorkspace(a1, { name: 'Formação' });
+    expect(w2.modules).toEqual(['calendar', 'notes', 'voice', 'tasks', 'meetings', 'files']);
+    await expect(wsSvc.createWorkspace(a1, { name: 'Terceiro' })).rejects.toMatchObject({
+      code: 'limit_reached',
+    });
+    await expect(wsSvc.createWorkspace(a1, { name: '  ' })).rejects.toMatchObject({ code: 'validation' });
+    // a note in the Trash still keeps it from being deleted
+    const n = await notesSvc.createNote(inWs(ana, w2.id), { title: 'Curso' });
+    await admin`update notes set deleted_at = now() where id = ${n.id}`;
+    await expect(wsSvc.deleteWorkspace(a1, w2.id)).rejects.toMatchObject({
+      code: 'workspace_not_empty',
+      extra: { items: { notes: 1 } },
+    });
+    await admin`update notes set workspace_id = ${w1!.id} where id = ${n.id}`;
+    await wsSvc.deleteWorkspace(a1, w2.id);
+    await expect(wsSvc.deleteWorkspace(a1, w1!.id)).rejects.toMatchObject({ code: 'last_workspace' });
+    const [c] = await admin`select count(*)::int as n from notes where id = ${n.id}`;
+    expect(c!.n).toBe(1);
+  });
+
+  it('2b: moving a folder takes its notes and subfolders; linked items only when asked', async () => {
+    const ana = await signedIn('ana8@ws.pt');
+    const rui = await signedIn('rui8@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const a1 = inWs(ana, w1!.id);
+    const w2 = await wsSvc.createWorkspace(a1, { name: 'Pessoal' });
+    const a2 = inWs(ana, w2.id);
+    const f = await notesSvc.createFolder(a1, 'Casa');
+    const inFolder = await notesSvc.createNote(a1, { title: 'Obras', folderId: f.id });
+    const alone = await notesSvc.createNote(a1, { title: 'Solta', folderId: f.id });
+    const task = await tasksSvc.createTask(a1, { title: 'Ligar ao canalizador' });
+    await notesSvc.linkItems(a1, { type: 'note', id: inFolder.id }, { type: 'task', id: task.id });
+    // preview: what goes, and the linked task that could go too
+    const pv = await wsSvc.moveItems(a1, {
+      items: [{ type: 'folder', id: f.id }],
+      target: w2.id,
+      preview: true,
+    });
+    expect(pv.moved).toMatchObject({ folder: 1, note: 2, task: 0 });
+    expect(pv.linked).toEqual([{ type: 'task', id: task.id, title: 'Ligar ao canalizador' }]);
+    expect((await notesSvc.listNotes(a1, {})).length).toBe(2); // nothing moved yet
+    // move the single note first: it leaves its folder
+    await wsSvc.moveItems(a1, { items: [{ type: 'note', id: alone.id }], target: w2.id });
+    const [s] = await admin`select workspace_id, folder_id from notes where id = ${alone.id}`;
+    expect(s).toMatchObject({ workspace_id: w2.id, folder_id: null });
+    // then the folder, with the linked task
+    await wsSvc.moveItems(a1, { items: [{ type: 'folder', id: f.id }], target: w2.id, withLinked: true });
+    expect(await notesSvc.listNotes(a1, {})).toHaveLength(0);
+    expect(await tasksSvc.listTasks(a1)).toHaveLength(0);
+    expect((await notesSvc.listNotes(a2, {})).map((n) => n.title).sort()).toEqual(['Obras', 'Solta']);
+    expect((await notesSvc.listFolders(a2)).folders.map((x) => x.name)).toContain('Casa');
+    expect((await notesSvc.listFolders(a1)).folders).toHaveLength(0);
+    const [o] = await admin`select folder_id from notes where id = ${inFolder.id}`;
+    expect(o!.folder_id).toBe(f.id); // still in its folder
+    // the link is kept
+    const [l] = await admin`select count(*)::int as n from item_links`;
+    expect(l!.n).toBe(1);
+    // nobody moves someone else's items, or into someone else's workspace
+    const [rw] = await wsOf(rui.user.id);
+    await expect(
+      wsSvc.moveItems(inWs(rui, rw!.id), { items: [{ type: 'task', id: task.id }], target: rw!.id }),
+    ).rejects.toMatchObject({ code: 'not_found' });
+    await expect(
+      wsSvc.moveItems(a2, { items: [{ type: 'task', id: task.id }], target: rw!.id }),
+    ).rejects.toMatchObject({ code: 'not_found' });
+    // items of another workspace than the active one can't be moved from here
+    await expect(
+      wsSvc.moveItems(a1, { items: [{ type: 'task', id: task.id }], target: w1!.id }),
+    ).rejects.toMatchObject({ code: 'not_found' });
   });
 });

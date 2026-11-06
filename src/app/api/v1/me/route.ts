@@ -4,18 +4,17 @@ import { db } from '@/db/client';
 import { admins } from '@/db/schema';
 import { body, handler, json } from '@/server/http';
 import { requireAuth } from '@/server/auth/request';
-import { getEntitlements } from '@/server/licensing/entitlements';
 import { deleteAccount, updateProfile } from '@/server/account';
 import { clientIp } from '@/server/http';
 import { clearSessionCookie } from '@/server/auth/route-utils';
-import { prefsFor } from '@/server/workspaces';
+import { prefsFor, entitlementsFor } from '@/server/workspaces';
 
 // GET /me → user, tenant, plan, entitlements, prefs (API.md). The UI gates
 // the sidebar with `entitlements.modules`; the server re-checks on every call.
 export const GET = handler(async () => {
   const auth = await requireAuth();
   const [ent, admin, prefs] = await Promise.all([
-    getEntitlements(auth.tenant.id),
+    entitlementsFor(auth),
     db()
       .select({ role: admins.role, status: admins.status })
       .from(admins)

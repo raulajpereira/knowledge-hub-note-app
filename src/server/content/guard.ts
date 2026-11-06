@@ -1,20 +1,20 @@
 import 'server-only';
 import { z } from 'zod';
 import { requireAuth } from '@/server/auth/request';
-import { getEntitlements, requireModule } from '@/server/licensing/entitlements';
 import { ApiError } from '@/server/errors';
+import { entitlementsFor, requireModuleFor } from '@/server/workspaces';
 
 /** Session + entitlement for a content module (API.md: every app route needs both). */
 export async function requireContent(moduleId: string) {
   const auth = await requireAuth();
-  await requireModule(auth.tenant.id, moduleId);
+  await requireModuleFor(auth, moduleId);
   return auth;
 }
 
 /** Some module of a group (Management: any mg_* page gives access to its data). */
 export async function requireAnyContent(moduleIds: readonly string[]) {
   const auth = await requireAuth();
-  const { modules } = await getEntitlements(auth.tenant.id);
+  const { modules } = await entitlementsFor(auth);
   if (!moduleIds.some((m) => modules.includes(m)))
     throw new ApiError(403, 'module_not_included', undefined, { module: moduleIds[0] });
   return auth;
