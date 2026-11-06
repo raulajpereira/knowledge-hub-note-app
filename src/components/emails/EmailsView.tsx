@@ -132,6 +132,9 @@ export function EmailsView() {
 
   const open = useCallback(
     (id: string | null) => {
+      // the detail of the email on screen goes with the click, not when the
+      // address catches up: its buttons must never act on the previous one
+      setFull((cur) => (cur && cur.id === id ? cur : null));
       const next = new URLSearchParams(sp.toString());
       if (id) next.set('m', id);
       else next.delete('m');

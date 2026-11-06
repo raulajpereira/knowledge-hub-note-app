@@ -1550,5 +1550,14 @@
   "ws_k1_voice": "nota de voz",
   "ws_k1_meeting": "reunião",
   "ws_k1_file": "ficheiro",
-  "ws_moveLinked1": "Está ligado a 1 item deste ambiente:"
+  "ws_moveLinked1": "Está ligado a 1 item deste ambiente:",
+  "act_fail": "Não foi possível carregar a atividade.",
+  "act_k_task": "Tarefa",
+  "act_k_note": "Nota",
+  "act_k_meeting": "Reunião",
+  "act_k_file": "Ficheiro",
+  "act_k_voice": "Nota de voz",
+  "act_k_issue": "Tarefa de projeto",
+  "act_k_artifact": "Artefacto",
+  "act_k_ticket": "Ticket"
 }

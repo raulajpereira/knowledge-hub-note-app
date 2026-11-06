@@ -318,4 +318,37 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
       wsSvc.moveItems(a1, { items: [{ type: 'task', id: task.id }], target: w1!.id }),
     ).rejects.toMatchObject({ code: 'not_found' });
   });
+
+  it('Atividade: created, done and changed items of the period, of the active workspace only', async () => {
+    const ana = await signedIn('ana9@ws.pt');
+    const rui = await signedIn('rui9@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const a1 = inWs(ana, w1!.id);
+    const w2 = await wsSvc.createWorkspace(a1, { name: 'Pessoal' });
+    const a2 = inWs(ana, w2.id);
+    const { activityOf } = await import('@/server/activity');
+    const t = await tasksSvc.createTask(a1, { title: 'Fechar SM37' });
+    await tasksSvc.updateTask(a1, t.id, { done: true });
+    const n = await notesSvc.createNote(a1, { title: 'Ata' });
+    // an edit long after the creation counts as "Atualizado"
+    await admin`update notes set created_at = now() - interval '1 day', updated_at = now() where id = ${n.id}`;
+    await notesSvc.createNote(a2, { title: 'Ginásio' });
+    await tasksSvc.createTask(rui, { title: 'Do Rui' });
+    const range = { from: new Date(Date.now() - 3_600_000), to: new Date(Date.now() + 60_000) };
+    const mods = new Set(['tasks', 'notes']);
+    const got = (await activityOf(a1, range, mods)).map((x) => `${x.type}:${x.title}:${x.action}`).sort();
+    expect(got).toEqual(['note:Ata:updated', 'task:Fechar SM37:created', 'task:Fechar SM37:done']);
+    const g2 = await activityOf(a2, range, mods);
+    expect(g2.map((x) => x.title)).toEqual(['Ginásio']);
+    expect(g2[0]!.href).toMatch(/^\/app\/notes\?n=/);
+    // a module the workspace doesn't show is left out; an earlier period is empty
+    expect(await activityOf(a1, range, new Set(['notes']))).toHaveLength(1);
+    expect(
+      await activityOf(
+        a1,
+        { from: new Date(Date.now() - 5 * 864e5), to: new Date(Date.now() - 4 * 864e5) },
+        mods,
+      ),
+    ).toHaveLength(0);
+  });
 });

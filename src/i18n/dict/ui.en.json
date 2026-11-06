@@ -1550,5 +1550,14 @@
   "ws_k1_voice": "voice note",
   "ws_k1_meeting": "meeting",
   "ws_k1_file": "file",
-  "ws_moveLinked1": "It is linked to 1 item of this workspace:"
+  "ws_moveLinked1": "It is linked to 1 item of this workspace:",
+  "act_fail": "The activity could not be loaded.",
+  "act_k_task": "Task",
+  "act_k_note": "Note",
+  "act_k_meeting": "Meeting",
+  "act_k_file": "File",
+  "act_k_voice": "Voice note",
+  "act_k_issue": "Project issue",
+  "act_k_artifact": "Artifact",
+  "act_k_ticket": "Ticket"
 }

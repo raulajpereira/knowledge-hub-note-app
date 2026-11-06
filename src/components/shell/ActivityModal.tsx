@@ -1,29 +1,32 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { DateInput, Modal } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
+import { api } from '@/lib/client/api';
 
-export type ActivityEntry = { title: string; kind: string; action: string; at: string };
+type Entry = {
+  type: string;
+  id: string;
+  title: string;
+  action: 'created' | 'done' | 'updated';
+  at: string;
+  href: string;
+};
+const ACTION = { created: 'actCreated', done: 'actDone', updated: 'actUpdated' } as const;
 
 const iso = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /**
- * "Atividade" (prototype actOpen): what was created / completed / updated in
- * a date range. Content modules (Phase 4+) feed `entries`; until then the
- * range is always empty.
+ * "Atividade" (prototype actOpen): what the person created, completed or
+ * changed in a date range (GET /me/activity, the active workspace's modules).
+ * The days are the person's local days.
  */
-export function ActivityModal({
-  open,
-  onClose,
-  entries = [],
-}: {
-  open: boolean;
-  onClose: () => void;
-  entries?: ActivityEntry[];
-}) {
-  const { t } = useI18n();
+export function ActivityModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t, lang } = useI18n();
+  const router = useRouter();
   const today = useMemo(() => new Date(), []);
   const [from, setFrom] = useState(iso(today));
   const [to, setTo] = useState(iso(today));
@@ -42,7 +45,35 @@ export function ActivityModal({
     ] as const;
   }, [t, today]);
 
-  const list = entries.filter((e) => e.at.slice(0, 10) >= from && e.at.slice(0, 10) <= to);
+  const [list, setList] = useState<Entry[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!open || !from || !to || from > to) return;
+    let live = true;
+    setFailed(false);
+    // local midnight of `from` up to local midnight after `to`
+    const a = new Date(`${from}T00:00:00`);
+    const b = new Date(`${to}T00:00:00`);
+    b.setDate(b.getDate() + 1);
+    const q = new URLSearchParams({ from: a.toISOString(), to: b.toISOString() });
+    api<{ items: Entry[] }>(`/me/activity?${q}`)
+      .then((r) => live && setList(r.items))
+      .catch(() => {
+        if (!live) return;
+        setList([]);
+        setFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [open, from, to]);
+  const when = (at: string) =>
+    new Date(at).toLocaleString(lang === 'en' ? 'en-GB' : 'pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
   return (
     <Modal open={open} onClose={onClose} title={t('activity')} closeLabel={t('i_close')}>
@@ -67,9 +98,13 @@ export function ActivityModal({
           </button>
         ))}
       </div>
-      {list.length === 0 ? (
+      {list === null ? (
         <div style={{ padding: '10px 0 20px', fontSize: 14, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
-          {t('actNone')}
+          …
+        </div>
+      ) : list.length === 0 ? (
+        <div style={{ padding: '10px 0 20px', fontSize: 14, color: 'rgb(var(--t) / calc(.7 * var(--t-k)))' }}>
+          {failed ? t('act_fail') : t('actNone')}
         </div>
       ) : (
         <>
@@ -86,15 +121,24 @@ export function ActivityModal({
             {list.length === 1 ? t('actEvent') : t('actEvents')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '0 -8px' }}>
-            {list.map((a, i) => (
-              <div key={i} className="kh-act__row">
+            {list.map((a) => (
+              <button
+                key={`${a.type}:${a.id}:${a.action}:${a.at}`}
+                type="button"
+                className="kh-act__row"
+                data-action={a.action}
+                onClick={() => {
+                  onClose();
+                  router.push(a.href);
+                }}
+              >
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontSize: 14, fontWeight: 500 }}>{a.title}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>{a.title || '—'}</span>
                   <span style={{ fontSize: 12, color: 'rgb(var(--t) / calc(.62 * var(--t-k)))' }}>
-                    {a.kind} · {a.action}
+                    {t(`act_k_${a.type}`)} · {t(ACTION[a.action])} · {when(a.at)}
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </>

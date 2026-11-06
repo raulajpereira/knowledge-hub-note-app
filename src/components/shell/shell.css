@@ -871,8 +871,32 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
   padding: 10px;
+  border: 0;
   border-radius: 16px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kh-act__row:hover {
+  background: rgb(var(--w) / 0.1);
+}
+.kh-act__row::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: oklch(0.75 0.14 250);
+}
+.kh-act__row[data-action='done']::before {
+  background: oklch(0.8 0.15 150);
+}
+.kh-act__row[data-action='updated']::before {
+  background: oklch(0.82 0.13 70);
 }
 .kh-preset {
   height: 34px;
