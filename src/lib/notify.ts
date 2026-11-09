@@ -25,6 +25,8 @@ export const NotifyPrefs = z.object({
   summary: z.boolean(),
   /** local time of the daily summary, HH:MM */
   summaryTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  /** Ambientes (fase 6): notify only about items of these workspaces; null = all of them */
+  workspaces: z.array(z.uuid()).max(50).nullable(),
 });
 export type NotifyPrefs = z.infer<typeof NotifyPrefs>;
 
@@ -38,6 +40,7 @@ export const NOTIFY_DEFAULTS: NotifyPrefs = {
   email: false,
   summary: false,
   summaryTime: '08:00',
+  workspaces: null,
 };
 
 /** Stored prefs over the defaults; anything malformed falls back to the default. */

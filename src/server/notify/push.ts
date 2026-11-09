@@ -136,7 +136,8 @@ export function pushPayload(
   return {
     title: head[n.kind] || 'KnowledgeHub',
     body: n.title,
-    url: `${base}${path}`,
+    // Ambientes: the app opens it in the item's workspace (AppShell reads kh_ws)
+    url: `${base}${path}${typeof n.meta?.ws === 'string' ? `${path.includes('?') ? '&' : '?'}kh_ws=${n.meta.ws}` : ''}`,
     // the same item replaces its earlier message on the device
     tag: `${n.kind.split('_')[0]}:${n.itemId ?? n.id}`,
   };

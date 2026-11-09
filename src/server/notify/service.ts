@@ -46,6 +46,24 @@ export const PAGE = 30;
  * title, date, unread again) instead of adding a second one. True when it was
  * written or refreshed.
  */
+const ITEM_TABLE: Record<string, string> = {
+  task: 'tasks',
+  issue: 'issues',
+  meeting: 'meetings',
+  note: 'notes',
+  email: 'emails',
+  ticket: 'tickets',
+};
+/** The workspace of a notified item (null: none, or not an item kept per workspace). */
+async function itemWorkspace(tx: Tx, type: string, id: string | null): Promise<string | null> {
+  const table = ITEM_TABLE[type];
+  if (!table || !id) return null;
+  const [r] = (await tx.execute(
+    sql`select workspace_id::text as ws from ${sql.identifier(table)} where id = ${id}`,
+  )) as unknown as Array<{ ws: string | null }>;
+  return r?.ws ?? null;
+}
+
 export async function addNotification(
   tx: Tx,
   auth: { tenantId: string; userId: string },
@@ -59,7 +77,19 @@ export async function addNotification(
     stamp?: string;
   },
 ): Promise<boolean> {
-  const meta = n.stamp ? { ...n.meta, stamp: n.stamp } : (n.meta ?? {});
+  // Ambientes (fase 6): the item's workspace — kept with the notification (it
+  // opens there) and checked against the workspaces the person wants to hear from
+  const ws = await itemWorkspace(tx, n.itemType, n.itemId);
+  if (ws) {
+    const [st] = await tx
+      .select({ prefs: notifySettings.prefs })
+      .from(notifySettings)
+      .where(eq(notifySettings.userId, auth.userId));
+    const only = notifyPrefs(st?.prefs ?? {}).workspaces;
+    if (only && !only.includes(ws)) return false;
+  }
+  const meta0 = ws ? { ...n.meta, ws } : n.meta;
+  const meta = n.stamp ? { ...meta0, stamp: n.stamp } : (meta0 ?? {});
   const row = {
     tenantId: auth.tenantId,
     userId: auth.userId,

@@ -94,7 +94,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
           aria-label={t('ws_title')}
         >
           <div className="kh-ws-menu__h">{t('ws_title')}</div>
-          {list.map((w) => (
+          {list.map((w, i) => (
             <button
               key={w.id}
               type="button"
@@ -114,6 +114,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
                 <b>{w.name}</b>
                 <span>{!combined && w.id === active.id ? t('ws_active') : t('ws_switch')}</span>
               </span>
+              {i < 9 && list.length > 1 && <kbd className="kh-ws-k">Alt {i + 1}</kbd>}
             </button>
           ))}
           {list.length > 1 && (
@@ -132,6 +133,7 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
                   <b>{t('ws_all')}</b>
                   <span>{t('ws_allSub')}</span>
                 </span>
+                <kbd className="kh-ws-k">Alt 0</kbd>
               </button>
             </>
           )}

@@ -83,7 +83,8 @@ export function NotifyTab() {
   const { t, lang } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
-  const { modules } = useShell();
+  const { modules, me } = useShell();
+  const wsList = me.workspaces.list;
   const [s, setS] = useState<Settings | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [emailFolders, setEmailFolders] = useState<Folder[]>([]);
@@ -263,6 +264,32 @@ export function NotifyTab() {
             </Row>
           )}
         </div>
+        {wsList.length > 1 && (
+          <div className="kh-set__rows">
+            <Row title={t('nf_ws')} desc={t('nf_wsD')}>
+              <span />
+            </Row>
+            {wsList.map((w) => {
+              const on = !p.workspaces || p.workspaces.includes(w.id);
+              return (
+                <Row key={w.id} title={`${w.icon ? `${w.icon} ` : ''}${w.name}`} desc="">
+                  <Toggle
+                    on={on}
+                    label={`${t('nf_ws')}: ${w.name}`}
+                    onChange={(v) => {
+                      const cur = p.workspaces ?? wsList.map((x) => x.id);
+                      const next = v ? [...new Set([...cur, w.id])] : cur.filter((x) => x !== w.id);
+                      // every workspace chosen: "all" (new workspaces included)
+                      void save({
+                        prefs: { workspaces: wsList.every((x) => next.includes(x.id)) ? null : next },
+                      });
+                    }}
+                  />
+                </Row>
+              );
+            })}
+          </div>
+        )}
         <div className="kh-set__rows">
           <Row title={t('nf_email')} desc={t('nf_emailD')}>
             <Toggle on={p.email} label={t('nf_email')} onChange={setP('email')} />

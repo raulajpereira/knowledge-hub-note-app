@@ -1580,5 +1580,7 @@
   "sn_notAdded": "sistema não adicionado",
   "ws_all": "Todos os ambientes",
   "ws_allSub": "Vista combinada: Calendário, Início e pesquisa (só consulta)",
-  "ws_combinedRo": "Na vista \"Todos os ambientes\" só se consulta. Escolhe um ambiente para criar ou alterar."
+  "ws_combinedRo": "Na vista \"Todos os ambientes\" só se consulta. Escolhe um ambiente para criar ou alterar.",
+  "nf_ws": "Ambientes",
+  "nf_wsD": "Notificar só sobre itens destes ambientes. Uma notificação abre o item no seu ambiente."
 }

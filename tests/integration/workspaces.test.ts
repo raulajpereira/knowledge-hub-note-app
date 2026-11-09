@@ -48,7 +48,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE item_links, sap_systems, tickets, ticket_types, workspaces, task_subtasks, tasks, note_attachments, notes, folders, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE notifications, notify_settings, item_links, sap_systems, tickets, ticket_types, workspaces, task_subtasks, tasks, note_attachments, notes, folders, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -495,5 +495,36 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     // a workspace with a vault can't be deleted
     await vault.setupVault(a2, keys('C'));
     await expect(wsSvc.deleteWorkspace(a1, w2.id)).rejects.toMatchObject({ code: 'workspace_not_empty' });
+  });
+
+  it('6: notificações só dos ambientes escolhidos; cada uma guarda o ambiente do item', async () => {
+    const ana = await signedIn('ana14@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const a1 = inWs(ana, w1!.id);
+    const w2 = await wsSvc.createWorkspace(a1, { name: 'Pessoal' });
+    const a2 = inWs(ana, w2.id);
+    const ns = await import('@/server/notify/service');
+    const t1 = await tasksSvc.createTask(a1, { title: 'Trabalho' });
+    const t2 = await tasksSvc.createTask(a2, { title: 'Pessoal' });
+    const add = (id: string, key: string) =>
+      tenant.asUser(ana, (tx) =>
+        ns.addNotification(
+          tx,
+          { tenantId: ana.tenant.id, userId: ana.user.id },
+          { kind: 'task_due', itemType: 'task', itemId: id, title: key, key },
+        ),
+      );
+    // all workspaces (default): both, each with its workspace
+    expect(await add(t1.id, 'k1')).toBe(true);
+    expect(await add(t2.id, 'k2')).toBe(true);
+    const rows = await admin`select title, meta->>'ws' as ws from notifications order by title`;
+    expect(rows.map((r) => [r.title, r.ws])).toEqual([
+      ['k1', w1!.id],
+      ['k2', w2.id],
+    ]);
+    // only the first workspace
+    await ns.updateNotifySettings(a1, { prefs: { workspaces: [w1!.id] } });
+    expect(await add(t1.id, 'k3')).toBe(true);
+    expect(await add(t2.id, 'k4')).toBe(false);
   });
 });

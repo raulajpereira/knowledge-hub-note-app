@@ -8,6 +8,7 @@ import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { fmtDue } from '@/lib/tasks';
 import { Icon } from './icons';
+import { useShell } from './ShellContext';
 import './notify.css';
 
 // The header bell: unread count, and a popover with the notifications
@@ -85,6 +86,7 @@ function useAgo() {
 export function NotificationBell() {
   const { t } = useI18n();
   const router = useRouter();
+  const { me } = useShell();
   const ago = useAgo();
   const btn = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -161,7 +163,17 @@ export function NotificationBell() {
     const href = hrefOf(n);
     setOpen(false);
     if (n.itemType === 'share') window.dispatchEvent(new CustomEvent('kh:settings-tab', { detail: 'share' }));
-    if (href) router.push(href);
+    if (!href) return;
+    // Ambientes: an item of another workspace opens there (the device switches to it)
+    const ws = typeof n.meta?.ws === 'string' ? n.meta.ws : null;
+    if (ws && ws !== me.workspaces.device && me.workspaces.list.some((w) => w.id === ws)) {
+      void api('/workspaces/active', { id: ws }, 'PUT').then(
+        () => window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH || ''}${href}`),
+        () => router.push(href),
+      );
+      return;
+    }
+    router.push(href);
   };
 
   const label = (n: Item) => {

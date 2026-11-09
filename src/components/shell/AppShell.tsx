@@ -26,7 +26,7 @@ import type { ShellMe } from './types';
 import './shell.css';
 import './mobile.css';
 import { CommandPalette, useCommandPaletteKey } from './CommandPalette';
-import { setPageWorkspace } from '@/lib/client/api';
+import { api as apiCall, setPageWorkspace } from '@/lib/client/api';
 
 // ZNotes root: 64px header · content · 36px ticker; sidebar + content
 // columns with a drag handle (double-click resets). Pages that need the
@@ -40,6 +40,41 @@ type Cols = { side?: number; list?: number; insp?: number };
 function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const { t } = useI18n();
   const toast = useToast();
+  // Ambientes (fase 6): a link that names its workspace (?kh_ws=, from a push
+  // notification) opens there; Alt+1…9 switch workspace, Alt+0 = all of them
+  useEffect(() => {
+    const u = new URL(window.location.href);
+    const want = u.searchParams.get('kh_ws');
+    if (!want) return;
+    u.searchParams.delete('kh_ws');
+    const known = want === 'all' || me.workspaces.list.some((w) => w.id === want);
+    if (!known || want === me.workspaces.device) {
+      window.history.replaceState(null, '', u.toString());
+      return;
+    }
+    void apiCall('/workspaces/active', { id: want }, 'PUT')
+      .then(() => window.location.replace(u.toString()))
+      .catch(() => window.history.replaceState(null, '', u.toString()));
+  }, [me.workspaces]);
+  useEffect(() => {
+    const list = me.workspaces.list;
+    if (list.length < 2) return;
+    const on = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const d = /^Digit([0-9])$/.exec(e.code)?.[1];
+      if (d === undefined) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      const id = d === '0' ? 'all' : list[Number(d) - 1]?.id;
+      if (!id || id === me.workspaces.device) return;
+      e.preventDefault();
+      void apiCall('/workspaces/active', { id }, 'PUT').then(() =>
+        window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/app`),
+      );
+    };
+    window.addEventListener('keydown', on);
+    return () => window.removeEventListener('keydown', on);
+  }, [me.workspaces]);
   // "Todos os ambientes" is read only: say so when something tried to save (lib/client/api)
   useEffect(() => {
     const on = () => toast({ message: t('ws_combinedRo'), tone: 'info' });
