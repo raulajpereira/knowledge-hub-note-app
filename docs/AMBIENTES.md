@@ -51,7 +51,7 @@ só muda o ambiente a que pertence.
 | 2a | Seletor no cabeçalho + personalização; aparência por ambiente; ambiente ativo por dispositivo (cookie kh_ws) | ✅ produção 06/11 07:28 UTC (contagens iguais) |
 | 2b | Criar/apagar ambientes (só vazio, nunca o último; limite do plano), módulos por ambiente; Notas, pastas, Tarefas, Registos Reuniões, Ficheiros, Notas de Voz, Calendário, Etiquetas, Lixo, contadores, pesquisa, IA e Início só do ambiente ativo; mover itens/pastas com aviso das ligações | ✅ produção 06/11 10:01 UTC (dcb1c05; cópia pre-deploy; contagens iguais) |
 | 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA (migração 0054; pastas de Emails/Artefactos/API; Notícias únicas por ambiente; mover artefactos, tarefas de projeto, emails, snippets, quadros, pastas) | ✅ produção 06/11 12:09 UTC (cb66b84; cópia pre-deploy; contagens iguais) |
-| 3b | SAP e Tickets | — |
+| 3b | SAP e Tickets (migração 0055): 1.º ambiente = equipa (dados atuais, workspace_id vazio); outros ambientes com dados SAP/Clientes privados; Tickets por ambiente; números únicos por ambiente | aprovada 09/11; em deploy |
 | 3c | Management | — |
 | 4 | Cofre por ambiente | — |
 | 5 | Vista combinada (Calendário, Início, Pesquisa) | — |
@@ -100,3 +100,16 @@ mg_projects 3 · mg_bookings 2
 - Mover na interface: Ligações (artefactos, tarefas de projeto) e Emails; no
   servidor também snippets, quadros e pastas de Emails/Artefactos/API (botões
   nesses ecrãs: a seguir).
+
+## Fase 3b — notas (decisão 09/11/2026)
+
+- Dados SAP e Clientes são da conta (equipa). O **1.º ambiente** de cada
+  pessoa é o da equipa: tudo o que existe e o que lá se cria fica partilhado
+  como antes (`workspace_id` vazio). Noutro ambiente, o que se cria fica só
+  nesse ambiente e dessa pessoa (`kh_team_item_workspace`, política
+  `*_workspace_scope` com `kh_team_scope()` / `kh_ws_mine()`).
+- Tickets e tipos: regra da 0053; únicos por (pessoa, ambiente, número/nome);
+  Notas SAP únicas por (conta, ambiente, número).
+- Apagar uma conta apaga os dados SAP dos ambientes privados dela
+  (`users_private_team_items`), nunca os da equipa.
+- Por fazer: mover itens SAP entre ambientes.
