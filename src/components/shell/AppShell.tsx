@@ -26,6 +26,7 @@ import type { ShellMe } from './types';
 import './shell.css';
 import './mobile.css';
 import { CommandPalette, useCommandPaletteKey } from './CommandPalette';
+import { setPageWorkspace } from '@/lib/client/api';
 
 // ZNotes root: 64px header · content · 36px ticker; sidebar + content
 // columns with a drag handle (double-click resets). Pages that need the
@@ -231,6 +232,9 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
 }
 
 export function AppShell({ me, prefs, children }: { me: ShellMe; prefs: Prefs; children: React.ReactNode }) {
+  // before any request of this page: the device's workspace it was rendered
+  // with (lib/client/api; the cookie as it was, so a stale one never loops)
+  setPageWorkspace(me.workspaces.device);
   return (
     <PrefsProvider initial={prefs}>
       <Shell me={me}>{children}</Shell>

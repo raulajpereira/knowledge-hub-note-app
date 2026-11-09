@@ -33,7 +33,7 @@ export const wsIcon = (i: string) => i === '' || (WS_ICONS as readonly string[])
 export const wsTint = (w: Pick<Workspace, 'color'>) => w.color || WS_COLORS[0];
 
 /**
- * Modules already separated per workspace (fases 2b–3c; the Passwords vault in fase 4). The others still show
+ * Modules separated per workspace (fases 2b–4): every module of the plan. The others still show
  * everything the person has, so (never mixing workspaces) they are offered
  * only in the first workspace until their phase (docs/AMBIENTES.md).
  */
@@ -75,6 +75,8 @@ export const WS_SEPARATED = [
   'mg_staff',
   'mg_time',
   'mg_clients',
+  // fase 4: one vault per workspace
+  'passwords',
 ] as const;
 /** Features with no items of their own: available in every workspace. */
 export const WS_EVERYWHERE = [

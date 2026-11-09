@@ -19,5 +19,7 @@ export type ShellMe = {
     active: string;
     /** the modules of the plan (each workspace shows some of them) */
     planModules: string[];
+    /** this device's workspace cookie as the page was rendered with it (null: none) */
+    device: string | null;
   };
 };

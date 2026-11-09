@@ -48,7 +48,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     modules: ent.modules,
     admin: admin[0]?.status === 'active' ? { role: admin[0].role } : null,
     assets,
-    workspaces: { list: ws.list, active: ws.active.id, planModules: plan.modules },
+    workspaces: {
+      list: ws.list,
+      active: ws.active.id,
+      planModules: plan.modules,
+      device: auth.workspaceId ?? null,
+    },
   };
   return (
     <AppShell me={me} prefs={withDeviceSize(prefs, (await cookies()).get(SIZE_COOKIE)?.value)}>

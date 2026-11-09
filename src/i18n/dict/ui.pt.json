@@ -1521,7 +1521,7 @@
   "ws_createFail": "Não foi possível criar o ambiente.",
   "ws_limit": "Chegaste ao limite de ambientes do teu plano ({max}).",
   "ws_modules": "Módulos neste ambiente",
-  "ws_modulesFirst": "As Passwords ficam por agora no primeiro ambiente; chegam aos outros na próxima fase. Os dados SAP e os Clientes do primeiro ambiente são os da equipa; aqui ficam só os deste ambiente.",
+  "ws_modulesFirst": "Os dados SAP e os Clientes do primeiro ambiente são os da equipa; aqui ficam só os deste ambiente. O cofre de Passwords deste ambiente tem a sua própria palavra-passe mestra.",
   "ws_delete": "Apagar ambiente",
   "ws_deleteAsk": "Apagar o ambiente «{name}»? Só é possível com o ambiente vazio — nada é apagado com ele.",
   "ws_deleted": "Ambiente apagado.",

@@ -462,4 +462,38 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     );
     expect(Number([...(seen as unknown as Array<{ n: number }>)][0]!.n)).toBeLessThanOrEqual(bd!.n);
   });
+
+  it('4: um cofre por ambiente — o existente fica no 1.º; cada um com as suas chaves', async () => {
+    const ana = await signedIn('ana13@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const a1 = inWs(ana, w1!.id);
+    const vault = await import('@/server/content/vault');
+    const keys = (salt: string) => ({
+      kdfSalt: salt,
+      kdfParams: { alg: 'argon2id' as const, m: 65536, t: 3, p: 1 },
+      dekWrappedMp: `mp-${salt}`,
+      dekWrappedRk: `rk-${salt}`,
+      rkFingerprint: `fp-${salt}`,
+    });
+    await vault.setupVault(a1, keys('A'));
+    await vault.createVaultItem(a1, 'ct-trabalho');
+    const w2 = await wsSvc.createWorkspace(a1, { name: 'Pessoal' });
+    const a2 = inWs(ana, w2.id);
+    // a new workspace has no vault yet; it gets its own keys
+    expect(await vault.getVault(a2)).toEqual({ keys: null, items: [] });
+    await vault.setupVault(a2, keys('B'));
+    await vault.createVaultItem(a2, 'ct-pessoal');
+    const v1 = await vault.getVault(a1);
+    const v2 = await vault.getVault(a2);
+    expect(v1.keys?.kdfSalt).toBe('A');
+    expect(v1.items.map((i) => i.ciphertext)).toEqual(['ct-trabalho']);
+    expect(v2.keys?.kdfSalt).toBe('B');
+    expect(v2.items.map((i) => i.ciphertext)).toEqual(['ct-pessoal']);
+    // "Repor e Apagar" in one workspace leaves the other vault alone
+    await vault.wipeVault(a2);
+    expect((await vault.getVault(a1)).items).toHaveLength(1);
+    // a workspace with a vault can't be deleted
+    await vault.setupVault(a2, keys('C'));
+    await expect(wsSvc.deleteWorkspace(a1, w2.id)).rejects.toMatchObject({ code: 'workspace_not_empty' });
+  });
 });

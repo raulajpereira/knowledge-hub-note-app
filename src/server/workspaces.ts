@@ -193,6 +193,7 @@ const WS_TABLES = [
   'user_templates',
   'ai_chats',
   'vault_items',
+  'vault_keys',
   'tickets',
   'ticket_types',
   'mg_teams',

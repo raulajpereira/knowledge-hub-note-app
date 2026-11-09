@@ -244,22 +244,28 @@ export const voiceNotes = pgTable(
  * password and by the recovery key, the recovery key's fingerprint and
  * AES-256-GCM ciphertext. Never the master password, the DEK or plaintext.
  */
-export const vaultKeys = pgTable('vault_keys', {
-  ownerId: uuid('owner_id')
-    .primaryKey()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  tenantId: tenantId(),
-  kdfSalt: text('kdf_salt').notNull(),
-  kdfParams: jsonb('kdf_params').$type<{ alg: 'argon2id'; m: number; t: number; p: number }>().notNull(),
-  dekWrappedMp: text('dek_wrapped_mp').notNull(),
-  dekWrappedRk: text('dek_wrapped_rk'),
-  rkFingerprint: text('rk_fingerprint'),
-  rkCreatedAt: ts('rk_created_at'),
-  // Encrypted vault metadata (folder names) — same DEK, opaque to the server.
-  metaCt: text('meta_ct'),
-  createdAt: ts('created_at').notNull().defaultNow(),
-  updatedAt: ts('updated_at').notNull().defaultNow(),
-});
+/** One vault per person and workspace (migration 0057; the workspace is filled by a trigger). */
+export const vaultKeys = pgTable(
+  'vault_keys',
+  {
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
+    tenantId: tenantId(),
+    kdfSalt: text('kdf_salt').notNull(),
+    kdfParams: jsonb('kdf_params').$type<{ alg: 'argon2id'; m: number; t: number; p: number }>().notNull(),
+    dekWrappedMp: text('dek_wrapped_mp').notNull(),
+    dekWrappedRk: text('dek_wrapped_rk'),
+    rkFingerprint: text('rk_fingerprint'),
+    rkCreatedAt: ts('rk_created_at'),
+    // Encrypted vault metadata (folder names) — same DEK, opaque to the server.
+    metaCt: text('meta_ct'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ name: 'vault_keys_pkey', columns: [t.ownerId, t.workspaceId] })],
+);
 
 export const vaultItems = pgTable(
   'vault_items',

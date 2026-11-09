@@ -4,6 +4,15 @@
 // { code, ... } from the server's { error: { code } } envelope).
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
+// Ambientes: the workspace this page was loaded in. Every request says it, so
+// the server refuses (409 workspace_changed) when another tab switched the
+// device's workspace meanwhile — nothing is ever saved in a workspace the page
+// isn't showing (and the vault never uses one workspace's key in another).
+let pageWorkspace: string | null = null;
+export function setPageWorkspace(id: string | null) {
+  pageWorkspace = id;
+}
+
 export type ApiFailure = {
   code: string;
   status: number;
@@ -33,9 +42,12 @@ export function adminApi<T = unknown>(
 async function request<T>(url: string, body: unknown, method: string): Promise<T> {
   let res: Response;
   const payload = body === undefined ? undefined : JSON.stringify(body);
+  const headers: Record<string, string> = {};
+  if (payload !== undefined) headers['Content-Type'] = 'application/json';
+  if (pageWorkspace) headers['x-kh-ws'] = pageWorkspace;
   const init: RequestInit = {
     method,
-    headers: payload === undefined ? undefined : { 'Content-Type': 'application/json' },
+    headers,
     body: payload,
     credentials: 'same-origin',
   };
@@ -54,6 +66,8 @@ async function request<T>(url: string, body: unknown, method: string): Promise<T
     const e =
       (data as { error?: { code?: string; retryAfter?: number; siteKey?: string } & Record<string, unknown> })
         .error ?? {};
+    // another tab switched workspace: show this one as it now is
+    if (e.code === 'workspace_changed' && typeof window !== 'undefined') window.location.reload();
     throw {
       code: e.code ?? 'internal',
       status: res.status,

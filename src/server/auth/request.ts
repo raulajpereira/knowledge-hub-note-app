@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { ApiError, currentRequest } from '@/server/http';
 import { SESSION_COOKIE, resolveSession, type AuthContext } from './session';
 
@@ -12,7 +12,12 @@ export async function getAuth(): Promise<AuthContext | null> {
   const auth = await resolveSession(jar.get(SESSION_COOKIE)?.value);
   if (!auth) return null;
   const ws = jar.get(WORKSPACE_COOKIE)?.value;
-  return { ...auth, workspaceId: ws && UUID.test(ws) ? ws : null, wsScope: true };
+  const workspaceId = ws && UUID.test(ws) ? ws : null;
+  // the page that sent this request shows another workspace (switched in another tab)
+  const page = (await headers()).get('x-kh-ws');
+  if (page && workspaceId && UUID.test(page) && page !== workspaceId)
+    throw new ApiError(409, 'workspace_changed');
+  return { ...auth, workspaceId, wsScope: true };
 }
 
 export async function requireAuth(): Promise<AuthContext> {
