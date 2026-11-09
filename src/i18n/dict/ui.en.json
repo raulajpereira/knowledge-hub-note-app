@@ -1521,7 +1521,7 @@
   "ws_createFail": "The workspace could not be created.",
   "ws_limit": "You reached your plan's limit of workspaces ({max}).",
   "ws_modules": "Modules in this workspace",
-  "ws_modulesFirst": "The plan's other modules (Management, Passwords) stay in the first workspace for now; they come to the others in the next phases. The first workspace's SAP data is the team's; here there is only this workspace's.",
+  "ws_modulesFirst": "Passwords stay in the first workspace for now; they come to the others in the next phase. The first workspace's SAP data and Clients are the team's; here there are only this workspace's.",
   "ws_delete": "Delete workspace",
   "ws_deleteAsk": "Delete the «{name}» workspace? Only possible when it is empty — nothing is deleted with it.",
   "ws_deleted": "Workspace deleted.",

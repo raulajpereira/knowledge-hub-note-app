@@ -268,7 +268,7 @@ async function applyTx(tx: Tx, tenantId: string, ownerId: string, ops: MgOpT[]) 
         .insert(mgSettings)
         .values({ tenantId, ownerId, data: parsed.data })
         .onConflictDoUpdate({
-          target: mgSettings.ownerId,
+          target: [mgSettings.ownerId, mgSettings.workspaceId],
           set: { data: parsed.data, updatedAt: new Date() },
         });
       continue;

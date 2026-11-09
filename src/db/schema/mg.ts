@@ -38,16 +38,22 @@ const stamps = () => ({
 });
 
 /** Areas and seniority levels of a manager (Definições › Management). */
-export const mgSettings = pgTable('mg_settings', {
-  ownerId: uuid('owner_id')
-    .primaryKey()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  tenantId: tenantId(),
-  data: jsonb('data')
-    .notNull()
-    .default(sql`'{}'::jsonb`),
-  updatedAt: ts('updated_at').notNull().defaultNow(),
-});
+/** One row per person and workspace (migration 0056; the workspace is filled by a trigger). */
+export const mgSettings = pgTable(
+  'mg_settings',
+  {
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id'),
+    tenantId: tenantId(),
+    data: jsonb('data')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ name: 'mg_settings_pkey', columns: [t.ownerId, t.workspaceId] })],
+);
 
 export const mgTeams = pgTable(
   'mg_teams',

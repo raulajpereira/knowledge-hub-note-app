@@ -234,15 +234,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     // modules: outside the first workspace only the separated ones (and the features)
     const ent = ['notes', 'tasks', 'calendar', 'emails', 'mg_people', 'tickets', 'ai', 'sidebar'];
     expect(await wsSvc.modulesFor(a1, ent)).toEqual(ent);
-    expect(await wsSvc.modulesFor(a2, ent)).toEqual([
-      'notes',
-      'tasks',
-      'calendar',
-      'emails',
-      'tickets',
-      'ai',
-      'sidebar',
-    ]);
+    expect(await wsSvc.modulesFor(a2, ent)).toEqual(ent); // fase 3c: all but the vault
     await wsSvc.updateWorkspace(a2, w2.id, { modules: ['notes'] });
     expect(await wsSvc.modulesFor(a2, ent)).toEqual(['notes', 'ai', 'sidebar']);
   });
@@ -440,5 +432,34 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     await admin`delete from users where id = ${ana.user.id}`;
     const left = await admin`select name from sap_systems order by name`;
     expect(left.map((x) => x.name)).toEqual(['S4D']);
+  });
+
+  it('3c: Management de cada ambiente (dados, definições e "Repor Dados" só no ativo)', async () => {
+    const ana = await signedIn('ana12@ws.pt');
+    const [w1] = await wsOf(ana.user.id);
+    const a1 = inWs(ana, w1!.id);
+    const w2 = await wsSvc.createWorkspace(a1, { name: 'Projeto paralelo' });
+    const a2 = inWs(ana, w2.id);
+    const mg = await import('@/server/content/mg');
+    await mg.resetMgSample(a1);
+    const d1 = await mg.loadMg(a1);
+    expect(d1.people.length).toBeGreaterThan(0);
+    expect((await mg.loadMg(a2)).people).toHaveLength(0);
+    // settings per workspace
+    await mg.applyMgOps(a1, [{ op: 'put', c: 'settings', v: { hiddenAreas: ['bw'] } }]);
+    await mg.applyMgOps(a2, [{ op: 'put', c: 'settings', v: { hiddenAreas: ['abap'] } }]);
+    expect((await mg.loadMg(a1)).settings).toMatchObject({ hiddenAreas: ['bw'] });
+    expect((await mg.loadMg(a2)).settings).toMatchObject({ hiddenAreas: ['abap'] });
+    // "Repor Dados" in the second workspace never touches the first one
+    await mg.resetMgSample(a2);
+    expect((await mg.loadMg(a1)).people.map((p) => p.id).sort()).toEqual(d1.people.map((p) => p.id).sort());
+    const [c] = await admin`select count(*)::int as n from mg_settings where owner_id = ${ana.user.id}`;
+    expect(c!.n).toBe(1); // a1's (the reset of a2 removed only a2's)
+    // booking days follow their booking's workspace
+    const [bd] = await admin`select count(*)::int as n from mg_booking_days`;
+    const seen = await tenant.asUser(a2, (tx) =>
+      tx.execute('select count(*)::int as n from mg_booking_days'),
+    );
+    expect(Number([...(seen as unknown as Array<{ n: number }>)][0]!.n)).toBeLessThanOrEqual(bd!.n);
   });
 });

@@ -203,6 +203,7 @@ const WS_TABLES = [
   'mg_absences',
   'mg_timesheets',
   'mg_requests',
+  'mg_settings',
   // fase 3b: rows of a private workspace (the team's have none)
   'sap_systems',
   'sap_tcodes',
