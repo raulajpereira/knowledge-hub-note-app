@@ -358,6 +358,8 @@ export function SapNotesView() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list, sort, lang]);
+  /** Matriz: only the systems some listed note has (in the systems' order) */
+  const mSystems = systems.filter((s) => sorted.some((n) => n.systems[s.id]));
   const act = all.find((x) => x.id === activeId) ?? null;
   const compOpts = [...new Set([...components, ...all.map((n) => n.component).filter(Boolean)])].sort();
   const compSuggest = [...new Set([...compOpts, ...COMMON_COMPONENTS])].sort();
@@ -637,8 +639,8 @@ export function SapNotesView() {
           </div>
         ) : (
           <div className="kh-sap-body kh-sn-mwrap">
-            {!systems.length ? (
-              <div className="kh-sap-empty">{t('sn_noSystems')}</div>
+            {!mSystems.length ? (
+              <div className="kh-sap-empty">{systems.length ? t('sn_noSysMatrix') : t('sn_noSystems')}</div>
             ) : (
               <table className="kh-sn-matrix" aria-label={t('sn_matrix')}>
                 <thead>
@@ -646,7 +648,7 @@ export function SapNotesView() {
                     <th scope="col" className="kh-sn-mnote">
                       {t('sn_note')}
                     </th>
-                    {systems.map((s) => (
+                    {mSystems.map((s) => (
                       <th key={s.id} scope="col" title={s.name}>
                         <span className="kh-sn-msys">
                           <i style={{ background: envColor(s.env) }} />
@@ -666,8 +668,15 @@ export function SapNotesView() {
                           <span>{n.title || '—'}</span>
                         </button>
                       </th>
-                      {systems.map((s) => {
+                      {mSystems.map((s) => {
                         const st = stOf(n, s.id);
+                        // a system not added to this note: an empty cell
+                        if (!n.systems[s.id])
+                          return (
+                            <td key={s.id} className="kh-sn-mnone">
+                              <span aria-label={`${n.number} · ${sysLabel(s)} · ${t('sn_notAdded')}`} />
+                            </td>
+                          );
                         return (
                           <td key={s.id}>
                             <select
@@ -698,7 +707,12 @@ export function SapNotesView() {
                 <span key={k}>
                   <i style={{ background: c }} />
                   {tr(l)}
-                  <b>{sorted.reduce((a, n) => a + systems.filter((s) => stOf(n, s.id) === k).length, 0)}</b>
+                  <b>
+                    {sorted.reduce(
+                      (a, n) => a + Object.values(n.systems).filter((v) => v.status === k).length,
+                      0,
+                    )}
+                  </b>
                 </span>
               ))}
             </div>

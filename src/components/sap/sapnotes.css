@@ -544,3 +544,13 @@
     min-height: 44px;
   }
 }
+
+/* Matriz: a system not added to the note */
+.kh-sn-mnone span {
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: rgb(var(--w) / 0.14);
+}

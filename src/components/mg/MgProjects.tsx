@@ -291,7 +291,29 @@ export function MgProjects({ mg }: { mg: Mg }) {
   const good = over ? 'oklch(0.84 0.13 30)' : 'oklch(0.86 0.12 150)';
   const s0 = wi(sel.from);
   const e0 = wi(sel.to);
+  // the phases bar is drawn by day (by week, phases ending and starting in the
+  // same week overlapped and a short one disappeared under the next one)
+  const dayOf = (v: string) => (isIsoDay(v) ? dnOf(v) : null);
+  const d0 = dayOf(sel.from);
+  const d1 = dayOf(sel.to);
+  const byDay = d0 !== null && d1 !== null && d1 >= d0;
+  const daySpan = byDay ? d1! - d0! + 1 : 1;
+  const today = dnOf(new Date().toISOString().slice(0, 10));
+  /** left / width (%) of a phase on the bar */
+  const phaseBox = (from: string, to: string) => {
+    const f0 = byDay ? dayOf(from) : null;
+    const t0 = byDay ? dayOf(to) : null;
+    if (byDay && f0 !== null && t0 !== null) {
+      const f = Math.max(d0!, f0);
+      const t = Math.min(d1!, t0);
+      return { left: ((f - d0!) / daySpan) * 100, width: (Math.max(0, t - f + 1) / daySpan) * 100 };
+    }
+    const f = Math.max(s0, wi(from));
+    const t = Math.min(e0, wi(to));
+    return { left: ((f - s0) / span) * 100, width: (Math.max(0, t - f + 1) / span) * 100 };
+  };
   const span = Math.max(1, e0 - s0 + 1);
+  const todayPct = byDay ? ((today - d0!) / daySpan) * 100 : ((0 - s0) / span) * 100;
   /** Modelos: replace the phases, one after the other from the project's first week (the end follows). */
   const applyPhases = async (tpl: ProjectTpl) => {
     if (
@@ -549,14 +571,13 @@ export function MgProjects({ mg }: { mg: Mg }) {
             )}
           >
             {sel.phases.map((ph, i) => {
-              const f = Math.max(s0, wi(ph.from));
-              const t = Math.min(e0, wi(ph.to));
+              const b = phaseBox(ph.from, ph.to);
               return (
                 <div
                   key={i}
-                  title={ph.name}
+                  title={`${ph.name} · ${ph.from} → ${ph.to}`}
                   style={css(
-                    `position:absolute;top:3px;bottom:3px;left:${((f - s0) / span) * 100}%;width:${(Math.max(0, t - f + 1) / span) * 100}%;border-radius:7px;background:${PHC[i % PHC.length]};border:1px solid rgb(var(--w) / .2);display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;box-sizing:border-box;`,
+                    `position:absolute;top:3px;bottom:3px;left:${b.left}%;width:${b.width}%;min-width:4px;border-radius:7px;background:${PHC[i % PHC.length]};border:1px solid rgb(var(--w) / .2);display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;box-sizing:border-box;`,
                   )}
                 >
                   {ph.name}
@@ -565,7 +586,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
             })}
             <div
               style={css(
-                `position:absolute;top:0;bottom:0;left:${Math.max(0, Math.min(100, ((0 - s0) / span) * 100))}%;width:2px;background:var(--ink);box-shadow:0 0 8px rgb(var(--w) / .6);`,
+                `position:absolute;top:0;bottom:0;left:${Math.max(0, Math.min(100, todayPct))}%;width:2px;background:var(--ink);box-shadow:0 0 8px rgb(var(--w) / .6);`,
               )}
             />
           </div>

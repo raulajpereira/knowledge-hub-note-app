@@ -144,7 +144,13 @@ test('SAP notes: new note, status in the matrix', async ({ page }) => {
   await expect(panel.locator('.kh-sn-sysrow')).toHaveCount(0);
   // no "Sistemas" column in the table any more
   await expect(page.getByRole('columnheader', { name: 'Sistemas' })).toHaveCount(0);
+  // the Matriz shows only the systems added to the notes: add S4P
+  const s4p = await addSel.locator('option', { hasText: /^S4P\// }).getAttribute('value');
+  const added2 = page.waitForResponse((r) => r.url().includes('/systems/') && r.request().method() === 'PUT');
+  await addSel.selectOption(s4p!);
+  expect((await added2).ok()).toBe(true);
   await page.getByRole('radio', { name: 'Matriz' }).click();
+  await expect(page.getByRole('columnheader', { name: /S4D/ })).toHaveCount(0);
   const cell = page.getByLabel('3089413 · S4P/100');
   await expect(cell).toHaveValue('new');
   const saved = page.waitForResponse((r) => r.url().includes('/systems/') && r.request().method() === 'PUT');
