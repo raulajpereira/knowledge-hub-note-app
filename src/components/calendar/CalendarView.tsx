@@ -7,6 +7,7 @@ import { api, isApiFailure } from '@/lib/client/api';
 import { isoD, ptHolidays } from '@/lib/calendar';
 import { usePersistentState, useToast, useViewport } from '@/components/ui';
 import { useShell } from '@/components/shell/ShellContext';
+import { WorkspaceDot } from '@/components/shell/WorkspaceSwitcher';
 import { refreshCounts } from '@/components/shell/counts';
 import './calendar.css';
 
@@ -15,10 +16,24 @@ import './calendar.css';
 // day panel to add/complete, and the period summary.
 
 type Prio = 'low' | 'medium' | 'high';
-type Task = { id: string; title: string; priority: Prio; dueOn: string | null; doneAt: string | null };
+type Task = {
+  id: string;
+  workspaceId?: string;
+  title: string;
+  priority: Prio;
+  dueOn: string | null;
+  doneAt: string | null;
+};
 type IssueStatus = 'open' | 'progress' | 'waiting' | 'done';
-type Issue = { id: string; title: string; status: IssueStatus; dueOn: string | null };
-type Meeting = { id: string; title: string; heldOn: string; startTime: string; endTime: string };
+type Issue = { id: string; workspaceId?: string; title: string; status: IssueStatus; dueOn: string | null };
+type Meeting = {
+  id: string;
+  workspaceId?: string;
+  title: string;
+  heldOn: string;
+  startTime: string;
+  endTime: string;
+};
 type Item = {
   kind: 'task' | 'issue' | 'meeting';
   id: string;
@@ -28,6 +43,8 @@ type Item = {
   c: string;
   /** priority (tasks) or status (issues) label key; the time (meetings) */
   meta: string;
+  /** Ambientes: the item's workspace (the combined view shows and opens it there) */
+  ws?: string;
 };
 const IC = 'oklch(0.76 0.12 245)';
 const MC = 'oklch(0.82 0.1 120)';
@@ -64,7 +81,11 @@ export function CalendarView() {
   const { t, lang } = useI18n();
   const toast = useToast();
   const router = useRouter();
-  const { modules } = useShell();
+  const { modules: navModules, me } = useShell();
+  // "Todos os ambientes": read-only, the items of every workspace (modules of the plan)
+  const combined = me.workspaces.combined;
+  const modules = combined ? new Set(me.workspaces.planModules) : navModules;
+  const wsById = new Map(me.workspaces.list.map((w) => [w.id, w]));
   const hasTasks = modules.has('tasks');
   const hasIssues = modules.has('issues');
   const hasMeetings = modules.has('meetings');
@@ -145,6 +166,7 @@ export function CalendarView() {
             .map((x) => ({
               kind: 'task' as const,
               id: x.id,
+              ws: x.workspaceId,
               due: x.dueOn!,
               title: x.title,
               done: !!x.doneAt,
@@ -158,6 +180,7 @@ export function CalendarView() {
             .map((x) => ({
               kind: 'issue' as const,
               id: x.id,
+              ws: x.workspaceId,
               due: x.dueOn!,
               title: x.title,
               done: x.status === 'done',
@@ -169,6 +192,7 @@ export function CalendarView() {
         ? meetings.map((x) => ({
             kind: 'meeting' as const,
             id: x.id,
+            ws: x.workspaceId,
             due: x.heldOn,
             title: x.startTime ? `${x.startTime} ${x.title}` : x.title,
             done: false,
@@ -278,7 +302,21 @@ export function CalendarView() {
   const selDate = at12(sel);
   const dd = Math.round((+new Date(`${sel}T00:00:00`) - +new Date(`${today}T00:00:00`)) / 86_400_000);
   const selItems = byDay[sel] ?? [];
-  const open = (x: Item) => router.push(`${HREF[x.kind]}${x.id}`);
+  const open = (x: Item) => {
+    // combined view: into the item's workspace, where it can be changed
+    if (combined && x.ws) {
+      void api('/workspaces/active', { id: x.ws }, 'PUT').then(() =>
+        window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH || ''}${HREF[x.kind]}${x.id}`),
+      );
+      return;
+    }
+    router.push(`${HREF[x.kind]}${x.id}`);
+  };
+  /** the workspace dot of an item (combined view) */
+  const wsDot = (x: Item) => {
+    const w = combined && x.ws ? wsById.get(x.ws) : undefined;
+    return w ? <WorkspaceDot w={w} size={8} /> : null;
+  };
   // a meeting is never late
   const late = (x: Item) => x.kind !== 'meeting' && !x.done && x.due < today;
   const colorOf = (x: Item) => (late(x) ? LATE : x.c);
@@ -408,7 +446,7 @@ export function CalendarView() {
             <span style={{ background: 'rgb(var(--t) / calc(.5 * var(--t-k)))' }} />
             {t('c_done')}
           </button>
-          <span className="kh-cal__hint">{t('c_hint')}</span>
+          <span className="kh-cal__hint">{combined ? t('ws_allSub') : t('c_hint')}</span>
         </div>
         <div className="kh-cal__dow">
           {dow.map((d, i) => (
@@ -486,7 +524,7 @@ export function CalendarView() {
                   <div
                     key={x.id}
                     className="kh-cal__item"
-                    draggable
+                    draggable={!combined}
                     title={`${t(KIND_L[x.kind])} · ${x.title}`}
                     style={{
                       background: tint(colorOf(x), 0.2),
@@ -504,6 +542,7 @@ export function CalendarView() {
                       open(x);
                     }}
                   >
+                    {wsDot(x)}
                     <span style={{ textDecoration: x.done ? 'line-through' : 'none' }}>{x.title}</span>
                   </div>
                 ))}
@@ -587,7 +626,7 @@ export function CalendarView() {
           </span>
           {hol[sel] && <span className="kh-cal__selhol">{hol[sel]![en ? 1 : 0]}</span>}
         </div>
-        {hasTasks && (
+        {hasTasks && !combined && (
           <div className="kh-cal__add">
             <input
               value={draft}
@@ -635,6 +674,7 @@ export function CalendarView() {
                     data-on={x.done || undefined}
                     aria-label={x.title}
                     aria-pressed={x.done}
+                    disabled={combined}
                     onClick={(e) => {
                       e.stopPropagation();
                       void patchTask(x.id, { done: !x.done });
@@ -689,6 +729,12 @@ export function CalendarView() {
                   >
                     {x.title}
                   </span>
+                  {combined && x.ws && wsById.get(x.ws) && (
+                    <span className="kh-cal__ws">
+                      {wsDot(x)}
+                      {wsById.get(x.ws)!.name}
+                    </span>
+                  )}
                   <span className="kh-cal__selmeta">
                     <span style={{ background: tint(c, 0.3) }}>
                       {t(KIND_L[x.kind])}

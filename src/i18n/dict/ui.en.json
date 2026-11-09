@@ -1577,5 +1577,8 @@
   "sn_removeSysAsk": "This system already has a status, date or transport request in this note. Removing it loses that information.",
   "sn_noSysAdded": "No systems yet. Add the systems this note applies to.",
   "sn_noSysMatrix": "The notes in this list have no systems yet. Add them in each note's details.",
-  "sn_notAdded": "system not added"
+  "sn_notAdded": "system not added",
+  "ws_all": "All workspaces",
+  "ws_allSub": "Combined view: Calendar, Home and search (read only)",
+  "ws_combinedRo": "The \"All workspaces\" view is read only. Pick a workspace to create or change things."
 }

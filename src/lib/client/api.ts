@@ -68,6 +68,9 @@ async function request<T>(url: string, body: unknown, method: string): Promise<T
         .error ?? {};
     // another tab switched workspace: show this one as it now is
     if (e.code === 'workspace_changed' && typeof window !== 'undefined') window.location.reload();
+    // the combined view is read only (the shell shows why)
+    if (e.code === 'combined_readonly' && typeof window !== 'undefined')
+      window.dispatchEvent(new Event('kh-combined-ro'));
     throw {
       code: e.code ?? 'internal',
       status: res.status,

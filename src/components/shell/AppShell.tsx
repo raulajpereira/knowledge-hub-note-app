@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AmbientBackground, TagColorsProvider, useViewport } from '@/components/ui';
+import { AmbientBackground, TagColorsProvider, useToast, useViewport } from '@/components/ui';
 import type { TagColorMap } from '@/lib/tags';
 import { useI18n } from '@/i18n/client';
 import { COL_DEFAULTS, COL_LIMITS, effectivePrefs, type Prefs } from '@/lib/prefs';
@@ -39,6 +39,13 @@ type Cols = { side?: number; list?: number; insp?: number };
 
 function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
   const { t } = useI18n();
+  const toast = useToast();
+  // "Todos os ambientes" is read only: say so when something tried to save (lib/client/api)
+  useEffect(() => {
+    const on = () => toast({ message: t('ws_combinedRo'), tone: 'info' });
+    window.addEventListener('kh-combined-ro', on);
+    return () => window.removeEventListener('kh-combined-ro', on);
+  }, [toast, t]);
   const raw = usePrefsContext()!.prefs;
   const modules = useMemo(() => new Set(me.modules), [me.modules]);
   const look = useMemo(() => appearanceOf(effectivePrefs(raw, modules)), [raw, modules]);

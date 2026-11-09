@@ -21,5 +21,7 @@ export type ShellMe = {
     planModules: string[];
     /** this device's workspace cookie as the page was rendered with it (null: none) */
     device: string | null;
+    /** the combined view ("Todos os ambientes"): read-only */
+    combined: boolean;
   };
 };

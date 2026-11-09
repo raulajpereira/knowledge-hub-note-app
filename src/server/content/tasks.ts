@@ -20,6 +20,7 @@ export type TaskRemind = (typeof TASK_REMINDS)[number];
 
 export type TaskItem = {
   id: string;
+  workspaceId: string;
   title: string;
   type: TaskType;
   priority: TaskPriority;
@@ -44,6 +45,8 @@ export type Task = TaskItem & { subtasks: Subtask[] };
 
 const cols = {
   id: tasks.id,
+  /** Ambientes: the item's workspace (the combined view shows where it comes from) */
+  workspaceId: sql<string>`"tasks"."workspace_id"`,
   title: tasks.title,
   type: tasks.type,
   priority: tasks.priority,
@@ -61,6 +64,7 @@ const cols = {
 };
 type Row = {
   id: string;
+  workspaceId: string;
   title: string;
   type: TaskType;
   priority: TaskPriority;

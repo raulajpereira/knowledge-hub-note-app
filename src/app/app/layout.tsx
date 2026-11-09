@@ -11,6 +11,8 @@ import type { ShellMe } from '@/components/shell/types';
 import { prefsFor, entitlementsFor } from '@/server/workspaces';
 import { getEntitlements } from '@/server/licensing/entitlements';
 
+const COMBINED_FEATURES = new Set(['brand', 'bgphoto', 'typeface', 'glass', 'accent', 'sidebar']);
+
 export const dynamic = 'force-dynamic';
 
 // Signed-in area: session, entitlements, admin role and prefs are resolved
@@ -45,14 +47,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       trialEndsAt: auth.tenant.trialEndsAt?.toISOString() ?? null,
       status: auth.tenant.status,
     },
-    modules: ent.modules,
+    // the combined view: only the Calendar (the Home is always there) and the features with no items
+    modules: auth.combined
+      ? ent.modules.filter((m) => m === 'calendar' || COMBINED_FEATURES.has(m))
+      : ent.modules,
     admin: admin[0]?.status === 'active' ? { role: admin[0].role } : null,
     assets,
     workspaces: {
       list: ws.list,
       active: ws.active.id,
       planModules: plan.modules,
-      device: auth.workspaceId ?? null,
+      device: auth.combined ? 'all' : (auth.workspaceId ?? null),
+      combined: !!auth.combined,
     },
   };
   return (

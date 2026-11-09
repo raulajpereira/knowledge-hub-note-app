@@ -22,6 +22,7 @@ import { docText, validateDoc, type PMNode } from './doc';
 
 export type Meeting = {
   id: string;
+  workspaceId: string;
   folderId: string | null;
   title: string;
   heldOn: string;
@@ -39,6 +40,8 @@ export type MeetingFull = Meeting & { topicsDoc: PMNode | null };
 
 const cols = {
   id: meetings.id,
+  /** Ambientes: the item's workspace (the combined view shows where it comes from) */
+  workspaceId: sql<string>`"meetings"."workspace_id"`,
   folderId: meetings.folderId,
   title: meetings.title,
   heldOn: meetings.heldOn,

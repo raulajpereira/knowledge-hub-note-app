@@ -12,6 +12,7 @@ export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 export type IssuePriority = (typeof ISSUE_PRIORITIES)[number];
 export type Issue = {
   id: string;
+  workspaceId: string;
   title: string;
   status: IssueStatus;
   priority: IssuePriority;
@@ -26,6 +27,8 @@ export type Issue = {
 
 const cols = {
   id: issues.id,
+  /** Ambientes: the item's workspace (the combined view shows where it comes from) */
+  workspaceId: sql<string>`"issues"."workspace_id"`,
   title: issues.title,
   status: issues.status,
   priority: issues.priority,

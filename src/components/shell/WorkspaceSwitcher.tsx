@@ -34,14 +34,15 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Workspace | 'new' | null>(null);
   const list = me.workspaces.list;
+  const combined = me.workspaces.combined;
   const active = list.find((w) => w.id === me.workspaces.active) ?? list[0];
   if (!active) return null;
 
-  const switchTo = async (w: Workspace) => {
+  const switchTo = async (w: Workspace | 'all') => {
     setOpen(false);
-    if (w.id === active.id) return;
+    if (w === 'all' ? combined : !combined && w.id === active.id) return;
     try {
-      await api('/workspaces/active', { id: w.id }, 'PUT');
+      await api('/workspaces/active', { id: w === 'all' ? 'all' : w.id }, 'PUT');
       // the look and the lists of the other workspace come from the server
       window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/app`);
     } catch {
@@ -58,12 +59,18 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
         data-compact={compact || undefined}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`${t('ws_title')}: ${active.name}`}
+        aria-label={`${t('ws_title')}: ${combined ? t('ws_all') : active.name}`}
         title={t('ws_title')}
         onClick={() => setOpen((o) => !o)}
       >
-        {active.icon ? <span className="kh-ws-pill__ic">{active.icon}</span> : <WorkspaceDot w={active} />}
-        {!compact && <span className="kh-ws-pill__n">{active.name}</span>}
+        {combined ? (
+          <span className="kh-ws-pill__ic">✦</span>
+        ) : active.icon ? (
+          <span className="kh-ws-pill__ic">{active.icon}</span>
+        ) : (
+          <WorkspaceDot w={active} />
+        )}
+        {!compact && <span className="kh-ws-pill__n">{combined ? t('ws_all') : active.name}</span>}
         <svg
           width="12"
           height="12"
@@ -92,9 +99,9 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
               key={w.id}
               type="button"
               role="menuitemradio"
-              aria-checked={w.id === active.id}
+              aria-checked={!combined && w.id === active.id}
               className="kh-ws-item"
-              data-on={w.id === active.id || undefined}
+              data-on={(!combined && w.id === active.id) || undefined}
               onClick={() => void switchTo(w)}
             >
               <span
@@ -105,10 +112,29 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
               </span>
               <span className="kh-ws-item__t">
                 <b>{w.name}</b>
-                <span>{w.id === active.id ? t('ws_active') : t('ws_switch')}</span>
+                <span>{!combined && w.id === active.id ? t('ws_active') : t('ws_switch')}</span>
               </span>
             </button>
           ))}
+          {list.length > 1 && (
+            <>
+              <div className="kh-ws-menu__sep" />
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={combined}
+                className="kh-ws-item"
+                data-on={combined || undefined}
+                onClick={() => void switchTo('all')}
+              >
+                <span className="kh-ws-item__ic kh-ws-item__ic--plain">✦</span>
+                <span className="kh-ws-item__t">
+                  <b>{t('ws_all')}</b>
+                  <span>{t('ws_allSub')}</span>
+                </span>
+              </button>
+            </>
+          )}
           <div className="kh-ws-menu__sep" />
           <button
             type="button"
@@ -137,34 +163,36 @@ export function WorkspaceSwitcher({ compact = false }: { compact?: boolean }) {
               <span>{t('ws_newSub')}</span>
             </span>
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="kh-ws-item"
-            onClick={() => {
-              setOpen(false);
-              setEditing(active);
-            }}
-          >
-            <span className="kh-ws-item__ic kh-ws-item__ic--plain">
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-              </svg>
-            </span>
-            <span className="kh-ws-item__t">
-              <b>{t('ws_customize')}</b>
-              <span>{t('ws_customizeSub')}</span>
-            </span>
-          </button>
+          {!combined && (
+            <button
+              type="button"
+              role="menuitem"
+              className="kh-ws-item"
+              onClick={() => {
+                setOpen(false);
+                setEditing(active);
+              }}
+            >
+              <span className="kh-ws-item__ic kh-ws-item__ic--plain">
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                </svg>
+              </span>
+              <span className="kh-ws-item__t">
+                <b>{t('ws_customize')}</b>
+                <span>{t('ws_customizeSub')}</span>
+              </span>
+            </button>
+          )}
         </Popover>
       )}
       {editing && (

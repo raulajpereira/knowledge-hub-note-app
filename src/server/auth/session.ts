@@ -31,6 +31,8 @@ export type AuthContext = {
    * of the app (getAuth); background work leaves it off and sees everything.
    */
   wsScope?: boolean;
+  /** Ambientes, fase 5: the combined view ("Todos os ambientes"), read-only */
+  combined?: boolean;
   user: {
     id: string;
     name: string;

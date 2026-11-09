@@ -589,3 +589,15 @@
   background: oklch(0.78 0.11 240 / 0.3);
   color: #dbe8ff;
 }
+/* "Todos os ambientes": the item's workspace */
+.kh-cal__item .kh-ws-dot {
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.kh-cal__ws {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+}

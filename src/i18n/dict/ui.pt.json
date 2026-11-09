@@ -1577,5 +1577,8 @@
   "sn_removeSysAsk": "Este sistema já tem estado, data ou ordem de transporte nesta nota. Ao retirá-lo, essa informação perde-se.",
   "sn_noSysAdded": "Ainda sem sistemas. Adicione os sistemas onde esta nota se aplica.",
   "sn_noSysMatrix": "As notas desta lista ainda não têm sistemas. Adicione-os no detalhe de cada nota.",
-  "sn_notAdded": "sistema não adicionado"
+  "sn_notAdded": "sistema não adicionado",
+  "ws_all": "Todos os ambientes",
+  "ws_allSub": "Vista combinada: Calendário, Início e pesquisa (só consulta)",
+  "ws_combinedRo": "Na vista \"Todos os ambientes\" só se consulta. Escolhe um ambiente para criar ou alterar."
 }
