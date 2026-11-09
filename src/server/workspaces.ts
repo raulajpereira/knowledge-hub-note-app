@@ -203,6 +203,14 @@ const WS_TABLES = [
   'mg_absences',
   'mg_timesheets',
   'mg_requests',
+  // fase 3b: rows of a private workspace (the team's have none)
+  'sap_systems',
+  'sap_tcodes',
+  'sap_transports',
+  'sap_objects',
+  'sap_notes',
+  'sap_fn_records',
+  'mg_clients',
 ] as const;
 
 /** How many items (the ones in the Trash included) are in a workspace, per table; only the non-empty ones. */

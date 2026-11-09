@@ -33,7 +33,7 @@ export const wsIcon = (i: string) => i === '' || (WS_ICONS as readonly string[])
 export const wsTint = (w: Pick<Workspace, 'color'>) => w.color || WS_COLORS[0];
 
 /**
- * Modules already separated per workspace (fases 2b, 3a). The others still show
+ * Modules already separated per workspace (fases 2b, 3a, 3b). The others still show
  * everything the person has, so (never mixing workspaces) they are offered
  * only in the first workspace until their phase (docs/AMBIENTES.md).
  */
@@ -53,6 +53,17 @@ export const WS_SEPARATED = [
   'whiteboard',
   'issues',
   'news',
+  // fase 3b (SAP: the first workspace is the team's, the others private)
+  'codelib',
+  'systems',
+  'tcodes',
+  'transports',
+  'sapnotes',
+  'tickets',
+  'fn_proc',
+  'fn_test',
+  'fn_mig',
+  'fn_cut',
 ] as const;
 /** Features with no items of their own: available in every workspace. */
 export const WS_EVERYWHERE = [

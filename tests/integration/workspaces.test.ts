@@ -48,7 +48,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE item_links, workspaces, task_subtasks, tasks, note_attachments, notes, folders, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE item_links, sap_systems, tickets, ticket_types, workspaces, task_subtasks, tasks, note_attachments, notes, folders, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -239,6 +239,7 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
       'tasks',
       'calendar',
       'emails',
+      'tickets',
       'ai',
       'sidebar',
     ]);
@@ -401,5 +402,43 @@ describe.skipIf(!enabled)('workspaces (Ambientes) — foundation', () => {
     expect(r.moved).toMatchObject({ folder: 1, artifact: 1 });
     expect((await art.listArtifacts(a2)).map((x) => x.id)).toEqual([ar.id]);
     expect(await art.listArtifacts(a1)).toHaveLength(0);
+  });
+
+  it('3b: SAP é da equipa no 1.º ambiente e privado nos outros; Tickets por ambiente', async () => {
+    const ana = await signedIn('ana11@ws.pt');
+    const rui = await signedIn('rui11@ws.pt');
+    // Rui in Ana's account (a pack): the SAP data is the team's
+    await admin`update users set tenant_id = ${ana.tenant.id} where id = ${rui.user.id}`;
+    await admin`update workspaces set tenant_id = ${ana.tenant.id} where owner_id = ${rui.user.id}`;
+    const rui2 = { ...rui, tenant: ana.tenant };
+    const [wa] = await wsOf(ana.user.id);
+    const [wr] = await wsOf(rui.user.id);
+    const a1 = inWs(ana, wa!.id);
+    const r1 = inWs(rui2, wr!.id);
+    const w2 = await wsSvc.createWorkspace(a1, { name: 'Formação SAP' });
+    const a2 = inWs(ana, w2.id);
+    const sap = await import('@/server/content/sap');
+    await sap.createSystem(a1, { name: 'S4D' });
+    await sap.createSystem(a2, { name: 'Sandbox formação' });
+    const names = async (a: typeof a1) => (await sap.listSystems(a)).map((x) => x.name).sort();
+    expect(await names(a1)).toEqual(['S4D']); // the team's
+    expect(await names(r1)).toEqual(['S4D']); // Rui sees the team's, not Ana's private one
+    expect(await names(a2)).toEqual(['Sandbox formação']);
+    const [row] = await admin`select workspace_id from sap_systems where name = 'S4D'`;
+    expect(row!.workspace_id).toBeNull();
+    // the private workspace with SAP data can't be deleted (nothing goes with it)
+    await expect(wsSvc.deleteWorkspace(a1, w2.id)).rejects.toMatchObject({ code: 'workspace_not_empty' });
+    // tickets: the same number in two workspaces, each list only its own
+    const tk = await import('@/server/content/tickets');
+    await tk.createTicket(a1, { number: 'INC0001', summary: 'Trabalho' });
+    await tk.createTicket(a2, { number: 'INC0001', summary: 'Formação' });
+    expect((await tk.listTickets(a1)).tickets.map((x) => x.summary)).toEqual(['Trabalho']);
+    expect((await tk.listTickets(a2)).tickets.map((x) => x.summary)).toEqual(['Formação']);
+    await expect(tk.createTicket(a2, { number: 'inc0001', summary: 'x' })).rejects.toBeTruthy();
+    // deleting Ana deletes her private SAP rows, never the team's
+    await admin`delete from tickets where owner_id = ${ana.user.id}`;
+    await admin`delete from users where id = ${ana.user.id}`;
+    const left = await admin`select name from sap_systems order by name`;
+    expect(left.map((x) => x.name)).toEqual(['S4D']);
   });
 });
