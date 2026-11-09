@@ -246,6 +246,36 @@ export function SapNotesView() {
     }
   };
 
+  /** Takes a system off a note (asks first when it already has a status, date or transport there). */
+  const removeSys = async (n: SapNote, sysId: string) => {
+    const v = n.systems[sysId];
+    if (v && (v.status !== 'new' || v.implOn || v.transportId)) {
+      const ok = await confirm({
+        title: t('sn_removeSys'),
+        body: t('sn_removeSysAsk'),
+        confirmLabel: t('sn_removeSys'),
+        cancelLabel: t('tr_cancel'),
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    setItems(
+      (c) =>
+        c &&
+        c.map((x) => {
+          if (x.id !== n.id) return x;
+          const { [sysId]: _gone, ...rest } = x.systems;
+          return { ...x, systems: rest };
+        }),
+    );
+    try {
+      await api(`/sap/notes/${n.id}/systems/${sysId}`, undefined, 'DELETE');
+    } catch (e) {
+      fail(e);
+      void load().catch(() => {});
+    }
+  };
+
   const create = async (number: number, title = '') => {
     try {
       const { note } = await api<{ note: SapNote }>('/sap/notes', { number, ...(title && { title }) });
@@ -302,7 +332,10 @@ export function SapNotesView() {
       (!fCat || n.category === fCat) &&
       (!fPrio || n.priority === fPrio) &&
       (!fProj || n.projectId === fProj) &&
-      (!fSt || (fSys ? stOf(n, fSys) === fSt : systems.some((s) => stOf(n, s.id) === fSt))) &&
+      (!fSt ||
+        (fSys
+          ? !!n.systems[fSys] && stOf(n, fSys) === fSt
+          : Object.values(n.systems).some((v) => v.status === fSt))) &&
       (!query ||
         String(n.number).includes(query.replace(/^0+/, '')) ||
         [n.title, n.component, ...n.tags].some((v) => v.toLowerCase().includes(query))),
@@ -391,23 +424,6 @@ export function SapNotesView() {
       width: 110,
       sortable: true,
       render: (x) => <span className="kh-sap-mono">{x.releasedOn ?? '—'}</span>,
-    },
-    {
-      key: 'sys',
-      label: t('sn_systems'),
-      width: 200,
-      grow: true,
-      render: (x) => (
-        <span className="kh-sn-dots">
-          {systems.map((s) => (
-            <i
-              key={s.id}
-              title={`${sysLabel(s)} · ${stL(stOf(x, s.id))}`}
-              style={{ background: statusColor(stOf(x, s.id)) }}
-            />
-          ))}
-        </span>
-      ),
     },
   ];
 
@@ -614,15 +630,6 @@ export function SapNotesView() {
                   <span className="kh-tcard__m">
                     {x.component && <span className="kh-sap-mono">{x.component}</span>}
                     {x.releasedOn && <span className="kh-sap-mono">{x.releasedOn}</span>}
-                    <span className="kh-sn-dots">
-                      {systems.map((s) => (
-                        <i
-                          key={s.id}
-                          title={`${sysLabel(s)} · ${stL(stOf(x, s.id))}`}
-                          style={{ background: statusColor(stOf(x, s.id)) }}
-                        />
-                      ))}
-                    </span>
                   </span>
                 </div>
               )}
@@ -721,6 +728,7 @@ export function SapNotesView() {
             when={when}
             upd={(p, d) => upd(act.id, p, d)}
             setStatus={(s, v) => void setStatus(act, s, v)}
+            removeSys={(s) => void removeSys(act, s)}
             onOpen={open}
             onCreate={(n) => void create(n)}
             onRemove={() => void remove(act)}
@@ -756,6 +764,7 @@ function NotePanel({
   when,
   upd,
   setStatus,
+  removeSys,
   onOpen,
   onCreate,
   onRemove,
@@ -772,6 +781,7 @@ function NotePanel({
   when: (iso: string) => string;
   upd: (p: Patch, delay?: number) => void;
   setStatus: (sysId: string, v: Partial<NoteSystem>) => void;
+  removeSys: (sysId: string) => void;
   onOpen: (id: string | null) => void;
   onCreate: (n: number) => void;
   onRemove: () => void;
@@ -972,59 +982,90 @@ function NotePanel({
             <span>{t('sn_statusSys')}</span>
           </div>
           {!systems.length && <div className="kh-sn-muted">{t('sn_noSystems')}</div>}
-          {systems.map((s) => {
-            const v = n.systems[s.id] ?? { status: 'new', implOn: null, transportId: null };
-            const own = transports.filter((x) => !x.junkAt);
-            return (
-              <div key={s.id} className="kh-sn-sysrow" data-st={v.status}>
-                <span className="kh-sn-sysname" title={s.name}>
-                  <i style={{ background: envColor(s.env) }} />
-                  <b className="kh-sap-mono">{sysLabel(s)}</b>
-                  <small>{s.env}</small>
-                </span>
-                <select
-                  className="kh-sn-stsel"
-                  value={v.status}
-                  aria-label={`${t('sn_status')} ${sysLabel(s)}`}
-                  style={{ backgroundColor: statusColor(v.status) }}
-                  onChange={(e) => setStatus(s.id, { status: e.target.value })}
-                >
-                  {NOTE_STATUS.map(([k, l]) => (
-                    <option key={k} value={k}>
-                      {tr(l)}
-                    </option>
-                  ))}
-                </select>
-                <DateInput
-                  className="kh-sap-input kh-sn-date"
-                  value={v.implOn ?? ''}
-                  aria-label={`${t('sn_implOn')} ${sysLabel(s)}`}
-                  title={t('sn_implOn')}
-                  clearable
-                  onChange={(d) => setStatus(s.id, { implOn: d || null })}
-                />
-                {hasTransports && (
+          {!!systems.length && !systems.some((s) => n.systems[s.id]) && (
+            <div className="kh-sn-muted">{t('sn_noSysAdded')}</div>
+          )}
+          {systems
+            .filter((s) => n.systems[s.id])
+            .map((s) => {
+              const v = n.systems[s.id] ?? { status: 'new', implOn: null, transportId: null };
+              const own = transports.filter((x) => !x.junkAt);
+              return (
+                <div key={s.id} className="kh-sn-sysrow" data-st={v.status}>
+                  <span className="kh-sn-sysname" title={s.name}>
+                    <i style={{ background: envColor(s.env) }} />
+                    <b className="kh-sap-mono">{sysLabel(s)}</b>
+                    <small>{s.env}</small>
+                  </span>
                   <select
-                    className="kh-sap-select kh-sn-trsel"
-                    value={v.transportId ?? ''}
-                    aria-label={`${t('sn_trUsed')} ${sysLabel(s)}`}
-                    title={t('sn_trUsed')}
-                    onChange={(e) => setStatus(s.id, { transportId: e.target.value || null })}
+                    className="kh-sn-stsel"
+                    value={v.status}
+                    aria-label={`${t('sn_status')} ${sysLabel(s)}`}
+                    style={{ backgroundColor: statusColor(v.status) }}
+                    onChange={(e) => setStatus(s.id, { status: e.target.value })}
                   >
-                    <option value="">{t('sn_noTr')}</option>
-                    {own.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {trLabel(x)}
+                    {NOTE_STATUS.map(([k, l]) => (
+                      <option key={k} value={k}>
+                        {tr(l)}
                       </option>
                     ))}
-                    {v.transportId && !own.some((x) => x.id === v.transportId) && (
-                      <option value={v.transportId}>{trOf(v.transportId)?.trkorr ?? '—'}</option>
-                    )}
                   </select>
-                )}
-              </div>
-            );
-          })}
+                  <DateInput
+                    className="kh-sap-input kh-sn-date"
+                    value={v.implOn ?? ''}
+                    aria-label={`${t('sn_implOn')} ${sysLabel(s)}`}
+                    title={t('sn_implOn')}
+                    clearable
+                    onChange={(d) => setStatus(s.id, { implOn: d || null })}
+                  />
+                  {hasTransports && (
+                    <select
+                      className="kh-sap-select kh-sn-trsel"
+                      value={v.transportId ?? ''}
+                      aria-label={`${t('sn_trUsed')} ${sysLabel(s)}`}
+                      title={t('sn_trUsed')}
+                      onChange={(e) => setStatus(s.id, { transportId: e.target.value || null })}
+                    >
+                      <option value="">{t('sn_noTr')}</option>
+                      {own.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {trLabel(x)}
+                        </option>
+                      ))}
+                      {v.transportId && !own.some((x) => x.id === v.transportId) && (
+                        <option value={v.transportId}>{trOf(v.transportId)?.trkorr ?? '—'}</option>
+                      )}
+                    </select>
+                  )}
+                  <button
+                    type="button"
+                    className="kh-sn-sysdel"
+                    title={t('sn_removeSys')}
+                    aria-label={`${t('sn_removeSys')} ${sysLabel(s)}`}
+                    onClick={() => removeSys(s.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          {systems.some((s) => !n.systems[s.id]) && (
+            <select
+              className="kh-sap-select kh-sn-sysadd"
+              value=""
+              aria-label={t('sn_addSys')}
+              onChange={(e) => e.target.value && setStatus(e.target.value, { status: 'new' })}
+            >
+              <option value="">+ {t('sn_addSys')}</option>
+              {systems
+                .filter((s) => !n.systems[s.id])
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {sysLabel(s)} · {s.name}
+                  </option>
+                ))}
+            </select>
+          )}
         </div>
 
         <div className="kh-sn-sec">

@@ -1571,5 +1571,9 @@
   "ws_k_whiteboard": "quadros",
   "ws_k1_whiteboard": "quadro",
   "ws_k_request": "pedidos API",
-  "ws_k1_request": "pedido API"
+  "ws_k1_request": "pedido API",
+  "sn_addSys": "Adicionar sistema",
+  "sn_removeSys": "Retirar sistema",
+  "sn_removeSysAsk": "Este sistema já tem estado, data ou ordem de transporte nesta nota. Ao retirá-lo, essa informação perde-se.",
+  "sn_noSysAdded": "Ainda sem sistemas. Adicione os sistemas onde esta nota se aplica."
 }

@@ -126,6 +126,24 @@ test('SAP notes: new note, status in the matrix', async ({ page }) => {
     'href',
     'https://me.sap.com/notes/3089413',
   );
+  // the detail lists only the systems added to the note
+  const panel = page.locator('.kh-sap-panel');
+  await expect(panel.getByText('Ainda sem sistemas.', { exact: false })).toBeVisible();
+  const added = page.waitForResponse((r) => r.url().includes('/systems/') && r.request().method() === 'PUT');
+  const addSel = panel.getByLabel('Adicionar sistema');
+  const s4d = await addSel.locator('option', { hasText: /^S4D\// }).getAttribute('value');
+  await addSel.selectOption(s4d!);
+  expect((await added).ok()).toBe(true);
+  await expect(panel.locator('.kh-sn-sysrow')).toHaveCount(1);
+  await expect(panel.getByLabel('Adicionar sistema').locator('option', { hasText: /^S4D\// })).toHaveCount(0);
+  const gone = page.waitForResponse(
+    (r) => r.url().includes('/systems/') && r.request().method() === 'DELETE',
+  );
+  await panel.getByRole('button', { name: /^Retirar sistema S4D/ }).click();
+  expect((await gone).ok()).toBe(true);
+  await expect(panel.locator('.kh-sn-sysrow')).toHaveCount(0);
+  // no "Sistemas" column in the table any more
+  await expect(page.getByRole('columnheader', { name: 'Sistemas' })).toHaveCount(0);
   await page.getByRole('radio', { name: 'Matriz' }).click();
   const cell = page.getByLabel('3089413 · S4P/100');
   await expect(cell).toHaveValue('new');

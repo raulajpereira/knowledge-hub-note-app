@@ -301,6 +301,21 @@ export async function setNoteSystem(
   });
 }
 
+/** Takes a system off a note (its status, date and transport there go with it). */
+export async function removeNoteSystem(auth: AuthContext, noteId: string, systemId: string) {
+  await asUser(auth, async (tx) => {
+    const [n] = await tx
+      .select({ id: sapNotes.id })
+      .from(sapNotes)
+      .where(and(eq(sapNotes.id, noteId), isNull(sapNotes.deletedAt)));
+    if (!n) throw new ApiError(404, 'not_found');
+    await tx
+      .delete(sapNoteSystems)
+      .where(and(eq(sapNoteSystems.noteId, noteId), eq(sapNoteSystems.systemId, systemId)));
+    await tx.update(sapNotes).set({ updatedAt: new Date() }).where(eq(sapNotes.id, noteId));
+  });
+}
+
 export async function trashSapNote(auth: AuthContext, id: string) {
   await asUser(auth, async (tx) => {
     const r = await tx

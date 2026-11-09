@@ -275,9 +275,36 @@
 }
 .kh-sn-sysrow {
   display: grid;
-  grid-template-columns: minmax(90px, 0.9fr) minmax(120px, 1.1fr) 130px minmax(0, 1.3fr);
+  grid-template-columns: minmax(90px, 0.9fr) minmax(120px, 1.1fr) 130px 28px;
   gap: 6px;
   align-items: center;
+}
+/* the transport used: its own line under the status and the date */
+.kh-sn-sysrow .kh-sn-trsel {
+  grid-row: 2;
+  grid-column: 2 / 4;
+}
+.kh-sn-sysrow + .kh-sn-sysrow {
+  margin-top: 4px;
+}
+.kh-sn-sysdel {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--w) / 0.16);
+  background: rgb(var(--w) / 0.06);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.kh-sn-sysdel:hover {
+  background: oklch(0.72 0.16 25 / 0.3);
+}
+.kh-sn-sysadd {
+  align-self: flex-start;
+  max-width: 100%;
 }
 .kh-sn-sysname {
   display: flex;
@@ -508,6 +535,10 @@
     row-gap: 6px;
     padding: 6px 0 10px;
     border-bottom: 1px solid rgb(var(--w) / 0.08);
+  }
+  .kh-sn-sysrow .kh-sn-trsel {
+    grid-row: auto;
+    grid-column: auto;
   }
   .kh-sn-sysrow :is(select, input) {
     min-height: 44px;

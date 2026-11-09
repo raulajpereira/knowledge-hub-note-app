@@ -1571,5 +1571,9 @@
   "ws_k_whiteboard": "boards",
   "ws_k1_whiteboard": "board",
   "ws_k_request": "API requests",
-  "ws_k1_request": "API request"
+  "ws_k1_request": "API request",
+  "sn_addSys": "Add system",
+  "sn_removeSys": "Remove system",
+  "sn_removeSysAsk": "This system already has a status, date or transport request in this note. Removing it loses that information.",
+  "sn_noSysAdded": "No systems yet. Add the systems this note applies to."
 }
