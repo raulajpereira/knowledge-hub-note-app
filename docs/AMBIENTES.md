@@ -51,8 +51,8 @@ só muda o ambiente a que pertence.
 | 2a | Seletor no cabeçalho + personalização; aparência por ambiente; ambiente ativo por dispositivo (cookie kh_ws) | ✅ produção 06/11 07:28 UTC (contagens iguais) |
 | 2b | Criar/apagar ambientes (só vazio, nunca o último; limite do plano), módulos por ambiente; Notas, pastas, Tarefas, Registos Reuniões, Ficheiros, Notas de Voz, Calendário, Etiquetas, Lixo, contadores, pesquisa, IA e Início só do ambiente ativo; mover itens/pastas com aviso das ligações | ✅ produção 06/11 10:01 UTC (dcb1c05; cópia pre-deploy; contagens iguais) |
 | 3a | Emails, Artefactos, Biblioteca de Código, API Playground, Quadro, Tarefas de Projeto, Modelos, Vistas, Notícias, IA (migração 0054; pastas de Emails/Artefactos/API; Notícias únicas por ambiente; mover artefactos, tarefas de projeto, emails, snippets, quadros, pastas) | ✅ produção 06/11 12:09 UTC (cb66b84; cópia pre-deploy; contagens iguais) |
-| 3b | SAP e Tickets (migração 0055): 1.º ambiente = equipa (dados atuais, workspace_id vazio); outros ambientes com dados SAP/Clientes privados; Tickets por ambiente; números únicos por ambiente | aprovada 09/11; em deploy |
-| 3c | Management | — |
+| 3b | SAP e Tickets (migração 0055): 1.º ambiente = equipa (dados atuais, workspace_id vazio); outros ambientes com dados SAP/Clientes privados; Tickets por ambiente; números únicos por ambiente | ✅ produção 09/11 11:13 UTC (8f2acb8; cópia pre-deploy; contagens iguais) |
+| 3c | Management (migração 0056): regra da 0053; dias das marcações seguem a marcação; mg_settings uma por pessoa e ambiente (a existente no 1.º); "Repor Dados" só no ambiente ativo | aprovada 09/11; em deploy |
 | 4 | Cofre por ambiente | — |
 | 5 | Vista combinada (Calendário, Início, Pesquisa) | — |
 | 6 | Notificações/push por ambiente, atalhos, contadores | — |
