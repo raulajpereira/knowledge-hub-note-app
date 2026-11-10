@@ -949,7 +949,7 @@ export function NotesView() {
     if (!sp.has('import') || !modules.has('import')) return;
     setImportOpen(true);
     replaceParams((p) => p.delete('import'));
-  }, [sp, replaceParams]);
+  }, [sp, replaceParams, modules]);
 
   // Open the first note when none is selected (prototype: NOTES[0]); phones show the list instead.
   useEffect(() => {
