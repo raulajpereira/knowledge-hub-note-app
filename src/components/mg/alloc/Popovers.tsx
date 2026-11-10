@@ -1,5 +1,6 @@
 'use client';
 
+import { bodyZoom } from '@/components/ui/zoom';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -52,8 +53,10 @@ export function Floating({
     const el = ref.current;
     if (!el) return;
     const h = el.offsetHeight;
-    const left = Math.max(10, Math.min(window.innerWidth - w - 10, x));
-    const top = Math.max(10, Math.min(window.innerHeight - h - 10, y));
+    // x/y are screen pixels; the interface scale zooms the body
+    const z = bodyZoom();
+    const left = Math.max(10, Math.min(window.innerWidth / z - w - 10, x / z));
+    const top = Math.max(10, Math.min(window.innerHeight / z - h - 10, y / z));
     setPos({ left, top });
   }, [x, y, w]);
   useEffect(() => {

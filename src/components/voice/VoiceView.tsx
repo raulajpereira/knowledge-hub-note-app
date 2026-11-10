@@ -1,5 +1,6 @@
 'use client';
 
+import { NavIcon } from '@/components/shell/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
@@ -852,7 +853,10 @@ export function VoiceView() {
               onDelete={() => void remove()}
             />
           ) : (
-            <div className="kh-vc-none">{items ? t('v_noActive') : ''}</div>
+            <div className="kh-vc-none">
+              {items && <NavIcon id="voice" size={30} />}
+              {items ? t('v_noActive') : ''}
+            </div>
           )}
         </section>
       </div>

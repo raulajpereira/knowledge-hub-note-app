@@ -1,5 +1,6 @@
 'use client';
 
+import { cssRect } from './zoom';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cx } from './cx';
@@ -85,16 +86,14 @@ export function Select<T extends string>({
   // Position like the prototype: below when there's room, else above.
   useLayoutEffect(() => {
     if (!open || !triggerRef.current || !menuRef.current) return;
-    const r = triggerRef.current.getBoundingClientRect();
+    // in the body's CSS pixels (the interface scale zooms the body)
+    const r = cssRect(triggerRef.current);
     const mh = menuRef.current.offsetHeight;
-    const below = window.innerHeight - r.bottom - 8;
+    const below = r.vh - r.bottom - 8;
     const placeBelow = below >= Math.min(mh, 200) || below > r.top;
     const top = placeBelow ? r.bottom + 6 : Math.max(8, r.top - mh - 6);
     const minW = Math.max(160, r.width);
-    const left = Math.max(
-      8,
-      Math.min(r.left, window.innerWidth - Math.max(minW, menuRef.current.offsetWidth) - 8),
-    );
+    const left = Math.max(8, Math.min(r.left, r.vw - Math.max(minW, menuRef.current.offsetWidth) - 8));
     const maxH = placeBelow && below < mh ? Math.max(120, below - (searchable ? 50 : 14)) : 300;
     setPos({ top, left, minW, maxW: Math.max(320, r.width), maxH });
     // Only on open: the menu must not jump while filtering.

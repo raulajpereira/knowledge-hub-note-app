@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, eq } from 'drizzle-orm';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { db } from '@/db/client';
+import { asSelf } from '@/server/asSelf';
 import { userAssets } from '@/db/schema';
 import { env } from '@/lib/env';
 import { randomToken } from '@/lib/crypto';
@@ -45,10 +45,12 @@ export function sniffImage(buf: Uint8Array): 'image/png' | 'image/jpeg' | 'image
 }
 
 export async function listAssets(userId: string): Promise<Partial<Record<AssetKind, number>>> {
-  const rows = await db()
-    .select({ kind: userAssets.kind, updatedAt: userAssets.updatedAt })
-    .from(userAssets)
-    .where(eq(userAssets.userId, userId));
+  const rows = await asSelf(userId, (tx) =>
+    tx
+      .select({ kind: userAssets.kind, updatedAt: userAssets.updatedAt })
+      .from(userAssets)
+      .where(eq(userAssets.userId, userId)),
+  );
   return Object.fromEntries(rows.map((r) => [r.kind, r.updatedAt.getTime()]));
 }
 
@@ -68,25 +70,28 @@ export async function putAsset(
   const key = `users/${auth.user.id}/${kind}-${randomToken(9)}`;
   const Bucket = env().S3_BUCKET;
   await s3().send(new PutObjectCommand({ Bucket, Key: key, Body: data, ContentType: type }));
-  const [old] = await db()
-    .select({ key: userAssets.storageKey })
-    .from(userAssets)
-    .where(and(eq(userAssets.userId, auth.user.id), eq(userAssets.kind, kind)));
   const now = new Date();
-  await db()
-    .insert(userAssets)
-    .values({
-      userId: auth.user.id,
-      kind,
-      storageKey: key,
-      contentType: type,
-      bytes: data.length,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: [userAssets.userId, userAssets.kind],
-      set: { storageKey: key, contentType: type, bytes: data.length, updatedAt: now },
-    });
+  const old = await asSelf(auth.user.id, async (tx) => {
+    const [prev] = await tx
+      .select({ key: userAssets.storageKey })
+      .from(userAssets)
+      .where(and(eq(userAssets.userId, auth.user.id), eq(userAssets.kind, kind)));
+    await tx
+      .insert(userAssets)
+      .values({
+        userId: auth.user.id,
+        kind,
+        storageKey: key,
+        contentType: type,
+        bytes: data.length,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [userAssets.userId, userAssets.kind],
+        set: { storageKey: key, contentType: type, bytes: data.length, updatedAt: now },
+      });
+    return prev;
+  });
   if (old && old.key !== key)
     await s3()
       .send(new DeleteObjectCommand({ Bucket, Key: old.key }))
@@ -95,10 +100,12 @@ export async function putAsset(
 }
 
 export async function deleteAsset(auth: AuthContext, kind: AssetKind): Promise<void> {
-  const [row] = await db()
-    .delete(userAssets)
-    .where(and(eq(userAssets.userId, auth.user.id), eq(userAssets.kind, kind)))
-    .returning({ key: userAssets.storageKey });
+  const [row] = await asSelf(auth.user.id, (tx) =>
+    tx
+      .delete(userAssets)
+      .where(and(eq(userAssets.userId, auth.user.id), eq(userAssets.kind, kind)))
+      .returning({ key: userAssets.storageKey }),
+  );
   if (row)
     await s3()
       .send(new DeleteObjectCommand({ Bucket: env().S3_BUCKET, Key: row.key }))
@@ -109,10 +116,12 @@ export async function readAsset(
   userId: string,
   kind: AssetKind,
 ): Promise<{ body: Uint8Array; contentType: string; updatedAt: Date } | null> {
-  const [row] = await db()
-    .select()
-    .from(userAssets)
-    .where(and(eq(userAssets.userId, userId), eq(userAssets.kind, kind)));
+  const [row] = await asSelf(userId, (tx) =>
+    tx
+      .select()
+      .from(userAssets)
+      .where(and(eq(userAssets.userId, userId), eq(userAssets.kind, kind))),
+  );
   if (!row) return null;
   const obj = await s3().send(new GetObjectCommand({ Bucket: env().S3_BUCKET, Key: row.storageKey }));
   const body = await obj.Body?.transformToByteArray();

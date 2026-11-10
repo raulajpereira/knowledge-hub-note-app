@@ -105,6 +105,34 @@ describe.skipIf(!enabled)('web push', () => {
       ),
     );
 
+  it('user_prefs is each person’s own under RLS (0059): another user id sees and changes nothing', async () => {
+    const prefs = await import('@/server/prefs');
+    const { sql } = await import('drizzle-orm');
+    const ana = await signedIn('ana@prefs.pt');
+    const rui = await signedIn('rui@prefs.pt');
+    await prefs.patchPrefs(ana.user.id, { theme: 'light' }, new Set());
+    expect((await prefs.getPrefs(ana.user.id)).theme).toBe('light');
+    expect((await prefs.getPrefs(rui.user.id)).theme).toBeUndefined();
+    // as kh_app with Rui's id, Ana's row is invisible and can't be changed
+    const seen = await dbm.db().transaction(async (tx) => {
+      await tx.execute(sql`select set_config('app.user_id', ${rui.user.id}, true)`);
+      const n = (await tx.execute(
+        sql`select count(*)::int n from user_prefs where user_id = ${ana.user.id}`,
+      )) as unknown as Array<{ n: number }>;
+      const u = (await tx.execute(
+        sql`update user_prefs set data = '{}' where user_id = ${ana.user.id} returning 1`,
+      )) as unknown as unknown[];
+      return { n: n[0]!.n, u: u.length };
+    });
+    expect(seen).toEqual({ n: 0, u: 0 });
+    // and without any user id, nothing at all
+    const none = (await dbm.db().execute(sql`select count(*)::int n from user_prefs`)) as unknown as Array<{
+      n: number;
+    }>;
+    expect(none[0]!.n).toBe(0);
+    expect((await prefs.getPrefs(ana.user.id)).theme).toBe('light');
+  });
+
   it('sends new notifications once, to each person’s own devices, with the bell’s words', async () => {
     expect(push.pushConfigured()).toBe(true);
     const ana = await signedIn('ana@push.pt');

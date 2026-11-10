@@ -1,16 +1,14 @@
 import 'server-only';
 import { eq, sql } from 'drizzle-orm';
-import { db } from '@/db/client';
+import { asSelf } from '@/server/asSelf';
 import { userPrefs } from '@/db/schema';
 import { ApiError } from '@/server/errors';
 import { MAX_PREFS_BYTES, mergePrefs, parsePrefsPatch, prefAllowed, type Prefs } from '@/lib/prefs';
 
 export async function getPrefs(userId: string): Promise<Prefs> {
-  const [row] = await db()
-    .select({ data: userPrefs.data })
-    .from(userPrefs)
-    .where(eq(userPrefs.userId, userId))
-    .limit(1);
+  const [row] = await asSelf(userId, (tx) =>
+    tx.select({ data: userPrefs.data }).from(userPrefs).where(eq(userPrefs.userId, userId)).limit(1),
+  );
   return (row?.data as Prefs | undefined) ?? {};
 }
 
@@ -31,7 +29,7 @@ export async function patchPrefs(
     if (v !== null && !prefAllowed(k, v, modules))
       throw new ApiError(403, 'module_not_included', undefined, { key: k });
   }
-  return db().transaction(async (tx) => {
+  return asSelf(userId, async (tx) => {
     await tx.insert(userPrefs).values({ userId, data: {} }).onConflictDoNothing();
     const [row] = await tx
       .select({ data: userPrefs.data })

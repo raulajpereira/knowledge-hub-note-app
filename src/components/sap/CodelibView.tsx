@@ -1,5 +1,6 @@
 'use client';
 
+import { NavIcon } from '@/components/shell/icons';
 import { AiButton } from '@/components/ai/AiButton';
 import { useExplain } from '@/components/ai/useExplain';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -795,7 +796,12 @@ export function CodelibView() {
       </div>
 
       {/* ── object ── */}
-      {!o && <div className="kh-cl-none">{t('cl_noActive')}</div>}
+      {!o && (
+        <div className="kh-cl-none">
+          <NavIcon id="codelib" size={30} />
+          {t('cl_noActive')}
+        </div>
+      )}
       {o && (
         <div className="kh-cl-main">
           {md.phone && <BackBar onBack={md.back} title={o.name} />}

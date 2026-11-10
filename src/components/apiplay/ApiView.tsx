@@ -1,5 +1,6 @@
 'use client';
 
+import { NavIcon } from '@/components/shell/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
@@ -1590,7 +1591,10 @@ export function ApiView() {
             )}
           </div>
         ) : (
-          <div className="kh-em-none">{t('p_noActive')}</div>
+          <div className="kh-em-none">
+            <NavIcon id="api" size={30} />
+            {t('p_noActive')}
+          </div>
         )}
       </section>
       {mover && (

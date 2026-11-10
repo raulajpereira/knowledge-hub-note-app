@@ -682,3 +682,9 @@ fieldset.kh-tk-detail:disabled .kh-tk-donebtn {
     white-space: nowrap;
   }
 }
+
+/* empty detail: icon over the text, like the other pages */
+.kh-tk-none {
+  flex-direction: column;
+  gap: 10px;
+}

@@ -1,5 +1,6 @@
 'use client';
 
+import { NavIcon } from '@/components/shell/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
@@ -1049,7 +1050,10 @@ export function MeetingsView() {
             <Connections key={`${act.id}:${linksKey}`} type="meeting" id={act.id} variant="section" files />
           </div>
         ) : (
-          <div className="kh-em-none">{items && !all.length ? t('mt_empty') : t('mt_noActive')}</div>
+          <div className="kh-em-none">
+            <NavIcon id="meetings" size={30} />
+            {items && !all.length ? t('mt_empty') : t('mt_noActive')}
+          </div>
         )}
       </section>
       {leave && (

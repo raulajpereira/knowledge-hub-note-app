@@ -585,3 +585,9 @@
     font-size: 16px;
   }
 }
+
+/* empty detail: icon over the text, like the other pages */
+.kh-vc-none {
+  flex-direction: column;
+  gap: 10px;
+}

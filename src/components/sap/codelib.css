@@ -1686,3 +1686,9 @@
     padding: 12px 14px 0;
   }
 }
+
+/* empty detail: icon over the text, like the other pages */
+.kh-cl-none {
+  flex-direction: column;
+  gap: 10px;
+}

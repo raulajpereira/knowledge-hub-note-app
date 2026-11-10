@@ -1,5 +1,6 @@
 'use client';
 
+import { NavIcon } from '@/components/shell/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
@@ -1096,7 +1097,10 @@ export function TasksView() {
             onShare={(f) => void moveShared(f)}
           />
         ) : (
-          <div className="kh-tk-none">{items ? t('t_noActive') : ''}</div>
+          <div className="kh-tk-none">
+            {items && <NavIcon id="tasks" size={30} />}
+            {items ? t('t_noActive') : ''}
+          </div>
         )}
       </section>
     </div>

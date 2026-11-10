@@ -278,6 +278,7 @@ export function SystemsView() {
       key: 'name',
       label: t('s_system'),
       width: 200,
+      minWidth: 140,
       sortable: true,
       render: (x) => <span className="kh-sap-strong">{x.name}</span>,
     },
@@ -285,6 +286,8 @@ export function SystemsView() {
       key: 'customer',
       label: t('s_customer'),
       width: 160,
+      minWidth: 112,
+      hide: 5,
       sortable: true,
       render: (x) => cName(x.clientId) || '—',
     },
@@ -292,15 +295,33 @@ export function SystemsView() {
       key: 'sid',
       label: 'SID',
       width: 100,
+      minWidth: 70,
       sortable: true,
       render: (x) => <span className="kh-sap-mono kh-sap-strong">{x.sid || '—'}</span>,
     },
-    { key: 'env', label: t('s_env'), width: 130, sortable: true, render: (x) => envBadge(x.env) },
-    { key: 'type', label: t('s_type'), width: 210, sortable: true, render: (x) => x.type || '—' },
+    {
+      key: 'env',
+      label: t('s_env'),
+      width: 130,
+      minWidth: 91,
+      sortable: true,
+      render: (x) => envBadge(x.env),
+    },
+    {
+      key: 'type',
+      label: t('s_type'),
+      width: 210,
+      minWidth: 147,
+      hide: 4,
+      sortable: true,
+      render: (x) => x.type || '—',
+    },
     {
       key: 'host',
       label: t('s_host'),
       width: 160,
+      minWidth: 112,
+      hide: 3,
       sortable: true,
       render: (x) => <span className="kh-sap-mono">{x.host || '—'}</span>,
     },
@@ -308,6 +329,8 @@ export function SystemsView() {
       key: 'inst',
       label: t('s_inst'),
       width: 110,
+      minWidth: 77,
+      hide: 2,
       sortable: true,
       render: (x) => <span className="kh-sap-mono">{x.inst || '—'}</span>,
     },
@@ -315,6 +338,8 @@ export function SystemsView() {
       key: 'mandt',
       label: t('s_mandt'),
       width: 110,
+      minWidth: 77,
+      hide: 1,
       sortable: true,
       render: (x) => <span className="kh-sap-mono">{x.mandt || '—'}</span>,
     },
@@ -322,6 +347,7 @@ export function SystemsView() {
       key: 'acts',
       label: '',
       width: 90,
+      minWidth: 63,
       grow: true,
       render: (x) => (
         <span className="kh-sap-acts">
@@ -429,7 +455,7 @@ export function SystemsView() {
               onSortChange={setSort}
               emptyLabel={items ? t('s_empty') : ''}
               resizeLabel={t('resize')}
-              minWidth={1100}
+              fit
               card={(x) => (
                 <>
                   <div className="kh-tcard__main">

@@ -67,7 +67,8 @@ export function Sidebar() {
             >
               <Icon name="chevDown" size={12} sw={2.6} />
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {r.name}
+                {/* the Management group in the person's language (Gestão) */}
+                {r.name === 'Management' ? t('nav_mgmt') : r.name}
               </span>
             </button>
           ) : (

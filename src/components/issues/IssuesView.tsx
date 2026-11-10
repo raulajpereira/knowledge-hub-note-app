@@ -6,7 +6,14 @@ import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { fmtDue, localDay } from '@/lib/tasks';
-import { DateInput, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import {
+  DateInput,
+  ResizableTable,
+  useConfirm,
+  usePersistentState,
+  useToast,
+  type Column,
+} from '@/components/ui';
 import { refreshCounts } from '@/components/shell/counts';
 import { Connections } from '@/components/content/Connections';
 import { BackBar, useListDetail } from '@/components/content/MobilePane';
@@ -107,7 +114,6 @@ export function IssuesView() {
     key: 'created',
     dir: -1,
   });
-  const [colW, setColW] = usePersistentState<Partial<Record<Col, number>>>('issues.cols', {});
   const [kanW, setKanW] = usePersistentState<Partial<Record<Status, number>>>('issues.kan', {});
   const [live, setLive] = useState<{ key: string; w: number } | null>(null);
   const [items, setItems] = useState<Issue[] | null>(null);
@@ -241,9 +247,6 @@ export function IssuesView() {
           color: x.status !== 'done' && x.dueOn < today ? 'oklch(calc(.8 * var(--lk)) .13 30)' : undefined,
         }
       : { label: '—', color: 'rgb(var(--t) / calc(.5 * var(--t-k)))' };
-  const width = (c: Col) => (live?.key === `col:${c}` ? live.w : (colW[c] ?? COLS_DEF[c]));
-  const grid = COLS.map((c) => `minmax(${width(c)}px,${width(c)}fr)`).join(' ');
-  const tableW = COLS.reduce((a, c) => a + width(c), 0);
   const kw = (k: Status) => (live?.key === `kan:${k}` ? live.w : (kanW[k] ?? KAN_DEF[k]));
   const nonDone = all.filter((x) => x.status !== 'done').length;
   const a = all.find((x) => x.id === activeId) ?? null;
@@ -292,6 +295,25 @@ export function IssuesView() {
         return <div className="kh-is-td kh-is-td--created">{fmtStamp(x.createdAt)}</div>;
     }
   };
+
+  /** The app's table (fit): the less important columns hide first when there is no room. */
+  const HIDE: Partial<Record<Col, number>> = {
+    created: 1,
+    notes: 2,
+    waiting: 3,
+    desc: 4,
+    project: 5,
+    due: 6,
+  };
+  const tColumns: Array<Column<Issue>> = COLS.map((c) => ({
+    key: c,
+    label: t(`c_${c}`),
+    width: COLS_DEF[c],
+    minWidth: c === 'title' ? 200 : Math.max(96, Math.round(COLS_DEF[c] * 0.6)),
+    hide: HIDE[c],
+    sortable: true,
+    render: (x: Issue) => cell(x, c),
+  }));
 
   // phones: one card per task (the Kanban's card, with its status)
   const mCard = (x: Issue, withStatus: boolean) => {
@@ -470,62 +492,23 @@ export function IssuesView() {
           </div>
         ) : view === 'table' ? (
           <div className="kh-is-table">
-            <div style={{ minWidth: tableW }}>
-              <div className="kh-is-th" style={{ gridTemplateColumns: grid }}>
-                {COLS.map((c) => (
-                  <div key={c} className="kh-is-thc">
-                    <button
-                      type="button"
-                      onClick={() => setSort({ key: c, dir: sort.key === c ? (-sort.dir as 1 | -1) : 1 })}
-                    >
-                      {t(`c_${c}`)}
-                      <span>{sort.key === c ? (sort.dir > 0 ? '▲' : '▼') : ''}</span>
-                    </button>
-                    <div
-                      className="kh-is-rz"
-                      data-on={live?.key === `col:${c}` || undefined}
-                      title={t('resize')}
-                      role="separator"
-                      aria-orientation="vertical"
-                      onDoubleClick={() => setColW({ ...colW, [c]: COLS_DEF[c] })}
-                      onPointerDown={(e) =>
-                        startResize(
-                          e,
-                          width(c),
-                          [80, 700],
-                          (w) => setLive({ key: `col:${c}`, w }),
-                          (w) => {
-                            setLive(null);
-                            setColW({ ...colW, [c]: w });
-                          },
-                        )
-                      }
-                    >
-                      <div />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {sorted.map((x) => (
-                <div
-                  key={x.id}
-                  className="kh-is-tr"
-                  data-on={x.id === activeId || undefined}
-                  style={{ gridTemplateColumns: grid }}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => open(x.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && open(x.id)}
-                >
-                  {COLS.map((c) => (
-                    <div key={c} style={{ display: 'contents' }}>
-                      {cell(x, c)}
-                    </div>
-                  ))}
-                </div>
-              ))}
-              {items && !sorted.length && <div className="kh-is-empty">{t('i_empty')}</div>}
-            </div>
+            <ResizableTable
+              id="issues"
+              fit
+              columns={tColumns}
+              rows={sorted}
+              rowKey={(x) => x.id}
+              onRowClick={(x) => open(x.id)}
+              selectedKey={activeId}
+              sort={{ key: sort.key, dir: sort.dir > 0 ? 'asc' : 'desc' }}
+              onSortChange={(st) =>
+                setSort(
+                  st ? { key: st.key as Col, dir: st.dir === 'asc' ? 1 : -1 } : { key: 'created', dir: -1 },
+                )
+              }
+              emptyLabel={items ? t('i_empty') : ''}
+              resizeLabel={t('resize')}
+            />
           </div>
         ) : (
           <div className="kh-is-kanban">

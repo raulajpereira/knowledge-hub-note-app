@@ -426,6 +426,7 @@ export function TransportsView() {
       key: 'trkorr',
       label: t('o_code'),
       width: 150,
+      minWidth: 105,
       sortable: true,
       render: (x) => <span className="kh-ot-code">{x.trkorr || '—'}</span>,
     },
@@ -433,6 +434,7 @@ export function TransportsView() {
       key: 'desc',
       label: t('i_desc'),
       width: 360,
+      minWidth: 252,
       sortable: true,
       render: (x) => <span className="kh-sap-strong">{x.description || '—'}</span>,
     },
@@ -440,6 +442,8 @@ export function TransportsView() {
       key: 'client',
       label: t('s_customer'),
       width: 140,
+      minWidth: 98,
+      hide: 6,
       sortable: true,
       render: (x) => cName(x.clientId) || '—',
     },
@@ -447,6 +451,8 @@ export function TransportsView() {
       key: 'project',
       label: t('c_project'),
       width: 170,
+      minWidth: 119,
+      hide: 4,
       sortable: true,
       render: (x) => pjName(x.projectId) || '—',
     },
@@ -454,14 +460,18 @@ export function TransportsView() {
       key: 'system',
       label: t('s_system'),
       width: 130,
+      minWidth: 91,
+      hide: 5,
       sortable: true,
       render: (x) => sysById(x.systemId)?.name || '—',
     },
-    { key: 'type', label: t('s_type'), width: 130, sortable: true, render: typeTag },
+    { key: 'type', label: t('s_type'), width: 130, minWidth: 91, hide: 3, sortable: true, render: typeTag },
     {
       key: 'owner',
       label: t('o_createdBy'),
       width: 120,
+      minWidth: 84,
+      hide: 2,
       sortable: true,
       render: (x) => <span className="kh-sap-mono">{x.owner || '—'}</span>,
     },
@@ -469,6 +479,7 @@ export function TransportsView() {
       key: 'status',
       label: t('i_status'),
       width: 240,
+      minWidth: 168,
       sortable: true,
       render: (x) => (
         <span className="kh-ot-steps">
@@ -504,6 +515,8 @@ export function TransportsView() {
       key: 'created',
       label: t('c_created'),
       width: 150,
+      minWidth: 105,
+      hide: 1,
       sortable: true,
       grow: true,
       render: (x) => when(x.createdAt),
@@ -722,7 +735,7 @@ export function TransportsView() {
               onSortChange={setSort}
               emptyLabel={items ? t('o_empty') : ''}
               resizeLabel={t('resize')}
-              minWidth={1300}
+              fit
               card={(x) => (
                 <div className="kh-tcard__main">
                   <div className="kh-tcard__t">

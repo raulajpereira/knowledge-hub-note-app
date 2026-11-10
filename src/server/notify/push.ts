@@ -194,21 +194,31 @@ export async function runPush(): Promise<{ claimed: number; sent: number; gone: 
   }>;
   if (!rows.length) return { claimed: 0, sent: 0, gone: 0, failed: 0 };
   const users = [...new Set(rows.map((r) => r.user_id))];
+  // the ids go as bound parameters: array[$1, $2, …]::uuid[]
+  const uuidArray = sql`array[${sql.join(
+    users.map((u) => sql`${u}`),
+    sql`, `,
+  )}]::uuid[]`;
   // only people whose plan has "Notificações push" (the console's switch)
   const tenantOf = new Map(
     (
-      (await db().execute(
-        sql`select * from kh_user_tenants(${sql.raw(`array[${users.map((u) => `'${u.replace(/[^0-9a-f-]/gi, '')}'`).join(',')}]::uuid[]`)})`,
-      )) as unknown as Array<{ user_id: string; tenant_id: string }>
+      (await db().execute(sql`select * from kh_user_tenants(${uuidArray})`)) as unknown as Array<{
+        user_id: string;
+        tenant_id: string;
+      }>
     ).map((x) => [x.user_id, x.tenant_id]),
   );
   const pushOn = new Map<string, boolean>();
   for (const t of new Set(tenantOf.values()))
     pushOn.set(t, (await getEntitlements(t)).modules.includes('push'));
   const allowed = (u: string) => pushOn.get(tenantOf.get(u) ?? '') === true;
-  const subs = (await db().execute(
-    sql`select * from kh_push_targets(${sql.raw(`array[${users.map((u) => `'${u.replace(/[^0-9a-f-]/gi, '')}'`).join(',')}]::uuid[]`)})`,
-  )) as unknown as Array<{ id: string; user_id: string; endpoint: string; p256dh: string; auth: string }>;
+  const subs = (await db().execute(sql`select * from kh_push_targets(${uuidArray})`)) as unknown as Array<{
+    id: string;
+    user_id: string;
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+  }>;
   let sent = 0;
   let gone = 0;
   let failed = 0;

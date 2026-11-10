@@ -414,6 +414,13 @@
       "when": 1794499200000,
       "tag": "0058_later_features",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794585600000,
+      "tag": "0059_user_rows_rls",
+      "breakpoints": true
     }
   ]
 }

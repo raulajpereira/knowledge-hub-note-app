@@ -72,7 +72,7 @@ const isoToday = () => {
 test('write a record, a task from a to-do, on the Calendar, Trash', async ({ page }) => {
   await login(page);
   await page.goto('app/meetings');
-  await expect(page.getByRole('link', { name: 'Registos Reuniões' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Reuniões/ })).toBeVisible();
   await expect(page.getByText('Ainda sem registos. Crie o primeiro com +.').first()).toBeVisible();
   await page.getByRole('button', { name: 'Novo Registo' }).click();
   // the new record is created on the server first: write once it is open

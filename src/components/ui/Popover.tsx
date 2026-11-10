@@ -1,5 +1,6 @@
 'use client';
 
+import { cssRect } from './zoom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cx } from './cx';
@@ -41,26 +42,33 @@ export function Popover({
   'aria-multiselectable'?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
+  const [pos, setPos] = useState<{
+    top: number;
+    left?: number;
+    right?: number;
+    vw: number;
+    vh: number;
+  } | null>(null);
   const close = useRef(onClose);
   close.current = onClose;
   const asSheet = useViewport() === 'phone' && !!sheet;
 
   useLayoutEffect(() => {
     const place = () => {
-      const r = anchor.current?.getBoundingClientRect();
-      if (!r) return;
-      const vw = window.innerWidth;
+      if (!anchor.current) return;
+      // in the body's CSS pixels (the interface scale zooms the body)
+      const r = cssRect(anchor.current);
+      const { vw, vh } = r;
       // never past the window's edges (narrow screens): slide it back inside
       const w = Math.min(width ?? ref.current?.offsetWidth ?? 0, vw - 16);
       // the natural height (offsetHeight is already capped by the max height below the anchor)
       const h = ref.current?.scrollHeight ?? 0;
-      const up = flip && h > 0 && r.bottom + 6 + h > window.innerHeight - 8 && r.top - 6 - h >= 8;
+      const up = flip && h > 0 && r.bottom + 6 + h > vh - 8 && r.top - 6 - h >= 8;
       const top = up ? r.top - 6 - h : r.bottom + 6;
       setPos(
         align === 'right'
-          ? { top, right: Math.min(Math.max(8, vw - r.right), Math.max(8, vw - 8 - w)) }
-          : { top, left: Math.min(Math.max(8, r.left), Math.max(8, vw - 8 - w)) },
+          ? { top, vw, vh, right: Math.min(Math.max(8, vw - r.right), Math.max(8, vw - 8 - w)) }
+          : { top, vw, vh, left: Math.min(Math.max(8, r.left), Math.max(8, vw - 8 - w)) },
       );
     };
     place();
@@ -115,8 +123,8 @@ export function Popover({
         top: pos.top,
         left: pos.left,
         right: pos.right,
-        width: width === undefined ? undefined : `min(${width}px, calc(100vw - 16px))`,
-        maxHeight: `min(${maxHeight ? `${maxHeight}px` : '100vh'}, calc(100vh - ${Math.round(pos.top) + 16}px))`,
+        width: width === undefined ? undefined : `${Math.min(width, pos.vw - 16)}px`,
+        maxHeight: `${Math.min(maxHeight ?? pos.vh, pos.vh - Math.round(pos.top) - 16)}px`,
       }}
     >
       {children}

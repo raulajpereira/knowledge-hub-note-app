@@ -205,7 +205,7 @@ test('API Playground: folders in a sheet, URL + method + Send in one row, a resp
 test('Tarefas de Projeto: card → task → back; Kanban one column at a time', async ({ page }) => {
   await login(page);
   await page.goto('app/issues');
-  await page.getByRole('button', { name: 'Novo Problema' }).click();
+  await page.getByRole('button', { name: 'Nova Tarefa de Projeto' }).click();
   await expect(page).toHaveURL(/\?i=/);
   await expect(page.locator('.kh-is-main')).toBeHidden();
   await page.getByLabel('Título').fill('Tarefa no telemóvel');

@@ -66,8 +66,8 @@ test.beforeAll(async ({ browser }) => {
 test('create, edit, move on the Kanban, see it on the Calendar, Trash', async ({ page }) => {
   await login(page);
   await page.goto('app/issues');
-  await expect(page.getByText('Sem problemas para este filtro.')).toBeVisible();
-  await page.getByRole('button', { name: 'Novo Problema' }).click();
+  await expect(page.getByText('Sem tarefas de projeto para este filtro.')).toBeVisible();
+  await page.getByRole('button', { name: 'Nova Tarefa de Projeto' }).click();
   const panel = page.locator('.kh-is-panel');
   await panel.getByLabel('Título').fill('IDoc ORDERS05 em erro 51');
   await panel.getByRole('button', { name: 'Crítica' }).click();
@@ -75,12 +75,13 @@ test('create, edit, move on the Kanban, see it on the Calendar, Trash', async ({
   const due = new Date();
   const iso = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
   await panel.getByLabel('Prazo').fill(iso);
-  await expect(page.locator('.kh-is-tr')).toContainText('IDoc ORDERS05 em erro 51');
-  await expect(page.locator('.kh-is-tr')).toContainText('Crítica');
+  await expect(page.locator('.kh-is-table .kh-table__row')).toContainText('IDoc ORDERS05 em erro 51');
+  await expect(page.locator('.kh-is-table .kh-table__row')).toContainText('Crítica');
   await page.waitForTimeout(900); // debounced text fields
 
   await page.reload();
-  await expect(page.locator('.kh-is-tr')).toContainText('Equipa Basis');
+  // the table fits its width: with the detail open "À espera de" is one of the columns that hide
+  await expect(panel.getByLabel('À espera de')).toHaveValue('Equipa Basis');
   await page.getByRole('radio', { name: 'Kanban' }).click();
   await page
     .locator('.kh-is-panel')

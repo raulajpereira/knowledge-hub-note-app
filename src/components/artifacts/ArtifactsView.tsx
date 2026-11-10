@@ -1,5 +1,6 @@
 'use client';
 
+import { NavIcon } from '@/components/shell/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ShareButton } from '@/components/share/ShareButton';
@@ -865,7 +866,10 @@ export function ArtifactsView() {
             </div>
           </div>
         ) : (
-          <div className="kh-em-none">{t('a_noActive')}</div>
+          <div className="kh-em-none">
+            <NavIcon id="artifacts" size={30} />
+            {t('a_noActive')}
+          </div>
         )}
       </section>
       {md.compact && (

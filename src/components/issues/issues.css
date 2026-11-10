@@ -833,3 +833,8 @@
     cursor: pointer;
   }
 }
+
+/* inside the app's table the cell already has its padding */
+.kh-table__td > .kh-is-td {
+  padding: 0;
+}

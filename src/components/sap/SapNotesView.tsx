@@ -437,6 +437,7 @@ export function SapNotesView() {
       key: 'number',
       label: t('sn_number'),
       width: 110,
+      minWidth: 77,
       sortable: true,
       render: (x) => <span className="kh-sap-mono kh-sap-strong">{x.number}</span>,
     },
@@ -444,6 +445,8 @@ export function SapNotesView() {
       key: 'version',
       label: t('sn_version'),
       width: 70,
+      minWidth: 49,
+      hide: 2,
       sortable: true,
       render: (x) => <span className="kh-sap-mono">{x.version}</span>,
     },
@@ -451,6 +454,7 @@ export function SapNotesView() {
       key: 'title',
       label: t('sn_title'),
       width: 320,
+      minWidth: 224,
       sortable: true,
       render: (x) => <span className="kh-sap-strong">{x.title || '—'}</span>,
     },
@@ -458,6 +462,8 @@ export function SapNotesView() {
       key: 'component',
       label: t('sn_component'),
       width: 130,
+      minWidth: 91,
+      hide: 4,
       sortable: true,
       render: (x) => <span className="kh-sap-mono">{x.component || '—'}</span>,
     },
@@ -465,6 +471,8 @@ export function SapNotesView() {
       key: 'category',
       label: t('sn_category'),
       width: 170,
+      minWidth: 119,
+      hide: 3,
       sortable: true,
       render: (x) => catL(x.category) || '—',
     },
@@ -472,6 +480,7 @@ export function SapNotesView() {
       key: 'priority',
       label: t('sn_priority'),
       width: 210,
+      minWidth: 147,
       sortable: true,
       render: (x) => prioPill(x.priority),
     },
@@ -479,6 +488,8 @@ export function SapNotesView() {
       key: 'releasedOn',
       label: t('sn_released'),
       width: 110,
+      minWidth: 77,
+      hide: 1,
       sortable: true,
       render: (x) => <span className="kh-sap-mono">{x.releasedOn ?? '—'}</span>,
     },
@@ -674,7 +685,7 @@ export function SapNotesView() {
               onSortChange={setSort}
               emptyLabel={items ? t('sn_empty') : ''}
               resizeLabel={t('resize')}
-              minWidth={1200}
+              fit
               card={(x) => (
                 <div className="kh-tcard__main">
                   <div className="kh-tcard__t">
