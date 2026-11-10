@@ -170,6 +170,18 @@ jobs:
             cd "$KH_APP_DIR"
             git fetch origin v2
             git reset --hard origin/v2
+            # old app images (one per deploy) filled the disk: keep only the 2 newest of
+            # web and worker; one in use is never removed (rmi without -f refuses it).
+            # Never touches volumes (database, files) nor the backup copies.
+            cleanup_images() {
+              for repo in ghcr.io/raulajpereira/knowledgehub-web ghcr.io/raulajpereira/knowledgehub-worker; do
+                docker images "$repo" --format '{{.CreatedAt}}|{{.ID}}' | sort -r | awk -F'|' '!seen[$2]++ {n++; if (n>2) print $2}' |
+                  while read -r id; do docker rmi "$id" >/dev/null 2>&1 && echo "    removed old image $repo $id" || true; done
+              done
+            }
+            echo "==> disk before: $(df -h / | awk 'NR==2 {print $4 " free of " $2}')"
+            cleanup_images
+            echo "==> disk after the cleanup: $(df -h / | awk 'NR==2 {print $4 " free of " $2}')"
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             export KH_IMAGE_TAG
             docker compose pull web worker migrate postgres
@@ -184,6 +196,8 @@ jobs:
             docker compose up -d --remove-orphans
             docker logout ghcr.io
             docker image prune -f
+            cleanup_images
+            echo "==> disk now: $(df -h / | awk 'NR==2 {print $4 " free of " $2}')"
             for i in $(seq 1 30); do
               if docker compose ps web --format '{{.Health}}' | grep -q healthy; then
                 echo "v2 is healthy ($KH_IMAGE_TAG)"; exit 0
