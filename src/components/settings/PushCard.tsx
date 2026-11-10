@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { ShellContext } from '@/components/shell/ShellContext';
+
+import { useCallback, useEffect, useState, useContext } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import {
@@ -19,7 +21,7 @@ import { Row, Toggle } from './NotifyTab';
 
 type Device = { id: string; device: string; createdAt: string; lastOkAt: string | null };
 
-export function PushCard() {
+function PushCardInner() {
   const { t, lang } = useI18n();
   const toast = useToast();
   const [key, setKey] = useState<string | null | undefined>(undefined);
@@ -132,4 +134,11 @@ export function PushCard() {
       )}
     </div>
   );
+}
+
+/** Shown only when the plan has "push" (console › Planos). */
+export function PushCard() {
+  const shell = useContext(ShellContext);
+  if (shell && !shell.modules.has('push')) return null;
+  return <PushCardInner />;
 }

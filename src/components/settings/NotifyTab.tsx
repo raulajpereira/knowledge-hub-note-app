@@ -290,26 +290,28 @@ export function NotifyTab() {
             })}
           </div>
         )}
-        <div className="kh-set__rows">
-          <Row title={t('nf_email')} desc={t('nf_emailD')}>
-            <Toggle on={p.email} label={t('nf_email')} onChange={setP('email')} />
-          </Row>
-          <Row title={t('nf_summary')} desc={t('nf_summaryD')}>
-            <input
-              type="time"
-              className="kh-sap-input"
-              style={{ width: 132, height: 34, fontSize: 13 }}
-              value={p.summaryTime}
-              disabled={!p.summary}
-              aria-label={t('nf_summaryTime')}
-              onChange={(e) => {
-                if (/^\d{2}:\d{2}$/.test(e.target.value))
-                  void save({ prefs: { summaryTime: e.target.value } });
-              }}
-            />
-            <Toggle on={p.summary} label={t('nf_summary')} onChange={setP('summary')} />
-          </Row>
-        </div>
+        {modules.has('mailnotify') && (
+          <div className="kh-set__rows">
+            <Row title={t('nf_email')} desc={t('nf_emailD')}>
+              <Toggle on={p.email} label={t('nf_email')} onChange={setP('email')} />
+            </Row>
+            <Row title={t('nf_summary')} desc={t('nf_summaryD')}>
+              <input
+                type="time"
+                className="kh-sap-input"
+                style={{ width: 132, height: 34, fontSize: 13 }}
+                value={p.summaryTime}
+                disabled={!p.summary}
+                aria-label={t('nf_summaryTime')}
+                onChange={(e) => {
+                  if (/^\d{2}:\d{2}$/.test(e.target.value))
+                    void save({ prefs: { summaryTime: e.target.value } });
+                }}
+              />
+              <Toggle on={p.summary} label={t('nf_summary')} onChange={setP('summary')} />
+            </Row>
+          </div>
+        )}
         <div className="kh-sg-tip">
           <span>{t('nf_tzT')}</span>
           <span>{t('nf_tz').replace('{tz}', s.tz)}</span>
@@ -318,7 +320,7 @@ export function NotifyTab() {
 
       <PushCard />
 
-      {ib && ibModules && (
+      {ib && ibModules && modules.has('inbound') && (
         <div className="kh-set__card" data-testid="inbound-card">
           <div className="kh-set__head">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

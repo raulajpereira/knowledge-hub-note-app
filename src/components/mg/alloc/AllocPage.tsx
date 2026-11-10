@@ -17,6 +17,7 @@ import { OPT } from '../css';
 import type { Mg } from '../store';
 import { AbsencePop, BookingPop, Fld } from './Popovers';
 import { DownloadIcon, ExportDialog } from './ExportDialog';
+import { useShell } from '@/components/shell/ShellContext';
 import { Timeline, type GroupBy, type Nav, type Unit } from './Timeline';
 import { Grid, type GUnit } from './Grid';
 import { ProjectsView } from './ProjectsView';
@@ -89,6 +90,7 @@ export function AllocPage({ mg }: { mg: Mg }) {
   const filtBtn = useRef<HTMLButtonElement>(null);
   const [filtOpen, setFiltOpen] = useState(false);
   const [expOpen, setExpOpen] = useState(false);
+  const xlsxOn = useShell().modules.has('xlsx');
   const absHelpBtn = useRef<HTMLButtonElement>(null);
   const [absHelp, setAbsHelp] = useState(false);
   const want = sp.get('v');
@@ -365,7 +367,7 @@ export function AllocPage({ mg }: { mg: Mg }) {
             {tr('Filtros')}
             {nFilters > 0 && <span className="n">{nFilters}</span>}
           </button>
-          {view !== 'cap' && (
+          {view !== 'cap' && xlsxOn && (
             <button type="button" className="al-pill" onClick={() => setExpOpen(true)} aria-haspopup="dialog">
               <DownloadIcon />
               {tr('Exportar')}

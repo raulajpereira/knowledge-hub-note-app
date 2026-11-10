@@ -88,6 +88,17 @@ export const WS_EVERYWHERE = [
   'glass',
   'accent',
   'sidebar',
+  // features added later (migration 0058): they follow the plan, not the workspace
+  'push',
+  'mailnotify',
+  'inbound',
+  'import',
+  'xlsx',
+  'publiclinks',
+  'templates',
+  'views',
+  'history',
+  'mg_profit',
 ] as const;
 
 /** The modules a workspace shows: the plan's, the ones chosen for it, and (outside the first one) only the separated ones. */

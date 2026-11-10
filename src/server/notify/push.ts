@@ -1,4 +1,5 @@
 import 'server-only';
+import { getEntitlements } from '@/server/licensing/entitlements';
 import { desc, eq, sql } from 'drizzle-orm';
 import webpush from 'web-push';
 import { db } from '@/db/client';
@@ -193,6 +194,18 @@ export async function runPush(): Promise<{ claimed: number; sent: number; gone: 
   }>;
   if (!rows.length) return { claimed: 0, sent: 0, gone: 0, failed: 0 };
   const users = [...new Set(rows.map((r) => r.user_id))];
+  // only people whose plan has "Notificações push" (the console's switch)
+  const tenantOf = new Map(
+    (
+      (await db().execute(
+        sql`select * from kh_user_tenants(${sql.raw(`array[${users.map((u) => `'${u.replace(/[^0-9a-f-]/gi, '')}'`).join(',')}]::uuid[]`)})`,
+      )) as unknown as Array<{ user_id: string; tenant_id: string }>
+    ).map((x) => [x.user_id, x.tenant_id]),
+  );
+  const pushOn = new Map<string, boolean>();
+  for (const t of new Set(tenantOf.values()))
+    pushOn.set(t, (await getEntitlements(t)).modules.includes('push'));
+  const allowed = (u: string) => pushOn.get(tenantOf.get(u) ?? '') === true;
   const subs = (await db().execute(
     sql`select * from kh_push_targets(${sql.raw(`array[${users.map((u) => `'${u.replace(/[^0-9a-f-]/gi, '')}'`).join(',')}]::uuid[]`)})`,
   )) as unknown as Array<{ id: string; user_id: string; endpoint: string; p256dh: string; auth: string }>;
@@ -212,6 +225,7 @@ export async function runPush(): Promise<{ claimed: number; sent: number; gone: 
       },
       r.lang === 'en' ? 'en' : 'pt',
     );
+    if (!allowed(r.user_id)) continue;
     for (const s of subs) {
       if (s.user_id !== r.user_id || dead.has(s.id)) continue;
       const res = await sendTo(s, p);

@@ -47,6 +47,8 @@ export const MODULE_GROUPS: ReadonlyArray<{
       ['mg_staff', 'Pesquisar Recursos', 'Resource Finder'],
       ['mg_time', 'Folhas de Tempos', 'Timesheets'],
       ['mg_clients', 'Clientes', 'Clients'],
+      // migration 0058: the projects' profitability block
+      ['mg_profit', 'Rentabilidade', 'Profitability'],
     ],
   },
   {
@@ -85,6 +87,16 @@ export const MODULE_GROUPS: ReadonlyArray<{
       ['share', 'Partilha', 'Sharing'],
       ['news', 'SAP News', 'SAP News'],
       ['ai', 'Assistente IA', 'AI Assistant'],
+      // migration 0058: features added after the first plans (on in every plan at first)
+      ['push', 'Notificações push', 'Push notifications'],
+      ['mailnotify', 'Notificações por email', 'Email notifications'],
+      ['inbound', 'Email para a app', 'Email to the app'],
+      ['import', 'Importar notas', 'Import notes'],
+      ['xlsx', 'Exportar para Excel', 'Export to Excel'],
+      ['publiclinks', 'Links públicos', 'Public links'],
+      ['templates', 'Modelos', 'Templates'],
+      ['views', 'Vistas guardadas', 'Saved views'],
+      ['history', 'Histórico de versões', 'Version history'],
     ],
   },
   {
@@ -121,6 +133,20 @@ export type PlanDef = {
   modules: string[];
   isPopular?: boolean;
 };
+
+/** Features added later (migration 0058): every plan has them at first; the console turns them off. */
+export const LATER_FEATURES = [
+  'push',
+  'mailnotify',
+  'inbound',
+  'import',
+  'xlsx',
+  'publiclinks',
+  'templates',
+  'views',
+  'history',
+  'mg_profit',
+] as const;
 
 // [name, colour, €/user/month, annual discount %, modules] — prototype `AP`.
 export const PLANS: PlanDef[] = (
@@ -216,7 +242,7 @@ export const PLANS: PlanDef[] = (
   color,
   price,
   annualDiscountPct: disc,
-  modules: expand([...mods]),
+  modules: [...new Set([...expand([...mods]), ...LATER_FEATURES])],
 }));
 
 // FREE creation limits (DATA_MODEL.md §3; prototype defaults).

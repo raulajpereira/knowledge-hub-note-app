@@ -13,9 +13,11 @@ export const GET = handler(async (req) => {
   if (sp.has('type')) {
     const { itemType, itemId } = Item.parse({ itemType: sp.get('type'), itemId: sp.get('id') });
     const auth = await requireContent(mod(itemType));
+    await requireModuleFor(auth, 'publiclinks');
     return json({ link: await linkFor(auth, itemType, itemId) });
   }
   const auth = await requireContent('share');
+  await requireModuleFor(auth, 'publiclinks');
   return json({ links: await listLinks(auth) });
 });
 
@@ -23,6 +25,7 @@ export const GET = handler(async (req) => {
 export const POST = handler(async (req) => {
   const { itemType, itemId } = await body(req, Item);
   const auth = await requireContent(mod(itemType));
+  await requireModuleFor(auth, 'publiclinks');
   await requireModuleFor(auth, 'share');
   return json({ link: await createLink(auth, itemType, itemId) }, { status: 201 });
 });

@@ -75,9 +75,11 @@ export function Sidebar() {
           ),
         )}
       </nav>
-      <Suspense>
-        <SidebarViews />
-      </Suspense>
+      {modules.has('views') && (
+        <Suspense>
+          <SidebarViews />
+        </Suspense>
+      )}
       <div className="kh-aside__fill" />
 
       {tier === 'FREE' && (

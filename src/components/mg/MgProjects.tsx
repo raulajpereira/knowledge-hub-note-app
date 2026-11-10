@@ -13,6 +13,7 @@ import type { Mg } from './store';
 import { XlsxButton } from '@/components/content/XlsxButton';
 import { downloadTableXlsx, xlsxName } from '@/lib/client/xlsxTable';
 import { ProjectProfit } from './ProjectProfit';
+import { useShell } from '@/components/shell/ShellContext';
 import { Popover, useConfirm } from '@/components/ui';
 import { ModChips, modChip, ModulePicker, moduleOptions } from './ModulePicker';
 import { useI18n } from '@/i18n/client';
@@ -55,6 +56,7 @@ export function mgNewProject(mg: Mg, p: Partial<MgProject>): MgProject {
 // Projetos (prototype isProjects): list with status filter, budget KPIs,
 // phases on a timeline, the allocated team and the resource requests.
 export function MgProjects({ mg }: { mg: Mg }) {
+  const { modules } = useShell();
   const sp = useSearchParams();
   const confirm = useConfirm();
   const { t: tx } = useI18n();
@@ -526,7 +528,7 @@ export function MgProjects({ mg }: { mg: Mg }) {
             },
           ]}
         />
-        <ProjectProfit mg={mg} sel={sel} />
+        {modules.has('mg_profit') && <ProjectProfit mg={mg} sel={sel} />}
         <div style={css('display:flex;flex-direction:column;gap:10px;')}>
           <div style={css('display:flex;align-items:center;gap:10px;')}>
             <span style={css('font-size:16px;font-weight:600;margin-right:auto;')}>{L(31)}</span>

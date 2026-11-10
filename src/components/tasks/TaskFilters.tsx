@@ -35,7 +35,8 @@ export function TaskFiltersButton({
 }: {
   value: TaskExtra;
   onChange: (p: Partial<TaskExtra>) => void;
-  onSave: () => void;
+  /** absent: the plan has no "Vistas guardadas" */
+  onSave?: () => void;
 }) {
   const { t } = useI18n();
   const { projects } = useMgOptions();
@@ -133,16 +134,18 @@ export function TaskFiltersButton({
               >
                 {t('vw_clear')}
               </button>
-              <button
-                type="button"
-                className="kh-vf__btn"
-                onClick={() => {
-                  setOpen(false);
-                  onSave();
-                }}
-              >
-                ★ {t('vw_save')}
-              </button>
+              {onSave && (
+                <button
+                  type="button"
+                  className="kh-vf__btn"
+                  onClick={() => {
+                    setOpen(false);
+                    onSave();
+                  }}
+                >
+                  ★ {t('vw_save')}
+                </button>
+              )}
             </div>
           </div>
         </Popover>

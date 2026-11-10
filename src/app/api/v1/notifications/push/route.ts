@@ -4,6 +4,7 @@ import { requireAuth } from '@/server/auth/request';
 import { allow } from '@/server/auth/rateLimit';
 import { ApiError } from '@/server/errors';
 import { listDevices, pushPublicKey, sendTest, subscribe, unsubscribe } from '@/server/notify/push';
+import { requireModuleFor } from '@/server/workspaces';
 
 // Web Push (Definições › Notificações › "Neste dispositivo"):
 // GET    → { key: VAPID public key | null (feature off), devices }
@@ -13,12 +14,14 @@ import { listDevices, pushPublicKey, sendTest, subscribe, unsubscribe } from '@/
 
 export const GET = handler(async () => {
   const auth = await requireAuth();
+  await requireModuleFor(auth, 'push');
   const key = pushPublicKey();
   return json({ key, devices: key ? await listDevices(auth) : [] });
 });
 
 export const POST = handler(async (req) => {
   const auth = await requireAuth();
+  await requireModuleFor(auth, 'push');
   if (new URL(req.url).searchParams.get('test')) {
     if (!(await allow(`push-test:${auth.user.id}`, 10, 3600)))
       throw new ApiError(429, 'rate_limited', 'Too many tests');
@@ -43,6 +46,7 @@ export const POST = handler(async (req) => {
 
 export const DELETE = handler(async (req) => {
   const auth = await requireAuth();
+  await requireModuleFor(auth, 'push');
   const b = await body(req, z.object({ endpoint: z.url().max(1000).optional(), id: z.uuid().optional() }));
   await unsubscribe(auth, b);
   return json({ ok: true });

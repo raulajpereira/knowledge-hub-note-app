@@ -18,6 +18,11 @@ x-app-env: &app-env
   S3_ENDPOINT: http://minio:9000
   # semantic search: web asks the worker (internal network only) for query vectors
   EMBED_URL: http://worker:3210
+  # semantic search and OCR turned off for now (decision 10/11/2026): search by
+  # keyword only, no text read from images. Here, so .env can't turn them back on;
+  # nothing already indexed is deleted. To turn them on again: 'on' and redeploy.
+  SEMANTIC_SEARCH: 'off'
+  OCR: 'off'
 
 x-app: &app
   env_file: .env

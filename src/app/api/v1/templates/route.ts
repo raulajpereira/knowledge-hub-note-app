@@ -3,6 +3,7 @@ import { body, handler, json } from '@/server/http';
 import { MG_MODULES, requireAnyContent, requireContent } from '@/server/content/guard';
 import { listTemplates, saveTemplate } from '@/server/content/templates';
 import { TPL_KINDS, tplModule, type TplKind } from '@/lib/templates';
+import { requireModuleFor } from '@/server/workspaces';
 
 const Kind = z.enum(TPL_KINDS);
 const TplCreate = z.object({
@@ -23,11 +24,13 @@ const gate = (kind: TplKind) =>
 export const GET = handler(async (req) => {
   const kind = Kind.parse(new URL(req.url).searchParams.get('kind'));
   const auth = await gate(kind);
+  await requireModuleFor(auth, 'templates');
   return json({ templates: await listTemplates(auth, kind) });
 });
 
 export const POST = handler(async (req) => {
   const input = await body(req, TplCreate);
   const auth = await gate(input.kind);
+  await requireModuleFor(auth, 'templates');
   return json({ template: await saveTemplate(auth, input) }, { status: 201 });
 });

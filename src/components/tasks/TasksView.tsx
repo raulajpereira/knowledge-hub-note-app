@@ -575,7 +575,7 @@ export function TasksView() {
   const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
-  const { focus } = useShell();
+  const { focus, modules } = useShell();
   const [savedFilter, setSavedFilter] = usePersistentState<'active' | 'done' | 'all'>(
     'tasks.filter',
     'active',
@@ -841,7 +841,11 @@ export function TasksView() {
                 aria-label={t('t_search')}
               />
             </label>
-            <TaskFiltersButton value={extra} onChange={(p) => setT(p)} onSave={() => setSaveOpen(true)} />
+            <TaskFiltersButton
+              value={extra}
+              onChange={(p) => setT(p)}
+              onSave={modules.has('views') ? () => setSaveOpen(true) : undefined}
+            />
             <button
               type="button"
               className="kh-tk-new"

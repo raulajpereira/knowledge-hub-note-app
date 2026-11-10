@@ -564,7 +564,8 @@ function EditorCard({
   onBack?: () => void;
   note: Note;
   /** opens "Histórico" (versions) */
-  onHistory: () => void;
+  /** absent: the plan has no "Histórico de versões" */
+  onHistory?: () => void;
   folder: { name: string; color: string };
   /** a note of a shared folder the caller can only read */
   readOnly: boolean;
@@ -612,16 +613,18 @@ function EditorCard({
           <span className="kh-nt-crumb__cur">{title || t('ne_untitled')}</span>
         </div>
         <div style={{ flex: 1 }} />
-        <button
-          type="button"
-          className="kh-nt-round"
-          style={{ color: 'rgb(var(--t) / calc(.75 * var(--t-k)))' }}
-          title={t('hist_title')}
-          aria-label={t('hist_title')}
-          onClick={onHistory}
-        >
-          <Svg d={P.history} size={16} sw={2} />
-        </button>
+        {onHistory && (
+          <button
+            type="button"
+            className="kh-nt-round"
+            style={{ color: 'rgb(var(--t) / calc(.75 * var(--t-k)))' }}
+            title={t('hist_title')}
+            aria-label={t('hist_title')}
+            onClick={onHistory}
+          >
+            <Svg d={P.history} size={16} sw={2} />
+          </button>
+        )}
         {readOnly ? (
           <span className="kh-nt-ro">{t('sh_readOnly')}</span>
         ) : (
@@ -780,7 +783,7 @@ export function NotesView() {
   const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
-  const { me, focus, query } = useShell();
+  const { me, focus, query, modules } = useShell();
   const [savedFilter, setSavedFilter] = usePersistentState<string>('notes.filter', 'all');
   // A saved view (or a shared link) puts its filters in the URL: ?view=&f=&tag=&tm=&days=&q=
   const urlKey = NOTE_VIEW_KEYS.map((k) => sp.getAll(k).join(',')).join('|');
@@ -943,7 +946,7 @@ export function NotesView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- listKey covers filter + query + view filters
   }, [listKey, listRev]);
   useEffect(() => {
-    if (!sp.has('import')) return;
+    if (!sp.has('import') || !modules.has('import')) return;
     setImportOpen(true);
     replaceParams((p) => p.delete('import'));
   }, [sp, replaceParams]);
@@ -1234,30 +1237,36 @@ export function NotesView() {
           onFolders={md.compact ? () => setFoldersOpen(true) : undefined}
           tools={
             <>
-              <button
-                type="button"
-                className="kh-vf-toggle"
-                title={t('imp_btn')}
-                aria-label={t('imp_btn')}
-                onClick={() => setImportOpen(true)}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+              {modules.has('import') && (
+                <button
+                  type="button"
+                  className="kh-vf-toggle"
+                  title={t('imp_btn')}
+                  aria-label={t('imp_btn')}
+                  onClick={() => setImportOpen(true)}
                 >
-                  <path d="M12 4v11" />
-                  <path d="M7 10l5 5 5-5" />
-                  <path d="M5 20h14" />
-                </svg>
-              </button>
-              <NoteFiltersButton value={extra} onChange={setExtra} onSave={() => setSaveOpen(true)} />
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 4v11" />
+                    <path d="M7 10l5 5 5-5" />
+                    <path d="M5 20h14" />
+                  </svg>
+                </button>
+              )}
+              <NoteFiltersButton
+                value={extra}
+                onChange={setExtra}
+                onSave={modules.has('views') ? () => setSaveOpen(true) : undefined}
+              />
             </>
           }
           below={<NoteFiltersActive value={extra} onChange={setExtra} />}
@@ -1311,10 +1320,14 @@ export function NotesView() {
           folder={curFolder}
           onPatch={patch}
           onDelete={() => void trashNote()}
-          onHistory={() => {
-            // the history starts from what is saved: send pending edits first
-            void flush().then(() => setHistOpen(true));
-          }}
+          onHistory={
+            modules.has('history')
+              ? () => {
+                  // the history starts from what is saved: send pending edits first
+                  void flush().then(() => setHistOpen(true));
+                }
+              : undefined
+          }
           readOnly={readOnly}
           sharedBy={note.mine ? null : (noteShared?.owner?.name ?? '')}
           onBack={md.phone ? md.back : undefined}

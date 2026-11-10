@@ -10,7 +10,8 @@ import { ApiError } from '@/server/errors';
 export type Entitlements = { modules: string[]; limits: Record<string, number> };
 
 const TTL_S = 60;
-const key = (tenantId: string) => `kh:ent:${tenantId}`;
+// v2: migration 0058 added modules — a new key so no cached list from before it is used
+const key = (tenantId: string) => `kh:ent2:${tenantId}`;
 
 export async function computeEntitlements(tenantId: string): Promise<Entitlements> {
   const [t] = await db()

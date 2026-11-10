@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { ShellContext } from '@/components/shell/ShellContext';
+
+import { useState, useContext } from 'react';
 import { useToast } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
 
 /** "Exportar .xlsx" of a list: a glass pill with a download icon (busy while the file is built). */
-export function XlsxButton({ onExport, compact }: { onExport: () => Promise<void>; compact?: boolean }) {
+function XlsxButtonInner({ onExport, compact }: { onExport: () => Promise<void>; compact?: boolean }) {
   const { t } = useI18n();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -47,4 +49,11 @@ export function XlsxButton({ onExport, compact }: { onExport: () => Promise<void
       {!compact && <span>{busy ? t('xl_busy') : t('xl_export')}</span>}
     </button>
   );
+}
+
+/** Shown only when the plan has "xlsx" (console › Planos). */
+export function XlsxButton(props: Parameters<typeof XlsxButtonInner>[0]) {
+  const shell = useContext(ShellContext);
+  if (shell && !shell.modules.has('xlsx')) return null;
+  return <XlsxButtonInner {...props} />;
 }

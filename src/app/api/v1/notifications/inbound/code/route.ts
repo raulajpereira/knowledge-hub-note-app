@@ -4,6 +4,7 @@ import { ApiError } from '@/server/errors';
 import { allow } from '@/server/auth/rateLimit';
 import { requireAuth } from '@/server/auth/request';
 import { checkInboundCode, setInboundCode } from '@/server/notify/service';
+import { requireModuleFor } from '@/server/workspaces';
 
 // "Email para a app": the person's own code (kh.entrada+<code>@…). Checks and
 // saves share one budget of 30 a minute per person, so the check can't be
@@ -17,6 +18,7 @@ const limited = async (userId: string) => {
 /** GET /notifications/inbound/code?code=… — { status: available | taken | invalid | reserved } */
 export const GET = handler(async (req) => {
   const auth = await requireAuth();
+  await requireModuleFor(auth, 'inbound');
   await limited(auth.user.id);
   const code = new URL(req.url).searchParams.get('code') ?? '';
   return json({ status: await checkInboundCode(auth, code.slice(0, 64)) });
@@ -25,6 +27,7 @@ export const GET = handler(async (req) => {
 /** PUT /notifications/inbound/code { code } — 409 code_taken, 400 invalid_code / reserved_code */
 export const PUT = handler(async (req) => {
   const auth = await requireAuth();
+  await requireModuleFor(auth, 'inbound');
   await limited(auth.user.id);
   const { code } = await body(req, z.object({ code: z.string().max(64) }));
   return json({ settings: await setInboundCode(auth, code) });

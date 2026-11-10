@@ -93,7 +93,7 @@ export async function processMessage(raw: Buffer, base: string, now = new Date()
     .where(eq(tenants.id, o.tenant_id));
   if (!t || t.deletedAt || !['trial', 'active', 'past_due'].includes(t.status)) return { status: 'tenant' };
   const { modules } = await getEntitlements(o.tenant_id);
-  if (!modules.includes(MODULE_OF[o.target])) return { status: 'module' };
+  if (!modules.includes('inbound') || !modules.includes(MODULE_OF[o.target])) return { status: 'module' };
 
   // the same message twice (a retry after a crash, two workers): handled once
   const msgKey = createHash('sha256')

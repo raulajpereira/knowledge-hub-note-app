@@ -30,7 +30,7 @@ const ICON = (
 /**
  * The prototype's "Partilhar" button of a note (solid pill with a green dot
  * when the public link is on) or of an artifact (round icon, green when on).
- * Hidden without the `share` module.
+ * Hidden without the `share` and `publiclinks` modules.
  */
 export function ShareButton({
   itemType,
@@ -49,7 +49,7 @@ export function ShareButton({
   const { modules } = useShell();
   const [open, setOpen] = useState(false);
   const [shared, setShared] = useState(false);
-  const can = modules.has('share');
+  const can = modules.has('share') && modules.has('publiclinks');
   useEffect(() => {
     if (!can) return;
     let on = true;

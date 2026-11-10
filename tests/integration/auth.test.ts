@@ -5,6 +5,7 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { eq, sql } from 'drizzle-orm';
+import { LATER_FEATURES } from '@/server/licensing/catalog';
 
 // Phase 2 business rules end-to-end through the real services, Postgres and
 // Redis (acceptance criteria of ROADMAP Fase 1/2 + SECURITY.md §2).
@@ -240,7 +241,8 @@ describe.skipIf(!enabled)('auth, codes and entitlements', () => {
     await registerAndVerify('f@z.pt', free.code);
     const auth = await session.resolveSession(await loginToken('f@z.pt'));
     const e = await ent.getEntitlements(auth!.tenant.id);
-    expect(e.modules).toEqual(['notes', 'tasks']);
+    // FREE = notes + tasks, plus the later features every plan starts with (0058)
+    expect(e.modules).toEqual(['notes', 'tasks', ...LATER_FEATURES].sort());
     expect(e.limits).toMatchObject({ notes: 30, tasks: 20 });
     await expect(ent.requireModule(auth!.tenant.id, 'passwords')).rejects.toMatchObject({
       code: 'module_not_included',

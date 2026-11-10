@@ -352,11 +352,13 @@ export async function runNotify(now = new Date(), opts: { email?: string } = {})
       if (!m) mods.set(p.tenantId, (m = new Set((await getEntitlements(p.tenantId)).modules)));
       const r = await generateFor(p, m, now);
       out.people++;
-      if (r.prefs.email && r.mailable.length) {
+      // "Notificações por email" (the console's switch): no instant emails nor daily summary
+      const mail = m.has('mailnotify');
+      if (mail && r.prefs.email && r.mailable.length) {
         await mailInstant(p, r.mailable);
         out.mailed += r.mailable.length;
       }
-      if (summaryDue(r.prefs, r.minutes) && (await dailySummary(p, m, r.day))) out.summaries++;
+      if (mail && summaryDue(r.prefs, r.minutes) && (await dailySummary(p, m, r.day))) out.summaries++;
     } catch (e) {
       out.failed++;
       console.error('[notify] failed for user', p.id, e);

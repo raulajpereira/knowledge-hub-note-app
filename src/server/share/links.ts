@@ -11,6 +11,7 @@ import { env } from '@/lib/env';
 import { s3 } from '@/lib/storage';
 import { ApiError } from '@/server/errors';
 import { audit } from '@/server/audit';
+import { getEntitlements } from '@/server/licensing/entitlements';
 import { hashPassword, verifyPassword } from '@/server/auth/password';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser, type Tx } from '@/server/content/tenant';
@@ -195,6 +196,8 @@ export async function findLink(token: string): Promise<Found | null> {
   const f = (Array.isArray(rows) ? rows : rows.rows)[0];
   if (!f) return null;
   if (f.expires_on && String(f.expires_on).slice(0, 10) < today()) return null;
+  // the owner's plan no longer has "Links públicos": the link stops opening (kept, not deleted)
+  if (!(await getEntitlements(f.tenant_id)).modules.includes('publiclinks')) return null;
   return { ...f, expires_on: f.expires_on ? String(f.expires_on).slice(0, 10) : null };
 }
 

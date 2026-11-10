@@ -11,7 +11,17 @@ import type { ShellMe } from '@/components/shell/types';
 import { prefsFor, entitlementsFor } from '@/server/workspaces';
 import { getEntitlements } from '@/server/licensing/entitlements';
 
-const COMBINED_FEATURES = new Set(['brand', 'bgphoto', 'typeface', 'glass', 'accent', 'sidebar']);
+const COMBINED_FEATURES = new Set([
+  'brand',
+  'bgphoto',
+  'typeface',
+  'glass',
+  'accent',
+  'sidebar',
+  'push',
+  'mailnotify',
+  'inbound',
+]);
 
 export const dynamic = 'force-dynamic';
 

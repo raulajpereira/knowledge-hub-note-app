@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ShellContext } from '@/components/shell/ShellContext';
+
+import { useCallback, useEffect, useRef, useState, useContext } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { builtinTemplates, type Tpl, type TplBody, type TplKind } from '@/lib/templates';
@@ -30,7 +32,7 @@ const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
   />
 );
 
-export function TemplateButton({
+function TemplateButtonInner({
   kind,
   onPick,
   compact,
@@ -148,7 +150,7 @@ export function TemplateButton({
 }
 
 /** "Guardar como modelo": asks for a name and saves what `body()` returns. */
-export function SaveTemplateButton({
+function SaveTemplateButtonInner({
   kind,
   body,
   defaultName,
@@ -238,4 +240,18 @@ export function SaveTemplateButton({
       </Modal>
     </>
   );
+}
+
+/** Shown only when the plan has "templates" (console › Planos). */
+export function TemplateButton(props: Parameters<typeof TemplateButtonInner>[0]) {
+  const shell = useContext(ShellContext);
+  if (shell && !shell.modules.has('templates')) return null;
+  return <TemplateButtonInner {...props} />;
+}
+
+/** Shown only when the plan has "templates" (console › Planos). */
+export function SaveTemplateButton(props: Parameters<typeof SaveTemplateButtonInner>[0]) {
+  const shell = useContext(ShellContext);
+  if (shell && !shell.modules.has('templates')) return null;
+  return <SaveTemplateButtonInner {...props} />;
 }
