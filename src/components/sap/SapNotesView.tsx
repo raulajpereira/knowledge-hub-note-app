@@ -377,6 +377,61 @@ export function SapNotesView() {
     ) : (
       '—'
     );
+  /** Matrix: the note, then one column per system (the status fills it; empty when not added). */
+  const mColumns: Array<Column<SapNote>> = [
+    {
+      key: 'number',
+      label: t('sn_number'),
+      width: 110,
+      render: (x) => <span className="kh-sap-mono kh-sap-strong">{x.number}</span>,
+    },
+    {
+      key: 'title',
+      label: t('sn_title'),
+      width: 280,
+      grow: true,
+      render: (x) => <span className="kh-sap-strong">{x.title || '—'}</span>,
+    },
+    ...mSystems.map((s): Column<SapNote> => ({
+      key: `sys-${s.id}`,
+      width: 130,
+      minWidth: 90,
+      grow: false,
+      label: (
+        <span className="kh-sn-msys" title={s.name}>
+          <i style={{ background: envColor(s.env) }} />
+          {sysLabel(s)}
+          <span className="kh-sn-menv">{s.env}</span>
+        </span>
+      ),
+      cellClassName: 'kh-sn-mtd',
+      render: (n) => {
+        if (!n.systems[s.id])
+          return (
+            <span className="kh-sn-mnone" aria-label={`${n.number} · ${sysLabel(s)} · ${t('sn_notAdded')}`} />
+          );
+        const st = stOf(n, s.id);
+        return (
+          <select
+            className="kh-sn-mcell"
+            value={st}
+            aria-label={`${n.number} · ${sysLabel(s)}`}
+            title={`${stL(st)}${n.systems[s.id]?.implOn ? ` · ${n.systems[s.id]!.implOn}` : ''}`}
+            style={{ backgroundColor: statusColor(st) }}
+            data-st={st}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => void setStatus(n, s.id, { status: e.target.value })}
+          >
+            {NOTE_STATUS.map(([k, l]) => (
+              <option key={k} value={k}>
+                {tr(l)}
+              </option>
+            ))}
+          </select>
+        );
+      },
+    })),
+  ];
   const columns: Array<Column<SapNote>> = [
     {
       key: 'number',
@@ -642,65 +697,17 @@ export function SapNotesView() {
             {!mSystems.length ? (
               <div className="kh-sap-empty">{systems.length ? t('sn_noSysMatrix') : t('sn_noSystems')}</div>
             ) : (
-              <table className="kh-sn-matrix" aria-label={t('sn_matrix')}>
-                <thead>
-                  <tr>
-                    <th scope="col" className="kh-sn-mnote">
-                      {t('sn_note')}
-                    </th>
-                    {mSystems.map((s) => (
-                      <th key={s.id} scope="col" title={s.name}>
-                        <span className="kh-sn-msys">
-                          <i style={{ background: envColor(s.env) }} />
-                          {sysLabel(s)}
-                        </span>
-                        <span className="kh-sn-menv">{s.env}</span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((n) => (
-                    <tr key={n.id} data-on={n.id === activeId || undefined}>
-                      <th scope="row" className="kh-sn-mnote">
-                        <button type="button" onClick={() => open(n.id)}>
-                          <span className="kh-sap-mono kh-sap-strong">{n.number}</span>
-                          <span>{n.title || '—'}</span>
-                        </button>
-                      </th>
-                      {mSystems.map((s) => {
-                        const st = stOf(n, s.id);
-                        // a system not added to this note: an empty cell
-                        if (!n.systems[s.id])
-                          return (
-                            <td key={s.id} className="kh-sn-mnone">
-                              <span aria-label={`${n.number} · ${sysLabel(s)} · ${t('sn_notAdded')}`} />
-                            </td>
-                          );
-                        return (
-                          <td key={s.id}>
-                            <select
-                              className="kh-sn-mcell"
-                              value={st}
-                              aria-label={`${n.number} · ${sysLabel(s)}`}
-                              title={`${stL(st)}${n.systems[s.id]?.implOn ? ` · ${n.systems[s.id]!.implOn}` : ''}`}
-                              style={{ backgroundColor: statusColor(st) }}
-                              data-st={st}
-                              onChange={(e) => void setStatus(n, s.id, { status: e.target.value })}
-                            >
-                              {NOTE_STATUS.map(([k, l]) => (
-                                <option key={k} value={k}>
-                                  {tr(l)}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <ResizableTable
+                id={`sapnotes-matrix-${mSystems.length}`}
+                columns={mColumns}
+                rows={sorted}
+                rowKey={(x) => x.id}
+                onRowClick={(x) => open(x.id)}
+                selectedKey={activeId}
+                emptyLabel={items ? t('sn_empty') : ''}
+                resizeLabel={t('resize')}
+                minWidth={360 + mSystems.length * 120}
+              />
             )}
             <div className="kh-sn-legend">
               {NOTE_STATUS.map(([k, l, c]) => (
@@ -716,7 +723,6 @@ export function SapNotesView() {
                 </span>
               ))}
             </div>
-            {items && !sorted.length && <div className="kh-sap-empty">{t('sn_empty')}</div>}
           </div>
         )}
       </div>
