@@ -198,6 +198,10 @@ test('weather: location picker from the banner and the popup, °F, kept after re
   await picker.getByRole('radio', { name: '°C' }).click();
   await picker.getByRole('button', { name: /Lisboa/ }).click();
   await expect(banner.locator('.kh-wx__place')).toContainText('Lisboa');
+  // the preference is saved a moment later: confirm °C is stored before the next test reads it
+  await page.waitForTimeout(1200);
+  await page.reload();
+  await expect(banner.locator('.kh-wx__temp')).toHaveText('20°');
 });
 
 test('weather: error and retry on the banner; phone sheet opens a day inline', async ({ browser }) => {
