@@ -86,22 +86,31 @@
   padding: 0 22px 22px;
 }
 .kh-sn-matrix {
+  width: 100%;
   border-collapse: separate;
   border-spacing: 4px;
   font-size: 12.5px;
 }
+/* the header and the note column: the glass of the app's tables */
 .kh-sn-matrix th {
   font-weight: 600;
   text-align: center;
-  vertical-align: bottom;
-  padding: 4px 6px;
+  vertical-align: middle;
+  height: 46px;
+  padding: 4px 10px;
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 1;
-  background: rgba(40, 30, 24, 0.55);
-  backdrop-filter: blur(12px);
-  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.2 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.1 * var(--sf-k)))
+  );
+  backdrop-filter: blur(var(--kh-blur-header, 24px)) saturate(160%);
+  border: 1px solid rgb(var(--w) / 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  border-radius: 14px;
 }
 .kh-sn-msys {
   display: flex;
@@ -125,14 +134,23 @@
   text-align: left;
   left: 0;
   z-index: 2;
+  width: 40%;
   min-width: 260px;
-  max-width: 380px;
+  max-width: 520px;
+  padding: 4px 14px;
 }
 .kh-sn-matrix tbody th.kh-sn-mnote {
   position: sticky;
   top: auto;
-  background: rgba(40, 30, 24, 0.45);
+  height: auto;
   padding: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(var(--sf) / calc(0.14 * var(--sf-k))),
+    rgb(var(--sf) / calc(0.07 * var(--sf-k)))
+  );
+  border-color: rgb(var(--w) / 0.1);
+  box-shadow: none;
 }
 .kh-sn-mnote button {
   display: flex;
@@ -163,12 +181,15 @@
 }
 .kh-sn-matrix td {
   padding: 0;
+  vertical-align: middle;
 }
+/* the status fills its system's column, the text centred */
 .kh-sn-mcell {
-  width: 132px;
-  height: 34px;
+  display: block;
+  width: 100%;
+  height: 36px;
   padding: 0 8px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid rgb(var(--w) / 0.16);
   color: var(--ink);
   font: inherit;
