@@ -2051,3 +2051,119 @@ button.kh-wx__chip {
 .kh-wxm--sheet .kh-wxd > .kh-wx__body {
   padding: 10px max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left));
 }
+
+/* PC: the banner twice as tall, everything in it scaled to match */
+@container (min-width: 900px) {
+  .kh-wxb__body {
+    min-height: 300px;
+    padding: 30px 34px;
+    gap: 20px 36px;
+    flex-wrap: nowrap;
+  }
+  .kh-wxb__left {
+    flex: 0 1 auto;
+    gap: 18px;
+  }
+  .kh-wxb .kh-wx__hero {
+    gap: 20px;
+  }
+  .kh-wxb .kh-wx__heroicon svg {
+    width: 96px;
+    height: 96px;
+  }
+  .kh-wxb .kh-wx__temp {
+    font-size: 100px;
+  }
+  .kh-wxb .kh-wx__cond {
+    gap: 6px;
+    font-size: 16px;
+  }
+  .kh-wxb .kh-wx__cond b {
+    font-size: 26px;
+  }
+  .kh-wxb__chips {
+    gap: 10px;
+  }
+  .kh-wxb :is(.kh-wxb__chips .kh-wx__chip, .kh-wx__place) {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 14.5px;
+  }
+  .kh-wxb__right {
+    flex: 1 1 480px;
+    max-width: 640px;
+    gap: 14px;
+  }
+  .kh-wxb__hours {
+    gap: 4px;
+    padding: 14px 8px;
+    border-radius: 26px;
+  }
+  .kh-wxb__hours > span {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 64px;
+    gap: 6px;
+  }
+  .kh-wxb__hours small {
+    font-size: 15px;
+  }
+  .kh-wxb__hours svg {
+    width: 46px;
+    height: 46px;
+  }
+  .kh-wxb__hours b {
+    font-size: 20px;
+  }
+  .kh-wxb__hours i {
+    min-height: 16px;
+    font-size: 13px;
+  }
+  .kh-wxb__hint,
+  .kh-wxb__msg {
+    gap: 8px;
+    font-size: 15px;
+  }
+}
+@container (min-width: 900px) {
+  .kh-wxb .kh-wx__cond b {
+    white-space: nowrap;
+  }
+}
+/* a narrower PC window: the same height, a little smaller inside */
+@container (min-width: 900px) and (max-width: 1060px) {
+  .kh-wxb__body {
+    padding: 28px 26px;
+    gap: 18px 24px;
+  }
+  .kh-wxb .kh-wx__heroicon svg {
+    width: 76px;
+    height: 76px;
+  }
+  .kh-wxb .kh-wx__temp {
+    font-size: 84px;
+  }
+  .kh-wxb .kh-wx__cond b {
+    font-size: 22px;
+  }
+  .kh-wxb__chips {
+    gap: 8px;
+  }
+  .kh-wxb :is(.kh-wxb__chips .kh-wx__chip, .kh-wx__place) {
+    padding: 0 12px;
+    font-size: 13.5px;
+  }
+  .kh-wxb__right {
+    flex-basis: 400px;
+  }
+  .kh-wxb__hours > span {
+    min-width: 54px;
+  }
+  .kh-wxb__hours svg {
+    width: 40px;
+    height: 40px;
+  }
+  .kh-wxb__hours b {
+    font-size: 18px;
+  }
+}
