@@ -274,15 +274,11 @@ export function TransportsView() {
 
   const create = async () => {
     const one = (k: FKey) => (fOn(k) && filters[k]!.length === 1 ? filters[k]![0]! : null);
-    const proj = projects.find((p) => p.id === one('proj'));
-    const client = one('client') ?? (proj?.client || null);
-    const dev = systems.filter((s) => s.env === 'DEV');
-    const sys = one('sys') ?? (dev.find((s) => client && s.clientId === client) ?? dev[0])?.id ?? null;
     try {
+      // a new request starts with client, project and system empty
       const { transport } = await api<{ transport: Transport }>('/sap/transports', {
-        systemId: sys,
-        clientId: client,
-        ...(proj ? { projectId: proj.id } : {}),
+        systemId: null,
+        clientId: null,
         ...(one('type') ? { type: one('type') } : {}),
       });
       refreshCounts();
@@ -906,6 +902,10 @@ export function TransportsView() {
                       {
                         clientId: v,
                         ...(act.projectId && (!p || p.client !== (v ?? '')) ? { projectId: null } : {}),
+                        // the system follows the client: one of another client is cleared
+                        ...(v && act.systemId && sysById(act.systemId)?.clientId !== v
+                          ? { systemId: null }
+                          : {}),
                       },
                       0,
                     );
@@ -930,7 +930,13 @@ export function TransportsView() {
                     // prototype: picking a project sets its client
                     upd(
                       act.id,
-                      { projectId: p?.id ?? null, ...(p?.client ? { clientId: p.client } : {}) },
+                      {
+                        projectId: p?.id ?? null,
+                        ...(p?.client ? { clientId: p.client } : {}),
+                        ...(p?.client && act.systemId && sysById(act.systemId)?.clientId !== p.client
+                          ? { systemId: null }
+                          : {}),
+                      },
                       0,
                     );
                   }}
@@ -949,14 +955,28 @@ export function TransportsView() {
                   className="kh-sap-select"
                   aria-label={t('s_system')}
                   value={act.systemId ?? ''}
-                  onChange={(e) => upd(act.id, { systemId: e.target.value || null }, 0)}
+                  onChange={(e) => {
+                    const sy = sysById(e.target.value || null);
+                    // a system picked without a client brings its client
+                    upd(
+                      act.id,
+                      {
+                        systemId: sy?.id ?? null,
+                        ...(!act.clientId && sy?.clientId ? { clientId: sy.clientId } : {}),
+                      },
+                      0,
+                    );
+                  }}
                 >
                   <option value="">—</option>
-                  {systems.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.sid})
-                    </option>
-                  ))}
+                  {/* only the client's systems once a client is chosen */}
+                  {systems
+                    .filter((s) => !act.clientId || s.clientId === act.clientId)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.sid})
+                      </option>
+                    ))}
                 </select>
               </label>
               <label className="kh-sap-fld">
