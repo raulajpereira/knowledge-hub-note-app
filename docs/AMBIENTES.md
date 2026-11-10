@@ -54,8 +54,8 @@ só muda o ambiente a que pertence.
 | 3b | SAP e Tickets (migração 0055): 1.º ambiente = equipa (dados atuais, workspace_id vazio); outros ambientes com dados SAP/Clientes privados; Tickets por ambiente; números únicos por ambiente | ✅ produção 09/11 11:13 UTC (8f2acb8; cópia pre-deploy; contagens iguais) |
 | 3c | Management (migração 0056): regra da 0053; dias das marcações seguem a marcação; mg_settings uma por pessoa e ambiente (a existente no 1.º); "Repor Dados" só no ambiente ativo | ✅ produção 09/11 11:58 UTC (2e8d64e; cópia pre-deploy; contagens iguais) |
 | 4 | Cofre por ambiente (migração 0057): um cofre por ambiente, com palavra-passe mestra e chave de recuperação próprias; o existente fica no 1.º; proteção de dois separadores (409 workspace_changed) | ✅ produção 09/11 15:46 UTC (658b03b; cópia pre-deploy; contagens iguais, 7 passwords) |
-| 5 | Vista combinada "Todos os ambientes" (kh_ws=all): só consulta (409 combined_readonly); Início e Calendário (bolinha do ambiente; abrir muda para o ambiente do item); pesquisa em todos | aprovada 09/11; em deploy |
-| 6 | Notificações/push por ambiente, atalhos, contadores | — |
+| 5 | Vista combinada "Todos os ambientes" (kh_ws=all): só consulta (409 combined_readonly); Início e Calendário (bolinha do ambiente; abrir muda para o ambiente do item); pesquisa em todos | ✅ produção 09/11 17:04 UTC (b5e4eab; cópia pre-deploy; contagens iguais) |
+| 6 | Notificações por ambiente (escolha em Definições › Notificações; meta.ws; o sino e o push abrem no ambiente do item), Alt+1…9 / Alt+0 | aprovada 10/11; em deploy |
 
 ## Produção antes da fase 1 (log do deploy de 06/11/2026 00:08 UTC)
 
