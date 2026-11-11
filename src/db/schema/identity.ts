@@ -128,6 +128,26 @@ export const tenantModules = pgTable(
   (t) => [primaryKey({ columns: [t.tenantId, t.moduleId] })],
 );
 
+/**
+ * Pricing policy: a module taken out of a plan stays with the clients that
+ * already had it until their renewal (at least 30 days); they are told by
+ * email. Entitlements add these until `until` (migration 0061).
+ */
+export const tenantModuleGrace = pgTable(
+  'tenant_module_grace',
+  {
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    moduleId: text('module_id')
+      .notNull()
+      .references(() => modules.id),
+    until: timestamp('until', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tenantId, t.moduleId] })],
+);
+
 // ── Users & sessions ────────────────────────────────────────────────────────
 export const users = pgTable(
   'users',

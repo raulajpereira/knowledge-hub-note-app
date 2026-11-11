@@ -105,6 +105,27 @@ describe.skipIf(!enabled)('plans, requests and license job', () => {
     expect((await ent.getEntitlements(user.tenant.id)).modules).toContain('codelib');
     dev = (await plansSvc.plansFull()).plans.find((p) => p.code === 'DEVELOPER')!;
     expect(dev.modules).not.toContain('nope');
+    // pricing policy: taken out again, the client keeps it (renewal or 30 days) and its admin is emailed
+    await plansSvc.setPlanModules(
+      ctx,
+      'DEVELOPER',
+      dev.modules.filter((m) => m !== 'codelib'),
+    );
+    expect((await ent.getEntitlements(user.tenant.id)).modules).toContain('codelib');
+    expect((await plansSvc.plansFull()).plans.find((p) => p.code === 'DEVELOPER')!.modules).not.toContain(
+      'codelib',
+    );
+    const [g] =
+      await admin`select until from tenant_module_grace where tenant_id = ${user.tenant.id} and module_id = 'codelib'`;
+    expect(new Date(g!.until as string).getTime() - Date.now()).toBeGreaterThan(29 * 86_400_000);
+    expect((await mails('featureEnding')).length).toBeGreaterThanOrEqual(1);
+    // a new client of the plan doesn't get it
+    const other = await signedIn('rui@kh.pt', 'DEVELOPER');
+    expect((await ent.getEntitlements(other.tenant.id)).modules).not.toContain('codelib');
+    // put back: the grace ends (the plan gives it again)
+    await plansSvc.setPlanModules(ctx, 'DEVELOPER', [...dev.modules]);
+    expect((await admin`select 1 from tenant_module_grace where module_id = 'codelib'`).length).toBe(0);
+    expect((await ent.getEntitlements(user.tenant.id)).modules).toContain('codelib');
     // FREE limits (empty = unlimited)
     await plansSvc.setLimits(ctx, 'FREE', { notes: 50, voice: null });
     const free = (await plansSvc.plansFull()).plans.find((p) => p.code === 'FREE')!;

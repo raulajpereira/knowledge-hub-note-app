@@ -8,6 +8,23 @@ type Copy = { subject: string; title: string; body: string; cta?: string; foot: 
 
 const COPY: Record<string, Record<Lang, Copy>> = {
   // a reminder or a meeting about to start (Definições › Notificações › email)
+  // pricing policy: a module taken out of the client's plan (kept until the renewal, at least 30 days)
+  featureEnding: {
+    pt: {
+      subject: 'Alteração ao plano {plan} · KnowledgeHub',
+      title: 'Uma alteração ao seu plano',
+      body: 'O plano {plan} de {client} deixa de incluir: {features}.\n\nComo já as tinha, continuam disponíveis até {date}. Até lá pode exportar o que precisar ou falar connosco para manter estas funcionalidades.',
+      cta: 'Abrir o KnowledgeHub',
+      foot: 'Recebe este email por ser administrador desta conta no KnowledgeHub.',
+    },
+    en: {
+      subject: 'Change to the {plan} plan · KnowledgeHub',
+      title: 'A change to your plan',
+      body: "{client}'s {plan} plan no longer includes: {features}.\n\nAs you already had them, they stay available until {date}. Until then you can export what you need or contact us to keep these features.",
+      cta: 'Open KnowledgeHub',
+      foot: 'You receive this email as an administrator of this account in KnowledgeHub.',
+    },
+  },
   notify: {
     pt: {
       subject: '{subject} · KnowledgeHub',

@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { planLimits, planModules, tenantModules, tenants } from '@/db/schema';
+import { planLimits, planModules, tenantModuleGrace, tenantModules, tenants } from '@/db/schema';
 import { redis } from '@/lib/redis';
 import { ApiError } from '@/server/errors';
 
@@ -20,7 +20,7 @@ export async function computeEntitlements(tenantId: string): Promise<Entitlement
     .where(eq(tenants.id, tenantId))
     .limit(1);
   if (!t) return { modules: [], limits: {} };
-  const [fromPlan, extra, lim] = await Promise.all([
+  const [fromPlan, extra, lim, grace] = await Promise.all([
     t.planId
       ? db().select({ m: planModules.moduleId }).from(planModules).where(eq(planModules.planId, t.planId))
       : [],
@@ -29,8 +29,15 @@ export async function computeEntitlements(tenantId: string): Promise<Entitlement
       .from(tenantModules)
       .where(eq(tenantModules.tenantId, tenantId)),
     t.planId ? db().select().from(planLimits).where(eq(planLimits.planId, t.planId)) : [],
+    // taken out of the plan, kept until the renewal (at least 30 days)
+    db()
+      .select({ m: tenantModuleGrace.moduleId })
+      .from(tenantModuleGrace)
+      .where(and(eq(tenantModuleGrace.tenantId, tenantId), gt(tenantModuleGrace.until, new Date()))),
   ]);
-  const modules = [...new Set([...fromPlan.map((r) => r.m), ...extra.map((r) => r.m)])].sort();
+  const modules = [
+    ...new Set([...fromPlan.map((r) => r.m), ...extra.map((r) => r.m), ...grace.map((r) => r.m)]),
+  ].sort();
   const limits = Object.fromEntries(lim.map((l) => [l.resource, l.max]));
   return { modules, limits };
 }

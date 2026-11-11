@@ -36,7 +36,7 @@ async function removePrefix(prefix: string) {
   }
 }
 
-async function adminsOf(tenantId: string, fallback: string | null) {
+export async function adminsOf(tenantId: string, fallback: string | null) {
   const rows = await db()
     .select({ email: users.email, lang: users.lang })
     .from(users)

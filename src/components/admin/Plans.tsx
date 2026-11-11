@@ -162,6 +162,11 @@ export function Plans() {
     <>
       <SectionHead title={A(SEC_TITLE.plans[0])} sub={A(SEC_TITLE.plans[1])} />
       <div className="kh-ad-body">
+        <p style={{ margin: '0 0 14px', fontSize: 13, opacity: 0.75 }}>
+          {A(
+            'Ao desligar uma funcionalidade num plano, os clientes atuais desse plano mantêm-na até à renovação (no mínimo 30 dias) e os administradores recebem um email.',
+          )}
+        </p>
         <div
           style={{
             display: 'grid',

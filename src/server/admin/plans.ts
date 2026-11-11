@@ -1,7 +1,22 @@
 import 'server-only';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { consoleSettings, modules, planLimits, planModules, plans, tenants } from '@/db/schema';
+import {
+  consoleSettings,
+  modules,
+  planLimits,
+  planModules,
+  plans,
+  tenantModuleGrace,
+  tenants,
+} from '@/db/schema';
+import { adminsOf } from '@/server/jobs/licenses';
+import { sendMail } from '@/server/mail/send';
+import { renderMail } from '@/server/mail/templates';
+import { env } from '@/lib/env';
+
+/** Pricing policy: the least a client keeps a module taken out of its plan. */
+export const GRACE_DAYS = 30;
 import { ApiError } from '@/server/errors';
 import { audit } from '@/server/audit';
 import { invalidateEntitlements } from '@/server/licensing/entitlements';
@@ -122,15 +137,63 @@ export async function setPlanModules(ctx: AdminCtx, code: string, ids: string[])
   const added = next.filter((m) => !cur.includes(m));
   const removed = cur.filter((m) => !next.includes(m));
   if (!added.length && !removed.length) return;
-  await db().transaction(async (tx) => {
+  // Pricing policy: the clients already on this plan keep what is taken out until
+  // their renewal (at least 30 days) and are told by email; put back, the grace ends.
+  const graced = await db().transaction(async (tx) => {
     if (removed.length)
       await tx
         .delete(planModules)
         .where(and(eq(planModules.planId, p.id), inArray(planModules.moduleId, removed)));
-    if (added.length)
+    if (added.length) {
       await tx.insert(planModules).values(added.map((moduleId) => ({ planId: p.id, moduleId })));
+      await tx
+        .delete(tenantModuleGrace)
+        .where(
+          and(
+            inArray(tenantModuleGrace.moduleId, added),
+            sql`${tenantModuleGrace.tenantId} in (select id from tenants where plan_id = ${p.id})`,
+          ),
+        );
+    }
+    if (!removed.length) return [];
+    const ts = await tx
+      .select({ id: tenants.id, name: tenants.name, renewAt: tenants.renewAt, contact: tenants.contactEmail })
+      .from(tenants)
+      .where(and(eq(tenants.planId, p.id), isNull(tenants.deletedAt)));
+    const min = new Date(Date.now() + GRACE_DAYS * 86_400_000);
+    for (const t of ts)
+      await tx
+        .insert(tenantModuleGrace)
+        .values(
+          removed.map((moduleId) => ({
+            tenantId: t.id,
+            moduleId,
+            until: t.renewAt && t.renewAt > min ? t.renewAt : min,
+          })),
+        )
+        .onConflictDoNothing();
+    return ts.map((t) => ({ ...t, until: t.renewAt && t.renewAt > min ? t.renewAt : min }));
   });
   await refresh(p.id);
+  if (graced.length) {
+    const names = new Map(
+      (await db().select({ id: modules.id, pt: modules.labelPt, en: modules.labelEn }).from(modules)).map(
+        (m) => [m.id, m],
+      ),
+    );
+    for (const t of graced)
+      for (const a of await adminsOf(t.id, t.contact))
+        await sendMail(
+          renderMail('featureEnding', a.lang, a.email, `${env().APP_URL.replace(/\/$/, '')}/app`, {
+            plan: code,
+            client: t.name,
+            features: removed
+              .map((m) => (a.lang === 'en' ? names.get(m)?.en : names.get(m)?.pt) ?? m)
+              .join(', '),
+            date: t.until.toLocaleDateString(a.lang === 'en' ? 'en-GB' : 'pt-PT'),
+          }),
+        ).catch((e: unknown) => console.error('[plans] grace email failed', t.id, e));
+  }
   await audit({
     action: 'plan.modules',
     actorUserId: ctx.user.id,
