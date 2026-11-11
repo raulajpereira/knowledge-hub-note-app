@@ -882,5 +882,7 @@
   "tl_askDel": "Delete this entry?",
   "tl_askDelB": "It goes to the Trash; its hours leave the timesheet (they come back if you restore it).",
   "tl_now": "Now",
-  "tl_total": "Total"
+  "tl_total": "Total",
+  "ne_wikiTitle": "Link to…",
+  "ne_wikiNone": "Nothing found. Keep typing."
 }

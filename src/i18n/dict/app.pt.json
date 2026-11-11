@@ -882,5 +882,7 @@
   "tl_askDel": "Apagar este registo?",
   "tl_askDelB": "Vai para o Lixo; as horas saem da folha de tempos (voltam se o recuperar).",
   "tl_now": "Agora",
-  "tl_total": "Total"
+  "tl_total": "Total",
+  "ne_wikiTitle": "Ligar a…",
+  "ne_wikiNone": "Nada encontrado. Continue a escrever."
 }

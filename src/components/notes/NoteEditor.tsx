@@ -12,7 +12,8 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import { useI18n } from '@/i18n/client';
 import { useToast } from '@/components/ui';
 import { Callout, LinkCard, NoteCodeBlock, NoteImage } from './extensions';
-import { itemHref } from '@/components/content/Connections';
+import { itemHref, LINKS_EVENT } from '@/components/content/Connections';
+import { bodyZoom } from '@/components/ui/zoom';
 import { notesApi, type Candidate } from './notesApi';
 import { shrinkImage as shrink } from './shrinkImage';
 
@@ -573,3 +574,119 @@ export function InsertBar({
 }
 
 export { EditorContent };
+
+/**
+ * "[[" in a note: a list of the items it can link to (notes, tasks, meetings,
+ * tickets…); picking one replaces "[[text" by a link to it and adds the link
+ * between both items ("Ligações" shows it on each side).
+ */
+export function WikiLinkPopup({ editor, noteId }: { editor: Editor; noteId: string }) {
+  const { t } = useI18n();
+  useEditorTick(editor);
+  const [found, setFound] = useState<Candidate[]>([]);
+  const [act, setAct] = useState(0);
+  const [closedAt, setClosedAt] = useState<number | null>(null);
+  const { $from, empty } = editor.state.selection;
+  const before = empty
+    ? $from.parent.textBetween(Math.max(0, $from.parentOffset - 80), $from.parentOffset, undefined, '\ufffc')
+    : '';
+  const m = /\[\[([^[\]\n\ufffc]{0,60})$/.exec(before);
+  const open = !!m && editor.isFocused && closedAt !== $from.pos - (m?.[0].length ?? 0);
+  const q = m?.[1] ?? '';
+  const start = $from.pos - (m?.[0].length ?? 0);
+
+  useEffect(() => {
+    if (!open) return;
+    let on = true;
+    const h = setTimeout(() => {
+      notesApi
+        .candidates(noteId, q.trim())
+        .then((r) => {
+          if (!on) return;
+          setFound(r.items.slice(0, 8));
+          setAct(0);
+        })
+        .catch(() => on && setFound([]));
+    }, 150);
+    return () => {
+      on = false;
+      clearTimeout(h);
+    };
+  }, [open, q, noteId]);
+
+  const pick = useCallback(
+    (c: Candidate) => {
+      const title = c.title || t('ne_untitled');
+      editor
+        .chain()
+        .focus()
+        .insertContentAt({ from: start, to: editor.state.selection.from }, [
+          { type: 'text', text: title, marks: [{ type: 'link', attrs: { href: itemHref(c.type, c.id) } }] },
+          { type: 'text', text: ' ' },
+        ])
+        .run();
+      void notesApi
+        .link(noteId, { type: c.type, id: c.id })
+        .then(() =>
+          window.dispatchEvent(new CustomEvent(LINKS_EVENT, { detail: { type: 'note', id: noteId } })),
+        )
+        .catch(() => {});
+    },
+    [editor, start, noteId, t],
+  );
+
+  // the editor keeps the focus: the arrows, Enter and Escape are taken here while the list is open
+  useEffect(() => {
+    if (!open) return;
+    const dom = editor.view.dom;
+    const key = (e: KeyboardEvent) => {
+      if (!dom.contains(e.target as Node)) return;
+      if (e.key === 'Escape') setClosedAt(start);
+      else if (!found.length) return;
+      else if (e.key === 'ArrowDown') setAct((a) => (a + 1) % found.length);
+      else if (e.key === 'ArrowUp') setAct((a) => (a - 1 + found.length) % found.length);
+      else if (e.key === 'Enter' || e.key === 'Tab') pick(found[act]!);
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', key, true);
+    return () => window.removeEventListener('keydown', key, true);
+  }, [open, found, act, pick, editor, start]);
+
+  if (!open) return null;
+  const z = bodyZoom();
+  const c = editor.view.coordsAtPos($from.pos);
+  const left = Math.min(c.left / z, window.innerWidth / z - 340);
+  const top = c.bottom / z + 6;
+  return (
+    <div
+      className="kh-popover kh-ne-wiki"
+      role="listbox"
+      aria-label={t('ne_wikiTitle')}
+      style={{ left, top }}
+    >
+      <div className="kh-ne-wiki__h">{t('ne_wikiTitle')}</div>
+      {found.length === 0 ? (
+        <div className="kh-ne-wiki__none">{t('ne_wikiNone')}</div>
+      ) : (
+        found.map((x, i) => (
+          <button
+            key={`${x.type}:${x.id}`}
+            type="button"
+            role="option"
+            aria-selected={i === act}
+            data-on={i === act || undefined}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              pick(x);
+            }}
+          >
+            <span className="kh-ne-wiki__t">{x.title || t('ne_untitled')}</span>
+            <span className="kh-ne-wiki__k">{t(`act_k_${x.type}`)}</span>
+          </button>
+        ))
+      )}
+    </div>
+  );
+}

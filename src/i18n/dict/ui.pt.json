@@ -1583,5 +1583,8 @@
   "ws_combinedRo": "Na vista \"Todos os ambientes\" só se consulta. Escolhe um ambiente para criar ou alterar.",
   "nf_ws": "Ambientes",
   "nf_wsD": "Notificar só sobre itens destes ambientes. Uma notificação abre o item no seu ambiente.",
-  "act_k_time": "Registo de horas"
+  "act_k_time": "Registo de horas",
+  "act_k_code": "Código",
+  "act_k_sapnote": "Nota SAP",
+  "act_k_transport": "Ordem de transporte"
 }

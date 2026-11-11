@@ -18,7 +18,14 @@ import { Connections } from '@/components/content/Connections';
 import { useWhen } from '@/components/content/useWhen';
 import { ColHandle } from '@/components/content/ColHandle';
 import { BackButton, FoldersButton, useListDetail } from '@/components/content/MobilePane';
-import { ChecklistBar, EditorContent, EditorToolbar, InsertBar, useNoteEditor } from './NoteEditor';
+import {
+  ChecklistBar,
+  EditorContent,
+  EditorToolbar,
+  InsertBar,
+  useNoteEditor,
+  WikiLinkPopup,
+} from './NoteEditor';
 import { NoteHistory } from './NoteHistory';
 import { ImportDialog } from './ImportDialog';
 import { MoveDialog } from '@/components/shell/MoveToWorkspace';
@@ -703,6 +710,7 @@ function EditorCard({
             )}
             <ChecklistBar editor={editor} />
             <EditorContent editor={editor} />
+            {editor && <WikiLinkPopup editor={editor} noteId={note.id} />}
           </div>
         </div>
       </div>

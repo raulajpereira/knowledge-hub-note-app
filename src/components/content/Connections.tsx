@@ -70,6 +70,9 @@ const STAGE: Record<Stage, [string, string]> = {
   prd: ['PRD', 'oklch(0.62 0.13 150 / .7)'],
   junk: ['cr_junk', 'oklch(0.55 0.15 28 / .7)'],
 };
+/** Fired with { type, id } when that item got a new link elsewhere (e.g. a [[link]] in its text). */
+export const LINKS_EVENT = 'kh:links';
+
 export const itemHref = (type: ItemType, id: string) =>
   ({
     task: `/app/tasks?t=${id}`,
@@ -112,11 +115,20 @@ export function Connections({
 
   useEffect(() => {
     let live = true;
-    api<{ links: Link[] }>(`/links?type=${type}&id=${id}`)
-      .then((r) => live && setLinks(r.links))
-      .catch(() => live && setLinks([]));
+    const load = () =>
+      api<{ links: Link[] }>(`/links?type=${type}&id=${id}`)
+        .then((r) => live && setLinks(r.links))
+        .catch(() => live && setLinks([]));
+    void load();
+    // a [[link]] typed in the note adds one
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<{ type: string; id: string }>).detail;
+      if (d?.type === type && d.id === id) void load();
+    };
+    window.addEventListener(LINKS_EVENT, on);
     return () => {
       live = false;
+      window.removeEventListener(LINKS_EVENT, on);
     };
   }, [type, id]);
 
