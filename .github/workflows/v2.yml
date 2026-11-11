@@ -82,7 +82,15 @@ jobs:
       - name: Build
         run: npm run build
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        # the system packages come from the Ubuntu mirrors (apt); when those are
+        # unreachable the runner image already has what Chromium needs (only
+        # extra fonts are missing), so fall back to the browser alone
+        timeout-minutes: 12
+        run: |
+          timeout 300 npx playwright install --with-deps chromium || {
+            echo "::warning::apt unavailable: installing Chromium without the extra system packages"
+            npx playwright install chromium
+          }
       - name: Start worker
         run: node dist/worker.mjs > worker.log 2>&1 &
       - name: Start fake AI provider (tests only)
