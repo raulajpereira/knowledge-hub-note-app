@@ -1,7 +1,7 @@
 'use client';
 
 import { NavIcon } from '@/components/shell/icons';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
 import { useI18n } from '@/i18n/client';
@@ -679,8 +679,10 @@ export function TasksView() {
 
   const all = useMemo(() => items ?? [], [items]);
   const today = localDay(new Date());
+  // typing stays fluid with thousands of tasks: the filter follows a step behind
+  const dq = useDeferredValue(q);
   const list = useMemo(() => {
-    const s = q.trim().toLowerCase();
+    const s = dq.trim().toLowerCase();
     const cmp =
       sort === 'due'
         ? (a: TaskItem, b: TaskItem) => ((a.dueOn ?? '9999') < (b.dueOn ?? '9999') ? -1 : 1)
@@ -697,7 +699,32 @@ export function TasksView() {
       )
       .sort((a, b) => Number(b.pinned) - Number(a.pinned) || cmp(a, b));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- extra is rebuilt from urlKey each render
-  }, [all, filter, typeF, sort, q, urlKey, today]);
+  }, [all, filter, typeF, sort, dq, urlKey, today]);
+
+  // Thousands of tasks: draw them in steps (150, then more as the end of the list comes into view)
+  const STEP = 150;
+  const [limit, setLimit] = useState(STEP);
+  useEffect(() => setLimit(STEP), [filter, typeF, sort, dq, urlKey]);
+  const moreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = moreRef.current;
+    if (!el || list.length <= limit) return;
+    const io = new IntersectionObserver(
+      (es) => es.some((e) => e.isIntersecting) && setLimit((l) => l + STEP),
+      {
+        rootMargin: '600px',
+      },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [list.length, limit]);
+  // the open task is always drawn, even past the limit
+  const drawn = useMemo(() => {
+    const head = list.slice(0, limit);
+    const act =
+      activeId && !head.some((x) => x.id === activeId) ? list.find((x) => x.id === activeId) : undefined;
+    return act ? [...head, act] : head;
+  }, [list, limit, activeId]);
 
   // Open the first task when none is selected (prototype tActive); phones show the list instead.
   useEffect(() => {
@@ -976,7 +1003,7 @@ export function TasksView() {
             }}
           />
           <div className="kh-tk-items">
-            {list.map((x) => {
+            {drawn.map((x) => {
               const on = x.id === activeId;
               const done = !!x.doneAt;
               const over = !done && !!x.dueOn && x.dueOn < today;
@@ -1076,6 +1103,7 @@ export function TasksView() {
                 </div>
               );
             })}
+            {list.length > limit && <div ref={moreRef} style={{ height: 1 }} aria-hidden="true" />}
             {items && list.length === 0 && <div className="kh-tk-empty">{t('t_empty')}</div>}
           </div>
         </section>
