@@ -32,6 +32,7 @@ import { restoreEntries } from './timelog';
 import { vecLiteral } from '@/server/search/embedClient';
 import { SEM_MAX_DIST } from '@/server/search/semantic';
 import { foldMatch } from '@/server/search/foldSql';
+import { excerpt, searchTerms } from '@/lib/search/fold';
 import { purgeEmailsTx } from './emails';
 import { purgeArtifactsTx } from './artifacts';
 import { purgeSnippetsTx } from './snippets';
@@ -324,7 +325,12 @@ export async function listNotes(
       .where(and(...conds))
       .orderBy(desc(sql`date_trunc('milliseconds', ${notes.updatedAt})`), desc(notes.id))
       .limit(Math.min(q.limit ?? 500, 500));
-    const items = rows.map((r) => toItem(r as ListRow, auth.user.id));
+    // searching: the summary shows where the words are (the list highlights them)
+    const terms = q.search ? searchTerms(q.search) : [];
+    const items = rows.map((r) => {
+      const it = toItem(r as ListRow, auth.user.id);
+      return terms.length ? { ...it, summary: excerpt((r as ListRow).contentText, terms, 160) } : it;
+    });
     if (!q.vector || q.after) return items;
     // "Semântica": up to 10 more notes of the same list that match by meaning, after the word matches
     const have = items.map((n) => n.id);

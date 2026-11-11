@@ -43,7 +43,7 @@ describe.skipIf(!enabled)('plans, requests and license job', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE plan_requests, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE support_reports, plan_requests, code_redemptions, recovery_codes, auth_tokens, sessions, admins, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -144,6 +144,33 @@ describe.skipIf(!enabled)('plans, requests and license job', () => {
     expect(acts.map((a) => a.action)).toEqual(
       expect.arrayContaining(['plan.update', 'plan.trial', 'plan.modules', 'plan.limits', 'plan.addon']),
     );
+  });
+
+  it('support: a reported problem reaches the console and its admins by email; handled; rate-limited', async () => {
+    const sup = await import('@/server/support');
+    const ctx = await owner();
+    const user = await signedIn('rep@kh.pt', 'PRO');
+    const r = await sup.reportProblem(user, {
+      message: 'O calendário não abre',
+      page: '/app/calendar',
+      ua: 'vitest',
+      version: '2.0.0',
+    });
+    const list = await sup.listReports();
+    expect(list[0]).toMatchObject({
+      id: r.id,
+      message: 'O calendário não abre',
+      status: 'new',
+      client: { name: user.tenant.name },
+    });
+    expect((await mails('supportReport')).length).toBeGreaterThanOrEqual(1);
+    await sup.setReportStatus(ctx, r.id, 'done');
+    expect((await sup.listReports())[0]!.status).toBe('done');
+    for (let i = 0; i < 9; i++)
+      await sup.reportProblem(user, { message: `x${i}`, page: '', ua: '', version: '' });
+    await expect(
+      sup.reportProblem(user, { message: 'mais um', page: '', ua: '', version: '' }),
+    ).rejects.toMatchObject({ code: 'too_many' });
   });
 
   it('requests: create emails the admins and dedupes; approve applies plan + trial; reject emails the reason', async () => {

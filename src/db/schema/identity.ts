@@ -421,3 +421,34 @@ export const workspaces = pgTable(
   },
   (t) => [index('workspaces_owner_idx').on(t.tenantId, t.ownerId, t.sort)],
 );
+
+/** "Reportar problema" in the app: the message, where it happened and the browser; listed in the console (Pedidos). */
+export const supportReports = pgTable(
+  'support_reports',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`uuid_generate_v7()`),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    message: text('message').notNull(),
+    page: text('page').notNull().default(''),
+    ua: text('ua').notNull().default(''),
+    version: text('version').notNull().default(''),
+    status: text('status', { enum: ['new', 'done'] })
+      .notNull()
+      .default('new'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check('support_reports_status_chk', sql`${t.status} in ('new','done')`),
+    check(
+      'support_reports_len',
+      sql`char_length(${t.message}) between 1 and 4000 and char_length(${t.page}) <= 500 and char_length(${t.ua}) <= 300 and char_length(${t.version}) <= 60`,
+    ),
+  ],
+);

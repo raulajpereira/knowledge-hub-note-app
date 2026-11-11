@@ -1,8 +1,9 @@
 'use client';
 
+import { ReportDialog } from './ReportDialog';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { SidebarViews } from '@/components/views/Views';
 import { useI18n } from '@/i18n/client';
 import type { NavEntry } from '@/lib/prefs';
@@ -16,6 +17,7 @@ import { useShell } from './ShellContext';
 
 export function Sidebar() {
   const { t } = useI18n();
+  const [report, setReport] = useState(false);
   const path = usePathname();
   const { me, modules, openAccount, openAbout } = useShell();
   const [saved] = usePref<NavEntry[] | undefined>('nav', undefined);
@@ -131,6 +133,11 @@ export function Sidebar() {
         <Icon name="about" size={16} />
         {t('nav_about')}
       </button>
+      <button type="button" className="kh-aside__btn" onClick={() => setReport(true)}>
+        <Icon name="help" size={16} />
+        {t('rp_title')}
+      </button>
+      <ReportDialog open={report} onClose={() => setReport(false)} />
       <button type="button" className="kh-acct" title={t('acc_title')} onClick={openAccount}>
         <span className="kh-avatar" style={{ width: 42, height: 42 }}>
           <AvatarFace name={me.user.name} photoV={me.assets.avatar} size={42} fontSize={14.5} />

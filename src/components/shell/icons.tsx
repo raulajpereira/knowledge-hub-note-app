@@ -33,6 +33,7 @@ const D = {
     '<rect x="5" y="11" width="14" height="10" rx="2.5"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path>',
   trash: '<path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path>',
   settings: '<circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8.5"></circle>',
+  help: '<path d="M4.5 5.5h15v10h-8l-4.5 4v-4h-2.5z"></path><path d="M12 8v3.5"></path><path d="M12 13.6v.1"></path>',
   about:
     '<path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>',
   chevRight: '<path d="M9 6l6 6-6 6"></path>',

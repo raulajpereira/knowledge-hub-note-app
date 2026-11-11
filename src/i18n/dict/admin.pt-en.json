@@ -391,5 +391,13 @@
   "Reenviar confirmação": "Resend confirmation",
   "Email de confirmação reenviado.": "Confirmation email resent.",
   "Ambientes por pessoa": "Workspaces per person",
-  "Ao desligar uma funcionalidade num plano, os clientes atuais desse plano mantêm-na até à renovação (no mínimo 30 dias) e os administradores recebem um email.": "When a feature is turned off in a plan, that plan's current clients keep it until their renewal (at least 30 days) and their administrators get an email."
+  "Ao desligar uma funcionalidade num plano, os clientes atuais desse plano mantêm-na até à renovação (no mínimo 30 dias) e os administradores recebem um email.": "When a feature is turned off in a plan, that plan's current clients keep it until their renewal (at least 30 days) and their administrators get an email.",
+  "Problemas reportados": "Reported problems",
+  "Só por tratar": "Only open",
+  "Ver todos": "Show all",
+  "Mensagem": "Message",
+  "Quem reportou": "Reported by",
+  "Não há problemas por tratar.": "No open problems.",
+  "Marcar tratado": "Mark handled",
+  "Reabrir": "Reopen"
 }

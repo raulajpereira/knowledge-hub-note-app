@@ -196,6 +196,7 @@ export function Requests() {
             ]}
           />
         )}
+        <SupportReports />
         <div className="kh-ad-note">
           {A(
             'Os pedidos chegam da janela de planos da app (Pedir este plano, Pedir mudança, pacote personalizado) e são enviados por email aos administradores. Aprovar aplica o pacote, os lugares e o ciclo ao cliente e avisa quem pediu; vindo de um plano grátis para um pacote com trial, começa o trial.',
@@ -249,5 +250,94 @@ function Reject({ r, label, onDone }: { r: Req; label: string; onDone: () => voi
         </button>
       </div>
     </>
+  );
+}
+
+type Report = {
+  id: string;
+  message: string;
+  page: string;
+  ua: string;
+  version: string;
+  status: 'new' | 'done';
+  createdAt: string;
+  client: { id: string; name: string };
+  user: { name: string; email: string };
+};
+
+/** "Problemas reportados" (Reportar problema, in the app). */
+function SupportReports() {
+  const { A } = useA();
+  const { can } = useConsole();
+  const toast = useToast();
+  const w = can('requests', true);
+  const [rows, setRows] = useState<Report[] | null>(null);
+  const [all, setAll] = useState(false);
+  const load = useCallback(() => {
+    adminApi<{ reports: Report[] }>('/support')
+      .then((r) => setRows(r.reports))
+      .catch(() => setRows([]));
+  }, []);
+  useEffect(load, [load]);
+  const list = (rows ?? []).filter((r) => all || r.status === 'new');
+  const mark = async (r: Report, status: 'new' | 'done') => {
+    try {
+      await adminApi(`/support/${r.id}`, { status }, 'PATCH');
+      load();
+    } catch {
+      toast({ message: A('Não foi possível concluir a ação.'), tone: 'error' });
+    }
+  };
+  if (!rows) return null;
+  return (
+    <div style={{ marginTop: 26 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+        <div style={{ fontSize: 17, fontWeight: 600 }}>{A('Problemas reportados')}</div>
+        <span className="kh-ad-td__sub">{rows.filter((r) => r.status === 'new').length}</span>
+        <span style={{ flex: 1 }} />
+        <button type="button" className="kh-ad-btn kh-ad-btn--sm" onClick={() => setAll((v) => !v)}>
+          {all ? A('Só por tratar') : A('Ver todos')}
+        </button>
+      </div>
+      <Table<Report>
+        label={A('Problemas reportados')}
+        grid="minmax(260px,2fr) minmax(150px,1fr) minmax(160px,1fr) 150px 140px"
+        minW={900}
+        rows={list}
+        rowKey={(r) => r.id}
+        empty={A('Não há problemas por tratar.')}
+        cols={[
+          {
+            label: A('Mensagem'),
+            cell: (r) => (
+              <>
+                <span style={{ whiteSpace: 'pre-wrap' }}>{r.message}</span>
+                <span className="kh-ad-td__sub" title={r.ua}>
+                  {r.page} · v{r.version}
+                </span>
+              </>
+            ),
+          },
+          { label: A('Cliente'), cell: (r) => <Cell main={r.client.name} /> },
+          { label: A('Quem reportou'), cell: (r) => <Cell main={r.user.name} sub={r.user.email} /> },
+          { label: A('Recebido'), cell: (r) => <Cell mono main={fmtStamp(r.createdAt)} /> },
+          {
+            label: '',
+            row: true,
+            cell: (r) =>
+              w ? (
+                <button
+                  type="button"
+                  className="kh-ad-btn kh-ad-btn--sm"
+                  data-kind={r.status === 'new' ? 'p' : undefined}
+                  onClick={() => void mark(r, r.status === 'new' ? 'done' : 'new')}
+                >
+                  {r.status === 'new' ? A('Marcar tratado') : A('Reabrir')}
+                </button>
+              ) : null,
+          },
+        ]}
+      />
+    </div>
   );
 }

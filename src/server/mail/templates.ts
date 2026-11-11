@@ -25,6 +25,23 @@ const COPY: Record<string, Record<Lang, Copy>> = {
       foot: 'You receive this email as an administrator of this account in KnowledgeHub.',
     },
   },
+  // "Reportar problema" from the app → the console's admins
+  supportReport: {
+    pt: {
+      subject: 'Problema reportado · {client}',
+      title: 'Novo problema reportado',
+      body: '{who} ({email}) de {client} escreveu:\n\n{message}\n\nPágina: {page}\nNavegador: {ua}\nVersão: {version}',
+      cta: 'Abrir os Pedidos na consola',
+      foot: 'Recebe este email por ser administrador da Consola do KnowledgeHub.',
+    },
+    en: {
+      subject: 'Problem reported · {client}',
+      title: 'New problem reported',
+      body: '{who} ({email}) from {client} wrote:\n\n{message}\n\nPage: {page}\nBrowser: {ua}\nVersion: {version}',
+      cta: 'Open Requests in the console',
+      foot: 'You receive this email as an administrator of the KnowledgeHub Console.',
+    },
+  },
   notify: {
     pt: {
       subject: '{subject} · KnowledgeHub',

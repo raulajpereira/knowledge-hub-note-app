@@ -730,3 +730,35 @@
     font-size: 16px;
   }
 }
+
+/* "Os seus dados" */
+.kh-dt {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.kh-dt__item {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.1);
+}
+.kh-dt__item svg {
+  flex: none;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+.kh-dt__item b {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.kh-dt__item p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.8;
+}

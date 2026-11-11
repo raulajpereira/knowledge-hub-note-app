@@ -1,5 +1,6 @@
 'use client';
 
+import { DataTab } from './DataTab';
 import { useEffect, useRef, useState } from 'react';
 import { usePersistentState, useViewport } from '@/components/ui';
 import { BackBar, usePhoneBack } from '@/components/content/MobilePane';
@@ -61,6 +62,12 @@ const TABS = [
     label: 'set_tab_nav',
     module: 'sidebar',
     icon: '<rect x="3" y="4" width="18" height="16" rx="3"></rect><line x1="9" y1="4" x2="9" y2="20"></line>',
+  },
+  {
+    id: 'data',
+    label: 'set_tab_data',
+    module: null,
+    icon: '<path d="M12 3l7.5 3v5.5c0 4.5-3.2 8.3-7.5 9.5-4.3-1.2-7.5-5-7.5-9.5V6z"></path>',
   },
   {
     id: 'mgmt',
@@ -237,6 +244,7 @@ export function SettingsView() {
             {tab === 'share' && <SharingTab />}
             {tab === 'nav' && <NavTab />}
             {tab === 'mgmt' && <MgSettingsTab />}
+            {tab === 'data' && <DataTab />}
           </div>
         </div>
       </div>

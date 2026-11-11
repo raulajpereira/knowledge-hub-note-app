@@ -1,5 +1,7 @@
 'use client';
 
+import { Highlight } from '@/components/search/SearchResults';
+import { searchTerms } from '@/lib/search/fold';
 import { SvgIcon } from '@/components/ui/SvgIcon';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -391,7 +393,10 @@ function NoteList({
   tools,
   below,
   onFolders,
+  terms = [],
 }: {
+  /** the words searched (highlighted in the summaries) */
+  terms?: string[];
   title: string;
   /** phones/tablets: the title is the "Pastas" toggle */
   onFolders?: () => void;
@@ -477,7 +482,11 @@ function NoteList({
                 <span>{when(n.updatedAt)}</span>
               </div>
               <div className="kh-nt-card__title">{n.title || t('ne_untitled')}</div>
-              {n.summary && <div className="kh-nt-card__sum">{n.summary}</div>}
+              {n.summary && (
+                <div className="kh-nt-card__sum">
+                  {terms.length ? <Highlight text={n.summary} terms={terms} /> : n.summary}
+                </div>
+              )}
               {n.tags.length > 0 && (
                 <div className="kh-nt-card__tags">
                   {n.tags.map((tg) => (
@@ -1231,6 +1240,7 @@ export function NotesView() {
           onNew={() => void newNote(validFilter !== 'all' && validFilter !== 'fav' ? validFilter : null)}
           onMore={next ? () => void loadMore() : undefined}
           onFolders={md.compact ? () => setFoldersOpen(true) : undefined}
+          terms={searchTerms(query.trim() || extra.q.trim())}
           tools={
             <>
               {modules.has('import') && (
