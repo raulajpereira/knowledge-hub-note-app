@@ -920,5 +920,14 @@
   "rp_send": "Send",
   "rp_sent": "Thank you! The problem was sent.",
   "rp_fail": "Could not send. Please try again.",
-  "rp_auto": "Sent along, to help: the page, the browser and the version —"
+  "rp_auto": "Sent along, to help: the page, the browser and the version —",
+  "set_tab_ext": "Browser extension",
+  "ex_title": "Save pages from the browser",
+  "ex_desc": "With the extension you save the page you are reading (or the selected text) as a note or a task, with one click on its icon or with the right button. It works in Chrome and Edge. It keeps no passwords: it uses the session you already have open in KnowledgeHub.",
+  "ex_dl": "Download the extension (.zip)",
+  "ex_s1": "Unzip the downloaded file: you get a “knowledgehub-extension” folder.",
+  "ex_s2": "Open chrome://extensions (in Edge: edge://extensions) and turn on “Developer mode”.",
+  "ex_s3": "Click “Load unpacked” and choose the “knowledgehub-extension” folder.",
+  "ex_s4": "Pin the KnowledgeHub icon to the browser bar (puzzle piece icon → pin).",
+  "ex_use": "Then: click the icon and “Guardar esta página”, or right-click a page or a selected text. KnowledgeHub's “Share” window opens, where you choose a note or a task."
 }

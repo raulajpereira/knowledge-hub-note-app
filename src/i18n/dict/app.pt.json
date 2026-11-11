@@ -920,5 +920,14 @@
   "rp_send": "Enviar",
   "rp_sent": "Obrigado! O problema foi enviado.",
   "rp_fail": "Não foi possível enviar. Tente de novo.",
-  "rp_auto": "Vai junto, para ajudar: a página, o navegador e a versão —"
+  "rp_auto": "Vai junto, para ajudar: a página, o navegador e a versão —",
+  "set_tab_ext": "Extensão do navegador",
+  "ex_title": "Guardar páginas a partir do navegador",
+  "ex_desc": "Com a extensão, guarda a página que está a ver (ou o texto selecionado) como nota ou tarefa, com um clique no ícone ou com o botão direito. Funciona no Chrome e no Edge. Não guarda palavras-passe: usa a sessão que já tem aberta no KnowledgeHub.",
+  "ex_dl": "Descarregar a extensão (.zip)",
+  "ex_s1": "Descomprima o ficheiro descarregado: fica uma pasta “knowledgehub-extension”.",
+  "ex_s2": "Abra chrome://extensions (no Edge: edge://extensions) e ligue o “Modo de programador”.",
+  "ex_s3": "Clique em “Carregar sem compressão” e escolha a pasta “knowledgehub-extension”.",
+  "ex_s4": "Afixe o ícone do KnowledgeHub na barra do navegador (ícone da peça de puzzle → alfinete).",
+  "ex_use": "Depois: clique no ícone e em “Guardar esta página”, ou clique com o botão direito numa página ou num texto selecionado. Abre a janela “Partilhar” do KnowledgeHub, onde escolhe nota ou tarefa."
 }

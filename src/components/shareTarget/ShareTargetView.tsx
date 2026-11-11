@@ -60,9 +60,20 @@ export function ShareTargetView() {
   const { modules } = useShell();
   const k = sp.get('k');
   const err = sp.get('e');
-  const [share, setShare] = useState<Shared | null | undefined>(k ? undefined : null);
+  // the browser extension ("Guardar no KnowledgeHub") sends the page in the address: ?title=&url=&text=
+  const fromExt =
+    !k && (sp.has('url') || sp.has('text'))
+      ? {
+          title: (sp.get('title') ?? '').slice(0, 300),
+          text: (sp.get('text') ?? '').slice(0, 20_000),
+          // only web addresses: it is shown as a link (no javascript: and the like)
+          url: /^https?:\/\/[^\s]+$/i.test(sp.get('url') ?? '') ? sp.get('url')!.slice(0, 2000) : '',
+          files: [],
+        }
+      : null;
+  const [share, setShare] = useState<Shared | null | undefined>(k ? undefined : fromExt);
   const [files, setFiles] = useState<File[]>([]);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(() => (fromExt ? guessTitle(fromExt) : ''));
   const [busy, setBusy] = useState<Kind | 'drop' | null>(null);
 
   useEffect(() => {

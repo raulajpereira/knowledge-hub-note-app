@@ -1,5 +1,6 @@
 'use client';
 
+import { ExtensionTab } from './ExtensionTab';
 import { DataTab } from './DataTab';
 import { useEffect, useRef, useState } from 'react';
 import { usePersistentState, useViewport } from '@/components/ui';
@@ -62,6 +63,12 @@ const TABS = [
     label: 'set_tab_nav',
     module: 'sidebar',
     icon: '<rect x="3" y="4" width="18" height="16" rx="3"></rect><line x1="9" y1="4" x2="9" y2="20"></line>',
+  },
+  {
+    id: 'ext',
+    label: 'set_tab_ext',
+    module: null,
+    icon: '<path d="M9 4h4v3a2 2 0 1 0 4 0V4h3v6h-3a2 2 0 1 0 0 4h3v6H9v-3a2 2 0 1 0-4 0v3H4V10h3a2 2 0 1 0 0-4H4V4z"></path>',
   },
   {
     id: 'data',
@@ -245,6 +252,7 @@ export function SettingsView() {
             {tab === 'nav' && <NavTab />}
             {tab === 'mgmt' && <MgSettingsTab />}
             {tab === 'data' && <DataTab />}
+            {tab === 'ext' && <ExtensionTab />}
           </div>
         </div>
       </div>
