@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { DailyPopup, useDailyPopup } from './DailyPopup';
 import { api } from '@/lib/client/api';
 import { refreshCounts } from '@/components/shell/counts';
 import { useWhen } from '@/components/content/useWhen';
@@ -184,6 +185,8 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
   const [hour, setHour] = useState<number | null>(initialHour ?? null);
   useEffect(() => setHour(new Date().getHours()), []);
   const router = useRouter();
+  // "O seu dia": once a day on the Início (see DailyPopup)
+  const daily = useDailyPopup();
 
   // Real data for the cards (tasks, recent/favourite notes) — Phase 4.
   const [data, setData] = useState<HomeData>({});
@@ -1303,6 +1306,28 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
         >
           {greeting}
         </h1>
+        {modules.has('notes') && (
+          <button
+            type="button"
+            onClick={() => daily.setOpen(true)}
+            className="kh-pill-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              height: 42,
+              padding: '0 18px',
+              fontSize: 14,
+              borderColor: 'rgb(var(--w) / .2)',
+              background: 'rgb(var(--w) / .1)',
+            }}
+          >
+            {svg(
+              '<rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17"></path><path d="M8 3v4"></path><path d="M16 3v4"></path><path d="M8 14h4"></path>',
+            )}
+            {t('dn_btn')}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -1539,6 +1564,7 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           );
         })}
       </div>
+      {modules.has('notes') && <DailyPopup open={daily.open} onClose={() => daily.setOpen(false)} />}
     </section>
   );
 }

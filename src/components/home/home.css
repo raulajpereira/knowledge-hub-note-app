@@ -2193,3 +2193,91 @@ button.kh-wx__chip {
 .kh-wxb__date::first-letter {
   text-transform: uppercase;
 }
+
+/* "O seu dia" (DailyPopup) */
+.kh-dn {
+  width: min(560px, 94vw);
+}
+.kh-dn__sec + .kh-dn__sec {
+  margin-top: 16px;
+}
+.kh-dn__sec h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.kh-dn__sec ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kh-dn__sec li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgb(var(--w) / 0.06);
+  font-size: 14px;
+}
+.kh-dn__sec a {
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-dn__sec a:hover {
+  text-decoration: underline;
+}
+.kh-dn__time {
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  min-width: 46px;
+  opacity: 0.8;
+}
+.kh-dn__box {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid rgb(var(--w) / 0.5);
+}
+.kh-dn__late {
+  margin-left: auto;
+  font-size: 11px;
+  color: oklch(0.75 0.17 30);
+  white-space: nowrap;
+}
+.kh-dn__none {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.65;
+}
+.kh-dn__foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.kh-dn__auto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+@media (max-width: 560px) {
+  .kh-dn__foot .kh-btn--primary {
+    flex: 1 1 100%;
+  }
+}

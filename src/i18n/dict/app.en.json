@@ -884,5 +884,18 @@
   "tl_now": "Now",
   "tl_total": "Total",
   "ne_wikiTitle": "Link to…",
-  "ne_wikiNone": "Nothing found. Keep typing."
+  "ne_wikiNone": "Nothing found. Keep typing.",
+  "dn_folder": "Journal",
+  "dn_title": "Journal",
+  "dn_meetings": "Meetings",
+  "dn_tasks": "Tasks",
+  "dn_notes": "Notes",
+  "dn_noMeetings": "No meetings on this day.",
+  "dn_noTasks": "No pending tasks.",
+  "dn_popT": "Your day",
+  "dn_open": "Open today's note",
+  "dn_dismiss": "Dismiss for today",
+  "dn_auto": "Show when opening Home",
+  "dn_btn": "My day",
+  "dn_overdue": "overdue"
 }

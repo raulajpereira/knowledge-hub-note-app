@@ -884,5 +884,18 @@
   "tl_now": "Agora",
   "tl_total": "Total",
   "ne_wikiTitle": "Ligar a…",
-  "ne_wikiNone": "Nada encontrado. Continue a escrever."
+  "ne_wikiNone": "Nada encontrado. Continue a escrever.",
+  "dn_folder": "Diário",
+  "dn_title": "Diário",
+  "dn_meetings": "Reuniões",
+  "dn_tasks": "Tarefas",
+  "dn_notes": "Notas",
+  "dn_noMeetings": "Sem reuniões neste dia.",
+  "dn_noTasks": "Sem tarefas pendentes.",
+  "dn_popT": "O seu dia",
+  "dn_open": "Abrir a nota do dia",
+  "dn_dismiss": "Dispensar hoje",
+  "dn_auto": "Mostrar ao abrir o Início",
+  "dn_btn": "O meu dia",
+  "dn_overdue": "atrasada"
 }
