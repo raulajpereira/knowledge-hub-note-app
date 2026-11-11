@@ -1,4 +1,5 @@
 'use client';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 import { useState } from 'react';
 import { useToast } from '@/components/ui';
@@ -11,20 +12,7 @@ import type { Mg } from './store';
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const CAM = '<path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle>';
 const X = '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>';
-const Ic = ({ d }: { d: string }) => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
-);
+const Ic = ({ d }: { d: string }) => <SvgIcon d={d} size="13" sw="2.2" />;
 
 /** Recursos › the person's avatar: initials or photo, with upload and remove. */
 export function PersonPhoto({

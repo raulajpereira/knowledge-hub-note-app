@@ -1,5 +1,6 @@
 'use client';
 
+import { SvgIcon } from '@/components/ui/SvgIcon';
 import { DateInput } from '@/components/ui';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -79,20 +80,7 @@ type Proj = { id: string; code: string; name: string };
 type Patch = Partial<Omit<SapNote, 'id' | 'systems' | 'createdAt' | 'updatedAt'>> & { body?: JSONContent };
 type Lbl = { pt: string; en: string };
 
-const Svg = ({ d, s = 14 }: { d: string; s?: number }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
-);
+const Svg = ({ d, s = 14 }: { d: string; s?: number }) => <SvgIcon d={d} size={s} sw="2" />;
 const I = {
   list: '<line x1="8" y1="6" x2="20" y2="6"></line><line x1="8" y1="12" x2="20" y2="12"></line><line x1="8" y1="18" x2="20" y2="18"></line><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle>',
   matrix:

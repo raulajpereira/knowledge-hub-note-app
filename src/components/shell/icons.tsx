@@ -1,3 +1,4 @@
+import { SvgIcon } from '@/components/ui/SvgIcon';
 import { NAV_ICON_PATHS } from './navData';
 
 // Shell icons: the prototype's 24×24 stroke paths. Inner markup comes from
@@ -6,20 +7,7 @@ import { NAV_ICON_PATHS } from './navData';
 type P = { size?: number; sw?: number };
 
 function Svg({ size = 17, sw = 1.8, d }: P & { d: string }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={sw}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: d }}
-    />
-  );
+  return <SvgIcon d={d} size={size} sw={sw} />;
 }
 
 export const NavIcon = ({ id, size = 18 }: { id: string; size?: number }) => (

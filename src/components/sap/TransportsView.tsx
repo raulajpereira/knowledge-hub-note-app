@@ -1,5 +1,6 @@
 'use client';
 
+import { SvgIcon } from '@/components/ui/SvgIcon';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { projectLabel, useMgOptions } from '@/components/mg/useMgOptions';
@@ -74,18 +75,7 @@ const tint = (c: string) => c.replace(')', ' / .22)');
 const SO: Record<Stage, number> = { mod: 0, rel: 1, qas: 2, prd: 3, junk: 4 };
 
 const Ico = ({ d, w = 3, s = 12 }: { d: string; w?: number; s?: number }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={w}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
+  <SvgIcon d={d} size={s} sw={w} />
 );
 const CHECK = '<path d="M5 12.5l4.5 4.5L19 7.5"></path>';
 const PEN = '<path d="M4 20h4L19 9l-4-4L4 16z"></path>';

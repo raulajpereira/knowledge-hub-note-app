@@ -1,5 +1,6 @@
 'use client';
 
+import { SvgIcon } from '@/components/ui/SvgIcon';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
@@ -50,18 +51,7 @@ type Patch = Partial<Omit<SapSystem, 'id' | 'fav' | 'createdAt'>>;
 const EO = ENV_ORDER;
 
 const Svg = ({ d, s = 14, fill = 'none' }: { d: string; s?: number; fill?: string }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill={fill}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
+  <SvgIcon d={d} size={s} sw="2" fill={fill} />
 );
 const I = {
   list: '<line x1="8" y1="6" x2="20" y2="6"></line><line x1="8" y1="12" x2="20" y2="12"></line><line x1="8" y1="18" x2="20" y2="18"></line><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle>',

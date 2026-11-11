@@ -1,4 +1,5 @@
 'use client';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 import { useMemo, useState } from 'react';
 import { usePref } from '@/components/shell/PrefsProvider';
@@ -9,20 +10,7 @@ import type { NavEntry } from '@/lib/prefs';
 import { useI18n } from '@/i18n/client';
 import { Card } from './LookTab';
 
-const ic = (d: string, size = 16) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
-);
+const ic = (d: string, size = 16) => <SvgIcon d={d} size={size} sw="2" />;
 const GRIP =
   '<circle cx="9" cy="6" r="1"></circle><circle cx="15" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle><circle cx="15" cy="18" r="1"></circle>';
 const EYE =

@@ -1,4 +1,5 @@
 'use client';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 import { ShellContext } from '@/components/shell/ShellContext';
 
@@ -17,20 +18,7 @@ const ICON =
   '<rect x="4" y="3" width="16" height="18" rx="2.5"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="12" y2="16"></line>';
 const SAVE =
   '<rect x="4" y="3" width="16" height="18" rx="2.5"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line>';
-const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
-);
+const Svg = ({ d, s = 15 }: { d: string; s?: number }) => <SvgIcon d={d} size={s} sw="1.9" />;
 
 function TemplateButtonInner({
   kind,

@@ -1,4 +1,5 @@
 'use client';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -61,20 +62,7 @@ const OFFICE_PREVIEW_MAX = 25 * 1024 * 1024;
 const XL_ROWS = 500;
 const XL_COLS = 40;
 
-const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
-);
+const Svg = ({ d, s = 15 }: { d: string; s?: number }) => <SvgIcon d={d} size={s} sw="1.9" />;
 const I = {
   search: '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>',
   upload: '<path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 20h16"></path>',

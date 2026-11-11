@@ -1,5 +1,6 @@
 'use client';
 
+import { SvgIcon } from '@/components/ui/SvgIcon';
 import { NavIcon } from '@/components/shell/icons';
 import { AiButton } from '@/components/ai/AiButton';
 import { useExplain } from '@/components/ai/useExplain';
@@ -87,20 +88,7 @@ const TREE = { def: 250, min: 190, max: 720 };
 const tint = (c: string) => c.replace(')', ' / .22)');
 
 function Svg({ d, size = 15, sw = 1.9 }: { d: string; size?: number; sw?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={sw}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: d }}
-    />
-  );
+  return <SvgIcon d={d} size={size} sw={sw} />;
 }
 const IC = {
   code: '<path d="M8 7l-5 5 5 5"></path><path d="M16 7l5 5-5 5"></path>',

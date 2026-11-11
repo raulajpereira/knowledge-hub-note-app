@@ -1,4 +1,5 @@
 'use client';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 import { NavIcon } from '@/components/shell/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -120,20 +121,7 @@ function dropFolder(list: Folder[], id: string): Folder[] {
 }
 const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 
-const Svg = ({ d, s = 15 }: { d: string; s?: number }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
-);
+const Svg = ({ d, s = 15 }: { d: string; s?: number }) => <SvgIcon d={d} size={s} sw="1.9" />;
 const I = {
   search: '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>',
   plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',

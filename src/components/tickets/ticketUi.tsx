@@ -1,4 +1,5 @@
 'use client';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@/i18n/client';
@@ -118,18 +119,7 @@ export function Due({ x }: { x: Pick<Ticket, 'dueOn' | 'status'> }) {
 }
 
 export const Ico = ({ d, s = 15, w = 1.9 }: { d: string; s?: number; w?: number }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={w}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
+  <SvgIcon d={d} size={s} sw={w} />
 );
 export const I = {
   search: '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>',

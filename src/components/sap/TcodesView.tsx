@@ -1,5 +1,6 @@
 'use client';
 
+import { SvgIcon } from '@/components/ui/SvgIcon';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
@@ -40,18 +41,7 @@ const COPY =
   '<rect x="9" y="9" width="11" height="11" rx="2.5"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path>';
 const OK = '<path d="M5 12.5l4.5 4.5L19 7.5"></path>';
 const Svg = ({ d, s = 14, fill = 'none', w = 1.9 }: { d: string; s?: number; fill?: string; w?: number }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill={fill}
-    stroke="currentColor"
-    strokeWidth={w}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
+  <SvgIcon d={d} size={s} sw={w} fill={fill} />
 );
 
 export function copyTcode(code: string) {

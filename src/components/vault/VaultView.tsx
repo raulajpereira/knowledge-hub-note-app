@@ -1,4 +1,5 @@
 'use client';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@/i18n/client';
@@ -81,18 +82,7 @@ let fails = 0;
 let until = 0;
 
 const Svg = ({ d, s = 14, w = 1.9, fill = 'none' }: { d: string; s?: number; w?: number; fill?: string }) => (
-  <svg
-    width={s}
-    height={s}
-    viewBox="0 0 24 24"
-    fill={fill}
-    stroke="currentColor"
-    strokeWidth={w}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: d }}
-  />
+  <SvgIcon d={d} size={s} sw={w} fill={fill} />
 );
 const I = {
   copy: '<rect x="9" y="9" width="11" height="11" rx="2.5"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path>',

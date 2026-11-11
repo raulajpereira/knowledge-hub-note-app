@@ -1,5 +1,6 @@
 'use client';
 
+import { SvgIcon } from '@/components/ui/SvgIcon';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { JSONContent } from '@tiptap/react';
@@ -51,20 +52,7 @@ const SH = 'sh:';
 const linkedOf = (shared: SharedFolder[], folderId: string) =>
   shared.find((x) => x.mine && x.folderId === folderId);
 function Svg({ d, size = 14, sw = 1.9 }: { d: string; size?: number; sw?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={sw}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: d }}
-    />
-  );
+  return <SvgIcon d={d} size={size} sw={sw} />;
 }
 
 // ── Folders panel ──────────────────────────────────────────────────────────
