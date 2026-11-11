@@ -31,7 +31,10 @@ async function localHour(): Promise<number | null> {
 async function startPage(): Promise<string | null> {
   const h = await headers();
   // a document load (Sec-Fetch-Dest), not the router's fetch of an Início click
-  const doc = h.get('sec-fetch-dest') ? h.get('sec-fetch-dest') === 'document' : !h.get('rsc');
+  // (x-kh-nav: the same page load, fetched again by the offline service worker)
+  const doc =
+    h.get('x-kh-nav') === '1' ||
+    (h.get('sec-fetch-dest') ? h.get('sec-fetch-dest') === 'document' : !h.get('rsc'));
   if (!doc) return null;
   const auth = await getAuth();
   if (!auth) return null;

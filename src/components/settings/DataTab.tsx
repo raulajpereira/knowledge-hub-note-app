@@ -27,6 +27,11 @@ const ITEMS = [
     'dt_backupD',
     '<path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"></path><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7"></path><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path>',
   ],
+  [
+    'dt_offline',
+    'dt_offlineD',
+    '<path d="M3 7l9-4 9 4-9 4z"></path><path d="M3 12l9 4 9-4"></path><path d="M3 17l9 4 9-4"></path>',
+  ],
   ['dt_keep', 'dt_keepD', '<circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path>'],
 ] as const;
 

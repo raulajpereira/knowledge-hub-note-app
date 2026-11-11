@@ -929,5 +929,12 @@
   "ex_s2": "Abra chrome://extensions (no Edge: edge://extensions) e ligue o “Modo de programador”.",
   "ex_s3": "Clique em “Carregar sem compressão” e escolha a pasta “knowledgehub-extension”.",
   "ex_s4": "Afixe o ícone do KnowledgeHub na barra do navegador (ícone da peça de puzzle → alfinete).",
-  "ex_use": "Depois: clique no ícone e em “Guardar esta página”, ou clique com o botão direito numa página ou num texto selecionado. Abre a janela “Partilhar” do KnowledgeHub, onde escolhe nota ou tarefa."
+  "ex_use": "Depois: clique no ícone e em “Guardar esta página”, ou clique com o botão direito numa página ou num texto selecionado. Abre a janela “Partilhar” do KnowledgeHub, onde escolhe nota ou tarefa.",
+  "of_off": "Sem ligação: está a ver a última cópia guardada neste dispositivo. As alterações a notas e tarefas são enviadas quando a ligação voltar.",
+  "of_back": "Ligação de volta: a enviar as alterações feitas sem ligação…",
+  "of_pending": "{n} por enviar",
+  "of_sent": "{n} alterações feitas sem ligação foram enviadas.",
+  "of_copies": "{n} nota(s) tinham mudado noutro dispositivo: a sua versão foi guardada como cópia “(cópia offline)”.",
+  "dt_offline": "Sem ligação",
+  "dt_offlineD": "Para funcionar sem rede, este dispositivo guarda uma cópia das páginas que abriu e das suas notas e tarefas recentes, e as alterações feitas sem ligação até serem enviadas. Ao terminar a sessão, tudo isto é apagado do dispositivo."
 }

@@ -929,5 +929,12 @@
   "ex_s2": "Open chrome://extensions (in Edge: edge://extensions) and turn on “Developer mode”.",
   "ex_s3": "Click “Load unpacked” and choose the “knowledgehub-extension” folder.",
   "ex_s4": "Pin the KnowledgeHub icon to the browser bar (puzzle piece icon → pin).",
-  "ex_use": "Then: click the icon and “Guardar esta página”, or right-click a page or a selected text. KnowledgeHub's “Share” window opens, where you choose a note or a task."
+  "ex_use": "Then: click the icon and “Guardar esta página”, or right-click a page or a selected text. KnowledgeHub's “Share” window opens, where you choose a note or a task.",
+  "of_off": "No connection: you are seeing the last copy kept on this device. Changes to notes and tasks are sent when the connection is back.",
+  "of_back": "Connection back: sending the changes made offline…",
+  "of_pending": "{n} to send",
+  "of_sent": "{n} changes made offline were sent.",
+  "of_copies": "{n} note(s) had changed on another device: your version was kept as a copy “(cópia offline)”.",
+  "dt_offline": "Offline",
+  "dt_offlineD": "To work without a network, this device keeps a copy of the pages you opened and of your recent notes and tasks, and the changes made offline until they are sent. Signing out removes all of it from the device."
 }

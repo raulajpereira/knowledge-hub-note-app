@@ -2,6 +2,8 @@
 
 // Thin fetch wrapper for the app's own API (basePath-aware, JSON, errors as
 // { code, ... } from the server's { error: { code } } envelope).
+import { announce, enqueue, queueable } from './offline';
+
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 // Ambientes: the workspace this page was loaded in. Every request says it, so
@@ -59,8 +61,17 @@ async function request<T>(url: string, body: unknown, method: string): Promise<T
       ? await fetch(url, { ...init, keepalive: true }).catch(() => fetch(url, init))
       : await fetch(url, init);
   } catch {
+    // offline: an edit of a note or a task waits on this device and goes later
+    const path = url.slice(`${BASE}/api/v1`.length);
+    if (url.startsWith(`${BASE}/api/v1/`) && queueable(method, path) && body && typeof body === 'object') {
+      await enqueue(path, body as Record<string, unknown>).catch(() => {});
+      throw { code: 'offline_queued', status: 0 } satisfies ApiFailure;
+    }
+    announce(true);
     throw { code: 'network', status: 0 } satisfies ApiFailure;
   }
+  // the service worker's copy (no connection): the shell says so
+  announce(!!res.headers.get('x-kh-offline'));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const e =

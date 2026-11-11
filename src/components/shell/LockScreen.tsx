@@ -1,5 +1,6 @@
 'use client';
 
+import { clearOffline } from '@/lib/client/offline';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, isApiFailure } from '@/lib/client/api';
@@ -59,6 +60,7 @@ export function LockScreen({
   const other = async (e: React.MouseEvent) => {
     e.preventDefault();
     await api('/auth/logout', {}).catch(() => {});
+    await clearOffline();
     onUnlock();
     router.replace('/login');
     router.refresh();

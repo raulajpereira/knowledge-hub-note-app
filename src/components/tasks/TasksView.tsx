@@ -756,7 +756,24 @@ export function TasksView() {
         toast({ message: t('tk_nextCreated').replace('{d}', fmtDue(r.next.dueOn)), tone: 'info' });
       }
       if ('done' in p) refreshCounts();
-    } catch {
+    } catch (e) {
+      // offline: kept on this device and sent later (the list shows the change now)
+      if (isApiFailure(e) && e.code === 'offline_queued') {
+        setItems(
+          (cur) =>
+            cur &&
+            cur.map((x) =>
+              x.id === id
+                ? {
+                    ...x,
+                    ...(p as Partial<TaskItem>),
+                    ...('done' in p ? { doneAt: p.done ? new Date().toISOString() : null } : {}),
+                  }
+                : x,
+            ),
+        );
+        return;
+      }
       toast({ message: t('ne_saveFail'), tone: 'error' });
     }
   };

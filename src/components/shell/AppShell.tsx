@@ -9,6 +9,7 @@ import { appearanceCss, appearanceOf } from './appearance';
 import { assetUrl } from './assetUrl';
 import './fonts';
 import { AboutModal } from './AboutModal';
+import { OfflineBar } from './OfflineBar';
 import { AccountModal } from './AccountModal';
 import { ActivityModal } from './ActivityModal';
 import { AiPanel } from '@/components/ai/AiPanel';
@@ -256,6 +257,7 @@ function Shell({ me, children }: { me: ShellMe; children: React.ReactNode }) {
         )}
         <AccountModal open={accOpen} onClose={() => setAccOpen(false)} />
         <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
+        <OfflineBar />
         <ActivityModal open={actOpen} onClose={() => setActOpen(false)} />
         <AiPanel open={aiOpen} onClose={closeAi} />
         {!locked && <PaletteKey onToggle={togglePalette} />}

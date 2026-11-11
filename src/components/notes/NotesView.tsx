@@ -1,5 +1,6 @@
 'use client';
 
+import { warmNotes } from '@/lib/client/offline';
 import { Highlight } from '@/components/search/SearchResults';
 import { searchTerms } from '@/lib/search/fold';
 import { SvgIcon } from '@/components/ui/SvgIcon';
@@ -938,6 +939,8 @@ export function NotesView() {
             if (!live) return;
             setItems(r.notes);
             setNext(r.next);
+            // offline: the most recent notes are kept on this device for reading
+            warmNotes(r.notes.map((x) => x.id));
             setLoading(false);
           })
           .catch(() => live && setLoading(false));
@@ -1004,6 +1007,21 @@ export function NotesView() {
       });
       if ('favorite' in p.patch) void loadFolders();
     } catch (e) {
+      // offline: kept on this device and sent when the connection is back
+      if (isApiFailure(e) && e.code === 'offline_queued') {
+        setItems((all) =>
+          all.map((x) =>
+            x.id === p.id
+              ? {
+                  ...x,
+                  ...(typeof p.patch.title === 'string' ? { title: p.patch.title } : {}),
+                  updatedAt: new Date().toISOString(),
+                }
+              : x,
+          ),
+        );
+        return;
+      }
       // keep the unsaved fields (newer edits win) so the next flush retries them
       // (re-read: an edit made while the request was in flight may have set it)
       const cur = pending.current as typeof p | null;

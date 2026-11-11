@@ -1,5 +1,6 @@
 'use client';
 
+import { clearOffline } from '@/lib/client/offline';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -252,6 +253,8 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
     });
     if (!ok) return;
     await api('/auth/logout', {}).catch(() => {});
+    // the copies kept for offline and the edits not sent leave this device
+    await clearOffline();
     router.replace('/login');
     router.refresh();
   };

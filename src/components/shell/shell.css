@@ -1080,3 +1080,38 @@
     animation: none;
   }
 }
+
+/* offline: the line at the top (OfflineBar) */
+.kh-offline {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(760px, calc(100vw - 24px));
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  background: oklch(0.45 0.1 250 / 0.92);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+.kh-offline[data-off] {
+  background: oklch(0.42 0.12 40 / 0.94);
+}
+.kh-offline__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+.kh-offline b {
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
