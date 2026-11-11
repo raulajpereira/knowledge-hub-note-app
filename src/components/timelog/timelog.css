@@ -1,0 +1,317 @@
+/* Registo de Tempos — the header button, its dialogs, the hourly card and the page. */
+
+.kh-tl-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  max-width: 340px;
+  padding: 0 16px 0 9px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--w) / 0.22);
+  background: linear-gradient(135deg, oklch(0.72 0.15 150 / 0.55), oklch(0.62 0.14 170 / 0.45));
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 6px 18px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(var(--kh-blur-btn, 20px));
+}
+.kh-tl-btn[data-run] {
+  background: linear-gradient(135deg, oklch(0.68 0.19 25 / 0.72), oklch(0.6 0.17 15 / 0.58));
+}
+.kh-tl-btn:focus-visible {
+  outline: 2px solid var(--ink-hi);
+  outline-offset: 2px;
+}
+.kh-tl-btn i {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  display: grid;
+  place-items: center;
+  color: oklch(0.55 0.15 150);
+}
+.kh-tl-btn[data-run] i {
+  color: oklch(0.55 0.2 25);
+}
+.kh-tl-btn__clk {
+  font-family: 'Geist Mono', monospace;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.kh-tl-btn__sub {
+  min-width: 0;
+  font-weight: 500;
+  font-size: 12px;
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-tl-btn__lbl {
+  white-space: nowrap;
+}
+@media (max-width: 1180px) {
+  .kh-tl-btn__sub {
+    display: none;
+  }
+}
+
+/* dialogs */
+.kh-tl-modal {
+  width: min(580px, 94vw);
+}
+.kh-tl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.kh-tl-full {
+  grid-column: 1 / -1;
+}
+@media (max-width: 560px) {
+  .kh-tl-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.kh-tl-ta {
+  height: auto;
+  min-height: 84px;
+  padding: 10px 14px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.45;
+}
+.kh-tl-sug {
+  position: relative;
+  min-width: 0;
+}
+.kh-tl-sug__list {
+  /* in the flow (not absolute): a dialog's scroll box would clip it */
+  margin-top: 6px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid rgb(var(--w) / 0.16);
+  border-radius: 14px;
+  background: rgb(var(--sf) / calc(0.12 * var(--sf-k)));
+  padding: 4px;
+}
+.kh-tl-sug__list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.kh-tl-sug__list button[data-on] {
+  background: rgb(var(--w) / 0.14);
+}
+.kh-tl-sug__l {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-tl-sug__s {
+  font-size: 12px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+.kh-tl-sug__k {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+.kh-tl-recent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 12px;
+}
+.kh-tl-recent > span {
+  opacity: 0.65;
+  margin-right: 4px;
+}
+.kh-tl-recent .kh-chip {
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-tl-big {
+  font-family: 'Geist Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 46px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.03em;
+  margin: 4px 0 2px;
+}
+.kh-tl-meta {
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.75;
+  margin-bottom: 14px;
+}
+.kh-tl-sw {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+.kh-tl-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  opacity: 0.65;
+}
+/* the buttons wrap instead of overflowing (phone, narrow dialog) */
+.kh-tl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.kh-tl-foot__sp {
+  flex: 1;
+}
+@media (max-width: 560px) {
+  .kh-tl-foot .kh-btn--primary {
+    flex: 1 1 100%;
+  }
+}
+
+/* "Ainda em …?" every full hour */
+.kh-tl-hour {
+  position: fixed;
+  top: 96px;
+  right: 24px;
+  z-index: 900;
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border-radius: 20px;
+}
+.kh-tl-hour b {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-tl-hour p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+.kh-tl-hour div {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* the page */
+.kh-tl-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 760px) {
+  .kh-tl-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.kh-tl-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.kh-tl-tools .kh-tl-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.kh-tl-day {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+}
+.kh-tl-day b {
+  font-family: 'Geist Mono', monospace;
+}
+.kh-tl-mono {
+  font-family: 'Geist Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+.kh-tl-strong {
+  font-weight: 600;
+}
+.kh-tl-dim {
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+}
+.kh-tl-run {
+  color: oklch(0.75 0.17 25);
+  font-weight: 600;
+}
+.kh-tl-cols {
+  display: grid;
+  grid-template-columns:
+    78px 92px 86px minmax(120px, 1.2fr) minmax(110px, 1fr) minmax(100px, 0.9fr) minmax(140px, 1.6fr)
+    70px;
+}
+.kh-tl-table {
+  overflow: auto;
+}
+@media (max-width: 1240px) {
+  .kh-tl-cols {
+    grid-template-columns: 64px 84px 80px minmax(120px, 1.2fr) minmax(110px, 1fr) minmax(140px, 1.6fr) 64px;
+  }
+  .kh-tl-cols > :nth-child(6) {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .kh-tl-cols {
+    grid-template-columns: 56px 72px minmax(0, 1fr) 56px;
+  }
+  .kh-tl-cols > :nth-child(2),
+  .kh-tl-cols > :nth-child(5),
+  .kh-tl-cols > :nth-child(6),
+  .kh-tl-cols > :nth-child(7) {
+    display: none;
+  }
+}
+
+.kh-tl-tools .kh-tl-sel {
+  width: 210px;
+  max-width: 100%;
+}

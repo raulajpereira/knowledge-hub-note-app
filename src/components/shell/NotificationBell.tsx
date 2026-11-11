@@ -32,6 +32,7 @@ const HREF: Record<string, string> = {
   meeting: '/app/meetings?m=',
   note: '/app/notes?n=',
   email: '/app/emails?m=',
+  time: '/app/timelog?e=',
 };
 const hrefOf = (n: Item) =>
   n.itemType === 'share'
@@ -54,6 +55,7 @@ const KIND_ICON: Record<string, string> = {
   mail: '<rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="M3.5 7l8.5 6 8.5-6"></path>',
 };
 const ICON_OF: Record<string, [string, string]> = {
+  timer_running: ['reminder', 'oklch(0.72 0.17 25)'],
   task_due: ['task', 'oklch(0.8 0.13 245)'],
   issue_due: ['task', 'oklch(0.78 0.14 305)'],
   task_overdue: ['overdue', 'oklch(0.75 0.17 30)'],
@@ -189,6 +191,8 @@ export function NotificationBell() {
         return t('nt_issueOverdue').replace('{d}', fmtDue(m.due ?? ''));
       case 'task_reminder':
         return t('nt_reminder');
+      case 'timer_running':
+        return t('nt_timer').replace('{h}', m.h ?? '');
       case 'meeting':
         return m.start ? t('nt_meetingAt').replace('{s}', m.start) : t('nt_meetingToday');
       case 'share_invite':

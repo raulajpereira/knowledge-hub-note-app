@@ -30,6 +30,7 @@ export const NOTIFY_KINDS = [
   'inbound_note',
   'inbound_task',
   'inbound_email',
+  'timer_running',
 ] as const;
 
 export const notifications = pgTable(

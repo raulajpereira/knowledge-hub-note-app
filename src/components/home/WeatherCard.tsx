@@ -1,5 +1,6 @@
 'use client';
 
+import { useClock } from '@/components/shell/useClock';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Sheet, usePersistentState, useViewport } from '@/components/ui';
 import { api } from '@/lib/client/api';
@@ -183,6 +184,7 @@ export function WeatherCard() {
     ...(d.sunset ? [{ time: d.sunset, rise: false }] : []),
   ]);
 
+  const clk = useClock(lang);
   const sky = <WxSky cond={now?.cond ?? 'cloudy'} isDay={isDay} paused={full} scale={phone ? 0.6 : 1} />;
   const placeChip = (ref: React.RefObject<HTMLButtonElement | null>, at: 'banner' | 'full') => (
     <button
@@ -399,6 +401,11 @@ export function WeatherCard() {
       />
       <div className="kh-wxb__body">
         <div className="kh-wxb__left">
+          {/* the date and time (they left the header for the "Registar horas" button) */}
+          <div className="kh-wxb__clock">
+            <span className="kh-wxb__time">{clk.clock}</span>
+            <span className="kh-wxb__date">{clk.date}</span>
+          </div>
           {placeChip(bannerPlaceRef, 'banner')}
           {!wx ? (
             status === 'err' ? (

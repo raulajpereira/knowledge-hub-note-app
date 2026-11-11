@@ -96,6 +96,7 @@ const HREF: Record<string, string> = {
   meeting: '/app/meetings?m=',
   note: '/app/notes?n=',
   email: '/app/emails?m=',
+  time: '/app/timelog?e=',
 };
 const ddmm = (iso: string) =>
   /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : iso;
@@ -126,6 +127,7 @@ export function pushPayload(
     inbound_note: t('nt_inboundNote'),
     inbound_task: t('nt_inboundTask'),
     inbound_email: t('nt_inboundEmail'),
+    timer_running: t('nt_timer').replace('{h}', m.h ?? ''),
   };
   const base = env().NEXT_PUBLIC_BASE_PATH;
   const path =

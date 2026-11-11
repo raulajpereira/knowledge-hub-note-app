@@ -421,6 +421,13 @@
       "when": 1794585600000,
       "tag": "0059_user_rows_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794672000000,
+      "tag": "0060_time_log",
+      "breakpoints": true
     }
   ]
 }

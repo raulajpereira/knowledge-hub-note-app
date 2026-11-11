@@ -19,6 +19,8 @@ export const NAV_ICON_PATHS: Record<string, string> = {
   issues:
     '<rect x="4" y="4" width="16" height="5" rx="1.5"></rect><path d="M5 9v10h14V9"></path><line x1="10" y1="13" x2="14" y2="13"></line>',
   artifacts: '<path d="M9 7l-5 5 5 5"></path><path d="M15 7l5 5-5 5"></path>',
+  timelog:
+    '<circle cx="12" cy="13.5" r="7.5"></circle><path d="M12 10v3.5l2.5 1.5"></path><path d="M10 2.5h4"></path><path d="M12 2.5V6"></path><path d="M18.5 6.5l1.5-1.5"></path>',
   codelib: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>',
   api: '<path d="M8 3v5"></path><path d="M16 3v5"></path><path d="M6 8h12v3a6 6 0 0 1-12 0z"></path><path d="M12 17v4"></path>',
   contacts:
@@ -110,6 +112,10 @@ export const NAV_DEFAULT = [
   {
     type: 'item',
     id: 'issues',
+  },
+  {
+    type: 'item',
+    id: 'timelog',
   },
   {
     type: 'spacer',

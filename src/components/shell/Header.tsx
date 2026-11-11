@@ -13,32 +13,16 @@ import { TcodesPopup } from '@/components/sap/TcodesPopup';
 import { NotificationBell } from './NotificationBell';
 import { HeaderSearch } from '@/components/search/HeaderSearch';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
-
-function useClock(lang: string) {
-  // Client-only (server and browser clocks differ → no hydration mismatch).
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const loc = lang === 'en' ? 'en-GB' : 'pt-PT';
-  return {
-    clock: now?.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) ?? ' ',
-    date:
-      now?.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) ?? '',
-  };
-}
+import { TimerButton } from '@/components/timelog/Timer';
 
 export function Header({ onActivity, activityOpen }: { onActivity: () => void; activityOpen: boolean }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [tcOpen, setTcOpen] = useState(false);
   const { modules, me, focus, toggleFocus, lock, openPalette } = useShell();
   const [isMac, setIsMac] = useState(false);
   useEffect(() => setIsMac(/Mac|iP/.test(navigator.platform)), []);
   const counts = useCounts();
   const path = usePathname();
-  const { clock, date } = useClock(lang);
   const isOwner = me.admin?.role === 'owner';
 
   return (
@@ -101,10 +85,8 @@ export function Header({ onActivity, activityOpen }: { onActivity: () => void; a
 
       <div style={{ flex: 1 }} />
 
-      <div className="kh-hdr__date">
-        <span className="kh-hdr__clock">{clock}</span>
-        <span className="kh-hdr__dtext">{date}</span>
-      </div>
+      {/* "Registar horas" — the date and time moved into the weather card (Início) */}
+      {modules.has('timelog') && <TimerButton />}
 
       {modules.has('whiteboard') && (
         <Link

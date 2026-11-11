@@ -97,6 +97,7 @@ export const MODULE_GROUPS: ReadonlyArray<{
       ['templates', 'Modelos', 'Templates'],
       ['views', 'Vistas guardadas', 'Saved views'],
       ['history', 'Histórico de versões', 'Version history'],
+      ['timelog', 'Registo de Tempos', 'Time log'],
     ],
   },
   {
@@ -146,6 +147,7 @@ export const LATER_FEATURES = [
   'views',
   'history',
   'mg_profit',
+  'timelog',
 ] as const;
 
 // [name, colour, €/user/month, annual discount %, modules] — prototype `AP`.

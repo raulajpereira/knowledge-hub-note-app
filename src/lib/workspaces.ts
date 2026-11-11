@@ -99,6 +99,7 @@ export const WS_EVERYWHERE = [
   'views',
   'history',
   'mg_profit',
+  'timelog',
 ] as const;
 
 /** The modules a workspace shows: the plan's, the ones chosen for it, and (outside the first one) only the separated ones. */

@@ -2167,3 +2167,29 @@ button.kh-wx__chip {
     font-size: 18px;
   }
 }
+
+/* the date and time, above the place (moved here from the header) */
+.kh-wxb__clock {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+.kh-wxb__time {
+  font-family: 'Geist Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.kh-wxb__date {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.kh-wxb__date::first-letter {
+  text-transform: uppercase;
+}

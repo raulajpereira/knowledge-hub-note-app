@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, asc, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { issues, meetings, notifySettings, tasks, tenants, users } from '@/db/schema';
+import { issues, meetings, notifySettings, tasks, tenants, timeEntries, users } from '@/db/schema';
 import { env } from '@/lib/env';
 import { localParts, notifyPrefs, reminderAt, type NotifyPrefs, type RemindMode } from '@/lib/notify';
 import { allow } from '@/server/auth/rateLimit';
@@ -169,6 +169,31 @@ async function generateFor(p: Person, modules: ReadonlySet<string>, now: Date) {
           title: i.folder_name,
           meta: { who: i.owner_name, kind: i.kind },
           key: `share_invite:${i.id}`,
+        });
+    }
+    // Registo de Tempos: every full hour of a running timer, "Ainda a trabalhar em …?" (bell + push)
+    if (modules.has('timelog')) {
+      const [r] = await tx
+        .select({
+          id: timeEntries.id,
+          startedAt: timeEntries.startedAt,
+          ref: timeEntries.refLabel,
+          desc: timeEntries.description,
+          client: timeEntries.clientLabel,
+        })
+        .from(timeEntries)
+        .where(
+          and(eq(timeEntries.ownerId, p.id), isNull(timeEntries.endedAt), isNull(timeEntries.deletedAt)),
+        );
+      const h = r ? Math.floor((now.getTime() - r.startedAt.getTime()) / 3_600_000) : 0;
+      if (r && h >= 1)
+        await addNotification(tx, auth, {
+          kind: 'timer_running',
+          itemType: 'time',
+          itemId: r.id,
+          title: (r.ref || r.desc || r.client || '—').slice(0, 300),
+          meta: { h: String(h) },
+          key: `timer:${r.id}:${h}`,
         });
     }
     for (const [key, p] of pick)

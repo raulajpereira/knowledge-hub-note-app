@@ -50,6 +50,16 @@ const SOURCES: Source[] = [
     done: 'resolved_at',
     href: '/app/tickets?k=',
   },
+  // Registo de Tempos: started (created) and ended (done), with the time kept
+  {
+    type: 'time',
+    module: 'timelog',
+    table: 'time_entries',
+    title:
+      "coalesce(nullif(ref_label, ''), nullif(description, ''), client_label, '') || coalesce(' · ' || (minutes / 60)::text || 'h ' || lpad((minutes % 60)::text, 2, '0') || 'm', '')",
+    done: 'ended_at',
+    href: '/app/timelog?e=',
+  },
 ];
 
 const MAX = 500;

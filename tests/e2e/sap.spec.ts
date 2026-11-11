@@ -252,6 +252,8 @@ test('code library SAP: new class, method, generated pool, include reference, Re
   await main.fill('REPORT znew_program.\n\nINCLUDE znew_program_f02.\n');
   const ref = page.locator('.kh-ab-ref', { hasText: 'znew_program_f02' });
   await expect(ref).toBeVisible();
+  // the highlight layer is redrawn as the text settles: wait until it has a box
+  await expect.poll(async () => (await ref.boundingBox()) !== null).toBe(true);
   const box = (await ref.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.keyboard.down('Control');

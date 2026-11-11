@@ -1582,5 +1582,6 @@
   "ws_allSub": "Combined view: Calendar, Home and search (read only)",
   "ws_combinedRo": "The \"All workspaces\" view is read only. Pick a workspace to create or change things.",
   "nf_ws": "Workspaces",
-  "nf_wsD": "Only notify about items of these workspaces. A notification opens the item in its workspace."
+  "nf_wsD": "Only notify about items of these workspaces. A notification opens the item in its workspace.",
+  "act_k_time": "Time entry"
 }

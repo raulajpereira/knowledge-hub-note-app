@@ -25,7 +25,10 @@ import {
   tickets,
   voiceNotes,
   embeddings,
+  timeEntries,
 } from '@/db/schema';
+import { getEntitlements } from '@/server/licensing/entitlements';
+import { restoreEntries } from './timelog';
 import { vecLiteral } from '@/server/search/embedClient';
 import { SEM_MAX_DIST } from '@/server/search/semantic';
 import { foldMatch } from '@/server/search/foldSql';
@@ -528,7 +531,8 @@ export type TrashKind =
   | 'code'
   | 'fn'
   | 'sapnote'
-  | 'ticket';
+  | 'ticket'
+  | 'time';
 export type TrashItem = {
   id: string;
   kind: TrashKind;
@@ -635,6 +639,15 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       .select({ id: emails.id, title: emails.subject, deletedAt: emails.deletedAt })
       .from(emails)
       .where(isNotNull(emails.deletedAt));
+    // Registo de Tempos: "INC0012345 · 1h 30m" (or its description)
+    const tes = await tx
+      .select({
+        id: timeEntries.id,
+        title: sql<string>`trim(coalesce(nullif(${timeEntries.refLabel}, ''), nullif(${timeEntries.description}, ''), ${timeEntries.clientLabel}) || ' · ' || to_char(${timeEntries.startedAt} at time zone 'Europe/Lisbon', 'DD/MM HH24:MI'), ' ·')`,
+        deletedAt: timeEntries.deletedAt,
+      })
+      .from(timeEntries)
+      .where(isNotNull(timeEntries.deletedAt));
     const left = (d: Date) => Math.max(0, TRASH_DAYS - Math.floor((Date.now() - d.getTime()) / 86_400_000));
     return [
       ...rs.map((x) => ({
@@ -661,6 +674,13 @@ export async function listTrash(auth: AuthContext): Promise<TrashItem[]> {
       ...sns.map((x) => ({
         id: x.id,
         kind: 'sapnote' as const,
+        title: x.title,
+        deletedAt: x.deletedAt!.toISOString(),
+        daysLeft: left(x.deletedAt!),
+      })),
+      ...tes.map((x) => ({
+        id: x.id,
+        kind: 'time' as const,
         title: x.title,
         deletedAt: x.deletedAt!.toISOString(),
         daysLeft: left(x.deletedAt!),
@@ -808,6 +828,16 @@ export async function restoreTrash(auth: AuthContext, items: Array<{ kind: Trash
     if (snIds.length) await tx.update(sapNotes).set({ deletedAt: null }).where(inArray(sapNotes.id, snIds));
     const tkIds = items.filter((i) => i.kind === 'ticket').map((i) => i.id);
     if (tkIds.length) await tx.update(tickets).set({ deletedAt: null }).where(inArray(tickets.id, tkIds));
+    // Registo de Tempos: back, and their hours back in the timesheet
+    const teIds = items.filter((i) => i.kind === 'time').map((i) => i.id);
+    if (teIds.length)
+      await restoreEntries(
+        tx,
+        auth,
+        teIds,
+        new Set((await getEntitlements(auth.tenant.id)).modules),
+        'Europe/Lisbon',
+      );
     const aIds = items.filter((i) => i.kind === 'artifact').map((i) => i.id);
     if (aIds.length) await tx.update(artifacts).set({ deletedAt: null }).where(inArray(artifacts.id, aIds));
     const iIds = items.filter((i) => i.kind === 'issue').map((i) => i.id);
@@ -1122,6 +1152,16 @@ export async function purgeTrash(
     await purgeRecordsTx(tx, fnIds);
     await purgeSapNotesTx(tx, snIds);
     await purgeTicketsTx(tx, tkIds);
+    const teIds =
+      items === 'all'
+        ? (
+            await tx.select({ id: timeEntries.id }).from(timeEntries).where(isNotNull(timeEntries.deletedAt))
+          ).map((r) => r.id)
+        : items.filter((i) => i.kind === 'time').map((i) => i.id);
+    if (teIds.length)
+      await tx
+        .delete(timeEntries)
+        .where(and(inArray(timeEntries.id, teIds), isNotNull(timeEntries.deletedAt)));
     await purgeApiRequestsTx(tx, rIds);
     if (aIds.length) {
       await unlinkAll(tx, 'artifact', aIds);
