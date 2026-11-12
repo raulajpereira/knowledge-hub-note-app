@@ -442,6 +442,13 @@
       "when": 1794844800000,
       "tag": "0062_support_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1794931200000,
+      "tag": "0063_budgets",
+      "breakpoints": true
     }
   ]
 }

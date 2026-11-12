@@ -49,6 +49,8 @@ export const MODULE_GROUPS: ReadonlyArray<{
       ['mg_clients', 'Clientes', 'Clients'],
       // migration 0058: the projects' profitability block
       ['mg_profit', 'Rentabilidade', 'Profitability'],
+      // migration 0063: SuccessFactors budgets from the person's matrix
+      ['mg_budget', 'Orçamentos', 'Budgets'],
     ],
   },
   {
@@ -148,6 +150,7 @@ export const LATER_FEATURES = [
   'history',
   'mg_profit',
   'timelog',
+  'mg_budget',
 ] as const;
 
 // [name, colour, €/user/month, annual discount %, modules] — prototype `AP`.
