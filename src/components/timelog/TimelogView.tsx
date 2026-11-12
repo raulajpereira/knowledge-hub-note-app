@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { DateInput, Modal, Select, Switch, useConfirm, useToast } from '@/components/ui';
+import { DateInput, Modal, Select, Switch, useConfirm, usePersistentState, useToast } from '@/components/ui';
+import { bodyZoom } from '@/components/ui/zoom';
 import { XlsxButton } from '@/components/content/XlsxButton';
 import { downloadTableXlsx, xlsxName } from '@/lib/client/xlsxTable';
 import { fmtMinutes, roundUp15 } from '@/lib/timelog';
@@ -28,6 +29,8 @@ import './timelog.css';
 // "Enviar para a folha de tempos" for the whole range; Excel export.
 
 type Range = 'week' | 'month';
+/** default widths: Início, Fim, Duração, Ticket, Cliente, Projeto, Descrição (takes the rest), Folha */
+const COL_DEF = [78, 92, 86, 190, 150, 140, 240, 84];
 const pad = (n: number) => String(n).padStart(2, '0');
 const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const hm = (iso: string | null) => {
@@ -79,6 +82,54 @@ export function TimelogView() {
   const [edit, setEdit] = useState<Edit | null>(null);
   const [busy, setBusy] = useState(false);
   const opts = useTimeOptions(true);
+  // the columns' widths (wide screens): dragged in the header, kept on this device
+  const [colW, setColW] = usePersistentState<number[] | null>('tl.cols', null);
+  const [live, setLive] = useState<number[] | null>(null);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1241px)');
+    const on = () => setWide(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  const widths = live ?? (colW && colW.length === COL_DEF.length ? colW : COL_DEF);
+  const cols: React.CSSProperties | undefined = wide
+    ? {
+        gridTemplateColumns: widths
+          .map((w, i) => (i === 6 ? 'minmax(100px,1fr)' : `${Math.round(w)}px`))
+          .join(' '),
+      }
+    : undefined;
+  const startResize = (i: number, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const z = bodyZoom();
+    const x0 = e.clientX;
+    const start = [...widths];
+    // never wider than the table: the description keeps at least 100 px
+    const box = (e.currentTarget as HTMLElement).closest('.kh-tl-table') as HTMLElement | null;
+    const room =
+      (box?.clientWidth ?? 1e6) - 100 - start.reduce((a, w, j) => (j === i || j === 6 ? a : a + w), 0) - 4;
+    let cur = start;
+    const move = (ev: PointerEvent) => {
+      const w = Math.min(room, Math.max(56, start[i]! + (ev.clientX - x0) / z));
+      cur = start.map((x, j) => (j === i ? w : x));
+      setLive(cur);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setColW(cur.map(Math.round));
+      setLive(null);
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
   const [from, to] = useMemo(() => bounds(range, offset), [range, offset]);
 
   const load = useCallback(() => {
@@ -384,7 +435,7 @@ export function TimelogView() {
         </div>
         <div className="kh-sap-body" style={{ padding: '0 22px 22px' }}>
           <div className="kh-well kh-table kh-tl-table" role="table" aria-label={t('tl_title')}>
-            <div className="kh-table__head kh-tl-cols" role="row">
+            <div className="kh-table__head kh-tl-cols" role="row" style={cols}>
               {[
                 'tl_cFrom',
                 'tl_cTo',
@@ -394,9 +445,23 @@ export function TimelogView() {
                 'tl_cProject',
                 'tl_cDesc',
                 'tl_cSheet',
-              ].map((k) => (
-                <div key={k} role="columnheader" className="kh-table__th">
-                  {t(k)}
+              ].map((k, i, all) => (
+                <div
+                  key={k}
+                  role="columnheader"
+                  style={{ position: 'relative', minWidth: 0, height: '100%' }}
+                >
+                  <div className="kh-table__th">{t(k)}</div>
+                  {/* drag the edge to resize (wide screens), double-click to restore */}
+                  {wide && i < all.length - 1 && i !== 6 && (
+                    <span
+                      className="kh-table__grip"
+                      title={t('resize')}
+                      aria-hidden="true"
+                      onPointerDown={(e) => startResize(i, e)}
+                      onDoubleClick={() => setColW(null)}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -413,6 +478,7 @@ export function TimelogView() {
                     role="row"
                     tabIndex={0}
                     className="kh-table__row kh-table__row--click kh-tl-cols"
+                    style={cols}
                     onClick={() => openEdit(e)}
                     onKeyDown={(ev) => ev.key === 'Enter' && ev.target === ev.currentTarget && openEdit(e)}
                   >
