@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 // Offline: notes and tasks read from the copy on this device; an edit made offline is sent when the connection is back.
-test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 } });
+test.use({ locale: 'pt-PT', viewport: { width: 1440, height: 900 }, serviceWorkers: 'allow' });
 test.describe.configure({ mode: 'serial' });
 
 const outbox = process.env.MAIL_OUTBOX_DIR;

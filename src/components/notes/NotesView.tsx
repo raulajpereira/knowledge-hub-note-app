@@ -960,8 +960,15 @@ export function NotesView() {
   }, [sp, replaceParams, modules]);
 
   // Open the first note when none is selected (prototype: NOTES[0]); phones show the list instead.
+  // Not once a new note was asked for: the list arriving later must not open over it.
+  const autoOpen = useRef(true);
+  const made = useRef<string | null>(null);
+  // the new note is open: from now on it may open the first note again (e.g. after a delete)
   useEffect(() => {
-    if (!md.phone && !activeId && !loading && items[0]) open(items[0].id);
+    if (activeId && activeId === made.current) autoOpen.current = true;
+  }, [activeId]);
+  useEffect(() => {
+    if (!md.phone && !activeId && !loading && items[0] && autoOpen.current) open(items[0].id);
   }, [md.phone, activeId, loading, items, open]);
 
   // Load the open note.
@@ -1070,6 +1077,7 @@ export function NotesView() {
     });
 
   const newNote = async (folderId: string | null) => {
+    autoOpen.current = false;
     // in a shared folder: "Criar numa pasta partilhada?" first
     if (curShared && !(await confirm(sharedConfirm(t, curShared, false)))) return;
     try {
@@ -1081,9 +1089,11 @@ export function NotesView() {
         setFilter(folderId ?? 'all');
       setItems((all) => [item, ...all]);
       setNote({ ...item, content: null });
+      made.current = item.id;
       open(item.id);
       void loadFolders();
     } catch (e) {
+      autoOpen.current = true;
       failed(e);
     }
   };

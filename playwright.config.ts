@@ -14,6 +14,9 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${port}${basePath}/`,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // the offline service worker would hide requests from page.route (mocked
+    // answers): blocked everywhere but in the offline spec, which needs it
+    serviceWorkers: 'block',
   },
   projects: [
     {
