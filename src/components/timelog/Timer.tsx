@@ -102,7 +102,7 @@ export function useTimeOptions(open: boolean) {
 
 const ICON = {
   play: '<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"></path>',
-  stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"></rect>',
+  rec: '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"></circle>',
 };
 const Ico = ({ d }: { d: string }) => (
   <svg
@@ -444,7 +444,7 @@ export function TimerButton() {
         aria-label={entry ? `${t('tl_run_t')} · ${fmtClock(secs)} · ${labelOf(entry)}` : t('tl_btn')}
       >
         <i>
-          <Ico d={entry ? ICON.stop : ICON.play} />
+          <Ico d={entry ? ICON.rec : ICON.play} />
         </i>
         {entry ? (
           <>

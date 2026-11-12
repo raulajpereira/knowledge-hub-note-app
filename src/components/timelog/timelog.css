@@ -10,8 +10,14 @@
   padding: 0 16px 0 9px;
   border-radius: 999px;
   border: 1px solid rgb(var(--w) / 0.22);
-  background: linear-gradient(135deg, oklch(0.72 0.15 150 / 0.55), oklch(0.62 0.14 170 / 0.45));
+  /* the app's highlight colour (Definições › Aparência) */
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--accent) 78%, transparent),
+    color-mix(in oklch, var(--accent) 58%, transparent)
+  );
   color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -20,9 +26,6 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
     0 6px 18px rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(var(--kh-blur-btn, 20px));
-}
-.kh-tl-btn[data-run] {
-  background: linear-gradient(135deg, oklch(0.68 0.19 25 / 0.72), oklch(0.6 0.17 15 / 0.58));
 }
 .kh-tl-btn:focus-visible {
   outline: 2px solid var(--ink-hi);
@@ -36,10 +39,24 @@
   background: rgba(255, 255, 255, 0.92);
   display: grid;
   place-items: center;
-  color: oklch(0.55 0.15 150);
+  color: color-mix(in oklch, var(--accent) 80%, #000);
 }
+/* recording: the red dot pulses */
 .kh-tl-btn[data-run] i {
-  color: oklch(0.55 0.2 25);
+  color: oklch(0.6 0.22 27);
+}
+.kh-tl-btn[data-run] i svg {
+  animation: kh-tl-rec 1.4s ease-in-out infinite;
+}
+@keyframes kh-tl-rec {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kh-tl-btn[data-run] i svg {
+    animation: none;
+  }
 }
 .kh-tl-btn__clk {
   font-family: 'Geist Mono', monospace;
