@@ -2,11 +2,13 @@
    draws under it (black-translucent): when iOS reports no inset (it does on
    some launches), assume the tallest status bar so the header stays tappable. */
 :root {
-  --kh-safe-top: env(safe-area-inset-top, 0px);
+  --kh-safe-top: calc(env(safe-area-inset-top, 0px) / var(--ui-scale, 1));
 }
+/* the page is zoomed by "Tamanho dos Elementos": the space is divided by it so
+   the status bar keeps its real height at any size */
 @media (display-mode: standalone) and (max-width: 1099.98px) and (pointer: coarse) {
   :root {
-    --kh-safe-top: calc(max(env(safe-area-inset-top, 0px), 50px) + 10px);
+    --kh-safe-top: calc((max(env(safe-area-inset-top, 0px), 50px) + 16px) / var(--ui-scale, 1));
   }
 }
 
