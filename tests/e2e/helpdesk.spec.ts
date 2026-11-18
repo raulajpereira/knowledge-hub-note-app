@@ -195,6 +195,12 @@ test('link a helpdesk list, import it, and see the changes of a later read', asy
   await page.getByRole('radio', { name: 'Modificações' }).click();
   await expect(page.getByText('Prioridade: Média → Alta')).toBeVisible();
   await shot(page, '7-modificacoes');
+  // a change opens its ticket
+  await page.getByText('Prioridade: Média → Alta').click();
+  const fromChange = page.getByRole('dialog', { name: '#146975' });
+  await expect(fromChange).toContainText('Histórico');
+  await fromChange.getByRole('button', { name: 'Fechar' }).last().click();
+  await expect(fromChange).toHaveCount(0);
   await page.getByRole('radio', { name: 'Tickets' }).click();
   await page.getByRole('row', { name: /146975/ }).click();
   await expect(page.getByRole('dialog', { name: '#146975' })).toContainText('Histórico');

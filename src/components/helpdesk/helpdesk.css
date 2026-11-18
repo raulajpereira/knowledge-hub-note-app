@@ -379,3 +379,28 @@ em[data-k='back'] {
     width: calc(50% - 4px);
   }
 }
+
+/* a change opens its ticket */
+.kh-hd-chg--click {
+  cursor: pointer;
+}
+.kh-hd-chg--click:hover,
+.kh-hd-chg--click:focus-visible {
+  background: rgb(var(--w) / 0.06);
+  outline: none;
+}
+.kh-hd-pop__i {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kh-hd-pop__i:hover .kh-hd-pop__s,
+.kh-hd-pop__i:focus-visible .kh-hd-pop__s {
+  text-decoration: underline;
+}

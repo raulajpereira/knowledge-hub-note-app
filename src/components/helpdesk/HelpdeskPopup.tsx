@@ -94,8 +94,18 @@ export function HelpdeskPopup() {
       <ul>
         {list.slice(0, 8).map((c) => (
           <li key={c.id}>
-            <span className="kh-hd-mono">#{c.number}</span> <span className="kh-hd-pop__s">{c.summary}</span>
-            <em data-k={c.kind}>{text(c)}</em>
+            <button
+              type="button"
+              className="kh-hd-pop__i"
+              onClick={() => {
+                void seen();
+                router.push(`/app/helpdesk?i=${c.itemId}`);
+              }}
+            >
+              <span className="kh-hd-mono">#{c.number}</span>{' '}
+              <span className="kh-hd-pop__s">{c.summary}</span>
+              <em data-k={c.kind}>{text(c)}</em>
+            </button>
           </li>
         ))}
       </ul>

@@ -176,6 +176,20 @@ export function HelpdeskView() {
   }, [sp, ext, go, pair]);
 
   const srcOf = useMemo(() => new Map((data?.sources ?? []).map((s) => [s.id, s])), [data]);
+  /** a change (or the popup, ?i=) opens its ticket */
+  const openItem = useCallback(
+    (id: string) => {
+      const it = data?.items.find((x) => x.id === id);
+      if (it) setOpen(it);
+    },
+    [data],
+  );
+  useEffect(() => {
+    const id = sp.get('i');
+    if (!id || !data) return;
+    openItem(id);
+    go({ i: null });
+  }, [sp, data, openItem, go]);
   // filters (kept on this device): client, priority, status ("Prioritários" = Aberto, Reaberto, Em progresso)
   const [fClient, setFClient] = usePersistentState<string>('hd.fClient', '');
   const [fPrio, setFPrio] = usePersistentState<string>('hd.fPrio', '');
@@ -572,7 +586,19 @@ export function HelpdeskView() {
                     {new Date(at).toLocaleString()} · {srcOf.get(cs[0]!.sourceId)?.name ?? ''}
                   </div>
                   {cs.map((c) => (
-                    <div key={c.id} className="kh-hd-chg">
+                    <div
+                      key={c.id}
+                      className="kh-hd-chg kh-hd-chg--click"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openItem(c.itemId)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openItem(c.itemId);
+                        }
+                      }}
+                    >
                       <span className="kh-hd-mono">#{c.number}</span>
                       <span>
                         {c.summary}
