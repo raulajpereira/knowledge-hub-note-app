@@ -36,6 +36,8 @@ export const NAV_ICON_PATHS: Record<string, string> = {
   tickets:
     '<path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"></path><path d="M14 6v2"></path><path d="M14 11v2"></path><path d="M14 16v2"></path>',
   tags: '<path d="M3 12V4h8l10 10-8 8z"></path><circle cx="7.5" cy="8.5" r="1.3"></circle>',
+  helpdesk:
+    '<path d="M4 13v-1a8 8 0 0 1 16 0v1"></path><rect x="3" y="13" width="4" height="6" rx="1.5"></rect><rect x="17" y="13" width="4" height="6" rx="1.5"></rect><path d="M19 19v.5a2.5 2.5 0 0 1-2.5 2.5H13"></path>',
   mg_budget:
     '<rect x="4" y="3" width="16" height="18" rx="2.5"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="11" y2="12"></line><line x1="13" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="11" y2="16"></line><line x1="13" y1="16" x2="16" y2="16"></line>',
   mg_overview:
@@ -233,6 +235,11 @@ export const NAV_DEFAULT = [
   {
     type: 'item',
     id: 'tickets',
+    nested: true,
+  },
+  {
+    type: 'item',
+    id: 'helpdesk',
     nested: true,
   },
   {

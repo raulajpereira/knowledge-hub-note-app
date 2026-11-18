@@ -101,6 +101,8 @@ export const WS_EVERYWHERE = [
   'mg_profit',
   'timelog',
   'mg_budget',
+  // the helpdesk's tickets are the person's, in every workspace
+  'helpdesk',
 ] as const;
 
 /** The modules a workspace shows: the plan's, the ones chosen for it, and (outside the first one) only the separated ones. */

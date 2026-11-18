@@ -68,10 +68,17 @@ export function cookieOptions(remember: boolean) {
 
 export async function createSession(
   userId: string,
-  opts: { remember: boolean; ip?: string | null; userAgent?: string | null },
+  opts: {
+    remember: boolean;
+    ip?: string | null;
+    userAgent?: string | null;
+    /** 'ext': the browser extension's token (only its own routes accept it) */
+    scope?: 'app' | 'ext';
+    ttlMs?: number;
+  },
 ): Promise<{ token: string; sessionId: string; expiresAt: Date }> {
   const token = randomToken(32);
-  const expiresAt = new Date(Date.now() + (opts.remember ? REMEMBER_MS : SHORT_MS));
+  const expiresAt = new Date(Date.now() + (opts.ttlMs ?? (opts.remember ? REMEMBER_MS : SHORT_MS)));
   const [row] = await db()
     .insert(sessions)
     .values({
@@ -81,6 +88,7 @@ export async function createSession(
       expiresAt,
       ip: opts.ip ?? null,
       userAgent: opts.userAgent?.slice(0, 400) ?? null,
+      scope: opts.scope ?? 'app',
     })
     .returning({ id: sessions.id });
   await db().update(users).set({ lastSeenAt: new Date() }).where(eq(users.id, userId));
@@ -105,7 +113,10 @@ export function accessProblem(row: {
   return null;
 }
 
-export async function resolveSession(token: string | undefined | null): Promise<AuthContext | null> {
+export async function resolveSession(
+  token: string | undefined | null,
+  scope: 'app' | 'ext' = 'app',
+): Promise<AuthContext | null> {
   if (!token || token.length < 20 || token.length > 100) return null;
   const now = new Date();
   const [row] = await db()
@@ -139,7 +150,12 @@ export async function resolveSession(token: string | undefined | null): Promise<
     .leftJoin(plans, eq(plans.id, tenants.planId))
     .leftJoin(codes, eq(codes.id, users.registeredWithCodeId))
     .where(
-      and(eq(sessions.tokenHash, sha256(token)), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)),
+      and(
+        eq(sessions.tokenHash, sha256(token)),
+        eq(sessions.scope, scope),
+        isNull(sessions.revokedAt),
+        gt(sessions.expiresAt, now),
+      ),
     )
     .limit(1);
   if (!row || accessProblem(row)) return null;

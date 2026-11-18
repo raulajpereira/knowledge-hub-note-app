@@ -12,3 +12,4 @@ export * from './search';
 export * from './tickets';
 export * from './timelog';
 export * from './budget';
+export * from './helpdesk';

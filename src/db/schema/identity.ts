@@ -203,6 +203,10 @@ export const sessions = pgTable(
     ip: inet('ip'),
     userAgent: text('user_agent'),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    /** 'app': the browser's cookie; 'ext': the browser extension's token (Helpdesk sync only) */
+    scope: text('scope', { enum: ['app', 'ext'] })
+      .notNull()
+      .default('app'),
   },
   (t) => [uniqueIndex('sessions_token_idx').on(t.tokenHash), index('sessions_user_idx').on(t.userId)],
 );

@@ -34,12 +34,16 @@ const HREF: Record<string, string> = {
   email: '/app/emails?m=',
   time: '/app/timelog?e=',
 };
+// a whole list, not one item
+const PAGE_HREF: Record<string, string> = { helpdesk: '/app/helpdesk?tab=changes' };
 const hrefOf = (n: Item) =>
   n.itemType === 'share'
     ? '/app/settings?tab=share'
-    : HREF[n.itemType]
-      ? `${HREF[n.itemType]}${n.itemId}`
-      : null;
+    : PAGE_HREF[n.itemType]
+      ? PAGE_HREF[n.itemType]
+      : HREF[n.itemType]
+        ? `${HREF[n.itemType]}${n.itemId}`
+        : null;
 
 // small line icons per kind (stroke = currentColor)
 const KIND_ICON: Record<string, string> = {
@@ -56,6 +60,7 @@ const KIND_ICON: Record<string, string> = {
 };
 const ICON_OF: Record<string, [string, string]> = {
   timer_running: ['reminder', 'oklch(0.72 0.17 25)'],
+  helpdesk: ['task', 'oklch(0.8 0.13 200)'],
   task_due: ['task', 'oklch(0.8 0.13 245)'],
   issue_due: ['task', 'oklch(0.78 0.14 305)'],
   task_overdue: ['overdue', 'oklch(0.75 0.17 30)'],
@@ -193,6 +198,8 @@ export function NotificationBell() {
         return t('nt_reminder');
       case 'timer_running':
         return t('nt_timer').replace('{h}', m.h ?? '');
+      case 'helpdesk':
+        return m.error ? t('nt_helpdeskSession') : t('nt_helpdesk').replace('{n}', m.n ?? '');
       case 'meeting':
         return m.start ? t('nt_meetingAt').replace('{s}', m.start) : t('nt_meetingToday');
       case 'share_invite':

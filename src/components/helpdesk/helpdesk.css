@@ -1,0 +1,314 @@
+/* Helpdesk — the page, the set-up dialog and the changes card. */
+
+.kh-hd-mono {
+  font-family: 'Geist Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+.kh-hd-dim {
+  color: rgb(var(--t) / calc(0.7 * var(--t-k)));
+}
+.kh-hd-num {
+  text-align: right;
+  justify-content: flex-end;
+}
+
+/* the card after a read with changes (any page) */
+.kh-hd-pop {
+  position: fixed;
+  top: 96px;
+  right: 24px;
+  z-index: 900;
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 16px 18px;
+  border-radius: 20px;
+}
+.kh-hd-pop > b {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.kh-hd-pop ul {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.kh-hd-pop li {
+  padding: 6px 0;
+  border-bottom: 1px solid rgb(var(--w) / 0.08);
+  min-width: 0;
+}
+.kh-hd-pop__s {
+  opacity: 0.8;
+}
+.kh-hd-pop em,
+.kh-hd-chg em {
+  display: block;
+  font-style: normal;
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+em[data-k='new'] {
+  color: oklch(0.85 0.13 150);
+}
+em[data-k='field'] {
+  color: oklch(0.85 0.09 250);
+}
+em[data-k='comment'] {
+  color: oklch(0.86 0.12 85);
+}
+em[data-k='gone'],
+em[data-k='back'] {
+  color: oklch(0.82 0.12 30);
+}
+.kh-hd-pop p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+.kh-hd-pop > div {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+@media (max-width: 760px) {
+  .kh-hd-pop {
+    top: auto;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    right: 16px;
+  }
+}
+
+/* the page */
+.kh-hd-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 22px 10px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.12);
+  font-size: 13px;
+}
+.kh-hd-strip > span:nth-child(2) {
+  flex: 1;
+  min-width: 220px;
+}
+.kh-hd-strip[data-warn] {
+  border-color: oklch(0.75 0.13 80 / 0.6);
+  background: oklch(0.75 0.13 80 / 0.12);
+}
+.kh-hd-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: oklch(0.75 0.17 150);
+  box-shadow: 0 0 8px oklch(0.75 0.17 150);
+}
+.kh-hd-strip[data-warn] .kh-hd-dot {
+  background: oklch(0.8 0.15 80);
+  box-shadow: 0 0 8px oklch(0.8 0.15 80);
+}
+.kh-hd-strip[data-off] .kh-hd-dot {
+  background: rgb(var(--w) / 0.4);
+  box-shadow: none;
+}
+.kh-hd-steps {
+  margin: 0 22px 14px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgb(var(--w) / 0.06);
+  border: 1px solid rgb(var(--w) / 0.12);
+  font-size: 14px;
+}
+.kh-hd-steps ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  line-height: 1.9;
+}
+.kh-hd-steps p {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  opacity: 0.7;
+}
+.kh-hd-cols {
+  display: grid;
+  grid-template-columns:
+    96px minmax(200px, 2.2fr) minmax(110px, 1fr) 100px 100px minmax(110px, 1fr) minmax(120px, 1fr)
+    minmax(150px, 1.2fr) 110px;
+}
+.kh-hd-table {
+  overflow: auto;
+}
+.kh-hd-table > [role='row'],
+.kh-hd-table > [role='rowgroup'] > [role='row'] {
+  min-width: 1150px;
+}
+.kh-hd-table [data-gone] {
+  opacity: 0.5;
+}
+.kh-hd-tag {
+  display: inline-flex;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgb(var(--w) / 0.12);
+}
+.kh-hd-tag[data-k='gone'] {
+  background: oklch(0.7 0.14 30 / 0.25);
+  color: oklch(0.88 0.1 30);
+}
+.kh-hd-tag[data-k='new'] {
+  background: oklch(0.72 0.15 150 / 0.25);
+  color: oklch(0.88 0.12 150);
+}
+.kh-hd-tag[data-k='upd'] {
+  background: oklch(0.7 0.12 250 / 0.28);
+  color: oklch(0.88 0.09 250);
+}
+.kh-hd-chg {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 4px 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgb(var(--w) / 0.07);
+  font-size: 13px;
+}
+.kh-hd-when {
+  padding: 14px 14px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--t) / calc(0.65 * var(--t-k)));
+}
+
+/* dialogs */
+.kh-hd-modal {
+  width: min(980px, 95vw) !important;
+  max-width: none !important;
+}
+.kh-hd-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.kh-hd-map {
+  display: grid;
+  grid-template-columns: minmax(130px, 200px) minmax(0, 1fr) 230px;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+.kh-hd-map + .kh-hd-map {
+  margin-top: 6px;
+}
+.kh-hd-map.h {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+.kh-hd-map > b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-hd-map > span {
+  min-width: 0;
+  font-size: 12px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kh-hd-sum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.kh-hd-sum span {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgb(var(--w) / 0.07);
+  font-size: 13px;
+}
+.kh-hd-sum b {
+  font-family: 'Geist Mono', monospace;
+  font-size: 16px;
+  margin-right: 6px;
+}
+.kh-hd-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.kh-hd-tbl th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  padding: 6px 8px;
+}
+.kh-hd-tbl td {
+  padding: 8px;
+  border-top: 1px solid rgb(var(--w) / 0.08);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-hd-tbl td small {
+  display: block;
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: normal;
+}
+.kh-hd-kv {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 6px 14px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.kh-hd-kv > span:nth-child(odd) {
+  opacity: 0.65;
+}
+.kh-hd-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.kh-hd-foot > .sp {
+  flex: 1;
+}
+.kh-hd-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  opacity: 0.65;
+}
+@media (max-width: 760px) {
+  .kh-hd-grid,
+  .kh-hd-map {
+    grid-template-columns: 1fr;
+  }
+  .kh-hd-kv {
+    grid-template-columns: 1fr;
+  }
+}

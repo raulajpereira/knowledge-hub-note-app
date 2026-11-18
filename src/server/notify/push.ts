@@ -128,14 +128,17 @@ export function pushPayload(
     inbound_task: t('nt_inboundTask'),
     inbound_email: t('nt_inboundEmail'),
     timer_running: t('nt_timer').replace('{h}', m.h ?? ''),
+    helpdesk: m.error ? t('nt_helpdeskSession') : t('nt_helpdesk').replace('{n}', m.n ?? ''),
   };
   const base = env().NEXT_PUBLIC_BASE_PATH;
   const path =
     n.itemType === 'share'
       ? '/app/settings?tab=share'
-      : HREF[n.itemType] && n.itemId
-        ? `${HREF[n.itemType]}${n.itemId}`
-        : '/app';
+      : n.itemType === 'helpdesk'
+        ? '/app/helpdesk?tab=changes'
+        : HREF[n.itemType] && n.itemId
+          ? `${HREF[n.itemType]}${n.itemId}`
+          : '/app';
   return {
     title: head[n.kind] || 'KnowledgeHub',
     body: n.title,
