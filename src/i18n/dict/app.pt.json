@@ -1165,5 +1165,11 @@
   "hd_tUpd": "Atualizar",
   "hd_skipped": "{n} linha(s) sem número de ticket foram ignoradas.",
   "nt_helpdesk": "Helpdesk: {n} ticket(s) com modificações",
-  "nt_helpdeskSession": "Helpdesk: a sessão expirou, entre de novo no helpdesk"
+  "nt_helpdeskSession": "Helpdesk: a sessão expirou, entre de novo no helpdesk",
+  "hd_allStatus": "Todos os estados",
+  "hd_hot": "Só prioritários",
+  "hd_allPrio": "Todas as prioridades",
+  "hd_allClients": "Todos os clientes",
+  "hd_clearFilters": "Limpar filtros",
+  "hd_showing": "{a} de {b}"
 }

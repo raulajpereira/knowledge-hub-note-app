@@ -183,6 +183,14 @@ test('link a helpdesk list, import it, and see the changes of a later read', asy
   expect(order.indexOf('#143604')).toBeGreaterThan(order.indexOf('#145782'));
   expect(order.at(-1)).toBe('#146205');
   await expect(page.locator('.kh-hd-st[data-k=reopen]')).toHaveText('Reaberto');
+  // filters: "Prioritários" keeps Aberto / Reaberto / Em progresso (in the list)
+  await page.getByRole('combobox', { name: 'Estado' }).click();
+  await page.getByRole('option', { name: /^Só prioritários/ }).click();
+  await expect(page.locator('.kh-hd-table [role=row][tabindex]')).toHaveCount(4);
+  await expect(page.getByText('4 de 6')).toBeVisible();
+  await shot(page, '6b-filtros');
+  await page.getByRole('button', { name: 'Limpar filtros' }).click();
+  await expect(page.locator('.kh-hd-table [role=row][tabindex]')).toHaveCount(6);
   await shot(page, '6-lista');
   await page.getByRole('radio', { name: 'Modificações' }).click();
   await expect(page.getByText('Prioridade: Média → Alta')).toBeVisible();

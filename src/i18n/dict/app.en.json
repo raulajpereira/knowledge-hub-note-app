@@ -1165,5 +1165,11 @@
   "hd_tUpd": "Update",
   "hd_skipped": "{n} row(s) without a ticket number were skipped.",
   "nt_helpdesk": "Helpdesk: {n} ticket(s) changed",
-  "nt_helpdeskSession": "Helpdesk: the session expired, sign in to the helpdesk again"
+  "nt_helpdeskSession": "Helpdesk: the session expired, sign in to the helpdesk again",
+  "hd_allStatus": "All statuses",
+  "hd_hot": "To act on only",
+  "hd_allPrio": "All priorities",
+  "hd_allClients": "All clients",
+  "hd_clearFilters": "Clear filters",
+  "hd_showing": "{a} of {b}"
 }

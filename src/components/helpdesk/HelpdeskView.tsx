@@ -60,6 +60,8 @@ type Preview = {
 
 /** default widths: Nº, Descrição (takes the rest), Estado, Prioridade, Tipo, Cliente, Atribuído a, Último comentário, Aberto em */
 const COL_DEF = [96, 240, 150, 100, 100, 140, 140, 170, 90];
+/** the status filter's "Prioritários" (Aberto, Reaberto, Em progresso) */
+const HOT = '\u0000hot';
 const DESC = 1;
 
 /** "18/11 09:58" */
@@ -174,23 +176,37 @@ export function HelpdeskView() {
   }, [sp, ext, go, pair]);
 
   const srcOf = useMemo(() => new Map((data?.sources ?? []).map((s) => [s.id, s])), [data]);
+  // filters (kept on this device): client, priority, status ("Prioritários" = Aberto, Reaberto, Em progresso)
+  const [fClient, setFClient] = usePersistentState<string>('hd.fClient', '');
+  const [fPrio, setFPrio] = usePersistentState<string>('hd.fPrio', '');
+  const [fStatus, setFStatus] = usePersistentState<string>('hd.fStatus', '');
+  const distinct = (pick: (i: Item) => string) =>
+    [...new Set((data?.items ?? []).map(pick).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt'));
+  const clients = useMemo(() => distinct((i) => i.client), [data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const prios = useMemo(() => distinct((i) => i.priority), [data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const statuses = useMemo(() => distinct((i) => i.status), [data]); // eslint-disable-line react-hooks/exhaustive-deps
   const items = useMemo(() => {
     const k = q.trim().toLowerCase();
+    const hot = (st: string) => ['open', 'reopen', 'progress'].includes(hdStatusKind(st));
     return (
       (data?.items ?? [])
         .filter(
           (i) =>
-            !k ||
-            [i.number, i.summary, i.client, i.assignee, i.status, i.type].some((v) =>
-              v.toLowerCase().includes(k),
-            ),
+            (!k ||
+              [i.number, i.summary, i.client, i.assignee, i.status, i.type].some((v) =>
+                v.toLowerCase().includes(k),
+              )) &&
+            (!fClient || i.client === fClient) &&
+            (!fPrio || i.priority === fPrio) &&
+            (!fStatus || (fStatus === HOT ? i.inList && hot(i.status) : i.status === fStatus)),
         )
         // Aberto / Reaberto / Em progresso first; the rest keep their order (newest first)
         .map((i, n) => [i, n] as const)
         .sort(([a, x], [b, y]) => hdRank(a.status, a.inList) - hdRank(b.status, b.inList) || x - y)
         .map(([i]) => i)
     );
-  }, [data, q]);
+  }, [data, q, fClient, fPrio, fStatus]);
+  const filtered = !!(fClient || fPrio || fStatus);
 
   // the columns' widths: dragged in the header, kept on this device (the description takes the rest)
   const [colW, setColW] = usePersistentState<number[] | null>('hd.cols', null);
@@ -397,6 +413,64 @@ export function HelpdeskView() {
           {stat('oklch(0.75 0.13 80)', t('hd_changesToday'), changesToday.length)}
           {stat('oklch(0.7 0.14 30)', t('hd_gone'), (data?.items ?? []).filter((i) => !i.inList).length)}
         </div>
+
+        {tab === 'list' && data && data.items.length > 0 && (
+          <div className="kh-hd-filters">
+            <div>
+              <Select
+                value={fStatus}
+                options={[
+                  { value: '', label: t('hd_allStatus') },
+                  { value: HOT, label: t('hd_hot') },
+                  ...statuses.map((v) => ({ value: v, label: v })),
+                ]}
+                onChange={setFStatus}
+                searchPlaceholder={t('hd_f_status')}
+                aria-label={t('hd_f_status')}
+              />
+            </div>
+            <div>
+              <Select
+                value={fPrio}
+                options={[
+                  { value: '', label: t('hd_allPrio') },
+                  ...prios.map((v) => ({ value: v, label: v })),
+                ]}
+                onChange={setFPrio}
+                searchPlaceholder={t('hd_f_priority')}
+                aria-label={t('hd_f_priority')}
+              />
+            </div>
+            <div>
+              <Select
+                value={fClient}
+                options={[
+                  { value: '', label: t('hd_allClients') },
+                  ...clients.map((v) => ({ value: v, label: v })),
+                ]}
+                onChange={setFClient}
+                searchPlaceholder={t('hd_f_client')}
+                aria-label={t('hd_f_client')}
+              />
+            </div>
+            {filtered && (
+              <button
+                type="button"
+                className="kh-btn kh-btn--sm kh-btn--ghost"
+                onClick={() => {
+                  setFStatus('');
+                  setFPrio('');
+                  setFClient('');
+                }}
+              >
+                {t('hd_clearFilters')}
+              </button>
+            )}
+            <span className="kh-hd-dim" style={{ fontSize: 12.5, marginLeft: 'auto' }}>
+              {t('hd_showing').replace('{a}', String(items.length)).replace('{b}', String(data.items.length))}
+            </span>
+          </div>
+        )}
 
         <div className="kh-sap-body" style={{ padding: '0 22px 22px' }}>
           {tab === 'list' ? (

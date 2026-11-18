@@ -361,3 +361,21 @@ em[data-k='back'] {
 .kh-hd-st[data-k='other'] {
   font-weight: 500;
 }
+
+/* the filters above the list */
+.kh-hd-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 22px 12px;
+}
+.kh-hd-filters > div {
+  width: 200px;
+  max-width: 100%;
+}
+@media (max-width: 760px) {
+  .kh-hd-filters > div {
+    width: calc(50% - 4px);
+  }
+}
