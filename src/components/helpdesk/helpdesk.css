@@ -404,3 +404,11 @@ em[data-k='back'] {
 .kh-hd-pop__i:focus-visible .kh-hd-pop__s {
   text-decoration: underline;
 }
+
+/* the read a notification points at */
+.kh-hd-group--on {
+  border-radius: 14px;
+  background: color-mix(in oklch, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent);
+  scroll-margin-top: 12px;
+}

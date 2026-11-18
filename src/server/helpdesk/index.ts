@@ -412,7 +412,13 @@ async function apply(tx: Tx, auth: AuthContext, src: SRow, sn: HdSnapshot, first
         itemType: 'helpdesk',
         itemId: src.id,
         title: `${src.name}: ${[...new Set(news.map((c) => `#${c.number}`))].slice(0, 3).join(', ')}${items > 3 ? '…' : ''}`,
-        meta: { n: String(items), source: src.name },
+        // the bell opens this read's changes, or the ticket itself when it is just one
+        meta: {
+          n: String(items),
+          source: src.name,
+          at: now.toISOString(),
+          item: items === 1 ? news[0]!.itemId : '',
+        },
         key: `hd:${src.id}:${now.toISOString()}`,
       },
     );

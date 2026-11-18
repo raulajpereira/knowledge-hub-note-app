@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Popover, useViewport } from '@/components/ui';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
+import { hdNotifyHref } from '@/lib/helpdesk';
 import { fmtDue } from '@/lib/tasks';
 import { Icon } from './icons';
 import { useShell } from './ShellContext';
@@ -34,13 +35,12 @@ const HREF: Record<string, string> = {
   email: '/app/emails?m=',
   time: '/app/timelog?e=',
 };
-// a whole list, not one item
-const PAGE_HREF: Record<string, string> = { helpdesk: '/app/helpdesk?tab=changes' };
+
 const hrefOf = (n: Item) =>
   n.itemType === 'share'
     ? '/app/settings?tab=share'
-    : PAGE_HREF[n.itemType]
-      ? PAGE_HREF[n.itemType]
+    : n.itemType === 'helpdesk'
+      ? hdNotifyHref(n.meta)
       : HREF[n.itemType]
         ? `${HREF[n.itemType]}${n.itemId}`
         : null;

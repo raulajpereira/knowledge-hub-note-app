@@ -9,6 +9,7 @@ import { translate, type Lang } from '@/i18n';
 import { ApiError } from '@/server/errors';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser } from '@/server/content/tenant';
+import { hdNotifyHref } from '@/lib/helpdesk';
 
 // Web Push (docs/DEPLOY.md §5e): the bell's notifications on the person's
 // phone / computer, even with the app closed. Each browser where the person
@@ -135,7 +136,7 @@ export function pushPayload(
     n.itemType === 'share'
       ? '/app/settings?tab=share'
       : n.itemType === 'helpdesk'
-        ? '/app/helpdesk?tab=changes'
+        ? hdNotifyHref(n.meta)
         : HREF[n.itemType] && n.itemId
           ? `${HREF[n.itemType]}${n.itemId}`
           : '/app';

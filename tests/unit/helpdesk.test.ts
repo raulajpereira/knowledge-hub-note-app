@@ -91,3 +91,15 @@ describe('helpdesk status', () => {
     expect(hdRank('Aberto', false)).toBeGreaterThan(hdRank('Fechado', true));
   });
 });
+
+import { hdNotifyHref } from '@/lib/helpdesk';
+describe('helpdesk notification link', () => {
+  it('opens the ticket, the read, or the page', () => {
+    expect(hdNotifyHref({ item: 'abc', at: '2026-11-18T10:00:00.000Z' })).toBe('/app/helpdesk?i=abc');
+    expect(hdNotifyHref({ item: '', at: '2026-11-18T10:00:00.000Z' })).toBe(
+      '/app/helpdesk?tab=changes&at=2026-11-18T10%3A00%3A00.000Z',
+    );
+    expect(hdNotifyHref({ error: 'session' })).toBe('/app/helpdesk');
+    expect(hdNotifyHref(null)).toBe('/app/helpdesk?tab=changes');
+  });
+});

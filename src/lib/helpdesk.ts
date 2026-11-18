@@ -185,3 +185,12 @@ export function hdStatusKind(status: string): HdStatusKind {
 const RANK: Record<HdStatusKind, number> = { reopen: 0, open: 0, progress: 0, pending: 1, other: 1, done: 2 };
 /** Sort key: the ones to act on first, then the rest, the ones that left the list last. */
 export const hdRank = (status: string, inList: boolean) => (inList ? RANK[hdStatusKind(status)] : 3);
+
+/** Where a Helpdesk notification opens: the ticket (one changed), that read's changes, or the page. */
+export function hdNotifyHref(meta: Record<string, unknown> | null | undefined): string {
+  const m = (meta ?? {}) as Record<string, string | undefined>;
+  if (m.error) return '/app/helpdesk';
+  if (m.item) return `/app/helpdesk?i=${encodeURIComponent(m.item)}`;
+  if (m.at) return `/app/helpdesk?tab=changes&at=${encodeURIComponent(m.at)}`;
+  return '/app/helpdesk?tab=changes';
+}

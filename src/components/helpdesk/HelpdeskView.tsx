@@ -184,6 +184,14 @@ export function HelpdeskView() {
     },
     [data],
   );
+  // the bell: one read's changes (?at=), shown highlighted
+  const [focusAt, setFocusAt] = useState<string | null>(null);
+  useEffect(() => {
+    const at = sp.get('at');
+    if (!at) return;
+    setFocusAt(at);
+    go({ at: null });
+  }, [sp, go]);
   useEffect(() => {
     const id = sp.get('i');
     if (!id || !data) return;
@@ -581,7 +589,16 @@ export function HelpdeskView() {
             <div className="kh-well kh-table">
               {!groups.length && <div className="kh-table__empty">{t('hd_noChanges')}</div>}
               {groups.map(([at, cs]) => (
-                <div key={at} role="rowgroup">
+                <div
+                  key={at}
+                  role="rowgroup"
+                  className={at === focusAt ? 'kh-hd-group--on' : undefined}
+                  ref={
+                    at === focusAt
+                      ? (el) => el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+                      : undefined
+                  }
+                >
                   <div className="kh-hd-when">
                     {new Date(at).toLocaleString()} · {srcOf.get(cs[0]!.sourceId)?.name ?? ''}
                   </div>

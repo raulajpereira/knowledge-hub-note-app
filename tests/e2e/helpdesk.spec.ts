@@ -175,6 +175,17 @@ test('link a helpdesk list, import it, and see the changes of a later read', asy
   await page.keyboard.press('Escape');
   await pop.getByRole('button', { name: 'OK' }).click();
   await expect(pop).toHaveCount(0);
+  // the bell: the notification opens that read's changes, highlighted
+  await page
+    .getByRole('button', { name: /Notificações/ })
+    .first()
+    .click();
+  await page
+    .getByText(/Helpdesk: 5 ticket/)
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/app\/helpdesk/);
+  await expect(page.locator('.kh-hd-group--on')).toContainText('Estado: Pendente-Cliente → Em progresso');
 
   await page.goto('app/helpdesk');
   await expect(page.getByRole('row', { name: /146205/ })).toContainText('fora da lista');
