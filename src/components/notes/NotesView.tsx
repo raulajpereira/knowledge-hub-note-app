@@ -971,8 +971,12 @@ export function NotesView() {
     if (!md.phone && !activeId && !loading && items[0] && autoOpen.current) open(items[0].id);
   }, [md.phone, activeId, loading, items, open]);
 
-  // Load the open note.
+  // Load the open note. `wanted` is the note that should be open now: a reply for another one
+  // (e.g. the first note opened automatically, answering after "Nova Nota") is dropped, so the
+  // editor never shows — and saves into — a note other than the one selected.
+  const wanted = useRef<string | null>(null);
   useEffect(() => {
+    wanted.current = activeId;
     if (!activeId) {
       setNote(null);
       return;
@@ -981,7 +985,7 @@ export function NotesView() {
     let live = true;
     notesApi
       .get(activeId)
-      .then((r) => live && setNote(r.note))
+      .then((r) => live && wanted.current === r.note.id && setNote(r.note))
       .catch(() => {
         if (!live) return;
         setNote(null);
@@ -1088,6 +1092,7 @@ export function NotesView() {
       )
         setFilter(folderId ?? 'all');
       setItems((all) => [item, ...all]);
+      wanted.current = item.id;
       setNote({ ...item, content: null });
       made.current = item.id;
       open(item.id);

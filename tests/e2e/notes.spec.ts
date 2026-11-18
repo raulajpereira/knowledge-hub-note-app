@@ -366,6 +366,8 @@ test('tags page: tags with counts, rename', async ({ page }) => {
   await page.waitForTimeout(600);
   // another note: typing suggests the tags already used in the app
   await page.locator('.kh-nt-card').filter({ hasNotText: 'Go-live' }).first().click();
+  // wait for that note to be the open one (not the Go-live note, which would exclude its own tag)
+  await expect(page.locator('.kh-nt-tag', { hasText: 'Go-live' })).toHaveCount(0);
   await page.getByRole('button', { name: '+ Etiqueta' }).click();
   await page.getByRole('combobox', { name: 'Nova etiqueta' }).fill('go-l');
   await expect(page.getByRole('listbox', { name: 'Nova etiqueta' }).getByRole('option')).toHaveText([
