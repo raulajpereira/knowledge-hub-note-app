@@ -12,16 +12,6 @@ const appUrl = process.env.TEST_DATABASE_URL;
 const enabled = Boolean(adminUrl && appUrl);
 const outbox = process.env.MAIL_OUTBOX_DIR!;
 const meta = { ip: '203.0.113.39', userAgent: 'vitest', lang: 'pt' as const };
-const H = ['Assunto', 'Estado', 'Prioridade', 'Reportado por', 'Último comentário', 'Cliente'];
-const row = (n: string, st: string, pr = 'Média', c = '') => [
-  `#${n} Ticket ${n}`,
-  st,
-  pr,
-  'Ana (16/11/2026 11:20)',
-  c,
-  'Cliente A',
-];
-const URL1 = 'https://helpdesk.example/my-page';
 
 describe.skipIf(!enabled)('home cards data', () => {
   let svc: typeof import('@/server/auth/service');
@@ -79,7 +69,6 @@ describe.skipIf(!enabled)('home cards data', () => {
     if (!('token' in a)) throw new Error('2FA not expected');
     return { auth: (await session.resolveSession(a.token))!, cookie: a.token };
   }
-  const bearer = (t: string) => new Request('http://x', { headers: { authorization: `Bearer ${t}` } });
 
   it('SAP notes to implement per system, cutover / tests progress, empty lists', async () => {
     const { auth } = await signedIn('ana@home.pt');
