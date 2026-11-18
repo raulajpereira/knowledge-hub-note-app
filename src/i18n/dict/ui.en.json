@@ -1586,5 +1586,14 @@
   "act_k_time": "Time entry",
   "act_k_code": "Code",
   "act_k_sapnote": "SAP Note",
-  "act_k_transport": "Transport request"
+  "act_k_transport": "Transport request",
+  "w_timelog": "Time log",
+  "w_helpdesk": "Helpdesk",
+  "w_meetings": "Today’s meetings",
+  "w_daily": "Today’s note",
+  "w_sapnotes": "SAP Notes",
+  "w_news": "SAP News",
+  "w_fn": "Cutover & tests",
+  "w_files": "Recent files",
+  "w_voice": "Voice notes"
 }

@@ -88,6 +88,16 @@ export const HOME_TYPES = [
   'qnotes',
   'emails',
   'tickets',
+  // cards for the features added later (each one its own card)
+  'timelog',
+  'helpdesk',
+  'meetings',
+  'daily',
+  'sapnotes',
+  'news',
+  'fn',
+  'files',
+  'voice',
 ] as const;
 export type HomeType = (typeof HOME_TYPES)[number];
 export const HOME_SIZES = ['S', 'M', 'L', 'XL'] as const;

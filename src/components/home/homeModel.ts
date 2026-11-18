@@ -20,8 +20,8 @@ export const HOME_DEF: Array<{ type: HomeType; size: Widget['size'] }> = [
   { type: 'emails', size: 'S' },
 ];
 
-/** Card → module that must be in the plan (null = always available). */
-export const WIDGET_MODULE: Record<HomeType, string | null> = {
+/** Card → module that must be in the plan (null = always available; a list = any of them). */
+export const WIDGET_MODULE: Record<HomeType, string | readonly string[] | null> = {
   today: null,
   capture: null,
   shortcuts: null,
@@ -37,11 +37,20 @@ export const WIDGET_MODULE: Record<HomeType, string | null> = {
   qnotes: 'notes',
   emails: 'emails',
   tickets: 'tickets',
+  timelog: 'timelog',
+  helpdesk: 'helpdesk',
+  meetings: 'meetings',
+  daily: 'notes',
+  sapnotes: 'sapnotes',
+  news: 'news',
+  fn: ['fn_cut', 'fn_test', 'fn_mig'],
+  files: 'files',
+  voice: 'voice',
 };
 
 export const widgetAllowed = (type: HomeType, modules: ReadonlySet<string>) => {
   const m = WIDGET_MODULE[type];
-  return m === null || modules.has(m);
+  return m === null || (typeof m === 'string' ? modules.has(m) : m.some((x) => modules.has(x)));
 };
 
 export function defaultWidgets(modules: ReadonlySet<string>): Widget[] {
@@ -73,6 +82,21 @@ export const HOME_ICONS: Record<HomeType, string> = {
   emails: '<rect x="3" y="5" width="18" height="14" rx="2.5"></rect><path d="M4 7l8 6 8-6"></path>',
   tickets:
     '<path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"></path><path d="M14 6v2"></path><path d="M14 11v2"></path><path d="M14 16v2"></path>',
+  timelog:
+    '<circle cx="12" cy="13.5" r="7.5"></circle><path d="M12 10v3.5l2.5 1.5"></path><path d="M10 2.5h4"></path><path d="M12 2.5V6"></path>',
+  helpdesk:
+    '<path d="M4 13v-1a8 8 0 0 1 16 0v1"></path><rect x="3" y="13" width="4" height="6" rx="1.5"></rect><rect x="17" y="13" width="4" height="6" rx="1.5"></rect><path d="M19 19v.5a2.5 2.5 0 0 1-2.5 2.5H13"></path>',
+  meetings:
+    '<rect x="5" y="4" width="14" height="17" rx="2.5"></rect><path d="M9 4V3h6v1"></path><line x1="9" y1="10" x2="15" y2="10"></line><line x1="9" y1="14" x2="15" y2="14"></line>',
+  daily:
+    '<path d="M7 3h7l5 5v13H7z"></path><path d="M14 3v5h5"></path><path d="M10 13h6"></path><path d="M10 17h4"></path>',
+  sapnotes:
+    '<path d="M6 3h9l4 4v14H6z"></path><path d="M14 3v5h5"></path><path d="M9.5 16.5l1.5-5 1.5 3 1.5-2 1 4"></path>',
+  news: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M7 9h10"></path><path d="M7 13h6"></path>',
+  fn: '<path d="M4 19h16"></path><path d="M6 15l4-4 3 3 5-6"></path>',
+  files: '<path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path>',
+  voice:
+    '<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0"></path><line x1="12" y1="17" x2="12" y2="21"></line>',
 };
 
 export const QUICK_DEF = ['tasks', 'notes', 'issues', 'voice', 'emails', 'artifacts'];
@@ -108,6 +132,14 @@ export const WIDGET_PAGE: Partial<Record<HomeType, string>> = {
   systems: 'systems',
   emails: 'emails',
   tickets: 'tickets',
+  timelog: 'timelog',
+  helpdesk: 'helpdesk',
+  meetings: 'meetings',
+  sapnotes: 'sapnotes',
+  news: 'news',
+  fn: 'fn_cut',
+  files: 'files',
+  voice: 'voice',
 };
 
 export type PackedRow = { items: Array<{ w: Widget; index: number; f: number }> };

@@ -1,17 +1,22 @@
 import 'server-only';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import {
+  driveFiles,
   emails,
   folders,
   issues,
   mgClients,
   notes,
+  sapFnRecords,
+  sapNoteSystems,
+  sapNotes,
   sapSystemFavs,
   sapSystems,
   sapTcodeUsage,
   sapTcodes,
   sapTransports,
   tasks,
+  voiceNotes,
 } from '@/db/schema';
 import type { AuthContext } from '@/server/auth/session';
 import { asUser } from './tenant';
@@ -75,6 +80,18 @@ export type HomeData = {
     lang: string;
     sapUser: string;
   }>;
+  /** Notas SAP: the notes still to implement in some system (and how many are done). */
+  sapNotes?: {
+    todo: number;
+    done: number;
+    list: Array<{ id: string; number: number; title: string; systems: string[] }>;
+  };
+  /** Cutover e Testes: progress of the cutover, the tests and the data migration. */
+  fn?: Partial<Record<'cut' | 'test' | 'mig', { total: number; done: number; bad: number }>>;
+  /** Ficheiros recentes */
+  files?: Array<{ id: string; name: string; folder: string | null; updatedAt: string }>;
+  /** Notas de voz recentes */
+  voice?: Array<{ id: string; title: string; durationMs: number; transcribed: boolean; createdAt: string }>;
 };
 
 export async function homeData(auth: AuthContext, modules: ReadonlySet<string>): Promise<HomeData> {
@@ -224,6 +241,92 @@ export async function homeData(auth: AuthContext, modules: ReadonlySet<string>):
         .where(and(eq(sapSystemFavs.userId, auth.user.id), isNull(sapSystems.deletedAt)))
         .orderBy(sapSystems.name)
         .limit(24);
+    if (modules.has('sapnotes')) {
+      const rows = (await tx.execute(sql`
+        select n.id::text as id, n.number, n.title,
+          coalesce(array_agg(coalesce(s.sid, s.name)) filter (where ns.status = 'todo'), '{}') as systems,
+          bool_or(ns.status = 'todo') as todo, bool_and(ns.status in ('done','nrel','obs')) as done
+        from ${sapNotes} n
+        join ${sapNoteSystems} ns on ns.note_id = n.id
+        left join ${sapSystems} s on s.id = ns.system_id
+        where n.deleted_at is null
+        group by n.id, n.number, n.title, n.updated_at
+        order by n.updated_at desc
+        limit 500`)) as unknown as Array<{
+        id: string;
+        number: number;
+        title: string;
+        systems: string[];
+        todo: boolean;
+        done: boolean;
+      }>;
+      out.sapNotes = {
+        todo: rows.filter((r) => r.todo).length,
+        done: rows.filter((r) => r.done).length,
+        list: rows
+          .filter((r) => r.todo)
+          .slice(0, 5)
+          .map((r) => ({ id: r.id, number: r.number, title: r.title, systems: r.systems.filter(Boolean) })),
+      };
+    }
+    const fnPages = (
+      [
+        ['cut', 'fn_cut', ['done'], []],
+        ['test', 'fn_test', ['pass'], ['fail', 'block']],
+        ['mig', 'fn_mig', ['ok'], []],
+      ] as const
+    ).filter(([, m]) => modules.has(m));
+    if (fnPages.length) {
+      out.fn = {};
+      for (const [k, page, done, bad] of fnPages) {
+        const rows = await tx
+          .select({ st: sapFnRecords.st })
+          .from(sapFnRecords)
+          .where(and(eq(sapFnRecords.page, page), isNull(sapFnRecords.deletedAt)))
+          .limit(5000);
+        out.fn[k] = {
+          total: rows.length,
+          done: rows.filter((r) => (done as readonly string[]).includes(r.st)).length,
+          bad: rows.filter((r) => (bad as readonly string[]).includes(r.st)).length,
+        };
+      }
+    }
+    if (modules.has('files'))
+      out.files = (
+        await tx
+          .select({
+            id: driveFiles.id,
+            name: driveFiles.name,
+            updatedAt: driveFiles.updatedAt,
+            folder: folders.name,
+          })
+          .from(driveFiles)
+          .leftJoin(folders, and(eq(folders.id, driveFiles.folderId), isNull(folders.deletedAt)))
+          .where(isNull(driveFiles.deletedAt))
+          .orderBy(desc(driveFiles.updatedAt))
+          .limit(5)
+      ).map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() }));
+    if (modules.has('voice'))
+      out.voice = (
+        await tx
+          .select({
+            id: voiceNotes.id,
+            title: voiceNotes.title,
+            durationMs: voiceNotes.durationMs,
+            transcript: voiceNotes.transcript,
+            createdAt: voiceNotes.createdAt,
+          })
+          .from(voiceNotes)
+          .where(isNull(voiceNotes.deletedAt))
+          .orderBy(desc(voiceNotes.createdAt))
+          .limit(5)
+      ).map((r) => ({
+        id: r.id,
+        title: r.title,
+        durationMs: r.durationMs,
+        transcribed: !!r.transcript.trim(),
+        createdAt: r.createdAt.toISOString(),
+      }));
     return out;
   });
 }

@@ -55,6 +55,8 @@ export const EMPTY_FORM: TimeForm = {
   description: '',
 };
 export const TIMER_EVENT = 'kh:timer';
+/** Opens the header button's dialog (start, or stop when counting) from elsewhere (the Início card). */
+export const TIMER_OPEN_EVENT = 'kh:timer-open';
 export const tzQ = () => {
   try {
     return `tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`;
@@ -392,6 +394,11 @@ export function TimerButton() {
       setMode('start');
     }
   };
+  useEffect(() => {
+    const on = () => openDialog();
+    window.addEventListener(TIMER_OPEN_EVENT, on);
+    return () => window.removeEventListener(TIMER_OPEN_EVENT, on);
+  });
   const fail = (e: unknown) =>
     toast({
       message: (e as { code?: string })?.code === 'timer_running' ? t('tl_busy') : t('tl_fail'),

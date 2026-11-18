@@ -1586,5 +1586,14 @@
   "act_k_time": "Registo de horas",
   "act_k_code": "Código",
   "act_k_sapnote": "Nota SAP",
-  "act_k_transport": "Ordem de transporte"
+  "act_k_transport": "Ordem de transporte",
+  "w_timelog": "Registo de Tempos",
+  "w_helpdesk": "Helpdesk",
+  "w_meetings": "Reuniões de hoje",
+  "w_daily": "Nota do dia",
+  "w_sapnotes": "Notas SAP",
+  "w_news": "SAP News",
+  "w_fn": "Cutover e Testes",
+  "w_files": "Ficheiros recentes",
+  "w_voice": "Notas de voz"
 }

@@ -38,6 +38,18 @@ import {
 import { fmtT, pomo, usePomodoro } from './pomodoro';
 import { WeatherCard } from './WeatherCard';
 import { TicketsHomeCard, type HomeTicket } from '@/components/tickets/TicketsHomeCard';
+import {
+  DailyCard,
+  FilesCard,
+  FnCard,
+  HelpdeskCard,
+  MeetingsCard,
+  NewsCard,
+  SapNotesCard,
+  TimelogCard,
+  VoiceCard,
+} from './MoreCards';
+import type { HomeData as ServerHomeData } from '@/server/content/home';
 import './home.css';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
@@ -50,7 +62,7 @@ type HomeTask = {
   dueOn: string | null;
   pinned: boolean;
 };
-type HomeData = {
+type HomeData = Pick<ServerHomeData, 'sapNotes' | 'fn' | 'files' | 'voice'> & {
   tasks?: HomeTask[];
   recentNotes?: Array<{
     id: string;
@@ -339,7 +351,17 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
           size:
             type === 'today'
               ? 'L'
-              : ['tasks', 'deadlines', 'transports', 'issues', 'tickets'].includes(type)
+              : [
+                    'tasks',
+                    'deadlines',
+                    'transports',
+                    'issues',
+                    'tickets',
+                    'timelog',
+                    'helpdesk',
+                    'meetings',
+                    'fn',
+                  ].includes(type)
                 ? 'M'
                 : 'S',
         },
@@ -974,6 +996,24 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
       }
       case 'tickets':
         return <TicketsHomeCard items={data.tickets ?? []} />;
+      case 'timelog':
+        return <TimelogCard />;
+      case 'helpdesk':
+        return <HelpdeskCard />;
+      case 'meetings':
+        return <MeetingsCard />;
+      case 'daily':
+        return <DailyCard />;
+      case 'sapnotes':
+        return <SapNotesCard data={data.sapNotes} />;
+      case 'news':
+        return <NewsCard />;
+      case 'fn':
+        return <FnCard data={data.fn} />;
+      case 'files':
+        return <FilesCard data={data.files} />;
+      case 'voice':
+        return <VoiceCard data={data.voice} />;
       case 'transports': {
         const trs = data.transports ?? [];
         const stOf = (x: (typeof trs)[number]) => (!x.released ? 'mod' : x.qas ? 'qas' : 'rel');
@@ -1276,6 +1316,9 @@ export function HomeView({ initialHour }: { initialHour?: number | null } = {}) 
     qnotes: 0,
     emails: data.emails?.starred.length ?? 0,
     tickets: data.tickets?.length ?? 0,
+    ...(data.sapNotes ? { sapnotes: data.sapNotes.todo } : {}),
+    ...(data.files ? { files: data.files.length } : {}),
+    ...(data.voice ? { voice: data.voice.length } : {}),
   };
   const catalog = HOME_TYPES.filter(
     (k) => widgetAllowed(k, modules) && !home.widgets.some((w) => w.type === k),
