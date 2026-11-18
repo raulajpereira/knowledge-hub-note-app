@@ -170,3 +170,18 @@ export function readRow(
   if (r.url && !/^https?:\/\//i.test(r.url)) r.url = '';
   return r;
 }
+
+/** The status's look and weight: Aberto, Reaberto and Em progresso come first (the ones to act on). */
+export type HdStatusKind = 'open' | 'reopen' | 'progress' | 'pending' | 'done' | 'other';
+export function hdStatusKind(status: string): HdStatusKind {
+  const s = status.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  if (/^re-?abert|^reopen/.test(s)) return 'reopen';
+  if (/^abert|^novo|^open|^new/.test(s)) return 'open';
+  if (/progress|^em curso|^em tratamento|^in progress/.test(s)) return 'progress';
+  if (/pendente|aguard|espera|pending|waiting|on hold/.test(s)) return 'pending';
+  if (/resolvid|fechad|conclu|cancel|anulad|closed|resolved|done/.test(s)) return 'done';
+  return 'other';
+}
+const RANK: Record<HdStatusKind, number> = { reopen: 0, open: 0, progress: 0, pending: 1, other: 1, done: 2 };
+/** Sort key: the ones to act on first, then the rest, the ones that left the list last. */
+export const hdRank = (status: string, inList: boolean) => (inList ? RANK[hdStatusKind(status)] : 3);

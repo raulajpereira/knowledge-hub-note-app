@@ -155,11 +155,13 @@ test('link a helpdesk list, import it, and see the changes of a later read', asy
       ),
       R('146233', 'Solicitação de regularização da integração', 'Aberto', 'Baixa'),
       R('147010', 'Erro na replicação EC → ECP', 'Aberto'),
+      R('145782', 'HCM_PT_Integração - Erro de integração', 'Reaberto'),
+      R('143604', 'Solicitação de Abertura de Pedido', 'Fechado'),
     ],
   });
-  expect(((await r.json()) as { changes: number }).changes).toBe(5);
+  expect(((await r.json()) as { changes: number }).changes).toBe(7);
   await page.goto('app');
-  const pop = page.getByRole('alertdialog', { name: /Helpdesk: 3 ticket/ });
+  const pop = page.getByRole('alertdialog', { name: /Helpdesk: 5 ticket/ });
   await expect(pop).toContainText('Estado: Pendente-Cliente → Em progresso');
   await expect(pop).toContainText('Novo comentário de Raul Pereira (18/11 10:05)');
   await expect(pop).toContainText('Saiu da lista do helpdesk');
@@ -176,6 +178,11 @@ test('link a helpdesk list, import it, and see the changes of a later read', asy
 
   await page.goto('app/helpdesk');
   await expect(page.getByRole('row', { name: /146205/ })).toContainText('fora da lista');
+  // Aberto / Reaberto / Em progresso first, then the rest, the ones that left the list last
+  const order = await page.locator('.kh-hd-table [role=row][tabindex] > :first-child').allInnerTexts();
+  expect(order.indexOf('#143604')).toBeGreaterThan(order.indexOf('#145782'));
+  expect(order.at(-1)).toBe('#146205');
+  await expect(page.locator('.kh-hd-st[data-k=reopen]')).toHaveText('Reaberto');
   await shot(page, '6-lista');
   await page.getByRole('radio', { name: 'Modificações' }).click();
   await expect(page.getByText('Prioridade: Média → Alta')).toBeVisible();

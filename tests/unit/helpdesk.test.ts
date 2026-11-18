@@ -77,3 +77,17 @@ describe('helpdesk rows', () => {
     expect(readRow(HEADERS, ['#1 x'], map, ['javascript:alert(1)'])?.url).toBe('');
   });
 });
+
+import { hdRank, hdStatusKind } from '@/lib/helpdesk';
+describe('helpdesk status', () => {
+  it('colours and order: Aberto, Reaberto, Em progresso first', () => {
+    expect(
+      ['Aberto', 'Reaberto', 'Em progresso', 'Pendente-Cliente', 'Resolvido', 'Fechado', 'Outro'].map(
+        hdStatusKind,
+      ),
+    ).toEqual(['open', 'reopen', 'progress', 'pending', 'done', 'done', 'other']);
+    expect(hdRank('Em progresso', true)).toBeLessThan(hdRank('Pendente-Cliente', true));
+    expect(hdRank('Pendente-Cliente', true)).toBeLessThan(hdRank('Fechado', true));
+    expect(hdRank('Aberto', false)).toBeGreaterThan(hdRank('Fechado', true));
+  });
+});

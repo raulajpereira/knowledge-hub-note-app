@@ -312,3 +312,52 @@ em[data-k='back'] {
     grid-template-columns: 1fr;
   }
 }
+
+/* the status: the ones to act on (Aberto, Reaberto, Em progresso) stand out */
+.kh-hd-st {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgb(var(--w) / 0.1);
+}
+.kh-hd-st::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.kh-hd-st[data-k='open'] {
+  background: oklch(0.62 0.17 250 / 0.38);
+  color: oklch(0.92 0.06 250);
+}
+.kh-hd-st[data-k='reopen'] {
+  background: oklch(0.6 0.2 25 / 0.42);
+  color: oklch(0.93 0.06 25);
+}
+.kh-hd-st[data-k='progress'] {
+  background: oklch(0.62 0.16 150 / 0.4);
+  color: oklch(0.93 0.07 150);
+}
+.kh-hd-st[data-k='pending'] {
+  background: oklch(0.75 0.13 80 / 0.16);
+  color: oklch(0.86 0.1 80);
+  font-weight: 500;
+}
+.kh-hd-st[data-k='done'] {
+  background: rgb(var(--w) / 0.08);
+  color: rgb(var(--t) / calc(0.6 * var(--t-k)));
+  font-weight: 500;
+}
+.kh-hd-st[data-k='other'] {
+  font-weight: 500;
+}

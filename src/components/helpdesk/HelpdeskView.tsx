@@ -4,8 +4,17 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { Modal, Select, useToast } from '@/components/ui';
-import { HD_FIELDS, HD_INTERVALS, type HdField, type HdMapping, type HdRow } from '@/lib/helpdesk';
+import { Modal, Select, usePersistentState, useToast } from '@/components/ui';
+import { bodyZoom } from '@/components/ui/zoom';
+import {
+  HD_FIELDS,
+  HD_INTERVALS,
+  hdRank,
+  hdStatusKind,
+  type HdField,
+  type HdMapping,
+  type HdRow,
+} from '@/lib/helpdesk';
 import { fmtWhen, HD_EVENT, useChangeText, type HdChange } from './HelpdeskPopup';
 import '@/components/sap/sap.css';
 import './helpdesk.css';
@@ -48,6 +57,10 @@ type Preview = {
   counts: { fresh: number; changed: number; same: number; gone: number };
   skipped: number;
 };
+
+/** default widths: Nº, Descrição (takes the rest), Estado, Prioridade, Tipo, Cliente, Atribuído a, Último comentário, Aberto em */
+const COL_DEF = [96, 240, 150, 100, 100, 140, 140, 170, 90];
+const DESC = 1;
 
 /** "18/11 09:58" */
 const short = (iso: string) => {
@@ -163,14 +176,67 @@ export function HelpdeskView() {
   const srcOf = useMemo(() => new Map((data?.sources ?? []).map((s) => [s.id, s])), [data]);
   const items = useMemo(() => {
     const k = q.trim().toLowerCase();
-    return (data?.items ?? []).filter(
-      (i) =>
-        !k ||
-        [i.number, i.summary, i.client, i.assignee, i.status, i.type].some((v) =>
-          v.toLowerCase().includes(k),
-        ),
+    return (
+      (data?.items ?? [])
+        .filter(
+          (i) =>
+            !k ||
+            [i.number, i.summary, i.client, i.assignee, i.status, i.type].some((v) =>
+              v.toLowerCase().includes(k),
+            ),
+        )
+        // Aberto / Reaberto / Em progresso first; the rest keep their order (newest first)
+        .map((i, n) => [i, n] as const)
+        .sort(([a, x], [b, y]) => hdRank(a.status, a.inList) - hdRank(b.status, b.inList) || x - y)
+        .map(([i]) => i)
     );
   }, [data, q]);
+
+  // the columns' widths: dragged in the header, kept on this device (the description takes the rest)
+  const [colW, setColW] = usePersistentState<number[] | null>('hd.cols', null);
+  const [live, setLive] = useState<number[] | null>(null);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 761px)');
+    const on = () => setWide(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  const widths = live ?? (colW && colW.length === COL_DEF.length ? colW : COL_DEF);
+  const cols: React.CSSProperties | undefined = wide
+    ? {
+        gridTemplateColumns: widths
+          .map((w, i) => (i === DESC ? `minmax(${Math.round(w)}px,1fr)` : `${Math.round(w)}px`))
+          .join(' '),
+        minWidth: widths.reduce((a, w) => a + w, 0),
+      }
+    : undefined;
+  const startResize = (i: number, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const z = bodyZoom();
+    const x0 = e.clientX;
+    const start = [...widths];
+    let cur = start;
+    const move = (ev: PointerEvent) => {
+      const w = Math.min(900, Math.max(56, start[i]! + (ev.clientX - x0) / z));
+      cur = start.map((x, j) => (j === i ? w : x));
+      setLive(cur);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setColW(cur.map(Math.round));
+      setLive(null);
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
   const today = new Date().toDateString();
   const changesToday = (data?.changes ?? []).filter((c) => new Date(c.syncAt).toDateString() === today);
   const week = Date.now() - 7 * 86_400_000;
@@ -335,7 +401,7 @@ export function HelpdeskView() {
         <div className="kh-sap-body" style={{ padding: '0 22px 22px' }}>
           {tab === 'list' ? (
             <div className="kh-well kh-table kh-hd-table" role="table" aria-label={t('nav_helpdesk')}>
-              <div className="kh-table__head kh-hd-cols" role="row">
+              <div className="kh-table__head kh-hd-cols" role="row" style={cols}>
                 {[
                   'hd_number',
                   'hd_f_summary',
@@ -346,9 +412,23 @@ export function HelpdeskView() {
                   'hd_f_assignee',
                   'hd_lastComment',
                   'hd_reported',
-                ].map((k) => (
-                  <div key={k} role="columnheader" className="kh-table__th">
-                    {t(k)}
+                ].map((k, i) => (
+                  <div
+                    key={k}
+                    role="columnheader"
+                    style={{ position: 'relative', minWidth: 0, height: '100%' }}
+                  >
+                    <div className="kh-table__th">{t(k)}</div>
+                    {/* drag the edge to resize, double-click to restore */}
+                    {wide && (
+                      <span
+                        className="kh-table__grip"
+                        title={t('resize')}
+                        aria-hidden="true"
+                        onPointerDown={(e) => startResize(i, e)}
+                        onDoubleClick={() => setColW(null)}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
@@ -362,6 +442,7 @@ export function HelpdeskView() {
                   tabIndex={0}
                   data-gone={!i.inList || undefined}
                   className="kh-table__row kh-table__row--click kh-hd-cols"
+                  style={cols}
                   onClick={() => setOpen(i)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') setOpen(i);
@@ -378,8 +459,14 @@ export function HelpdeskView() {
                       </span>
                     )}
                   </div>
-                  <div role="cell" className="kh-table__td">
-                    {i.status || '—'}
+                  <div role="cell" className="kh-table__td" title={i.status}>
+                    {i.status ? (
+                      <span className="kh-hd-st" data-k={hdStatusKind(i.status)}>
+                        {i.status}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
                   </div>
                   <div role="cell" className="kh-table__td">
                     {i.priority || '—'}
@@ -806,7 +893,15 @@ function SetupDialog({
                         </small>
                       ))}
                     </td>
-                    <td>{row.status || '—'}</td>
+                    <td>
+                      {row.status ? (
+                        <span className="kh-hd-st" data-k={hdStatusKind(row.status)}>
+                          {row.status}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td>{row.priority || '—'}</td>
                     <td>{row.client || '—'}</td>
                     <td className="kh-hd-mono">{row.reportedAt ? fmtWhen(row.reportedAt) : '—'}</td>
