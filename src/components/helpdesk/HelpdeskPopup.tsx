@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
+import { refreshCounts } from '@/components/shell/counts';
 import './helpdesk.css';
 
 // "Helpdesk": after each read of the helpdesk with changes, a card on any page
@@ -63,7 +64,13 @@ export function HelpdeskPopup() {
   const [list, setList] = useState<HdChange[]>([]);
   const load = useCallback(() => {
     void api<{ changes: HdChange[] }>('/helpdesk/changes')
-      .then((r) => setList(r.changes))
+      .then((r) => {
+        // a read with changes: the sidebar's badge may change too
+        setList((cur) => {
+          if (r.changes.some((c) => !cur.some((x) => x.id === c.id))) refreshCounts();
+          return r.changes;
+        });
+      })
       .catch(() => {});
   }, []);
   useEffect(() => {

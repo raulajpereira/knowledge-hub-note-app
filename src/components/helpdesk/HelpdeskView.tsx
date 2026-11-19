@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
+import { refreshCounts } from '@/components/shell/counts';
 import { Modal, Select, usePersistentState, useToast } from '@/components/ui';
 import { bodyZoom } from '@/components/ui/zoom';
 import {
@@ -122,7 +123,11 @@ export function HelpdeskView() {
   const load = useCallback(
     () =>
       api<Overview>('/helpdesk')
-        .then(setData)
+        .then((d) => {
+          setData(d);
+          // the sidebar's badge follows the list
+          refreshCounts();
+        })
         .catch(() => setData({ sources: [], items: [], changes: [] })),
     [],
   );

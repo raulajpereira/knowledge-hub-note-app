@@ -5,6 +5,7 @@ import {
   apiRequests,
   artifacts,
   emails,
+  helpdeskItems,
   folders,
   issues,
   meetings,
@@ -1578,6 +1579,15 @@ export async function contentCounts(auth: AuthContext, modules: ReadonlySet<stri
         .select({ n: sql<number>`count(*)::int` })
         .from(snippets)
         .where(isNull(snippets.deletedAt));
+      return r?.n ?? 0;
+    });
+  // Helpdesk: the tickets on the helpdesk list at the last read
+  if (modules.has('helpdesk'))
+    out.helpdesk = await asUser(auth, async (tx) => {
+      const [r] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(helpdeskItems)
+        .where(eq(helpdeskItems.inList, true));
       return r?.n ?? 0;
     });
   // SAP (prototype navCounts): objects, transactions, systems, open transports

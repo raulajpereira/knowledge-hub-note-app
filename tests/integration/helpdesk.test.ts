@@ -113,6 +113,9 @@ describe.skipIf(!enabled)('helpdesk', () => {
     expect(pv.counts).toEqual({ fresh: 2, changed: 0, same: 0, gone: 0 });
     expect(pv.skipped).toBe(1);
     expect(await hd.importSource(auth, s.id, { intervalMin: 15 })).toMatchObject({ created: 2 });
+    // the sidebar's badge: the tickets on the list
+    const { contentCounts } = await import('@/server/content/notes');
+    expect((await contentCounts(auth, new Set(['helpdesk']))).helpdesk).toBe(2);
     expect(await hd.unseenChanges(auth)).toEqual([]); // the first import is not news
     expect((await hd.extSources(auth)).map((x) => x.url)).toEqual([URL1]);
 
