@@ -33,11 +33,22 @@ describe('sidebar model', () => {
 
   it('shows every item for a plan with everything', () => {
     const rows = sideRows(defaultNav(), all, t);
-    expect(rows.filter((r) => r.kind === 'item')).toHaveLength(all.size);
+    // all but Tickets, which lives in Helpdesk (its "Manuais" tab)
+    const items = rows.filter((r) => r.kind === 'item');
+    expect(items).toHaveLength(all.size - 1);
+    expect(items.some((r) => r.kind === 'item' && r.id === 'tickets')).toBe(false);
     expect(rows.filter((r) => r.kind === 'group').map((r) => r.kind === 'group' && r.name)).toEqual([
       'Management',
       'SAP',
     ]);
+  });
+
+  it('Tickets without Helpdesk: its own item; with Helpdesk it goes', () => {
+    const ids = (m: string[]) =>
+      sideRows(defaultNav(), new Set(m), t).flatMap((r) => (r.kind === 'item' ? [r.id] : []));
+    expect(ids(['tickets'])).toContain('tickets');
+    expect(ids(['tickets'])).not.toContain('helpdesk');
+    expect(ids(['tickets', 'helpdesk'])).not.toContain('tickets');
   });
 
   it('FREE (notes, tasks): only licensed items; empty groups and stray spacers disappear', () => {

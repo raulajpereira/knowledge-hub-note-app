@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
-import { Modal, Select, Switch, useToast } from '@/components/ui';
+import { Modal, Select, useToast } from '@/components/ui';
 import { fmtClock, fmtMinutes, roundUp15 } from '@/lib/timelog';
 import './timelog.css';
 
@@ -35,7 +35,8 @@ export type TimeOptions = {
   recent: TimeEntry[];
   timesheet: boolean;
 };
-type Ref = { kind: 'ticket' | 'issue'; id: string; label: string; sub: string };
+/** a suggestion: a manual ticket, a project task, or a ticket synced from the helpdesk (kept as text) */
+type Ref = { kind: 'ticket' | 'issue' | 'helpdesk'; id: string; label: string; sub: string };
 export type TimeForm = {
   refKind: 'ticket' | 'issue' | null;
   refId: string | null;
@@ -223,11 +224,14 @@ export function TimeFields({
   set,
   opts,
   autoFocus,
+  project = true,
 }: {
   form: TimeForm;
   set: (p: Partial<TimeForm>) => void;
   opts: TimeOptions | null;
   autoFocus?: boolean;
+  /** the Projeto field (not in the header's quick dialog) */
+  project?: boolean;
 }) {
   const { t } = useI18n();
   const [refs, setRefs] = useState<Ref[]>([]);
@@ -265,10 +269,20 @@ export function TimeFields({
           items={refs.map((r) => ({
             ...r,
             key: `${r.kind}:${r.id}`,
-            tag: t(r.kind === 'ticket' ? 'tl_kTicket' : 'tl_kIssue'),
+            tag: t(r.kind === 'ticket' ? 'tl_kTicket' : r.kind === 'helpdesk' ? 'tl_kHelpdesk' : 'tl_kIssue'),
           }))}
           onType={(v) => set({ refLabel: v, refId: null, refKind: null })}
-          onPick={(r) => set({ refKind: r.kind, refId: r.id, refLabel: r.label })}
+          onPick={(r) =>
+            r.kind === 'helpdesk'
+              ? // a synced ticket is kept as its text (number · summary) and its client
+                set({
+                  refKind: null,
+                  refId: null,
+                  refLabel: r.label,
+                  ...(r.sub && !form.clientLabel.trim() ? { clientId: null, clientLabel: r.sub } : {}),
+                })
+              : set({ refKind: r.kind, refId: r.id, refLabel: r.label })
+          }
           freeLabel={q ? t('tl_free').replace('{x}', q) : undefined}
         />
       </div>
@@ -288,26 +302,28 @@ export function TimeFields({
           });
         }}
       />
-      <div className="kh-field">
-        <span className="kh-field__label">{t('tl_project')}</span>
-        <Select
-          aria-label={t('tl_project')}
-          searchPlaceholder={t('tl_project')}
-          value={form.projectId ?? ''}
-          options={[
-            { value: '', label: t('tl_noProject') },
-            ...projects.map((p) => ({ value: p.id, label: [p.code, p.name].filter(Boolean).join(' · ') })),
-          ]}
-          onChange={(v) => {
-            const p = (opts?.projects ?? []).find((x) => x.id === v);
-            const c = p?.clientId ? opts?.clients.find((x) => x.id === p.clientId) : undefined;
-            set({
-              projectId: v || null,
-              ...(c && !form.clientId ? { clientId: c.id, clientLabel: c.name } : {}),
-            });
-          }}
-        />
-      </div>
+      {project && (
+        <div className="kh-field">
+          <span className="kh-field__label">{t('tl_project')}</span>
+          <Select
+            aria-label={t('tl_project')}
+            searchPlaceholder={t('tl_project')}
+            value={form.projectId ?? ''}
+            options={[
+              { value: '', label: t('tl_noProject') },
+              ...projects.map((p) => ({ value: p.id, label: [p.code, p.name].filter(Boolean).join(' · ') })),
+            ]}
+            onChange={(v) => {
+              const p = (opts?.projects ?? []).find((x) => x.id === v);
+              const c = p?.clientId ? opts?.clients.find((x) => x.id === p.clientId) : undefined;
+              set({
+                projectId: v || null,
+                ...(c && !form.clientId ? { clientId: c.id, clientLabel: c.name } : {}),
+              });
+            }}
+          />
+        </div>
+      )}
       <label className="kh-field kh-tl-full">
         <span className="kh-field__label">{t('tl_desc')}</span>
         <textarea
@@ -336,7 +352,6 @@ export function TimerButton() {
   const [mode, setMode] = useState<'start' | 'stop' | 'next' | null>(null);
   const [form, setForm] = useState<TimeForm>(EMPTY_FORM);
   const [desc, setDesc] = useState('');
-  const [inTs, setInTs] = useState(true);
   const [busy, setBusy] = useState(false);
   const [ack, setAck] = useState(0);
   const opts = useTimeOptions(mode !== null);
@@ -387,7 +402,6 @@ export function TimerButton() {
   const openDialog = () => {
     if (entry) {
       setDesc(entry.description);
-      setInTs(entry.inTimesheet);
       setMode('stop');
     } else {
       setForm(EMPTY_FORM);
@@ -409,7 +423,12 @@ export function TimerButton() {
   const start = async () => {
     setBusy(true);
     try {
-      const r = await api<{ entry: TimeEntry }>('/timelog/start', payloadOf(form));
+      // the quick dialog has no project and no timesheet
+      const r = await api<{ entry: TimeEntry }>('/timelog/start', {
+        ...payloadOf(form),
+        projectId: null,
+        inTimesheet: false,
+      });
       setEntry(r.entry);
       setMode(null);
       changed();
@@ -424,8 +443,8 @@ export function TimerButton() {
     try {
       const r = await api<{ stopped: TimeEntry; next: TimeEntry | null }>(`/timelog/stop?${tzQ()}`, {
         description: desc.trim(),
-        inTimesheet: inTs,
-        ...(next ? { next: payloadOf(next) } : {}),
+        inTimesheet: false,
+        ...(next ? { next: { ...payloadOf(next), projectId: null, inTimesheet: false } } : {}),
       });
       toast({ message: t('tl_saved').replace('{d}', fmtMinutes(r.stopped.minutes ?? 15)), tone: 'success' });
       setEntry(r.next);
@@ -518,15 +537,28 @@ export function TimerButton() {
           </div>
         }
       >
-        <TimeFields form={form} set={(p) => setForm((f) => ({ ...f, ...p }))} opts={opts} autoFocus />
+        <TimeFields
+          form={form}
+          set={(p) => setForm((f) => ({ ...f, ...p }))}
+          opts={opts}
+          autoFocus
+          project={false}
+        />
         {!!opts?.recent.length && (
           <div className="kh-tl-recent">
             <span>{t('tl_recent')}</span>
-            {opts.recent.map((r) => (
-              <button key={r.id} type="button" className="kh-chip" onClick={() => setForm(formOf(r))}>
-                {[r.refLabel, r.clientLabel].filter(Boolean).join(' · ') || r.description || '—'}
-              </button>
-            ))}
+            <div className="kh-tl-recent__list">
+              {opts.recent.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className="kh-chip"
+                  onClick={() => setForm({ ...formOf(r), projectId: null })}
+                >
+                  {[r.refLabel, r.clientLabel].filter(Boolean).join(' · ') || r.description || '—'}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </Modal>
@@ -586,14 +618,6 @@ export function TimerButton() {
                 onChange={(e) => setDesc(e.target.value)}
               />
             </label>
-            {opts?.timesheet ? (
-              <div className="kh-tl-sw">
-                <Switch checked={inTs} onChange={setInTs} label={t('tl_inTs')} />
-                <span>{t('tl_inTs')}</span>
-              </div>
-            ) : opts ? (
-              <p className="kh-tl-hint">{t('tl_inTsNo')}</p>
-            ) : null}
           </>
         )}
       </Modal>

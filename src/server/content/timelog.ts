@@ -2,6 +2,7 @@ import 'server-only';
 import { and, asc, desc, eq, gte, ilike, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
+  helpdeskItems,
   issues,
   mgClients,
   mgPeople,
@@ -459,9 +460,9 @@ export async function includeRange(
   });
 }
 
-export type TimeRef = { kind: 'ticket' | 'issue'; id: string; label: string; sub: string };
+export type TimeRef = { kind: 'ticket' | 'issue' | 'helpdesk'; id: string; label: string; sub: string };
 
-/** The ticket field's suggestions: tickets (number / summary) and project tasks (title). */
+/** The ticket field's suggestions: the helpdesk's tickets (synced, then manual: number / summary) and project tasks (title). */
 export async function searchRefs(
   auth: AuthContext,
   q: string,
@@ -470,6 +471,25 @@ export async function searchRefs(
   const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return asUser(auth, async (tx) => {
     const res: TimeRef[] = [];
+    // the helpdesk's synced tickets first (the ones still on its list)
+    if (mods.has('helpdesk'))
+      for (const h of await tx
+        .select({
+          id: helpdeskItems.id,
+          n: helpdeskItems.number,
+          s: helpdeskItems.summary,
+          c: helpdeskItems.client,
+        })
+        .from(helpdeskItems)
+        .where(
+          and(
+            eq(helpdeskItems.inList, true),
+            q ? or(ilike(helpdeskItems.number, like), ilike(helpdeskItems.summary, like)) : undefined,
+          ),
+        )
+        .orderBy(desc(helpdeskItems.updatedAt))
+        .limit(8))
+        res.push({ kind: 'helpdesk', id: h.id, label: `#${h.n} · ${h.s}`, sub: h.c });
     if (mods.has('tickets'))
       for (const t of await tx
         .select({ id: tickets.id, n: tickets.number, s: tickets.summary, c: tickets.clientName })

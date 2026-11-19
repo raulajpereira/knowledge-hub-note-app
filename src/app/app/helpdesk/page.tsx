@@ -13,7 +13,7 @@ export default async function HelpdeskPage() {
   const auth = await getAuth();
   if (!auth) notFound();
   const [ent, lang] = await Promise.all([entitlementsFor(auth), getLang()]);
-  if (!ent.modules.includes('helpdesk'))
+  if (!ent.modules.includes('helpdesk') && !ent.modules.includes('tickets'))
     return (
       <Placeholder
         icon="helpdesk"

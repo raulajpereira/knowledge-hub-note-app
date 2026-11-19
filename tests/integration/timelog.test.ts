@@ -44,7 +44,7 @@ describe.skipIf(!enabled)('time log', () => {
 
   beforeEach(async () => {
     await admin.unsafe(
-      'TRUNCATE time_entries, mg_timesheets, mg_projects, mg_people, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
+      'TRUNCATE helpdesk_items, helpdesk_sources, time_entries, mg_timesheets, mg_projects, mg_people, code_redemptions, auth_tokens, sessions, user_prefs, users, codes, tenant_modules, tenants, plan_limits, plan_modules, plans, modules RESTART IDENTITY CASCADE',
     );
     await fs.rm(outbox, { recursive: true, force: true });
     const { redis } = await import('@/lib/redis');
@@ -139,6 +139,26 @@ describe.skipIf(!enabled)('time log', () => {
       'Europe/Lisbon',
     );
     expect(sat.tsState).toBe('weekend');
+  });
+
+  it('the ticket field suggests the helpdesk’s synced tickets (in the list) first', async () => {
+    const ana = await signedIn('ana@refs.pt');
+    const [src] = await admin`insert into helpdesk_sources (tenant_id, owner_id, name, url)
+      values (${ana.tenant.id}, ${ana.user.id}, 'HD', 'https://hd.example/my') returning id`;
+    await admin`insert into helpdesk_items (tenant_id, owner_id, source_id, number, summary, client, in_list) values
+      (${ana.tenant.id}, ${ana.user.id}, ${src!.id}, '146233', 'Regularização da integração', 'Atlas', true),
+      (${ana.tenant.id}, ${ana.user.id}, ${src!.id}, '146205', 'Monitor de replicação', 'Atlas', false)`;
+    const refs = await tl.searchRefs(ana, '1462', new Set(['helpdesk', 'tickets', 'issues']));
+    expect(refs).toEqual([
+      {
+        kind: 'helpdesk',
+        id: expect.any(String),
+        label: '#146233 · Regularização da integração',
+        sub: 'Atlas',
+      },
+    ]);
+    // without the module: nothing from the helpdesk
+    expect(await tl.searchRefs(ana, '1462', new Set(['tickets']))).toEqual([]);
   });
 
   it('nobody sees or changes another person’s entries', async () => {

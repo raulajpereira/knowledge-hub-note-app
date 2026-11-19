@@ -156,7 +156,7 @@ test('Tickets exports the list it shows', async ({ page }) => {
     data: { number: 'INC-1001', summary: 'Erro na fatura', priority: 'high' },
   });
   expect(r.ok()).toBe(true);
-  await page.goto('app/tickets');
+  await page.goto('app/tickets?folders=1');
   await expect(page.getByText('INC-1001')).toBeVisible();
   const [dl] = await Promise.all([
     page.waitForEvent('download'),

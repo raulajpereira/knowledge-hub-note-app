@@ -16,7 +16,10 @@ import {
   type HdMapping,
   type HdRow,
 } from '@/lib/helpdesk';
+import { useShell } from '@/components/shell/ShellContext';
+import { useListDetail } from '@/components/content/MobilePane';
 import { fmtWhen, HD_EVENT, useChangeText, type HdChange } from './HelpdeskPopup';
+import { ManualPanel, ManualTable, tkKind, useManualTickets } from './ManualTickets';
 import '@/components/sap/sap.css';
 import './helpdesk.css';
 
@@ -24,6 +27,8 @@ import './helpdesk.css';
 // extension (with the person's own login there), what changed between reads,
 // and the link: pair the extension, set up a list (columns → fields, interval,
 // what to do when a ticket leaves the list), first import, pause.
+// Tabs: Sincronizados (from the helpdesk) | Manuais (created here: the former
+// Tickets page) | Modificações.
 
 type Source = {
   id: string;
@@ -100,7 +105,19 @@ export function HelpdeskView() {
   const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
-  const tab = sp.get('tab') === 'changes' ? 'changes' : 'list';
+  const { modules } = useShell();
+  const sync = modules.has('helpdesk');
+  const manual = modules.has('tickets');
+  const want = sp.get('tab');
+  const tab: 'list' | 'manual' | 'changes' =
+    !sync || (want === 'manual' && manual) ? 'manual' : want === 'changes' ? 'changes' : 'list';
+  const tabs = [
+    ...(sync ? (['list'] as const) : []),
+    ...(manual ? (['manual'] as const) : []),
+    ...(sync ? (['changes'] as const) : []),
+  ];
+  const m = useManualTickets(manual);
+  const md = useListDetail('k');
   const setup = sp.get('setup');
   const [data, setData] = useState<Overview | null>(null);
   const [q, setQ] = useState('');
@@ -132,6 +149,7 @@ export function HelpdeskView() {
     [],
   );
   useEffect(() => {
+    if (!sync) return;
     void load();
     const on = () => void load();
     window.addEventListener(HD_EVENT, on);
@@ -142,7 +160,7 @@ export function HelpdeskView() {
       window.removeEventListener(HD_EVENT, on);
       clearInterval(i);
     };
-  }, [load]);
+  }, [load, sync]);
 
   const pair = useCallback(async () => {
     setPairing(true);
@@ -280,6 +298,26 @@ export function HelpdeskView() {
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   };
+  /** the table's header: the same columns (and widths) for the synced and the manual tickets */
+  const head = (keys: string[]) => (
+    <div className="kh-table__head kh-hd-cols" role="row" style={cols}>
+      {keys.map((k, i) => (
+        <div key={k} role="columnheader" style={{ position: 'relative', minWidth: 0, height: '100%' }}>
+          <div className="kh-table__th">{t(k)}</div>
+          {/* drag the edge to resize, double-click to restore */}
+          {wide && (
+            <span
+              className="kh-table__grip"
+              title={t('resize')}
+              aria-hidden="true"
+              onPointerDown={(e) => startResize(i, e)}
+              onDoubleClick={() => setColW(null)}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
   const today = new Date().toDateString();
   const changesToday = (data?.changes ?? []).filter((c) => new Date(c.syncAt).toDateString() === today);
   const week = Date.now() - 7 * 86_400_000;
@@ -314,24 +352,24 @@ export function HelpdeskView() {
   }, [data]);
 
   return (
-    <section className="kh-sap kh-hd">
+    <section className="kh-sap kh-hd" data-pane={tab === 'manual' ? md.pane : undefined}>
       <div className="kh-sap-main">
         <div className="kh-sap-head">
           <div className="kh-sap-titles">
             <h1>{t('nav_helpdesk')}</h1>
-            <div>{t('hd_sub')}</div>
+            <div>{t(tab === 'manual' ? 'hd_subManual' : 'hd_sub')}</div>
           </div>
           <div className="kh-sap-seg" role="radiogroup" aria-label={t('nav_helpdesk')}>
-            {(['list', 'changes'] as const).map((v) => (
+            {tabs.map((v) => (
               <button
                 key={v}
                 type="button"
                 role="radio"
                 aria-checked={tab === v}
                 data-on={tab === v || undefined}
-                onClick={() => go({ tab: v === 'changes' ? 'changes' : null })}
+                onClick={() => go({ tab: v === 'list' ? null : v, k: null })}
               >
-                {t(v === 'list' ? 'hd_tabList' : 'hd_tabChanges')}
+                {t(v === 'list' ? 'hd_tabList' : v === 'manual' ? 'hd_tabManual' : 'hd_tabChanges')}
               </button>
             ))}
           </div>
@@ -343,12 +381,14 @@ export function HelpdeskView() {
               aria-label={t('hd_search')}
             />
           </label>
-          <button type="button" className="kh-sap-new" disabled={pairing} onClick={() => void pair()}>
-            {ext?.paired ? `✓ ${t('hd_extOk')}` : t('hd_pair')}
-          </button>
+          {sync && tab !== 'manual' && (
+            <button type="button" className="kh-sap-new" disabled={pairing} onClick={() => void pair()}>
+              {ext?.paired ? `✓ ${t('hd_extOk')}` : t('hd_pair')}
+            </button>
+          )}
         </div>
 
-        {data && !data.sources.some((x) => x.active) && (
+        {tab !== 'manual' && data && !data.sources.some((x) => x.active) && (
           <div className="kh-hd-steps">
             <b>{t('hd_stepsT')}</b>
             <ol>
@@ -366,7 +406,7 @@ export function HelpdeskView() {
           </div>
         )}
 
-        {(data?.sources ?? [])
+        {(tab === 'manual' ? [] : (data?.sources ?? []))
           .filter((s) => s.active)
           .map((s) => {
             const warn = !!s.lastError;
@@ -426,20 +466,45 @@ export function HelpdeskView() {
             );
           })}
 
-        <div className="kh-ot-stats">
-          {stat(
-            'oklch(0.72 0.15 150)',
-            t('hd_inList'),
-            data ? data.items.filter((i) => i.inList).length : '…',
-          )}
-          {stat(
-            'oklch(0.7 0.12 250)',
-            t('hd_new7'),
-            (data?.items ?? []).filter((i) => Date.parse(i.firstSeenAt) > week).length,
-          )}
-          {stat('oklch(0.75 0.13 80)', t('hd_changesToday'), changesToday.length)}
-          {stat('oklch(0.7 0.14 30)', t('hd_gone'), (data?.items ?? []).filter((i) => !i.inList).length)}
-        </div>
+        {tab === 'manual' ? (
+          <div className="kh-ot-stats">
+            {stat(
+              'oklch(0.62 0.17 250)',
+              t('hd_mOpen'),
+              m.items ? m.items.filter((x) => x.status === 'open').length : '…',
+            )}
+            {stat(
+              'oklch(0.62 0.16 150)',
+              t('hd_mProgress'),
+              (m.items ?? []).filter((x) => x.status === 'progress').length,
+            )}
+            {stat(
+              'oklch(0.75 0.13 80)',
+              t('hd_mPending'),
+              (m.items ?? []).filter((x) => tkKind(x.status) === 'pending').length,
+            )}
+            {stat(
+              'oklch(0.7 0.14 30)',
+              t('hd_mDone'),
+              (m.items ?? []).filter((x) => tkKind(x.status) === 'done').length,
+            )}
+          </div>
+        ) : (
+          <div className="kh-ot-stats">
+            {stat(
+              'oklch(0.72 0.15 150)',
+              t('hd_inList'),
+              data ? data.items.filter((i) => i.inList).length : '…',
+            )}
+            {stat(
+              'oklch(0.7 0.12 250)',
+              t('hd_new7'),
+              (data?.items ?? []).filter((i) => Date.parse(i.firstSeenAt) > week).length,
+            )}
+            {stat('oklch(0.75 0.13 80)', t('hd_changesToday'), changesToday.length)}
+            {stat('oklch(0.7 0.14 30)', t('hd_gone'), (data?.items ?? []).filter((i) => !i.inList).length)}
+          </div>
+        )}
 
         {tab === 'list' && data && data.items.length > 0 && (
           <div className="kh-hd-filters">
@@ -499,40 +564,21 @@ export function HelpdeskView() {
           </div>
         )}
 
-        <div className="kh-sap-body" style={{ padding: '0 22px 22px' }}>
-          {tab === 'list' ? (
+        {tab === 'manual' && <ManualTable m={m} q={q} head={head} cols={cols} />}
+        <div className="kh-sap-body" style={{ padding: '0 22px 22px' }} hidden={tab === 'manual'}>
+          {tab === 'manual' ? null : tab === 'list' ? (
             <div className="kh-well kh-table kh-hd-table" role="table" aria-label={t('nav_helpdesk')}>
-              <div className="kh-table__head kh-hd-cols" role="row" style={cols}>
-                {[
-                  'hd_number',
-                  'hd_f_summary',
-                  'hd_f_status',
-                  'hd_f_priority',
-                  'hd_f_type',
-                  'hd_f_client',
-                  'hd_f_assignee',
-                  'hd_lastComment',
-                  'hd_reported',
-                ].map((k, i) => (
-                  <div
-                    key={k}
-                    role="columnheader"
-                    style={{ position: 'relative', minWidth: 0, height: '100%' }}
-                  >
-                    <div className="kh-table__th">{t(k)}</div>
-                    {/* drag the edge to resize, double-click to restore */}
-                    {wide && (
-                      <span
-                        className="kh-table__grip"
-                        title={t('resize')}
-                        aria-hidden="true"
-                        onPointerDown={(e) => startResize(i, e)}
-                        onDoubleClick={() => setColW(null)}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
+              {head([
+                'hd_number',
+                'hd_f_summary',
+                'hd_f_status',
+                'hd_f_priority',
+                'hd_f_type',
+                'hd_f_client',
+                'hd_f_assignee',
+                'hd_lastComment',
+                'hd_reported',
+              ])}
               {data && !items.length && (
                 <div className="kh-table__empty">{data.items.length ? t('hd_noMatch') : t('hd_empty')}</div>
               )}
@@ -635,6 +681,7 @@ export function HelpdeskView() {
         </div>
       </div>
 
+      {tab === 'manual' && <ManualPanel m={m} />}
       <ItemDialog
         item={open}
         headers={(open && srcOf.get(open.sourceId)?.headers) || []}
@@ -682,7 +729,7 @@ function ItemDialog({
     try {
       const r = await api<{ ticketId: string }>(`/helpdesk/items/${item.id}/ticket`, {});
       onTicket();
-      router.push(`/app/tickets?k=${r.ticketId}`);
+      router.push(`/app/helpdesk?tab=manual&k=${r.ticketId}`);
     } catch (e) {
       const code = (e as { code?: string })?.code;
       toast({

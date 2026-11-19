@@ -212,8 +212,29 @@ test('link a helpdesk list, import it, and see the changes of a later read', asy
   await expect(fromChange).toContainText('Histórico');
   await fromChange.getByRole('button', { name: 'Fechar' }).last().click();
   await expect(fromChange).toHaveCount(0);
-  await page.getByRole('radio', { name: 'Tickets' }).click();
+  await page.getByRole('radio', { name: 'Sincronizados' }).click();
   await page.getByRole('row', { name: /146975/ }).click();
   await expect(page.getByRole('dialog', { name: '#146975' })).toContainText('Histórico');
   await shot(page, '8-ticket');
+});
+
+test('Manuais: the tickets created here, like the synced ones; /app/tickets comes here', async ({ page }) => {
+  await login(page);
+  await page.goto('app/tickets');
+  await expect(page).toHaveURL(/\/app\/helpdesk\?tab=manual/);
+  await expect(page.getByRole('radio', { name: 'Manuais' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByText('Ainda sem tickets manuais')).toBeVisible();
+  await page.getByRole('button', { name: /Novo ticket/ }).click();
+  const dlg = page.getByRole('dialog', { name: 'Novo ticket' });
+  await dlg.getByLabel('Nº Ticket *').fill('INC0042');
+  await dlg.getByLabel('Descrição *').fill('Erro na MIGO');
+  await dlg.getByRole('button', { name: 'Criar ticket' }).click();
+  await expect(dlg).toHaveCount(0);
+  const row = page.getByRole('row', { name: /INC0042/ });
+  await expect(row.locator('.kh-hd-st[data-k=open]')).toHaveText('Aberto');
+  // it opens on the right, with its history and notes
+  const panel = page.locator('.kh-sap-panel');
+  await expect(panel.getByLabel('Nº Ticket', { exact: true })).toHaveValue('INC0042');
+  await expect(panel).toContainText('Histórico');
+  await shot(page, '9-manuais');
 });

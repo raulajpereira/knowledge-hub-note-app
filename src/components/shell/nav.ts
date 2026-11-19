@@ -16,6 +16,16 @@ export function moduleOf(id: string): string | null {
   return id in ITEM_MODULE ? ITEM_MODULE[id]! : id;
 }
 
+/**
+ * Whether a nav item shows for these modules. Tickets live inside Helpdesk
+ * (its "Manuais" tab): with Helpdesk the Tickets item goes.
+ */
+export function navAllowed(id: string, modules: ReadonlySet<string>): boolean {
+  if (id === 'tickets' && modules.has('helpdesk')) return false;
+  const m = moduleOf(id);
+  return m === null || modules.has(m);
+}
+
 export const isKnownItem = (id: string) =>
   id in NAV_ICON_PATHS && id !== 'contacts' && !/^fn_(cfg|ricef|kb|glo)$/.test(id);
 
@@ -76,10 +86,7 @@ export function sideRows(
   counts: Record<string, number> = {},
 ): SideRow[] {
   // 1) which items are visible at all (licensed and not hidden by the user)
-  const allowed = (id: string) => {
-    const m = moduleOf(id);
-    return m === null || modules.has(m);
-  };
+  const allowed = (id: string) => navAllowed(id, modules);
   const rows: SideRow[] = [];
   type Open = { open: boolean; rowAt: number; hasItems: boolean };
   let group: Open | null = null as Open | null;

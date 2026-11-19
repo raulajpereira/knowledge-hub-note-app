@@ -78,8 +78,10 @@ test('create, edit, comment, link, Kanban, filter, Trash', async ({ page }) => {
   const r = await page.request.post('api/v1/notes', { data: { title: 'Análise do erro M7' } });
   expect(r.ok()).toBe(true);
 
-  await page.goto('app/tickets');
-  await expect(page.getByRole('link', { name: 'Tickets' })).toBeVisible();
+  await page.goto('app/tickets?folders=1');
+  // Tickets live in Helpdesk › Manuais: no Tickets item in the menu
+  await expect(page.getByRole('link', { name: 'Helpdesk' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Tickets', exact: true })).toHaveCount(0);
   await expect(page.getByText('Ainda sem tickets.')).toBeVisible();
   await expect(await newTicket(page, 'INC0001', 'MIGO dá erro M7 021')).toHaveCount(0);
   await expect(page.getByLabel('Nº Ticket', { exact: true })).toHaveValue('INC0001');
@@ -153,7 +155,7 @@ test('create, edit, comment, link, Kanban, filter, Trash', async ({ page }) => {
   await expect(row).toContainText('Ticket');
   await row.getByRole('button', { name: 'Recuperar' }).click();
   await expect(row).toHaveCount(0);
-  await page.goto('app/tickets');
+  await page.goto('app/tickets?folders=1');
   await expect(page.locator('.kh-table__row')).toHaveCount(2);
   // without the detail: every column, fitted to the block, the client shown
   await expect(page.locator('.kh-table__head')).toContainText('Tipo');
@@ -170,7 +172,7 @@ test('phone: tickets as cards, the ticket full-page with Voltar', async ({ brows
   });
   const page = await ctx.newPage();
   await login(page);
-  await page.goto('app/tickets');
+  await page.goto('app/tickets?folders=1');
   const cards = page.locator('.kh-table-card');
   await expect(cards).toHaveCount(2);
   const w = await page.evaluate(() => document.documentElement.scrollWidth);

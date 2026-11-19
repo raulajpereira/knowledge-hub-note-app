@@ -13,7 +13,7 @@ import { clearSearchCache, useGlobalSearch } from '@/components/search/useGlobal
 import { Highlight, useGroupLabel } from '@/components/search/SearchResults';
 import { refreshCounts } from './counts';
 import { Icon, NavIcon } from './icons';
-import { hrefOf, isKnownItem, moduleOf } from './nav';
+import { hrefOf, isKnownItem, navAllowed } from './nav';
 import { NAV_DEFAULT } from './navData';
 import { usePref } from './PrefsProvider';
 import { useShell } from './ShellContext';
@@ -139,7 +139,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     create('notes', t('cmdk_import'), 'notes', () => go('/app/notes?import=1'), t('cmdk_kImport'));
     // every page of the plan, in the sidebar's default order
     for (const e of NAV_DEFAULT) {
-      if (e.type !== 'item' || !isKnownItem(e.id) || !has(moduleOf(e.id))) continue;
+      if (e.type !== 'item' || !isKnownItem(e.id) || !navAllowed(e.id, modules)) continue;
       out.push({
         id: `go-${e.id}`,
         group: 'go',

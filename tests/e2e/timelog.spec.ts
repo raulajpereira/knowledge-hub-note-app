@@ -68,6 +68,9 @@ test('start and stop from the header, the page, the Activity, Trash', async ({ p
   await expect(page.locator('.kh-wxb__time')).toBeVisible();
   await page.getByRole('button', { name: 'Registar horas' }).click();
   const start = page.getByRole('dialog', { name: 'Registar horas' });
+  // the quick dialog: no project, no timesheet switch
+  await expect(start.getByText('Projeto', { exact: true })).toHaveCount(0);
+  await expect(start.getByText('Incluir nas Folhas de Tempos')).toHaveCount(0);
   await start.getByLabel('Ticket').fill('INC0099 · Interface stock');
   await start.getByLabel('Cliente').fill('Cliente Teste');
   await start.getByLabel('Descrição').fill('Mapeamento de campos');
