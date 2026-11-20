@@ -9,7 +9,14 @@ export const GET = handler(async (req) => {
   const { auth } = await timelogAuth();
   const sp = new URL(req.url).searchParams;
   const p = z
-    .object({ n: z.string().trim().max(40).regex(/^#?[A-Za-z0-9_.-]*$/), id: z.uuid().nullable() })
+    .object({
+      n: z
+        .string()
+        .trim()
+        .max(40)
+        .regex(/^#?[A-Za-z0-9_.-]*$/),
+      id: z.uuid().nullable(),
+    })
     .safeParse({ n: sp.get('n') ?? '', id: sp.get('id') });
   if (!p.success) throw new ApiError(400, 'invalid_ticket');
   return json({ entries: await ticketEntries(auth, { number: p.data.n, ticketId: p.data.id }) });
