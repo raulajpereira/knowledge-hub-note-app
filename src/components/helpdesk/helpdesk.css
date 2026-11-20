@@ -412,3 +412,184 @@ em[data-k='back'] {
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent);
   scroll-margin-top: 12px;
 }
+
+/* the tabs: the tickets (synced, manual) together, their changes beside, the time log apart in its colour */
+.kh-hd-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.kh-hd-tabs__div {
+  width: 1px;
+  height: 28px;
+  margin: 0 4px;
+  background: rgb(var(--w) / 0.22);
+}
+.kh-hd-tl {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px 3px 3px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--hd-tl) 22%, transparent);
+  border: 1px solid color-mix(in oklch, var(--hd-tl) 60%, transparent);
+}
+.kh-hd-tl > button:first-child {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: color-mix(in oklch, var(--hd-tl) 35%, white);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kh-hd-tl[data-on] > button:first-child {
+  background: var(--hd-tl);
+  color: oklch(0.2 0.03 250);
+}
+.kh-hd-tl__dot {
+  width: 22px;
+  height: 22px;
+  margin-left: 2px;
+  border-radius: 50%;
+  border: 2px solid rgb(var(--w) / 0.7);
+  background: var(--hd-tl);
+  cursor: pointer;
+}
+.kh-hd-colors {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+}
+.kh-hd-colors > button {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.kh-hd-colors > button[aria-checked='true'] {
+  border-color: rgb(var(--w) / 0.95);
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.3);
+}
+
+/* a ticket's time: the button at its end, and its entries (popup or panel) */
+.kh-hd-tlbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--hd-tl, var(--accent)) 60%, transparent);
+  background: color-mix(in oklch, var(--hd-tl, var(--accent)) 22%, transparent);
+  color: color-mix(in oklch, var(--hd-tl, var(--accent)) 35%, white);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kh-hd-tlbtn:hover {
+  background: color-mix(in oklch, var(--hd-tl, var(--accent)) 34%, transparent);
+}
+.kh-hd-tt {
+  padding: 14px;
+  border-radius: 18px;
+  background: color-mix(in oklch, var(--hd-tl, var(--accent)) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--hd-tl, var(--accent)) 40%, transparent);
+  font-size: 13.5px;
+}
+.kh-hd-tt__tot {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.kh-hd-tt__tot > span {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgb(var(--w) / 0.07);
+  font-size: 12.5px;
+}
+.kh-hd-tt__tot b {
+  display: block;
+  font:
+    600 20px 'Geist Mono',
+    monospace;
+}
+.kh-hd-tt__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.kh-hd-tt__bar > b {
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.kh-hd-tt__bar > .sp {
+  flex: 1;
+}
+.kh-hd-tt__go {
+  background: oklch(0.68 0.15 150) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+.kh-hd-tt__row {
+  display: grid;
+  grid-template-columns: 70px 150px 70px minmax(0, 1fr);
+  gap: 10px;
+  padding: 9px 12px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  background: rgb(var(--w) / 0.06);
+}
+.kh-hd-tt__row > span {
+  white-space: nowrap;
+}
+.kh-hd-tt__row > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kh-hd-tt__row[data-run] {
+  background: oklch(0.68 0.15 150 / 0.18);
+}
+.kh-hd-tt__back {
+  margin-top: 10px;
+}
+.kh-hd-ttpanel {
+  padding: 18px;
+}
+.kh-hd-ttpanel h2 {
+  margin: 0;
+  font:
+    600 22px 'Geist Mono',
+    monospace;
+}
+.kh-hd-ttpanel h2 span {
+  font:
+    600 15px Inter,
+    system-ui,
+    sans-serif;
+  color: color-mix(in oklch, var(--hd-tl, var(--accent)) 45%, white);
+}
+.kh-hd-ttpanel p {
+  margin: 4px 0 14px;
+  opacity: 0.75;
+}
+.kh-hd-ttfoot {
+  padding: 12px 18px 18px;
+}
+@media (max-width: 760px) {
+  .kh-hd-tt__row {
+    grid-template-columns: 54px 100px 54px minmax(0, 1fr);
+    font-size: 12.5px;
+  }
+}

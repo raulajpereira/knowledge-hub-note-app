@@ -315,14 +315,7 @@
 .kh-tl-table {
   overflow: auto;
 }
-@media (max-width: 1240px) {
-  .kh-tl-cols {
-    grid-template-columns: 64px 84px 80px minmax(120px, 1.2fr) minmax(110px, 1fr) minmax(140px, 1.6fr) 64px;
-  }
-  .kh-tl-cols > :nth-child(6) {
-    display: none;
-  }
-}
+/* the columns' widths are set inline (resizable) from 761px; these are the defaults otherwise */
 @media (max-width: 760px) {
   .kh-tl-cols {
     grid-template-columns: 56px 72px minmax(0, 1fr) 56px;
@@ -338,4 +331,28 @@
 .kh-tl-tools .kh-tl-sel {
   width: 210px;
   max-width: 100%;
+}
+
+/* inside Helpdesk (its "Registo de Tempos" tab): the area in the chosen colour */
+.kh-tl-embed {
+  margin: 0 22px 22px;
+  padding: 14px 0 0;
+  border-radius: 22px;
+  background: color-mix(in oklch, var(--hd-tl) 14%, transparent);
+  border: 1px solid color-mix(in oklch, var(--hd-tl) 45%, transparent);
+}
+.kh-tl-embed__head {
+  padding: 0 18px 12px !important;
+}
+.kh-tl-embed .kh-ot-stats,
+.kh-tl-embed .kh-tl-tools,
+.kh-tl-embed .kh-sap-body {
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+}
+.kh-tl-embed .kh-sap-body {
+  padding-bottom: 18px !important;
+}
+.kh-tl-embed .kh-table {
+  background: rgb(0 0 0 / 0.12);
 }

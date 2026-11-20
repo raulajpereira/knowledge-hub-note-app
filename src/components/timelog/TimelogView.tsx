@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { DateInput, Modal, Select, Switch, useConfirm, usePersistentState, useToast } from '@/components/ui';
@@ -31,6 +31,7 @@ import './timelog.css';
 type Range = 'week' | 'month';
 /** default widths: Início, Fim, Duração, Ticket, Cliente, Projeto, Descrição (takes the rest), Folha */
 const COL_DEF = [78, 92, 86, 190, 150, 140, 240, 84];
+const DESC = 6;
 const pad = (n: number) => String(n).padStart(2, '0');
 const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const hm = (iso: string | null) => {
@@ -67,7 +68,7 @@ type Edit = {
   running: boolean;
 };
 
-export function TimelogView() {
+export function TimelogView({ embedded = false }: { embedded?: boolean } = {}) {
   const { t, lang } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
@@ -87,7 +88,7 @@ export function TimelogView() {
   const [live, setLive] = useState<number[] | null>(null);
   const [wide, setWide] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1241px)');
+    const mq = window.matchMedia('(min-width: 761px)');
     const on = () => setWide(mq.matches);
     on();
     mq.addEventListener('change', on);
@@ -97,8 +98,9 @@ export function TimelogView() {
   const cols: React.CSSProperties | undefined = wide
     ? {
         gridTemplateColumns: widths
-          .map((w, i) => (i === 6 ? 'minmax(100px,1fr)' : `${Math.round(w)}px`))
+          .map((w, i) => (i === DESC ? `minmax(${Math.round(w)}px,1fr)` : `${Math.round(w)}px`))
           .join(' '),
+        minWidth: widths.reduce((a, w) => a + w, 0),
       }
     : undefined;
   const startResize = (i: number, e: React.PointerEvent) => {
@@ -107,13 +109,9 @@ export function TimelogView() {
     const z = bodyZoom();
     const x0 = e.clientX;
     const start = [...widths];
-    // never wider than the table: the description keeps at least 100 px
-    const box = (e.currentTarget as HTMLElement).closest('.kh-tl-table') as HTMLElement | null;
-    const room =
-      (box?.clientWidth ?? 1e6) - 100 - start.reduce((a, w, j) => (j === i || j === 6 ? a : a + w), 0) - 4;
     let cur = start;
     const move = (ev: PointerEvent) => {
-      const w = Math.min(room, Math.max(56, start[i]! + (ev.clientX - x0) / z));
+      const w = Math.min(900, Math.max(56, start[i]! + (ev.clientX - x0) / z));
       cur = start.map((x, j) => (j === i ? w : x));
       setLive(cur);
     };
@@ -160,6 +158,34 @@ export function TimelogView() {
     const e = target && items?.find((x) => x.id === target);
     if (e) openEdit(e);
   }, [target, items, openEdit]);
+
+  // from a ticket's "Registo de Tempos": a manual entry with its ticket and client filled in
+  const fresh = sp.get('new');
+  const router = useRouter();
+  const path = usePathname();
+  useEffect(() => {
+    if (fresh === null) return;
+    const n = new Date();
+    const tk = sp.get('tk');
+    setEdit({
+      id: null,
+      day: dayKey(n),
+      from: `${pad(Math.max(0, n.getHours() - 1))}:00`,
+      to: `${pad(n.getHours())}:00`,
+      form: {
+        ...EMPTY_FORM,
+        refKind: tk ? 'ticket' : null,
+        refId: tk,
+        refLabel: fresh,
+        clientLabel: sp.get('c') ?? '',
+      },
+      inTs: true,
+      running: false,
+    });
+    const u = new URLSearchParams(sp.toString());
+    for (const k of ['new', 'tk', 'c']) u.delete(k);
+    router.replace(`${path}?${u}`, { scroll: false });
+  }, [fresh, sp, router, path]);
 
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -278,6 +304,335 @@ export function TimelogView() {
     </button>
   );
 
+  const controls = (
+    <>
+      <div className="kh-sap-seg" role="radiogroup" aria-label={t('tl_title')}>
+        {(['week', 'month'] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={range === v}
+            data-on={range === v || undefined}
+            onClick={() => {
+              setRange(v);
+              setOffset(0);
+            }}
+          >
+            {t(v === 'week' ? 'tl_week' : 'tl_month')}
+          </button>
+        ))}
+      </div>
+      <label className="kh-sap-search">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t('tl_search')}
+          aria-label={t('tl_search')}
+        />
+      </label>
+      <button
+        type="button"
+        className="kh-sap-new"
+        onClick={() => {
+          const n = new Date();
+          setEdit({
+            id: null,
+            day: dayKey(n),
+            from: `${pad(Math.max(0, n.getHours() - 1))}:00`,
+            to: `${pad(n.getHours())}:00`,
+            form: EMPTY_FORM,
+            inTs: true,
+            running: false,
+          });
+        }}
+      >
+        + {t('tl_manual')}
+      </button>
+    </>
+  );
+  const content = (
+    <>
+      <div className="kh-ot-stats">
+        {stat(
+          'oklch(0.72 0.15 150)',
+          t('tl_today'),
+          sum((items ?? []).filter((e) => dayKey(new Date(e.startedAt)) === today)),
+        )}
+        {stat(
+          'oklch(0.7 0.12 250)',
+          range === 'week' ? t('tl_weekN').replace('{n}', String(isoWeek(from))) : rangeLabel,
+          sum(items ?? []),
+        )}
+        {stat('oklch(0.75 0.13 80)', t('tl_total'), sum(shown))}
+        {stat(
+          'oklch(0.7 0.14 300)',
+          t('tl_inSheet'),
+          sum((items ?? []).filter((e) => e.tsState === 'added')),
+        )}
+      </div>
+      <div className="kh-tl-tools" style={{ padding: '0 22px 12px' }}>
+        <span className="kh-tl-nav">
+          <button
+            type="button"
+            className="kh-btn kh-btn--sm kh-btn--ghost"
+            aria-label={t('tl_prev')}
+            onClick={() => setOffset((o) => o - 1)}
+          >
+            ‹
+          </button>
+          <span>{rangeLabel}</span>
+          <button
+            type="button"
+            className="kh-btn kh-btn--sm kh-btn--ghost"
+            aria-label={t('tl_next')}
+            onClick={() => setOffset((o) => o + 1)}
+          >
+            ›
+          </button>
+        </span>
+        <div className="kh-tl-sel">
+          <Select
+            aria-label={t('tl_cClient')}
+            searchPlaceholder={t('tl_cClient')}
+            value={client}
+            options={[
+              { value: '', label: t('tl_allClients') },
+              ...clientOpts.map(([v, l]) => ({ value: v, label: l })),
+            ]}
+            onChange={setClient}
+          />
+        </div>
+        <div className="kh-tl-sel">
+          <Select
+            aria-label={t('tl_cProject')}
+            searchPlaceholder={t('tl_cProject')}
+            value={project}
+            options={[
+              { value: '', label: t('tl_allProjects') },
+              ...projectOpts.map(([v, l]) => ({ value: v, label: l })),
+            ]}
+            onChange={setProject}
+          />
+        </div>
+        <span style={{ flex: 1 }} />
+        <XlsxButton
+          onExport={() =>
+            downloadTableXlsx({
+              title: t('tl_title'),
+              subtitle: rangeLabel,
+              sheet: t('tl_title'),
+              lang,
+              totalLabel: t('xl_total'),
+              generatedLabel: t('xl_generated'),
+              fileName: xlsxName(t('tl_title')),
+              rows: [...shown].reverse(),
+              columns: [
+                {
+                  header: t('tl_day'),
+                  type: 'date',
+                  width: 12,
+                  value: (e) => dayKey(new Date(e.startedAt)),
+                },
+                { header: t('tl_cFrom'), width: 8, value: (e) => hm(e.startedAt) },
+                { header: t('tl_cTo'), width: 8, value: (e) => hm(e.endedAt) },
+                { header: `${t('tl_cDur')} (h)`, type: 'hours', width: 11, value: (e) => minsOf(e) / 60 },
+                { header: t('tl_cRef'), width: 30, value: (e) => e.refLabel },
+                { header: t('tl_cClient'), width: 22, value: (e) => e.clientLabel },
+                { header: t('tl_cProject'), width: 24, value: (e) => e.projectLabel },
+                { header: t('tl_cDesc'), width: 50, value: (e) => e.description },
+                { header: t('tl_cSheet'), width: 10, value: (e) => (e.tsState === 'added' ? '✓' : '') },
+              ],
+            })
+          }
+        />
+        {opts?.timesheet && (
+          <button type="button" className="kh-btn kh-btn--sm kh-btn--glass" onClick={() => void sendRange()}>
+            {t('tl_sendWeek')}
+          </button>
+        )}
+      </div>
+      <div className="kh-sap-body" style={{ padding: '0 22px 22px' }}>
+        <div className="kh-well kh-table kh-tl-table" role="table" aria-label={t('tl_title')}>
+          <div className="kh-table__head kh-tl-cols" role="row" style={cols}>
+            {[
+              'tl_cFrom',
+              'tl_cTo',
+              'tl_cDur',
+              'tl_cRef',
+              'tl_cClient',
+              'tl_cProject',
+              'tl_cDesc',
+              'tl_cSheet',
+            ].map((k, i) => (
+              <div key={k} role="columnheader" style={{ position: 'relative', minWidth: 0, height: '100%' }}>
+                <div className="kh-table__th">{t(k)}</div>
+                {/* drag the edge to resize (wide screens), double-click to restore */}
+                {wide && (
+                  <span
+                    className="kh-table__grip"
+                    title={t('resize')}
+                    aria-hidden="true"
+                    onPointerDown={(e) => startResize(i, e)}
+                    onDoubleClick={() => setColW(null)}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          {items && !days.length && <div className="kh-table__empty">{t('tl_empty')}</div>}
+          {days.map(([k, list]) => (
+            <div key={k} role="rowgroup">
+              <div className="kh-tl-day">
+                <span>{dayLabel(new Date(`${k}T12:00:00`))}</span>
+                <b>{fmtMinutes(sum(list))}</b>
+              </div>
+              {list.map((e) => (
+                <div
+                  key={e.id}
+                  role="row"
+                  tabIndex={0}
+                  className="kh-table__row kh-table__row--click kh-tl-cols"
+                  style={cols}
+                  onClick={() => openEdit(e)}
+                  onKeyDown={(ev) => ev.key === 'Enter' && ev.target === ev.currentTarget && openEdit(e)}
+                >
+                  <div role="cell" className="kh-table__td kh-tl-mono">
+                    {hm(e.startedAt)}
+                  </div>
+                  <div role="cell" className="kh-table__td kh-tl-mono">
+                    {e.endedAt ? hm(e.endedAt) : <span className="kh-tl-run">{t('tl_running')}</span>}
+                  </div>
+                  <div role="cell" className="kh-table__td kh-tl-mono kh-tl-strong">
+                    {fmtMinutes(minsOf(e))}
+                  </div>
+                  <div role="cell" className="kh-table__td" title={e.refLabel}>
+                    {e.refLabel || '—'}
+                  </div>
+                  <div role="cell" className="kh-table__td">
+                    {e.clientLabel || '—'}
+                  </div>
+                  <div role="cell" className="kh-table__td kh-tl-dim">
+                    {e.projectLabel || '—'}
+                  </div>
+                  <div role="cell" className="kh-table__td kh-tl-dim" title={e.description}>
+                    {e.description || '—'}
+                  </div>
+                  <div
+                    role="cell"
+                    className="kh-table__td"
+                    onClick={(ev) => ev.stopPropagation()}
+                    onKeyDown={(ev) => ev.stopPropagation()}
+                  >
+                    {e.endedAt && opts?.timesheet ? (
+                      <Switch
+                        checked={e.inTimesheet && e.tsState === 'added'}
+                        onChange={(v) => void toggleTs(e, v)}
+                        label={`${t('tl_inTs')} · ${e.refLabel || e.description}`}
+                        title={e.tsState ? t(`tl_ts_${e.tsState}`) : undefined}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+  const modal = (
+    <Modal
+      open={!!edit}
+      onClose={() => setEdit(null)}
+      title={edit?.id ? t('tl_editT') : t('tl_newT')}
+      closeLabel={t('ui_close')}
+      className="kh-tl-modal"
+      footer={
+        <div className="kh-tl-foot">
+          {edit?.id && (
+            <button type="button" className="kh-btn kh-btn--danger" onClick={() => void remove()}>
+              {t('tl_delete')}
+            </button>
+          )}
+          <span className="kh-tl-foot__sp" />
+          <button type="button" className="kh-btn kh-btn--ghost" onClick={() => setEdit(null)}>
+            {t('tl_cancel')}
+          </button>
+          <button
+            type="button"
+            className="kh-btn kh-btn--primary"
+            disabled={busy}
+            onClick={() => void save()}
+          >
+            {t('tl_save')}
+          </button>
+        </div>
+      }
+    >
+      {edit && (
+        <>
+          <div className="kh-tl-grid" style={{ gridTemplateColumns: '1.4fr 1fr 1fr', marginBottom: 14 }}>
+            <label className="kh-field">
+              <span className="kh-field__label">{t('tl_day')}</span>
+              <DateInput
+                className="kh-input"
+                value={edit.day}
+                onChange={(v) => v && setEdit({ ...edit, day: v })}
+                aria-label={t('tl_day')}
+              />
+            </label>
+            <label className="kh-field">
+              <span className="kh-field__label">{t('tl_cFrom')}</span>
+              <input
+                className="kh-input kh-tl-mono"
+                type="time"
+                value={edit.from}
+                onChange={(e) => setEdit({ ...edit, from: e.target.value })}
+              />
+            </label>
+            <label className="kh-field">
+              <span className="kh-field__label">{t('tl_cTo')}</span>
+              {edit.running ? (
+                <input className="kh-input" value={t('tl_running')} readOnly />
+              ) : (
+                <input
+                  className="kh-input kh-tl-mono"
+                  type="time"
+                  value={edit.to}
+                  onChange={(e) => setEdit({ ...edit, to: e.target.value })}
+                />
+              )}
+            </label>
+          </div>
+          <TimeFields
+            form={edit.form}
+            set={(p) => setEdit((x) => (x ? { ...x, form: { ...x.form, ...p } } : x))}
+            opts={opts}
+          />
+          {opts?.timesheet && !edit.running && (
+            <div className="kh-tl-sw">
+              <Switch
+                checked={edit.inTs}
+                onChange={(v) => setEdit({ ...edit, inTs: v })}
+                label={t('tl_inTs')}
+              />
+              <span>{t('tl_inTs')}</span>
+            </div>
+          )}
+        </>
+      )}
+    </Modal>
+  );
+  // inside Helpdesk (its "Registo de Tempos" tab): no title of its own
+  if (embedded)
+    return (
+      <div className="kh-tl-embed">
+        <div className="kh-sap-head kh-tl-embed__head">{controls}</div>
+        {content}
+        {modal}
+      </div>
+    );
   return (
     <section className="kh-sap kh-tl-page">
       <div className="kh-sap-main">
@@ -286,327 +641,11 @@ export function TimelogView() {
             <h1>{t('tl_title')}</h1>
             <div>{t('tl_sub')}</div>
           </div>
-          <div className="kh-sap-seg" role="radiogroup" aria-label={t('tl_title')}>
-            {(['week', 'month'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                role="radio"
-                aria-checked={range === v}
-                data-on={range === v || undefined}
-                onClick={() => {
-                  setRange(v);
-                  setOffset(0);
-                }}
-              >
-                {t(v === 'week' ? 'tl_week' : 'tl_month')}
-              </button>
-            ))}
-          </div>
-          <label className="kh-sap-search">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t('tl_search')}
-              aria-label={t('tl_search')}
-            />
-          </label>
-          <button
-            type="button"
-            className="kh-sap-new"
-            onClick={() => {
-              const n = new Date();
-              setEdit({
-                id: null,
-                day: dayKey(n),
-                from: `${pad(Math.max(0, n.getHours() - 1))}:00`,
-                to: `${pad(n.getHours())}:00`,
-                form: EMPTY_FORM,
-                inTs: true,
-                running: false,
-              });
-            }}
-          >
-            + {t('tl_manual')}
-          </button>
+          {controls}
         </div>
-        <div className="kh-ot-stats">
-          {stat(
-            'oklch(0.72 0.15 150)',
-            t('tl_today'),
-            sum((items ?? []).filter((e) => dayKey(new Date(e.startedAt)) === today)),
-          )}
-          {stat(
-            'oklch(0.7 0.12 250)',
-            range === 'week' ? t('tl_weekN').replace('{n}', String(isoWeek(from))) : rangeLabel,
-            sum(items ?? []),
-          )}
-          {stat('oklch(0.75 0.13 80)', t('tl_total'), sum(shown))}
-          {stat(
-            'oklch(0.7 0.14 300)',
-            t('tl_inSheet'),
-            sum((items ?? []).filter((e) => e.tsState === 'added')),
-          )}
-        </div>
-        <div className="kh-tl-tools" style={{ padding: '0 22px 12px' }}>
-          <span className="kh-tl-nav">
-            <button
-              type="button"
-              className="kh-btn kh-btn--sm kh-btn--ghost"
-              aria-label={t('tl_prev')}
-              onClick={() => setOffset((o) => o - 1)}
-            >
-              ‹
-            </button>
-            <span>{rangeLabel}</span>
-            <button
-              type="button"
-              className="kh-btn kh-btn--sm kh-btn--ghost"
-              aria-label={t('tl_next')}
-              onClick={() => setOffset((o) => o + 1)}
-            >
-              ›
-            </button>
-          </span>
-          <div className="kh-tl-sel">
-            <Select
-              aria-label={t('tl_cClient')}
-              searchPlaceholder={t('tl_cClient')}
-              value={client}
-              options={[
-                { value: '', label: t('tl_allClients') },
-                ...clientOpts.map(([v, l]) => ({ value: v, label: l })),
-              ]}
-              onChange={setClient}
-            />
-          </div>
-          <div className="kh-tl-sel">
-            <Select
-              aria-label={t('tl_cProject')}
-              searchPlaceholder={t('tl_cProject')}
-              value={project}
-              options={[
-                { value: '', label: t('tl_allProjects') },
-                ...projectOpts.map(([v, l]) => ({ value: v, label: l })),
-              ]}
-              onChange={setProject}
-            />
-          </div>
-          <span style={{ flex: 1 }} />
-          <XlsxButton
-            onExport={() =>
-              downloadTableXlsx({
-                title: t('tl_title'),
-                subtitle: rangeLabel,
-                sheet: t('tl_title'),
-                lang,
-                totalLabel: t('xl_total'),
-                generatedLabel: t('xl_generated'),
-                fileName: xlsxName(t('tl_title')),
-                rows: [...shown].reverse(),
-                columns: [
-                  {
-                    header: t('tl_day'),
-                    type: 'date',
-                    width: 12,
-                    value: (e) => dayKey(new Date(e.startedAt)),
-                  },
-                  { header: t('tl_cFrom'), width: 8, value: (e) => hm(e.startedAt) },
-                  { header: t('tl_cTo'), width: 8, value: (e) => hm(e.endedAt) },
-                  { header: `${t('tl_cDur')} (h)`, type: 'hours', width: 11, value: (e) => minsOf(e) / 60 },
-                  { header: t('tl_cRef'), width: 30, value: (e) => e.refLabel },
-                  { header: t('tl_cClient'), width: 22, value: (e) => e.clientLabel },
-                  { header: t('tl_cProject'), width: 24, value: (e) => e.projectLabel },
-                  { header: t('tl_cDesc'), width: 50, value: (e) => e.description },
-                  { header: t('tl_cSheet'), width: 10, value: (e) => (e.tsState === 'added' ? '✓' : '') },
-                ],
-              })
-            }
-          />
-          {opts?.timesheet && (
-            <button
-              type="button"
-              className="kh-btn kh-btn--sm kh-btn--glass"
-              onClick={() => void sendRange()}
-            >
-              {t('tl_sendWeek')}
-            </button>
-          )}
-        </div>
-        <div className="kh-sap-body" style={{ padding: '0 22px 22px' }}>
-          <div className="kh-well kh-table kh-tl-table" role="table" aria-label={t('tl_title')}>
-            <div className="kh-table__head kh-tl-cols" role="row" style={cols}>
-              {[
-                'tl_cFrom',
-                'tl_cTo',
-                'tl_cDur',
-                'tl_cRef',
-                'tl_cClient',
-                'tl_cProject',
-                'tl_cDesc',
-                'tl_cSheet',
-              ].map((k, i, all) => (
-                <div
-                  key={k}
-                  role="columnheader"
-                  style={{ position: 'relative', minWidth: 0, height: '100%' }}
-                >
-                  <div className="kh-table__th">{t(k)}</div>
-                  {/* drag the edge to resize (wide screens), double-click to restore */}
-                  {wide && i < all.length - 1 && i !== 6 && (
-                    <span
-                      className="kh-table__grip"
-                      title={t('resize')}
-                      aria-hidden="true"
-                      onPointerDown={(e) => startResize(i, e)}
-                      onDoubleClick={() => setColW(null)}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-            {items && !days.length && <div className="kh-table__empty">{t('tl_empty')}</div>}
-            {days.map(([k, list]) => (
-              <div key={k} role="rowgroup">
-                <div className="kh-tl-day">
-                  <span>{dayLabel(new Date(`${k}T12:00:00`))}</span>
-                  <b>{fmtMinutes(sum(list))}</b>
-                </div>
-                {list.map((e) => (
-                  <div
-                    key={e.id}
-                    role="row"
-                    tabIndex={0}
-                    className="kh-table__row kh-table__row--click kh-tl-cols"
-                    style={cols}
-                    onClick={() => openEdit(e)}
-                    onKeyDown={(ev) => ev.key === 'Enter' && ev.target === ev.currentTarget && openEdit(e)}
-                  >
-                    <div role="cell" className="kh-table__td kh-tl-mono">
-                      {hm(e.startedAt)}
-                    </div>
-                    <div role="cell" className="kh-table__td kh-tl-mono">
-                      {e.endedAt ? hm(e.endedAt) : <span className="kh-tl-run">{t('tl_running')}</span>}
-                    </div>
-                    <div role="cell" className="kh-table__td kh-tl-mono kh-tl-strong">
-                      {fmtMinutes(minsOf(e))}
-                    </div>
-                    <div role="cell" className="kh-table__td" title={e.refLabel}>
-                      {e.refLabel || '—'}
-                    </div>
-                    <div role="cell" className="kh-table__td">
-                      {e.clientLabel || '—'}
-                    </div>
-                    <div role="cell" className="kh-table__td kh-tl-dim">
-                      {e.projectLabel || '—'}
-                    </div>
-                    <div role="cell" className="kh-table__td kh-tl-dim" title={e.description}>
-                      {e.description || '—'}
-                    </div>
-                    <div
-                      role="cell"
-                      className="kh-table__td"
-                      onClick={(ev) => ev.stopPropagation()}
-                      onKeyDown={(ev) => ev.stopPropagation()}
-                    >
-                      {e.endedAt && opts?.timesheet ? (
-                        <Switch
-                          checked={e.inTimesheet && e.tsState === 'added'}
-                          onChange={(v) => void toggleTs(e, v)}
-                          label={`${t('tl_inTs')} · ${e.refLabel || e.description}`}
-                          title={e.tsState ? t(`tl_ts_${e.tsState}`) : undefined}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
+        {content}
       </div>
-
-      <Modal
-        open={!!edit}
-        onClose={() => setEdit(null)}
-        title={edit?.id ? t('tl_editT') : t('tl_newT')}
-        closeLabel={t('ui_close')}
-        className="kh-tl-modal"
-        footer={
-          <div className="kh-tl-foot">
-            {edit?.id && (
-              <button type="button" className="kh-btn kh-btn--danger" onClick={() => void remove()}>
-                {t('tl_delete')}
-              </button>
-            )}
-            <span className="kh-tl-foot__sp" />
-            <button type="button" className="kh-btn kh-btn--ghost" onClick={() => setEdit(null)}>
-              {t('tl_cancel')}
-            </button>
-            <button
-              type="button"
-              className="kh-btn kh-btn--primary"
-              disabled={busy}
-              onClick={() => void save()}
-            >
-              {t('tl_save')}
-            </button>
-          </div>
-        }
-      >
-        {edit && (
-          <>
-            <div className="kh-tl-grid" style={{ gridTemplateColumns: '1.4fr 1fr 1fr', marginBottom: 14 }}>
-              <label className="kh-field">
-                <span className="kh-field__label">{t('tl_day')}</span>
-                <DateInput
-                  className="kh-input"
-                  value={edit.day}
-                  onChange={(v) => v && setEdit({ ...edit, day: v })}
-                  aria-label={t('tl_day')}
-                />
-              </label>
-              <label className="kh-field">
-                <span className="kh-field__label">{t('tl_cFrom')}</span>
-                <input
-                  className="kh-input kh-tl-mono"
-                  type="time"
-                  value={edit.from}
-                  onChange={(e) => setEdit({ ...edit, from: e.target.value })}
-                />
-              </label>
-              <label className="kh-field">
-                <span className="kh-field__label">{t('tl_cTo')}</span>
-                {edit.running ? (
-                  <input className="kh-input" value={t('tl_running')} readOnly />
-                ) : (
-                  <input
-                    className="kh-input kh-tl-mono"
-                    type="time"
-                    value={edit.to}
-                    onChange={(e) => setEdit({ ...edit, to: e.target.value })}
-                  />
-                )}
-              </label>
-            </div>
-            <TimeFields
-              form={edit.form}
-              set={(p) => setEdit((x) => (x ? { ...x, form: { ...x.form, ...p } } : x))}
-              opts={opts}
-            />
-            {opts?.timesheet && !edit.running && (
-              <div className="kh-tl-sw">
-                <Switch
-                  checked={edit.inTs}
-                  onChange={(v) => setEdit({ ...edit, inTs: v })}
-                  label={t('tl_inTs')}
-                />
-                <span>{t('tl_inTs')}</span>
-              </div>
-            )}
-          </>
-        )}
-      </Modal>
+      {modal}
     </section>
   );
 }

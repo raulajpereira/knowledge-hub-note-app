@@ -161,6 +161,20 @@ describe.skipIf(!enabled)('time log', () => {
     expect(await tl.searchRefs(ana, '1462', new Set(['tickets']))).toEqual([]);
   });
 
+  it('a ticket’s entries: by its number at the start of the text, or a manual ticket by its id', async () => {
+    const ana = await signedIn('ana@tt.pt');
+    const a = await tl.startEntry(ana, { refLabel: '#146233 · Regularização' });
+    await tl.stopEntry(ana, {}, MODS, 'Europe/Lisbon');
+    await tl.startEntry(ana, { refLabel: '146233' });
+    await tl.stopEntry(ana, {}, MODS, 'Europe/Lisbon');
+    await tl.startEntry(ana, { refLabel: '1462330 · outro' });
+    await tl.stopEntry(ana, {}, MODS, 'Europe/Lisbon');
+    const got = await tl.ticketEntries(ana, { number: '146233' });
+    expect(got).toHaveLength(2);
+    expect(got.map((e) => e.refLabel)).toContain(a.refLabel);
+    expect(await tl.ticketEntries(ana, { number: '' })).toEqual([]);
+  });
+
   it('nobody sees or changes another person’s entries', async () => {
     const ana = await signedIn('ana@iso.pt');
     const rui = await signedIn('rui@iso.pt');

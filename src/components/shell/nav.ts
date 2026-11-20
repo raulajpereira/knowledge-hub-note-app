@@ -18,10 +18,12 @@ export function moduleOf(id: string): string | null {
 
 /**
  * Whether a nav item shows for these modules. Tickets live inside Helpdesk
- * (its "Manuais" tab): with Helpdesk the Tickets item goes.
+ * (its "Manuais" tab) and the Registo de Tempos too: with Helpdesk both items go.
  */
 export function navAllowed(id: string, modules: ReadonlySet<string>): boolean {
   if (id === 'tickets' && modules.has('helpdesk')) return false;
+  // and so does the Registo de Tempos (its own tab there)
+  if (id === 'timelog' && modules.has('helpdesk')) return false;
   const m = moduleOf(id);
   return m === null || modules.has(m);
 }

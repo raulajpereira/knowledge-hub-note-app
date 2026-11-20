@@ -12,6 +12,7 @@ import { useSharedFolders } from '@/components/share/useSharedFolders';
 import { Select, useConfirm, usePersistentState, useToast } from '@/components/ui';
 import { isDone, type TicketStatus } from '@/lib/tickets';
 import type { HdStatusKind } from '@/lib/helpdesk';
+import { TicketTime, TicketTimeButton, useTicketTime, type TicketRef } from './TicketTime';
 import { NewTicketDialog } from '@/components/tickets/NewTicketDialog';
 import { TicketDetail } from '@/components/tickets/TicketDetail';
 import {
@@ -349,7 +350,7 @@ export function ManualTable({
 }
 
 /** the open ticket, on the right (or full screen on phones) */
-export function ManualPanel({ m }: { m: Manual }) {
+export function ManualPanel({ m, timeOn }: { m: Manual; timeOn: boolean }) {
   const { other, setOther, sh } = m;
   const curSharedName = m.curShared?.owner?.name ?? '';
   const { t } = useI18n();
@@ -384,6 +385,14 @@ export function ManualPanel({ m }: { m: Manual }) {
       toast({ message: t('ne_saveFail'), tone: 'error' });
     }
   };
+  const [view, setView] = useState<'detail' | 'time'>('detail');
+  const actId = act?.id;
+  useEffect(() => setView('detail'), [actId]);
+  const ref: TicketRef | null =
+    act && timeOn
+      ? { number: act.number, summary: act.summary, client: act.clientName, ticketId: act.id }
+      : null;
+  const time = useTicketTime(ref);
   if (!act) return null;
   return (
     <SidePanel
@@ -394,22 +403,41 @@ export function ManualPanel({ m }: { m: Manual }) {
       onBack={md.back}
       backTitle={act.number}
     >
-      <TicketDetail
-        key={act.id}
-        item={act}
-        clients={m.clients}
-        people={people}
-        folders={m.folders}
-        ownShared={sh.folders.filter((s) => s.mine && !s.folderId).map((s) => ({ id: s.id, name: s.name }))}
-        sharedBy={act.mine ? null : curSharedName}
-        onLocal={(p) => setOne(act.id, p)}
-        onSaved={(x) => {
-          setOne(x.id, x);
-          refreshCounts();
-        }}
-        onRemove={() => void remove(act)}
-        onClose={md.back}
-      />
+      {view === 'time' && ref ? (
+        <div className="kh-hd-ttpanel">
+          <h2>
+            {act.number} <span>· {t('tl_title')}</span>
+          </h2>
+          <p>{[act.summary, act.clientName].filter(Boolean).join(' · ')}</p>
+          <TicketTime r={ref} entries={time.entries} onBack={() => setView('detail')} />
+        </div>
+      ) : (
+        <>
+          <TicketDetail
+            key={act.id}
+            item={act}
+            clients={m.clients}
+            people={people}
+            folders={m.folders}
+            ownShared={sh.folders
+              .filter((s) => s.mine && !s.folderId)
+              .map((s) => ({ id: s.id, name: s.name }))}
+            sharedBy={act.mine ? null : curSharedName}
+            onLocal={(p) => setOne(act.id, p)}
+            onSaved={(x) => {
+              setOne(x.id, x);
+              refreshCounts();
+            }}
+            onRemove={() => void remove(act)}
+            onClose={md.back}
+          />
+          {ref && (
+            <div className="kh-hd-ttfoot">
+              <TicketTimeButton total={time.total} onClick={() => setView('time')} />
+            </div>
+          )}
+        </>
+      )}
     </SidePanel>
   );
 }

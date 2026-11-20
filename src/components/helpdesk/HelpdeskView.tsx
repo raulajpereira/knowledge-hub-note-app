@@ -1,11 +1,12 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/i18n/client';
 import { api } from '@/lib/client/api';
 import { refreshCounts } from '@/components/shell/counts';
-import { Modal, Select, usePersistentState, useToast } from '@/components/ui';
+import { Modal, Popover, Select, usePersistentState, useToast } from '@/components/ui';
+import { TimelogView } from '@/components/timelog/TimelogView';
 import { bodyZoom } from '@/components/ui/zoom';
 import {
   HD_FIELDS,
@@ -19,6 +20,7 @@ import {
 import { useShell } from '@/components/shell/ShellContext';
 import { useListDetail } from '@/components/content/MobilePane';
 import { fmtWhen, HD_EVENT, useChangeText, type HdChange } from './HelpdeskPopup';
+import { TicketTime, TicketTimeButton, useTicketTime, type TicketRef } from './TicketTime';
 import { ManualPanel, ManualTable, tkKind, useManualTickets } from './ManualTickets';
 import '@/components/sap/sap.css';
 import './helpdesk.css';
@@ -69,6 +71,15 @@ const COL_DEF = [96, 240, 150, 100, 100, 140, 140, 170, 90];
 /** the status filter's "Prioritários" (Aberto, Reaberto, Em progresso) */
 const HOT = '\u0000hot';
 const DESC = 1;
+/** the colours offered for the Registo de Tempos tab */
+const TL_COLORS = [
+  { id: 'accent', css: 'var(--accent)' },
+  { id: 'teal', css: 'oklch(0.72 0.12 190)' },
+  { id: 'green', css: 'oklch(0.72 0.15 150)' },
+  { id: 'violet', css: 'oklch(0.7 0.15 300)' },
+  { id: 'amber', css: 'oklch(0.8 0.13 80)' },
+  { id: 'rose', css: 'oklch(0.72 0.16 15)' },
+] as const;
 
 /** "18/11 09:58" */
 const short = (iso: string) => {
@@ -109,8 +120,24 @@ export function HelpdeskView() {
   const sync = modules.has('helpdesk');
   const manual = modules.has('tickets');
   const want = sp.get('tab');
-  const tab: 'list' | 'manual' | 'changes' =
-    !sync || (want === 'manual' && manual) ? 'manual' : want === 'changes' ? 'changes' : 'list';
+  const timeOn = modules.has('timelog');
+  const tab: 'list' | 'manual' | 'changes' | 'time' =
+    want === 'time' && timeOn
+      ? 'time'
+      : !sync || (want === 'manual' && manual)
+        ? 'manual'
+        : want === 'changes'
+          ? 'changes'
+          : 'list';
+  // the Registo de Tempos tab's colour (kept on this device): the app's accent or another one
+  const [tlColor, setTlColor] = usePersistentState<string>('hd.tlColor', 'accent');
+  const tlVar = TL_COLORS.find((c) => c.id === tlColor)?.css ?? TL_COLORS[0]!.css;
+  const [colorOpen, setColorOpen] = useState(false);
+  const colorBtn = useRef<HTMLButtonElement>(null);
+  // the popups (outside this page's box) use the same colour
+  useEffect(() => {
+    document.documentElement.style.setProperty('--hd-tl', tlVar);
+  }, [tlVar]);
   const tabs = [
     ...(sync ? (['list'] as const) : []),
     ...(manual ? (['manual'] as const) : []),
@@ -352,43 +379,111 @@ export function HelpdeskView() {
   }, [data]);
 
   return (
-    <section className="kh-sap kh-hd" data-pane={tab === 'manual' ? md.pane : undefined}>
+    <section
+      className="kh-sap kh-hd"
+      data-pane={tab === 'manual' ? md.pane : undefined}
+      style={{ '--hd-tl': tlVar } as React.CSSProperties}
+    >
       <div className="kh-sap-main">
         <div className="kh-sap-head">
           <div className="kh-sap-titles">
             <h1>{t('nav_helpdesk')}</h1>
-            <div>{t(tab === 'manual' ? 'hd_subManual' : 'hd_sub')}</div>
+            <div>{t(tab === 'manual' ? 'hd_subManual' : tab === 'time' ? 'hd_subTime' : 'hd_sub')}</div>
           </div>
-          <div className="kh-sap-seg" role="radiogroup" aria-label={t('nav_helpdesk')}>
-            {tabs.map((v) => (
-              <button
-                key={v}
-                type="button"
-                role="radio"
-                aria-checked={tab === v}
-                data-on={tab === v || undefined}
-                onClick={() => go({ tab: v === 'list' ? null : v, k: null })}
-              >
-                {t(v === 'list' ? 'hd_tabList' : v === 'manual' ? 'hd_tabManual' : 'hd_tabChanges')}
-              </button>
-            ))}
+          <div className="kh-hd-tabs">
+            {/* the tickets (synced and manual) together, their changes beside, the time log apart */}
+            <div className="kh-sap-seg" role="radiogroup" aria-label={t('hd_tickets')}>
+              {tabs
+                .filter((v) => v !== 'changes')
+                .map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="radio"
+                    aria-checked={tab === v}
+                    data-on={tab === v || undefined}
+                    onClick={() => go({ tab: v === 'list' ? null : v, k: null })}
+                  >
+                    {t(v === 'list' ? 'hd_tabList' : v === 'manual' ? 'hd_tabManual' : 'hd_tabChanges')}
+                  </button>
+                ))}
+            </div>
+            {tabs.includes('changes') && (
+              <div className="kh-sap-seg" role="radiogroup" aria-label={t('hd_tabChanges')}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={tab === 'changes'}
+                  data-on={tab === 'changes' || undefined}
+                  onClick={() => go({ tab: 'changes', k: null })}
+                >
+                  {t('hd_tabChanges')}
+                </button>
+              </div>
+            )}
+            {timeOn && (
+              <>
+                <span className="kh-hd-tabs__div" aria-hidden="true" />
+                <span className="kh-hd-tl" data-on={tab === 'time' || undefined}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={tab === 'time'}
+                    onClick={() => go({ tab: 'time', k: null })}
+                  >
+                    ⏱ {t('tl_title')}
+                  </button>
+                  <button
+                    ref={colorBtn}
+                    type="button"
+                    className="kh-hd-tl__dot"
+                    aria-label={t('hd_tlColor')}
+                    title={t('hd_tlColor')}
+                    onClick={() => setColorOpen((v) => !v)}
+                  />
+                </span>
+                {colorOpen && (
+                  <Popover anchor={colorBtn} align="right" onClose={() => setColorOpen(false)}>
+                    <div className="kh-hd-colors" role="radiogroup" aria-label={t('hd_tlColor')}>
+                      {TL_COLORS.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={tlColor === c.id}
+                          aria-label={t(`hd_tlc_${c.id}`)}
+                          title={t(`hd_tlc_${c.id}`)}
+                          style={{ background: c.css }}
+                          onClick={() => {
+                            setTlColor(c.id);
+                            setColorOpen(false);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </Popover>
+                )}
+              </>
+            )}
           </div>
-          <label className="kh-sap-search">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t('hd_search')}
-              aria-label={t('hd_search')}
-            />
-          </label>
-          {sync && tab !== 'manual' && (
+          {tab !== 'time' && (
+            <label className="kh-sap-search">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t('hd_search')}
+                aria-label={t('hd_search')}
+              />
+            </label>
+          )}
+          {sync && tab !== 'manual' && tab !== 'time' && (
             <button type="button" className="kh-sap-new" disabled={pairing} onClick={() => void pair()}>
               {ext?.paired ? `✓ ${t('hd_extOk')}` : t('hd_pair')}
             </button>
           )}
         </div>
 
-        {tab !== 'manual' && data && !data.sources.some((x) => x.active) && (
+        {(tab === 'list' || tab === 'changes') && data && !data.sources.some((x) => x.active) && (
           <div className="kh-hd-steps">
             <b>{t('hd_stepsT')}</b>
             <ol>
@@ -406,7 +501,7 @@ export function HelpdeskView() {
           </div>
         )}
 
-        {(tab === 'manual' ? [] : (data?.sources ?? []))
+        {(tab === 'manual' || tab === 'time' ? [] : (data?.sources ?? []))
           .filter((s) => s.active)
           .map((s) => {
             const warn = !!s.lastError;
@@ -466,7 +561,7 @@ export function HelpdeskView() {
             );
           })}
 
-        {tab === 'manual' ? (
+        {tab === 'time' ? null : tab === 'manual' ? (
           <div className="kh-ot-stats">
             {stat(
               'oklch(0.62 0.17 250)',
@@ -565,8 +660,13 @@ export function HelpdeskView() {
         )}
 
         {tab === 'manual' && <ManualTable m={m} q={q} head={head} cols={cols} />}
-        <div className="kh-sap-body" style={{ padding: '0 22px 22px' }} hidden={tab === 'manual'}>
-          {tab === 'manual' ? null : tab === 'list' ? (
+        {tab === 'time' && <TimelogView embedded />}
+        <div
+          className="kh-sap-body"
+          style={{ padding: '0 22px 22px' }}
+          hidden={tab === 'manual' || tab === 'time'}
+        >
+          {tab === 'manual' || tab === 'time' ? null : tab === 'list' ? (
             <div className="kh-well kh-table kh-hd-table" role="table" aria-label={t('nav_helpdesk')}>
               {head([
                 'hd_number',
@@ -681,11 +781,12 @@ export function HelpdeskView() {
         </div>
       </div>
 
-      {tab === 'manual' && <ManualPanel m={m} />}
+      {tab === 'manual' && <ManualPanel m={m} timeOn={timeOn} />}
       <ItemDialog
         item={open}
         headers={(open && srcOf.get(open.sourceId)?.headers) || []}
         changes={(data?.changes ?? []).filter((c) => c.itemId === open?.id)}
+        timeOn={timeOn}
         onClose={() => setOpen(null)}
         onTicket={() => void load()}
       />
@@ -708,9 +809,12 @@ function ItemDialog({
   item,
   headers,
   changes,
+  timeOn,
   onClose,
   onTicket,
 }: {
+  /** the person has the Registo de Tempos: the ticket's time, in the same popup */
+  timeOn: boolean;
   item: Item | null;
   /** the helpdesk's column order (the cells are kept unordered) */
   headers: string[];
@@ -722,6 +826,11 @@ function ItemDialog({
   const toast = useToast();
   const router = useRouter();
   const text = useChangeText();
+  const [view, setView] = useState<'detail' | 'time'>('detail');
+  useEffect(() => setView('detail'), [item?.id]);
+  const ref: TicketRef | null =
+    item && timeOn ? { number: item.number, summary: item.summary, client: item.client } : null;
+  const time = useTicketTime(ref);
   const [busy, setBusy] = useState(false);
   const ticket = async () => {
     if (!item) return;
@@ -750,13 +859,18 @@ function ItemDialog({
     <Modal
       open={!!item}
       onClose={onClose}
-      title={item ? `#${item.number}` : ''}
-      subtitle={item?.summary}
+      title={item ? `#${item.number}${view === 'time' ? ` · ${t('tl_title')}` : ''}` : ''}
+      subtitle={
+        item ? (view === 'time' ? [item.summary, item.client].filter(Boolean).join(' · ') : item.summary) : ''
+      }
       closeLabel={t('ui_close')}
       className="kh-hd-modal"
       footer={
         <div className="kh-hd-foot">
-          {item?.url && (
+          {view === 'detail' && ref && (
+            <TicketTimeButton total={time.total} onClick={() => setView('time')} />
+          )}
+          {view === 'detail' && item?.url && (
             <a className="kh-btn kh-btn--ghost" href={item.url} target="_blank" rel="noreferrer noopener">
               {t('hd_openHd')}
             </a>
@@ -765,18 +879,23 @@ function ItemDialog({
           <button type="button" className="kh-btn kh-btn--ghost" onClick={onClose}>
             {t('hd_close')}
           </button>
-          <button
-            type="button"
-            className="kh-btn kh-btn--primary"
-            disabled={busy}
-            onClick={() => void ticket()}
-          >
-            {item?.ticketId ? t('hd_seeTicket') : t('hd_makeTicket')}
-          </button>
+          {view === 'detail' && (
+            <button
+              type="button"
+              className="kh-btn kh-btn--primary"
+              disabled={busy}
+              onClick={() => void ticket()}
+            >
+              {item?.ticketId ? t('hd_seeTicket') : t('hd_makeTicket')}
+            </button>
+          )}
         </div>
       }
     >
-      {item && (
+      {item && view === 'time' && ref && (
+        <TicketTime r={ref} entries={time.entries} onBack={() => setView('detail')} />
+      )}
+      {item && view === 'detail' && (
         <>
           <div className="kh-hd-kv">
             {[

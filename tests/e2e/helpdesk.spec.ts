@@ -238,3 +238,37 @@ test('Manuais: the tickets created here, like the synced ones; /app/tickets come
   await expect(panel).toContainText('Histórico');
   await shot(page, '9-manuais');
 });
+
+test('Registo de Tempos: its own tab in Helpdesk, in its colour; a ticket’s time in its popup', async ({
+  page,
+}) => {
+  cli('tenants:module', '--email', email, '--add', 'timelog');
+  await login(page);
+  // the menu has no Registo de Tempos; its page comes here
+  await expect(page.getByRole('link', { name: 'Registo de Tempos', exact: true })).toHaveCount(0);
+  await page.goto('app/timelog');
+  await expect(page).toHaveURL(/\/app\/helpdesk\?tab=time/);
+  await expect(page.getByRole('radio', { name: /Registo de Tempos/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(page.locator('.kh-tl-embed')).toBeVisible();
+  // its colour: the app's accent, or another one
+  await page.getByRole('button', { name: 'Cor do Registo de Tempos' }).click();
+  await page.getByRole('radio', { name: 'Verde-água' }).click();
+  await shot(page, '11-tempos');
+
+  // a synced ticket: the button at the end of its popup, the ticket's time in the same popup
+  await page.getByRole('radio', { name: 'Sincronizados' }).click();
+  await page.getByRole('row', { name: /146233/ }).click();
+  const dlg = page.getByRole('dialog', { name: /#146233/ });
+  await dlg.getByRole('button', { name: /Registo de Tempos deste ticket/ }).click();
+  await expect(dlg).toContainText('Ainda sem horas registadas neste ticket.');
+  await dlg.getByRole('button', { name: /Iniciar/ }).click();
+  await expect(dlg.locator('.kh-hd-tt__row[data-run]')).toBeVisible();
+  await expect(dlg.getByRole('button', { name: /Parar/ })).toBeVisible();
+  await expect(page.locator('.kh-tl-btn[data-run]')).toContainText('146233');
+  await shot(page, '12-ticket-tempo');
+  await dlg.getByRole('button', { name: /Voltar aos detalhes/ }).click();
+  await expect(dlg).toContainText('Histórico');
+});

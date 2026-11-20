@@ -424,6 +424,47 @@ export async function listEntries(auth: AuthContext, from: Date, to: Date): Prom
   });
 }
 
+/**
+ * One ticket's entries (the popup's "Registo de Tempos deste ticket"): a manual
+ * ticket picked from the suggestions (ref id), or any entry whose ticket text
+ * starts with its number ("#146233 · …", "INC0042 · …").
+ */
+export async function ticketEntries(
+  auth: AuthContext,
+  t: { ticketId?: string | null; number: string },
+): Promise<TimeEntry[]> {
+  const n = t.number.trim().replace(/^#/, '');
+  if (!n && !t.ticketId) return [];
+  const esc = n.replace(/[\\%_]/g, (c) => `\\${c}`);
+  return asUser(auth, async (tx) => {
+    const rows = await tx
+      .select()
+      .from(timeEntries)
+      .where(
+        and(
+          mine(auth),
+          isNull(timeEntries.deletedAt),
+          or(
+            t.ticketId
+              ? and(eq(timeEntries.refKind, 'ticket'), eq(timeEntries.refId, t.ticketId))
+              : undefined,
+            n
+              ? or(
+                  ilike(timeEntries.refLabel, esc),
+                  ilike(timeEntries.refLabel, `#${esc}`),
+                  ilike(timeEntries.refLabel, `${esc} %`),
+                  ilike(timeEntries.refLabel, `#${esc} %`),
+                )
+              : undefined,
+          ),
+        ),
+      )
+      .orderBy(desc(timeEntries.startedAt))
+      .limit(500);
+    return rows.map(out);
+  });
+}
+
 /** "Enviar semana para a folha de tempos": every entry of the range goes in. */
 export async function includeRange(
   auth: AuthContext,
